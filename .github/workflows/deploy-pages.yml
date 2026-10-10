@@ -1,0 +1,80 @@
+name: Deploy web app to Pages
+
+on:
+  push:
+    branches: [main]
+  # Pull requests touching the app only build and test; they never deploy.
+  pull_request:
+    paths: ['packages/web/**', '.github/workflows/deploy-pages.yml']
+  workflow_dispatch:
+  # Redeploy when a new timetable has been published.
+  workflow_run:
+    workflows: ['Build timetable']
+    types: [completed]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'deploy' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: |
+          if [ -f pnpm-workspace.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            # Until the workspace root exists, install the web package on its own.
+            pnpm --dir packages/web install --ignore-workspace --no-frozen-lockfile
+          fi
+
+      - name: Test
+        run: pnpm --dir packages/web test
+
+      - name: Build
+        run: pnpm --dir packages/web build
+
+      - name: Add latest timetable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p packages/web/dist/data
+          if gh release download timetable-latest --repo "$GITHUB_REPOSITORY" --pattern '*.json' --dir packages/web/dist/data; then
+            ls -la packages/web/dist/data
+          else
+            echo "::warning::No timetable-latest release yet; the app will run on demo data."
+          fi
+
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/web/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
