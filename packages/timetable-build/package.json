@@ -11,12 +11,16 @@
     "build-timetable": "./bin/build-timetable.js"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
   },
   "dependencies": {
     "yauzl": "^3.4.0"
   },
   "devDependencies": {
-    "@types/yauzl": "^3.4.0"
+    "@types/node": "^22.20.0",
+    "@types/yauzl": "^3.4.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   }
 }

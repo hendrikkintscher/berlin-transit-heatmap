@@ -1,5 +1,6 @@
 // @ts-check
 import js from '@eslint/js';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -10,13 +11,11 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{js,mjs,cjs}'],
-    languageOptions: {
-      globals: {
-        process: 'readonly',
-        console: 'readonly',
-        URL: 'readonly',
-      },
-    },
+    languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['packages/web/public/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
   },
   {
     rules: {

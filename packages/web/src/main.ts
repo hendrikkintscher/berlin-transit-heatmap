@@ -48,7 +48,9 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     if (m.window !== state.window) return;
     loadbar.hidden = false;
     loadbar.classList.toggle('indeterminate', !m.total || m.loaded > m.total);
-    (loadbar.firstElementChild as HTMLElement).style.width = m.total ? `${Math.min(100, (100 * m.loaded) / m.total)}%` : '';
+    (loadbar.firstElementChild as HTMLElement).style.width = m.total
+      ? `${Math.min(100, (100 * m.loaded) / m.total)}%`
+      : '';
   } else if (m.type === 'loaded') {
     state.info[m.info.window] = m.info;
     if (m.info.window === state.window) loadbar.hidden = true;
@@ -71,7 +73,8 @@ function renderFeedInfo() {
   if (!i) {
     feedInfo.textContent = 'Loading timetable…';
   } else if (i.demo) {
-    feedInfo.textContent = 'No timetable published yet, so the map shows made-up demo times based on distance.';
+    feedInfo.textContent =
+      'No timetable published yet, so the map shows made-up demo times based on distance.';
   } else {
     feedInfo.textContent = `Timetable from VBB, service day ${i.serviceDate} (feed ${i.feedVersion}, ${i.stops.toLocaleString('en')} stops).`;
   }
@@ -142,7 +145,10 @@ map.on('load', () => {
   // Start with the attribution collapsed to its (i) button so it does not cover the legend.
   document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
   const firstSymbol = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-  map.addSource(HEAT_SOURCE, { type: 'geojson', data: lastResult ?? { type: 'FeatureCollection', features: [] } });
+  map.addSource(HEAT_SOURCE, {
+    type: 'geojson',
+    data: lastResult ?? { type: 'FeatureCollection', features: [] },
+  });
   const colorExpr: unknown[] = ['step', ['get', 'band'], BAND_COLORS[0]];
   for (let b = 1; b <= MAX_BAND; b++) colorExpr.push(b, BAND_COLORS[b]);
   map.addLayer(
@@ -191,7 +197,8 @@ function setWindow(w: Window) {
   if (state.origin) compute();
   else send({ type: 'load', window: w });
 }
-for (const b of segButtons) b.addEventListener('click', () => setWindow(b.dataset.window as Window));
+for (const b of segButtons)
+  b.addEventListener('click', () => setWindow(b.dataset.window as Window));
 setWindow(state.window);
 showOrigin();
 
