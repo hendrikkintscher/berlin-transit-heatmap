@@ -1,0 +1,82 @@
+name: Build timetable
+
+# Turns the latest VBB GTFS feed (release `gtfs-latest`) into the compact
+# per-window timetable files the web app downloads, and publishes them on the
+# release `timetable-latest`.
+
+on:
+  workflow_run:
+    workflows: ['Refresh VBB GTFS']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-timetable
+  cancel-in-progress: false
+
+env:
+  GTFS_TAG: gtfs-latest
+  TIMETABLE_TAG: timetable-latest
+  # Budget from the alpha plan, per timetable file.
+  MAX_BYTES: 8000000
+  MAX_GZIP_BYTES: 2000000
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Download GTFS feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p work
+          gh release download "$GTFS_TAG" -p GTFS.zip -p manifest.json -D work --clobber
+          cat work/manifest.json
+
+      - name: Build timetable files
+        run: |
+          pnpm build-timetable --gtfs work/GTFS.zip --out work/out
+          # Record which feed the files were built from.
+          jq --slurpfile gtfs work/manifest.json '. + {gtfs: $gtfs[0]}' work/out/build-info.json > work/build-info.json
+          mv work/build-info.json work/out/build-info.json
+          cat work/out/build-info.json
+
+      - name: Check size budget
+        run: |
+          for f in timetable-day.json timetable-night.json; do
+            bytes=$(jq ".files[\"$f\"].bytes" work/out/build-info.json)
+            gz=$(jq ".files[\"$f\"].gzipBytes" work/out/build-info.json)
+            echo "$f: $bytes bytes, $gz gzipped"
+            if [ "$bytes" -gt "$MAX_BYTES" ] || [ "$gz" -gt "$MAX_GZIP_BYTES" ]; then
+              echo "::warning title=Timetable over budget::$f is $bytes bytes ($gz gzipped), budget $MAX_BYTES ($MAX_GZIP_BYTES gzipped)"
+            fi
+          done
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          service=$(jq -r .serviceDate work/out/build-info.json)
+          feed=$(jq -r '.gtfs.serviceStart + " to " + .gtfs.serviceEnd' work/out/build-info.json)
+          notes="Timetable files for the web app, built $(date -u +%Y-%m-%d) from VBB GTFS ($feed). Reference service day: $service. Data © VBB, CC BY 4.0."
+          if ! gh release view "$TIMETABLE_TAG" >/dev/null 2>&1; then
+            gh release create "$TIMETABLE_TAG" --title "Timetable (latest)" --notes "$notes" --latest=false
+          else
+            gh release edit "$TIMETABLE_TAG" --notes "$notes"
+          fi
+          gh release upload "$TIMETABLE_TAG" \
+            work/out/timetable-day.json work/out/timetable-night.json \
+            work/out/stops.json work/out/build-info.json --clobber

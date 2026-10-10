@@ -3,3 +3,4 @@ dist/
 data/
 work/
 .DS_Store
+coverage/

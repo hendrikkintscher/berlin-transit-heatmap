@@ -4,14 +4,24 @@
 // Delete this file and point ./index.ts at `routing` once that package is merged.
 import type { FeatureCollection, Polygon } from 'geojson';
 
-export interface Stop { id: string; name: string; lat: number; lon: number; parent?: number }
+export interface Stop {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  parent?: number;
+}
 export interface Route {
   name: string;
   mode: 'sbahn' | 'ubahn' | 'tram' | 'bus' | 'ferry' | 'regional' | 'other';
   stops: number[];
   trips: number[][];
 }
-export interface Transfer { from: number; to: number; seconds: number }
+export interface Transfer {
+  from: number;
+  to: number;
+  seconds: number;
+}
 export interface Timetable {
   version: 1;
   window: 'day' | 'night';
@@ -29,7 +39,10 @@ export interface PreparedTimetable {
   lat: Float64Array;
   lon: Float64Array;
 }
-export interface Origin { lat: number; lon: number }
+export interface Origin {
+  lat: number;
+  lon: number;
+}
 export interface TravelTimeResult {
   stopSeconds: Float32Array;
   computedInMs: number;
@@ -134,7 +147,15 @@ export function gridToGeoJSON(grid: HeatGrid, bandSeconds = 300): FeatureCollect
         properties: { band: Math.floor(v / bandSeconds), seconds: v },
         geometry: {
           type: 'Polygon',
-          coordinates: [[[x0, y0], [x0 + dLon, y0], [x0 + dLon, y0 + dLat], [x0, y0 + dLat], [x0, y0]]],
+          coordinates: [
+            [
+              [x0, y0],
+              [x0 + dLon, y0],
+              [x0 + dLon, y0 + dLat],
+              [x0, y0 + dLat],
+              [x0, y0],
+            ],
+          ],
         },
       });
     }

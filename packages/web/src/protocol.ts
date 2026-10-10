@@ -19,5 +19,12 @@ export interface TimetableInfo {
 export type FromWorker =
   | { type: 'progress'; window: Window; loaded: number; total: number }
   | { type: 'loaded'; info: TimetableInfo }
-  | { type: 'result'; id: number; window: Window; geojson: FeatureCollection<Polygon>; computedInMs: number; totalMs: number }
+  | {
+      type: 'result';
+      id: number;
+      window: Window;
+      geojson: FeatureCollection<Polygon>;
+      computedInMs: number;
+      totalMs: number;
+    }
   | { type: 'error'; message: string };

@@ -1,5 +1,12 @@
 /// <reference lib="webworker" />
-import { gridToGeoJSON, heatGrid, loadTimetable, travelTimes, type PreparedTimetable, type Timetable } from './routing';
+import {
+  gridToGeoJSON,
+  heatGrid,
+  loadTimetable,
+  travelTimes,
+  type PreparedTimetable,
+  type Timetable,
+} from './routing';
 import { demoTimetable } from './demo-data';
 import type { FromWorker, ToWorker, Window } from './protocol';
 
@@ -47,7 +54,13 @@ function ensure(window: Window): Promise<PreparedTimetable> {
       const tt = loadTimetable(json);
       post({
         type: 'loaded',
-        info: { window, serviceDate: json.serviceDate, feedVersion: json.feedVersion, stops: json.stops.length, demo },
+        info: {
+          window,
+          serviceDate: json.serviceDate,
+          feedVersion: json.feedVersion,
+          stops: json.stops.length,
+          demo,
+        },
       });
       return tt;
     });

@@ -2,7 +2,16 @@
 export const BAND_SECONDS = 300;
 export const MAX_BAND = 18; // band 18 = 90+ min
 
-const STOPS = ['#ffffa0', '#fde24a', '#f9a93c', '#ef6b4a', '#d23c6c', '#9b2a8a', '#5e1f8c', '#2d0f5e'];
+const STOPS = [
+  '#ffffa0',
+  '#fde24a',
+  '#f9a93c',
+  '#ef6b4a',
+  '#d23c6c',
+  '#9b2a8a',
+  '#5e1f8c',
+  '#2d0f5e',
+];
 
 function hexToRgb(h: string): [number, number, number] {
   const n = parseInt(h.slice(1), 16);
@@ -12,7 +21,10 @@ function hexToRgb(h: string): [number, number, number] {
 function mix(a: string, b: string, t: number): string {
   const [r1, g1, b1] = hexToRgb(a);
   const [r2, g2, b2] = hexToRgb(b);
-  const c = (x: number, y: number) => Math.round(x + (y - x) * t).toString(16).padStart(2, '0');
+  const c = (x: number, y: number) =>
+    Math.round(x + (y - x) * t)
+      .toString(16)
+      .padStart(2, '0');
   return `#${c(r1, r2)}${c(g1, g2)}${c(b1, b2)}`;
 }
 
