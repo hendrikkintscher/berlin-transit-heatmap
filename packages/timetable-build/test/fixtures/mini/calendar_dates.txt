@@ -1,0 +1,3 @@
+service_id,date,exception_type
+NX,20261014,1
+WD,20261013,1

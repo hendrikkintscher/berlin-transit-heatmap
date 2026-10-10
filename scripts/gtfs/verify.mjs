@@ -32,12 +32,16 @@ function splitCsvLine(line) {
   for (let i = 0; i < line.length; i++) {
     const c = line[i];
     if (quoted) {
-      if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
-      else if (c === '"') quoted = false;
+      if (c === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') quoted = false;
       else cur += c;
     } else if (c === '"') quoted = true;
-    else if (c === ',') { out.push(cur); cur = ''; }
-    else cur += c;
+    else if (c === ',') {
+      out.push(cur);
+      cur = '';
+    } else cur += c;
   }
   out.push(cur);
   return out;
@@ -49,7 +53,7 @@ async function scan(path, onRow) {
   let rows = 0;
   for await (let line of rl) {
     if (header === null) {
-      header = splitCsvLine(line.replace(/^﻿/, '')).map((h) => h.trim());
+      header = splitCsvLine(line.replace(/^\uFEFF/, '')).map((h) => h.trim());
       continue;
     }
     if (line === '') continue;
@@ -72,7 +76,10 @@ async function main() {
 
   for (const [file, cols] of Object.entries(REQUIRED)) {
     const path = join(dir, file);
-    if (!existsSync(path)) { errors.push(`missing ${file}`); continue; }
+    if (!existsSync(path)) {
+      errors.push(`missing ${file}`);
+      continue;
+    }
 
     let badCoords = 0;
     let onRow;
@@ -80,14 +87,17 @@ async function main() {
       onRow = (r, h) => {
         const lat = Number(r[h.indexOf('stop_lat')]);
         const lon = Number(r[h.indexOf('stop_lon')]);
-        if (!(lat >= BBOX.minLat && lat <= BBOX.maxLat && lon >= BBOX.minLon && lon <= BBOX.maxLon)) badCoords++;
+        if (!(lat >= BBOX.minLat && lat <= BBOX.maxLat && lon >= BBOX.minLon && lon <= BBOX.maxLon))
+          badCoords++;
       };
     }
     const { header, rows } = await scan(path, onRow);
     const missingCols = cols.filter((c) => !header.includes(c));
     if (missingCols.length) errors.push(`${file} lacks columns: ${missingCols.join(', ')}`);
-    if (MIN_ROWS[file] && rows < MIN_ROWS[file]) errors.push(`${file} has only ${rows} rows (expected >= ${MIN_ROWS[file]})`);
-    if (file === 'stops.txt' && badCoords > rows * 0.01) errors.push(`stops.txt: ${badCoords} stops outside Berlin-Brandenburg`);
+    if (MIN_ROWS[file] && rows < MIN_ROWS[file])
+      errors.push(`${file} has only ${rows} rows (expected >= ${MIN_ROWS[file]})`);
+    if (file === 'stops.txt' && badCoords > rows * 0.01)
+      errors.push(`stops.txt: ${badCoords} stops outside Berlin-Brandenburg`);
     files[file] = rows;
   }
 
@@ -103,8 +113,10 @@ async function main() {
   if (calFiles.length === 0) errors.push('missing calendar.txt and calendar_dates.txt');
   for (const file of calFiles) {
     const { rows } = await scan(join(dir, file), (r, h) => {
-      if (file === 'calendar.txt') { widen(r[h.indexOf('start_date')]); widen(r[h.indexOf('end_date')]); }
-      else widen(r[h.indexOf('date')]);
+      if (file === 'calendar.txt') {
+        widen(r[h.indexOf('start_date')]);
+        widen(r[h.indexOf('end_date')]);
+      } else widen(r[h.indexOf('date')]);
     });
     files[file] = rows;
   }
@@ -130,4 +142,7 @@ async function main() {
   if (manifestOut) writeFileSync(manifestOut, JSON.stringify(manifest, null, 2) + '\n');
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

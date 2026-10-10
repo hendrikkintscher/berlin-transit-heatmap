@@ -11,7 +11,17 @@ Travel times include walking to the first stop and from the last stop. Everythin
 
 ## Status
 
-Early setup. So far this repository contains the timetable data pipeline. The routing core (`packages/routing`) and the web app (`packages/web`) come next.
+Working towards an alpha. Done so far: the GTFS refresh and the timetable build (`packages/timetable-build`). The routing core (`packages/routing`) and the web app (`packages/web`) come next.
+
+## Development
+
+Node 22 and pnpm (via `corepack enable`).
+
+```sh
+pnpm install
+pnpm check            # lint, format check, typecheck, tests
+pnpm build-timetable --gtfs data/GTFS.zip --out work/out
+```
 
 ## Timetable data
 
@@ -31,6 +41,10 @@ The feed is about 50–100 MB, so it lives in releases rather than in git:
 - `gtfs-YYYY-MM-DD` is a dated snapshot, kept so builds can be reproduced.
 - `gtfs-latest` always holds the newest verified feed. This is what the routing build uses.
 
+### Timetable build
+
+[`.github/workflows/build-timetable.yml`](.github/workflows/build-timetable.yml) runs after every successful refresh and by hand. It turns `gtfs-latest` into `timetable-day.json`, `timetable-night.json`, `stops.json` and `build-info.json` (see [`packages/timetable-build`](packages/timetable-build/README.md)) and publishes them on the release `timetable-latest`, which the web app deploy picks up.
+
 ### Using the data locally
 
 With the [GitHub CLI](https://cli.github.com/) installed and logged in:
@@ -45,9 +59,11 @@ Set `GTFS_TAG=gtfs-2026-10-02` (for example) to fetch a specific snapshot instea
 ## Layout
 
 ```
-.github/workflows/   monthly GTFS refresh
-scripts/gtfs/        download and verification scripts
-packages/            routing core and web app (coming next)
+.github/workflows/         CI, monthly GTFS refresh, timetable build
+scripts/gtfs/              download and verification scripts
+packages/timetable-build/  GTFS -> compact timetable files
+packages/routing/          RAPTOR engine and heatmap grid (coming next)
+packages/web/              web app (coming next)
 ```
 
 ## Licence

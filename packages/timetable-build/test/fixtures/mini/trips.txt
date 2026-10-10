@@ -1,0 +1,14 @@
+route_id,service_id,trip_id
+R1,WD,t1
+R1,WD,t1dup
+R1,WD,t2
+R1,WD,t3
+R2,WD,t4
+R2,WD,t5
+R2,WD,t6
+R3,WD,t7
+R3,NX,t8
+R2,WD,t9
+R2,WD,t10
+R2,WE,t11
+R4,WD,t12

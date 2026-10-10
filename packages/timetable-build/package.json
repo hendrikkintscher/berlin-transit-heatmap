@@ -1,0 +1,22 @@
+{
+  "name": "@bth/timetable-build",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Turns the VBB GTFS feed into compact per-window timetable files for the browser router.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "bin": {
+    "build-timetable": "./bin/build-timetable.js"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "yauzl": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/yauzl": "^3.4.0"
+  }
+}

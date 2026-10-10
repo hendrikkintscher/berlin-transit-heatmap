@@ -1,0 +1,56 @@
+// Contract 1 of the alpha plan: the timetable file format produced by this
+// package and consumed by `packages/routing`. Do not change without telling
+// the routing and web threads.
+
+export type Mode = 'sbahn' | 'ubahn' | 'tram' | 'bus' | 'ferry' | 'regional' | 'other';
+
+export type WindowName = 'day' | 'night';
+
+export interface Timetable {
+  version: 1;
+  window: WindowName;
+  /** YYYY-MM-DD, the reference weekday used. */
+  serviceDate: string;
+  /** Seconds since midnight of serviceDate, e.g. 36000 for 10:00. */
+  windowStart: number;
+  windowEnd: number;
+  feedVersion: string;
+  /** Index = stop id used everywhere below. Identical in both windows. */
+  stops: Stop[];
+  /** RAPTOR routes: trips with an identical stop sequence that never overtake each other. */
+  routes: Route[];
+  /** Footpaths between stops; both directions present. */
+  transfers: Transfer[];
+}
+
+export interface Stop {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  /** Index of the parent station in `stops`, if any. Station entries themselves have no routes. */
+  parent?: number;
+}
+
+export interface Route {
+  name: string;
+  mode: Mode;
+  /** Stop indices in travel order. */
+  stops: number[];
+  /** trips[t][i] = departure time (seconds) at stops[i]; arrival == departure. Sorted by first departure. */
+  trips: number[][];
+}
+
+export interface Transfer {
+  from: number;
+  to: number;
+  seconds: number;
+}
+
+/** `stops.json`: the stop list shared by both window files, for clients that want metadata only. */
+export interface StopsFile {
+  version: 1;
+  serviceDate: string;
+  feedVersion: string;
+  stops: Stop[];
+}
