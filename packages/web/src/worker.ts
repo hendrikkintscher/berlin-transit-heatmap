@@ -6,8 +6,7 @@ import {
   travelTimes,
   type PreparedTimetable,
   type Timetable,
-} from './routing';
-import { demoTimetable } from './demo-data';
+} from '@berlin-transit-heatmap/routing';
 import type { FromWorker, ToWorker, Window } from './protocol';
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -15,16 +14,11 @@ const post = (m: FromWorker) => ctx.postMessage(m);
 const loading = new Map<Window, Promise<PreparedTimetable>>();
 let dataBase = '';
 
-async function fetchTimetable(window: Window): Promise<{ json: Timetable; demo: boolean }> {
+async function fetchTimetable(window: Window): Promise<Timetable> {
   const url = new URL(`timetable-${window}.json`, dataBase);
-  let res: Response;
-  try {
-    res = await fetch(url);
-  } catch {
-    return { json: demoTimetable(window), demo: true };
-  }
+  const res = await fetch(url);
   if (!res.ok || !res.headers.get('content-type')?.includes('json') || !res.body) {
-    return { json: demoTimetable(window), demo: true };
+    throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
   }
   // Content-Length is the compressed size when the server gzips, so progress is approximate.
   const total = Number(res.headers.get('content-length')) || 0;
@@ -44,13 +38,13 @@ async function fetchTimetable(window: Window): Promise<{ json: Timetable; demo: 
     buf.set(c, off);
     off += c.length;
   }
-  return { json: JSON.parse(new TextDecoder().decode(buf)) as Timetable, demo: false };
+  return JSON.parse(new TextDecoder().decode(buf)) as Timetable;
 }
 
 function ensure(window: Window): Promise<PreparedTimetable> {
   let p = loading.get(window);
   if (!p) {
-    p = fetchTimetable(window).then(({ json, demo }) => {
+    p = fetchTimetable(window).then((json) => {
       const tt = loadTimetable(json);
       post({
         type: 'loaded',
@@ -59,7 +53,6 @@ function ensure(window: Window): Promise<PreparedTimetable> {
           serviceDate: json.serviceDate,
           feedVersion: json.feedVersion,
           stops: json.stops.length,
-          demo,
         },
       });
       return tt;
