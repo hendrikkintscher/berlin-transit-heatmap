@@ -1,0 +1,277 @@
+import { WALK_SPEED_MPS } from './geo';
+import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
+import type { Origin, TravelTimeOptions, TravelTimeResult } from './types';
+
+const DEFAULT_MAX_INITIAL_WALK_S = 900;
+const DEFAULT_MAX_ROUNDS = 6;
+
+const now: () => number =
+  typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? () => performance.now()
+    : () => Date.now();
+
+/**
+ * Range-RAPTOR (rRAPTOR) travel times from `origin` to every stop.
+ *
+ * Every distinct origin departure time in [windowStart, windowEnd] that lines
+ * up with a trip departing an access stop is scanned, latest first. Labels are
+ * kept between departures (an arrival reachable when leaving later is still
+ * reachable when leaving earlier), so each scan only does work where the
+ * earlier departure actually helps. A stop's travel time is the minimum over
+ * departures of (arrival - departure).
+ */
+export function travelTimes(
+  tt: PreparedTimetable,
+  origin: Origin,
+  opts: TravelTimeOptions = {},
+): TravelTimeResult {
+  const t0 = now();
+  const maxWalk = opts.maxInitialWalkSeconds ?? DEFAULT_MAX_INITIAL_WALK_S;
+  const maxRounds = Math.max(0, Math.floor(opts.maxRounds ?? DEFAULT_MAX_ROUNDS));
+  const S = tt.stopCount;
+
+  // Access stops: everything within walking range of the origin.
+  const accessStops: number[] = [];
+  const accessWalk: number[] = [];
+  const ox = (origin.lon - tt.proj.lon0) * tt.proj.mPerLon;
+  const oy = (origin.lat - tt.proj.lat0) * tt.proj.mPerLat;
+  forStopsWithin(tt, ox, oy, maxWalk * WALK_SPEED_MPS, (s, d) => {
+    accessStops.push(s);
+    accessWalk.push(Math.round(d / WALK_SPEED_MPS));
+  });
+
+  const best = new Float32Array(S).fill(Infinity);
+  for (let a = 0; a < accessStops.length; a++) {
+    const s = accessStops[a];
+    if (accessWalk[a] < best[s]) best[s] = accessWalk[a];
+  }
+
+  const departures = departureTimes(tt, accessStops, accessWalk);
+
+  if (departures.length > 0 && maxRounds > 0) {
+    const { routeStopOffset, routeStops, routeTripCount, routeTimeOffset, times } = tt;
+    const { stopRouteOffset, stopRouteRoute, stopRouteIndex } = tt;
+    const { transferOffset, transferTo, transferSeconds } = tt;
+
+    // tau[k * S + s]: earliest arrival at s using at most k trips. Kept across departures.
+    const tau = new Int32Array((maxRounds + 1) * S).fill(UNREACHED);
+    const tauStar = new Int32Array(S).fill(UNREACHED);
+    // Earliest arrival at s on board a vehicle. Footpaths start only from
+    // vehicle arrivals, so this is tracked separately: a stop first reached on
+    // foot must still pass its footpaths on when a vehicle gets there later.
+    const vehStar = new Int32Array(S).fill(UNREACHED);
+
+    // Stops improved in the previous / current round.
+    let marked = new Int32Array(S);
+    let markedCount = 0;
+    let nextMarked = new Int32Array(S);
+    let nextCount = 0;
+    const isNextMarked = new Uint8Array(S);
+    // Stops with a better vehicle arrival this round (footpath sources), and that arrival.
+    const routeMarked = new Int32Array(S);
+    const routeMarkedArr = new Int32Array(S);
+    const isRouteMarked = new Int32Array(S).fill(-1);
+    let routeMarkedCount = 0;
+    // Stops whose tauStar changed during the current departure.
+    const touched = new Int32Array(S);
+    let touchedCount = 0;
+    const isTouched = new Uint8Array(S);
+    // Routes to scan this round with the earliest marked index on them.
+    const routeFrom = new Int32Array(tt.routeCount).fill(-1);
+    const queue = new Int32Array(tt.routeCount);
+
+    for (let d = 0; d < departures.length; d++) {
+      const dep = departures[d];
+
+      // Round 0: walk from the origin.
+      markedCount = 0;
+      for (let a = 0; a < accessStops.length; a++) {
+        const s = accessStops[a];
+        const arr = dep + accessWalk[a];
+        if (arr < tauStar[s]) {
+          tau[s] = arr;
+          tauStar[s] = arr;
+          marked[markedCount++] = s;
+          if (!isTouched[s]) {
+            isTouched[s] = 1;
+            touched[touchedCount++] = s;
+          }
+        }
+      }
+
+      for (let k = 1; k <= maxRounds && markedCount > 0; k++) {
+        const prevBase = (k - 1) * S;
+        const curBase = k * S;
+
+        // Collect routes serving marked stops.
+        let queueCount = 0;
+        for (let m = 0; m < markedCount; m++) {
+          const s = marked[m];
+          for (let e = stopRouteOffset[s]; e < stopRouteOffset[s + 1]; e++) {
+            const r = stopRouteRoute[e];
+            const i = stopRouteIndex[e];
+            const cur = routeFrom[r];
+            if (cur === -1) {
+              routeFrom[r] = i;
+              queue[queueCount++] = r;
+            } else if (i < cur) {
+              routeFrom[r] = i;
+            }
+          }
+        }
+
+        // Scan routes.
+        nextCount = 0;
+        routeMarkedCount = 0;
+        for (let q = 0; q < queueCount; q++) {
+          const r = queue[q];
+          const from = routeFrom[r];
+          routeFrom[r] = -1;
+          const so = routeStopOffset[r];
+          const n = routeStopOffset[r + 1] - so;
+          const tripCount = routeTripCount[r];
+          const base = routeTimeOffset[r];
+          let trip = -1;
+          let tripBase = 0;
+          for (let i = from; i < n; i++) {
+            const s = routeStops[so + i];
+            if (trip >= 0) {
+              const arr = times[tripBase + i];
+              if (arr < vehStar[s]) {
+                vehStar[s] = arr;
+                const rm = isRouteMarked[s];
+                if (rm < 0) {
+                  isRouteMarked[s] = routeMarkedCount;
+                  routeMarked[routeMarkedCount] = s;
+                  routeMarkedArr[routeMarkedCount++] = arr;
+                } else {
+                  routeMarkedArr[rm] = arr;
+                }
+                if (arr < tauStar[s]) {
+                  tau[curBase + s] = arr;
+                  tauStar[s] = arr;
+                  if (!isNextMarked[s]) {
+                    isNextMarked[s] = 1;
+                    nextMarked[nextCount++] = s;
+                  }
+                  if (!isTouched[s]) {
+                    isTouched[s] = 1;
+                    touched[touchedCount++] = s;
+                  }
+                }
+              }
+            }
+            if (i === n - 1) break;
+            const ready = tau[prevBase + s];
+            if (ready >= UNREACHED) continue;
+            if (trip >= 0 && ready > times[tripBase + i]) continue;
+            // Earliest trip departing stop i at or after `ready`; only trips before the
+            // current one can improve on it (trips are FIFO), so binary-search those.
+            let lo = 0;
+            let hi = trip >= 0 ? trip : tripCount;
+            while (lo < hi) {
+              const mid = (lo + hi) >>> 1;
+              if (times[base + mid * n + i] >= ready) hi = mid;
+              else lo = mid + 1;
+            }
+            if (lo < (trip >= 0 ? trip : tripCount)) {
+              trip = lo;
+              tripBase = base + trip * n;
+            }
+          }
+        }
+
+        // Footpaths from vehicle arrivals of this round (never chained).
+        for (let m = 0; m < routeMarkedCount; m++) {
+          const s = routeMarked[m];
+          isRouteMarked[s] = -1;
+          const arrS = routeMarkedArr[m];
+          for (let e = transferOffset[s]; e < transferOffset[s + 1]; e++) {
+            const u = transferTo[e];
+            const arr = arrS + transferSeconds[e];
+            if (arr < tauStar[u]) {
+              tau[curBase + u] = arr;
+              tauStar[u] = arr;
+              if (!isNextMarked[u]) {
+                isNextMarked[u] = 1;
+                nextMarked[nextCount++] = u;
+              }
+              if (!isTouched[u]) {
+                isTouched[u] = 1;
+                touched[touchedCount++] = u;
+              }
+            }
+          }
+        }
+
+        // Swap marked sets.
+        for (let m = 0; m < nextCount; m++) isNextMarked[nextMarked[m]] = 0;
+        const tmp = marked;
+        marked = nextMarked;
+        nextMarked = tmp;
+        markedCount = nextCount;
+      }
+
+      // Fold this departure into the best travel times.
+      for (let m = 0; m < touchedCount; m++) {
+        const s = touched[m];
+        isTouched[s] = 0;
+        const t = tauStar[s] - dep;
+        if (t < best[s]) best[s] = t;
+      }
+      touchedCount = 0;
+    }
+  }
+
+  return {
+    stopSeconds: best,
+    computedInMs: now() - t0,
+    origin: { lat: origin.lat, lon: origin.lon },
+    departures: departures.length,
+  };
+}
+
+/**
+ * Distinct origin departure times in [windowStart, windowEnd], latest first:
+ * every trip departure from an access stop minus the walk to that stop.
+ */
+function departureTimes(
+  tt: PreparedTimetable,
+  accessStops: number[],
+  accessWalk: number[],
+): Int32Array {
+  const {
+    routeStopOffset,
+    routeTripCount,
+    routeTimeOffset,
+    times,
+    stopRouteOffset,
+    stopRouteRoute,
+    stopRouteIndex,
+  } = tt;
+  const lo = tt.windowStart;
+  const hi = tt.windowEnd;
+  const out: number[] = [];
+  for (let a = 0; a < accessStops.length; a++) {
+    const s = accessStops[a];
+    const walk = accessWalk[a];
+    for (let e = stopRouteOffset[s]; e < stopRouteOffset[s + 1]; e++) {
+      const r = stopRouteRoute[e];
+      const i = stopRouteIndex[e];
+      const n = routeStopOffset[r + 1] - routeStopOffset[r];
+      if (i === n - 1) continue; // cannot board at the last stop
+      const base = routeTimeOffset[r];
+      for (let t = 0; t < routeTripCount[r]; t++) {
+        const dep = times[base + t * n + i] - walk;
+        if (dep >= lo && dep <= hi) out.push(dep);
+      }
+    }
+  }
+  const arr = Int32Array.from(out).sort();
+  // Unique, descending.
+  const res: number[] = [];
+  for (let k = arr.length - 1; k >= 0; k--) {
+    if (res.length === 0 || res[res.length - 1] !== arr[k]) res.push(arr[k]);
+  }
+  return Int32Array.from(res);
+}
