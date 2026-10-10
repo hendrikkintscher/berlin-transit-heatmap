@@ -1,0 +1,91 @@
+name: Refresh VBB GTFS
+
+on:
+  schedule:
+    # 04:17 UTC on the 2nd of every month (VBB usually publishes early in the month).
+    - cron: '17 4 2 * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Publish even if the feed is unchanged'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gtfs-refresh
+  cancel-in-progress: false
+
+env:
+  GTFS_URL: https://www.vbb.de/vbbgtfs
+  LATEST_TAG: gtfs-latest
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download feed
+        run: |
+          mkdir -p work
+          curl -fsSL --retry 4 --retry-delay 10 -o work/GTFS.zip "$GTFS_URL"
+          unzip -tq work/GTFS.zip
+          echo "SHA256=$(sha256sum work/GTFS.zip | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "SIZE=$(stat -c%s work/GTFS.zip)" >> "$GITHUB_ENV"
+
+      - name: Skip if unchanged
+        id: changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          previous=""
+          if gh release download "$LATEST_TAG" -p manifest.json -O work/previous.json 2>/dev/null; then
+            previous=$(jq -r '.sha256 // empty' work/previous.json)
+          fi
+          if [ "$previous" = "$SHA256" ] && [ "${{ inputs.force }}" != "true" ]; then
+            echo "Feed unchanged ($SHA256), nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify feed
+        if: steps.changed.outputs.publish == 'true'
+        run: |
+          mkdir work/gtfs
+          unzip -q work/GTFS.zip -d work/gtfs
+          node scripts/gtfs/verify.mjs work/gtfs work/verify.json
+          jq --arg sha "$SHA256" --argjson size "$SIZE" --arg url "$GTFS_URL" \
+            '{source: $url, sha256: $sha, bytes: $size} + .' work/verify.json > work/manifest.json
+          cat work/manifest.json
+
+      - name: Publish release
+        if: steps.changed.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="gtfs-$(date -u +%Y-%m-%d)"
+          range=$(jq -r '"\(.serviceStart) to \(.serviceEnd)"' work/manifest.json)
+          notes="VBB GTFS feed downloaded $(date -u +%Y-%m-%d). Service period: $range. SHA-256: $SHA256"
+
+          # Dated snapshot, kept for reproducible builds.
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --title "GTFS $(date -u +%Y-%m-%d)" --notes "$notes" --latest=false
+          fi
+          gh release upload "$tag" work/GTFS.zip work/manifest.json --clobber
+
+          # Moving pointer the routing build downloads from.
+          if ! gh release view "$LATEST_TAG" >/dev/null 2>&1; then
+            gh release create "$LATEST_TAG" --title "GTFS (latest)" --notes "$notes" --latest=false
+          else
+            gh release edit "$LATEST_TAG" --notes "$notes"
+          fi
+          gh release upload "$LATEST_TAG" work/GTFS.zip work/manifest.json --clobber

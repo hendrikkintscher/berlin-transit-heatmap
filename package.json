@@ -1,0 +1,17 @@
+{
+  "name": "berlin-transit-heatmap",
+  "private": true,
+  "version": "0.0.0",
+  "description": "How long does it take to get anywhere in Berlin by public transport? A travel-time heatmap.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "gtfs:fetch": "sh scripts/gtfs/fetch.sh",
+    "gtfs:verify": "node scripts/gtfs/verify.mjs data/gtfs"
+  }
+}
