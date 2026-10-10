@@ -60,8 +60,7 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     lastResult = m.geojson;
     (map.getSource(HEAT_SOURCE) as GeoJSONSource | undefined)?.setData(m.geojson);
     loadbar.hidden = true;
-    const demo = state.info[m.window]?.demo ? ' · demo data' : '';
-    statusEl.textContent = `Computed in ${(m.totalMs / 1000).toFixed(1)} s${demo} · tap the map for minutes`;
+    statusEl.textContent = `Computed in ${(m.totalMs / 1000).toFixed(1)} s · tap the map for minutes`;
   } else if (m.type === 'error') {
     loadbar.hidden = true;
     statusEl.textContent = `Something went wrong: ${m.message}`;
@@ -72,9 +71,6 @@ function renderFeedInfo() {
   const i = state.info[state.window];
   if (!i) {
     feedInfo.textContent = 'Loading timetable…';
-  } else if (i.demo) {
-    feedInfo.textContent =
-      'No timetable published yet, so the map shows made-up demo times based on distance.';
   } else {
     feedInfo.textContent = `Timetable from VBB, service day ${i.serviceDate} (feed ${i.feedVersion}, ${i.stops.toLocaleString('en')} stops).`;
   }

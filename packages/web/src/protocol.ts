@@ -13,7 +13,6 @@ export interface TimetableInfo {
   serviceDate: string;
   feedVersion: string;
   stops: number;
-  demo: boolean;
 }
 
 export type FromWorker =
