@@ -1,0 +1,25 @@
+{
+  "name": "@berlin-transit-heatmap/routing",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Range-RAPTOR travel-time engine and heatmap grid for the Berlin transit heatmap. Zero runtime dependencies.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run",
+    "test:slow": "ROUTING_SLOW=1 vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "bench": "tsx bench/bench.ts",
+    "fetch-data": "tsx bench/fetch-data.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
