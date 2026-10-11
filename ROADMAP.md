@@ -1,6 +1,18 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done apart from two items added to group 3 (suggested meeting points, search result choices); groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), group 11 is the Android app and group 12 temporary changes; they run from quick wins to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1, 2, 4, 6, 7 and 8 are done; groups 3 and 5 each have open items added later. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+
+## Up next
+
+State on 2026-10-11, live through PR #33. Build in this order, one step per PR:
+
+1. **Next:** Suggested meeting points + Search result: new start, destination or second start (group 3, built together)
+2. Visual polish: round buttons, legend at the bottom, clearer ✕ (group 5)
+3. Step-free mode (group 9)
+4. Bike + transit and bike only (group 9)
+5. Smaller, faster first load (group 10)
+6. Android app, starting with a TWA (group 11)
+7. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -68,7 +80,7 @@ Notes: run the router twice in the worker and combine the two grids; needs a sec
 
 With two start points, suggest a few good places to meet (about three) and mark them on the map. Tapping one shows the connections for both people: each person's trip, drawn and listed in the trip card.
 
-Notes: candidates are the cells with the smallest slower-of-both time, with the sum of both times as a tie-breaker so neither person carries the whole trip. Pick the best, leave out everything within about 1.5 km of it, and repeat, so the suggestions are spread out. Prefer spots at a station or a named place and label them with the station or Ortsteil name. Trip on tap already draws and lists both trips when a second start is set, so tapping a suggestion reuses it. Small to medium effort; added from Hendrik's request on 2026-10-11 and built right after group 8.
+Notes: candidates are the cells with the smallest slower-of-both time, with the sum of both times as a tie-breaker so neither person carries the whole trip. Pick the best, leave out everything within about 1.5 km of it, and repeat, so the suggestions are spread out. Prefer spots at a station or a named place and label them with the station or Ortsteil name. Trip on tap already draws and lists both trips when a second start is set, so tapping a suggestion reuses it. Small to medium effort; added from Hendrik's request on 2026-10-11, built together with the search result choice (Up next 1).
 
 ### Search result: new start, destination or second start
 
