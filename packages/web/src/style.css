@@ -967,3 +967,52 @@ dialog.when .seg-wide + .seg-wide {
   font-weight: 600;
   color: var(--ink);
 }
+
+/* Suggested meeting points: a numbered pin with the station name. */
+.meet-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 150px;
+  padding: 2px;
+  border: 2px solid #1d1530;
+  border-radius: 999px;
+  background: #fff;
+  color: #1d1530;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.meet-marker i {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1d1530;
+  color: #fff;
+  font-style: normal;
+  font-size: 11px;
+}
+.meet-marker span {
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meet-names .meet-marker {
+  padding-right: 8px;
+}
+.meet-names .meet-marker span {
+  display: inline;
+}
+#readout .spot-name {
+  display: block;
+  margin-bottom: 2px;
+}

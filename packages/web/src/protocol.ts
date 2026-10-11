@@ -1,6 +1,7 @@
 // Messages between the UI thread (main.ts) and the routing worker (worker.ts).
 import type { FeatureCollection, LineString, Point } from 'geojson';
 import type { ContourProps } from './contours';
+import type { MeetSuggestion } from './meet';
 
 /** A timetable window, e.g. "weekday-10" (see when.ts). */
 export type Window = string;
@@ -88,6 +89,8 @@ export type FromWorker =
       grid: { cols: number; rows: number; seconds: Float32Array<ArrayBuffer> };
       /** With a second start: each start's own times on the same grid (the map shows their max). */
       each?: [Float32Array<ArrayBuffer>, Float32Array<ArrayBuffer>];
+      /** With a second start: up to three suggested meeting points, best first. */
+      meet?: MeetSuggestion[];
       /** When comparing: times at the second time on the same grid; the image shows the difference. */
       compare?: Float32Array<ArrayBuffer>;
       /** Network hops the fastest journeys rely on, with share of reachable map. */

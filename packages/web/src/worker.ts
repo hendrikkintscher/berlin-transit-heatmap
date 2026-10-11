@@ -23,6 +23,7 @@ import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut } from './colors';
 import { blurSeconds, warpField } from './soften';
 import { contours } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
+import { suggestMeetingPoints, type MeetCandidate } from './meet';
 import type {
   Direction,
   FromWorker,
@@ -251,6 +252,15 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
               Float32Array<ArrayBuffer>,
             ])
           : undefined;
+      // Meeting point: a few stations both reach quickly, from each start's own times.
+      const candidates = runs.length === 2 ? meetCandidates(tt) : [];
+      const meet =
+        runs.length === 2
+          ? suggestMeetingPoints(candidates, (i) => [
+              cellSeconds(runs[0].shown, candidates[i]),
+              cellSeconds(runs[1].shown, candidates[i]),
+            ])
+          : undefined;
       ctx.postMessage(
         {
           type: 'result',
@@ -260,6 +270,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           bbox: grid.bbox,
           grid: { cols: grid.cols, rows: grid.rows, seconds },
           each,
+          meet,
           compare,
           routes,
           labels,
@@ -282,6 +293,34 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
   }
 };
+
+/** Stations with at least this many departures an hour can be suggested as meeting points. */
+const MEET_MIN_PER_HOUR = 6;
+const meetCache = new WeakMap<PreparedTimetable, MeetCandidate[]>();
+/** Meeting-point candidates: the stations of this timetable, worked out once per file. */
+function meetCandidates(tt: PreparedTimetable): MeetCandidate[] {
+  let c = meetCache.get(tt);
+  if (!c) {
+    c = stations(tt, departuresPerHour(tt))
+      .features.filter((f) => f.properties.perHour >= MEET_MIN_PER_HOUR)
+      .map((f) => ({
+        name: f.properties.name,
+        lon: f.geometry.coordinates[0],
+        lat: f.geometry.coordinates[1],
+      }));
+    meetCache.set(tt, c);
+  }
+  return c;
+}
+
+/** A grid's time at a point; Infinity outside it. */
+function cellSeconds(g: HeatGrid, p: { lat: number; lon: number }): number {
+  const [w, s, e, n] = g.bbox;
+  const c = Math.floor(((p.lon - w) / (e - w)) * g.cols);
+  const r = Math.floor(((n - p.lat) / (n - s)) * g.rows);
+  if (c < 0 || c >= g.cols || r < 0 || r >= g.rows) return Infinity;
+  return g.seconds[r * g.cols + c];
+}
 
 interface Run {
   result: TravelTimeResult;

@@ -57,8 +57,10 @@ const de = {
     '<b>Takt der Haltestellen</b> zeigt, wie oft im Zeitfenster abgefahren wird. <b>ÖPNV-Wüsten</b> schattiert Orte, an denen der Fußweg zur Haltestelle plus die durchschnittliche Wartezeit (halber Takt) über 10 und 15 Min. liegt, zwischen 0 und 5 Uhr über 20 und 30 Min.. Beide findest du im Menü.',
   minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} Min.</b>',
   secondHere: '2. Start',
+  newStart: 'Neuer Start',
+  meetSuggestion: 'Treffpunkt-Vorschlag {name}: {a} und {b} min',
   favHere: '★ Merken',
-  meet: 'Treffpunkt: Farben zeigen die längere der beiden Fahrten',
+  meet: 'Treffpunkt: Farben zeigen die längere der beiden Fahrten, 1–3 sind Vorschläge',
   meetClose: 'Zweiten Startpunkt entfernen',
   favTitle: 'Lieblingsorte',
   favEmpty:
@@ -210,8 +212,10 @@ const en: Record<Key, string> = {
     '<b>Stop frequency</b> shows how often each stop is served in the time window. <b>Transit deserts</b> shades places where the walk to a stop plus the average wait (half the gap between departures) is over 10 and 15 min, or 20 and 30 min between 00:00 and 05:00. Both are in the menu.',
   minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} min</b>',
   secondHere: '2nd start',
+  newStart: 'New start',
+  meetSuggestion: 'Suggested meeting point {name}: {a} and {b} min',
   favHere: '★ Save',
-  meet: 'Meeting point: colours show the longer of the two trips',
+  meet: 'Meeting point: colours show the longer of the two trips, 1–3 are suggestions',
   meetClose: 'Remove the second start',
   favTitle: 'Favourite places',
   favEmpty:
