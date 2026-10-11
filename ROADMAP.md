@@ -170,6 +170,16 @@ A way of drawing the heatmap so both the colours and the streets and labels read
 
 Notes: options to try and compare on the phone: draw the heatmap under the basemap's roads and labels (inserting the layer below the road layers, so streets sit on top of the colour); a "multiply"-style look by lightening the basemap and raising the heatmap's contrast; or a muted basemap style. MapLibre has no layer blend modes, so layer order and the basemap's own colours are the main levers. Pick one default and keep the opacity slider.
 
+### Visual polish: round buttons, legend at the bottom, clearer ✕
+
+Small fixes from Hendrik's look at the phone layout:
+
+- **Round buttons:** the locate, search and menu buttons at the top become true circles (today they are slightly oval), the same size and spacing.
+- **Legend at the very bottom:** the minute and colour legend sits flush at the bottom edge (above the phone's home bar), with the status line and hints above it, so the map gets the most room and the legend is always in the same place.
+- **A more obvious ✕ to deselect:** the ✕ that closes the tap card and removes a selection gets bigger, with a visible round background and a larger touch target (at least 44 px), so it is easy to find and hit.
+
+Notes: CSS and layout only, no effect on speed. Check at 360×740 and on an iPhone-sized screen with the home bar (safe-area insets). Small effort; added from Hendrik's request on 2026-10-11.
+
 ## 6. Trips you can trust
 
 Features that explain and sharpen the travel times. Each is a day or two of work and reuses the router as it is; together they turn the heatmap from a colour picture into something you act on.
