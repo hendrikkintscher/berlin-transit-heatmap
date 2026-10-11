@@ -924,21 +924,34 @@ dialog.when .seg-wide + .seg-wide {
 #readout .trip:empty {
   display: none;
 }
-.trip-sum,
-.trip-ride {
-  display: block;
-  line-height: 1.5;
-}
 .trip-sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  line-height: 1.6;
+}
+.trip-sum small {
+  display: inline !important;
+  margin: 0 0 0 4px !important;
+}
+.trip-sep {
   color: var(--muted);
 }
-.trip-ride small {
-  display: inline !important;
+#readout .trip-stops {
+  margin-top: 0;
+}
+.trip-link {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
 }
 .line-badge {
   display: inline-block;
   min-width: 26px;
-  margin-right: 6px;
   padding: 0 5px;
   border-radius: 4px;
   color: #fff;

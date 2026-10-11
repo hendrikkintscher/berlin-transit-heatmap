@@ -24,7 +24,7 @@ const de = {
   legend: 'Legende Reisezeit in Minuten',
   close: 'Schließen',
   aboutHow:
-    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen: 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin.',
+    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen: 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin. Tippe auf einen Startpunkt, um ihn zu entfernen.',
   aboutLines:
     '<b>Linien</b> zeigt die Abschnitte von S-Bahn, U-Bahn, Tram und Bus, auf die die schnellsten Fahrten von deinem Startpunkt angewiesen sind. Je dicker die Linie, desto mehr der Karte erreichst du darüber. Tippe auf eine Linie, um ihren Namen zu sehen.',
   aboutWindows:
@@ -138,12 +138,16 @@ const de = {
   compareChip: '{a} → {b}: rot = länger, grün = kürzer',
   cmpMinutes: '<b>{a} → {b} Min.</b> ({d})',
   legendDiff: 'Legende: Minuten länger oder kürzer zur Vergleichszeit',
-  tripWalk: 'zu Fuß {n} Min.',
+  tripWalk: '{n} Min. Fußweg',
   tripStops: '{n} Stat.',
   tripNone: 'Keine Verbindung gefunden',
   noTransfer: 'ohne Umstieg',
   oneTransfer: '1 Umstieg',
   transfers: '{n} Umstiege',
+  startPoint: 'Startpunkt',
+  secondPoint: 'Zweiter Startpunkt',
+  removeStart: '✕ Entfernen',
+  openGoogle: 'Google Maps ↗',
 };
 export type Key = keyof typeof de;
 
@@ -167,7 +171,7 @@ const en: Record<Key, string> = {
   legend: 'Travel time legend, minutes',
   close: 'Close',
   aboutHow:
-    'Tap anywhere or search for an address to set a start point. Colours show the public-transport travel time to each spot, including walking to and from stops: 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there.',
+    'Tap anywhere or search for an address to set a start point. Colours show the public-transport travel time to each spot, including walking to and from stops: 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there. Tap a start point to remove it.',
   aboutLines:
     '<b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from your start point rely on. The thicker the line, the more of the map is reached over it. Tap a line to see its name.',
   aboutWindows:
@@ -287,6 +291,10 @@ const en: Record<Key, string> = {
   noTransfer: 'no change',
   oneTransfer: '1 change',
   transfers: '{n} changes',
+  startPoint: 'Start point',
+  secondPoint: 'Second start',
+  removeStart: '✕ Remove',
+  openGoogle: 'Google Maps ↗',
 };
 
 export const STRINGS: Record<Lang, Record<Key, string>> = { de, en };

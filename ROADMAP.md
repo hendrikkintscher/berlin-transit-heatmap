@@ -162,7 +162,7 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 
 ### Show the trip on tap
 
-**Done** (PR #24): tapping a place lists the connection under the minutes (changes, walking minutes, each line with its first and last stop) and draws it on the map, rides in line colours and walks dotted. The link to the BVG or Google app is left out for now.
+**Done** (PR #24): tapping a place lists the connection under the minutes (changes, walking minutes, each line with its first and last stop) and draws it on the map, rides in line colours and walks dotted. Follow-up (PR #25): the route is compact (line badges, then changes, walking and the stops where you get on, change and get off) with a link that opens it in Google Maps; tapping a start point lets you remove it. BVG has no documented link format for a trip between two coordinates, so only Google is linked.
 
 Tapping a place shows how you get there, not just the minutes: "8 Min. Fußweg · U8 bis Hermannplatz · M41 · 4 Min. Fußweg, 1 Umstieg", with the route drawn on the map. Optionally a link to open the trip in the BVG or Google app.
 
