@@ -22,7 +22,14 @@ import {
   t,
   type Lang,
 } from './i18n';
-import { DESERT_THRESHOLDS } from './layers';
+import {
+  DEFAULT_WHEN,
+  desertThresholds,
+  whenFromParams,
+  windowName,
+  type DayType,
+  type When,
+} from './when';
 import type {
   FromWorker,
   RasterLayer,
@@ -66,7 +73,10 @@ const readoutText = $('readout-text');
 const statusEl = $('status');
 const feedInfo = $('feed-info');
 const infoDialog = $<HTMLDialogElement>('info');
-const segButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-window]')];
+const whenBtn = $<HTMLButtonElement>('when-btn');
+const whenDialog = $<HTMLDialogElement>('when');
+const dayButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-day]')];
+const hourGrid = $('hour-grid');
 const routesToggle = $<HTMLInputElement>('routes-toggle');
 const freqToggle = $<HTMLInputElement>('freq-toggle');
 const desertToggle = $<HTMLInputElement>('desert-toggle');
@@ -79,6 +89,8 @@ const menuDialog = $<HTMLDialogElement>('menu');
 const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
 
 const state: {
+  /** Weekday or weekend, and the departure hour; `window` names its timetable file. */
+  when: When;
   window: Window;
   origin: { lat: number; lon: number } | null;
   /** Meeting point: the second person's start. */
@@ -93,7 +105,8 @@ const state: {
   /** Re-renders the status line, so it follows a language switch. */
   status: () => string;
 } = {
-  window: 'day',
+  when: DEFAULT_WHEN,
+  window: windowName(DEFAULT_WHEN),
   origin: null,
   second: null,
   pending: null,
@@ -168,7 +181,6 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     loadbar.hidden = true;
     const s = m.totalMs / 1000;
     setStatus(() => t('computed', { s: formatDecimal(s, 1) }));
-    prefetchOtherWindow();
   } else if (m.type === 'layers') {
     layerData[m.window] = m;
     if (m.window === state.window) showLayers();
@@ -177,17 +189,6 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     setStatus(() => t('failed', { message: m.message }));
   }
 };
-
-// Only the visible window is downloaded on first load; once a heatmap is on screen,
-// fetch the other one quietly so the Day/Night toggle is instant.
-let prefetched = false;
-function prefetchOtherWindow() {
-  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-  if (prefetched || conn?.saveData) return;
-  prefetched = true;
-  const other: Window = state.window === 'day' ? 'night' : 'day';
-  setTimeout(() => send({ type: 'load', window: other, quiet: true }), 1500);
-}
 
 function renderFeedInfo() {
   const i = state.info[state.window];
@@ -220,7 +221,8 @@ function readUrl() {
   state.desert = layers.includes('desert');
   state.origin = parsePoint(p.get('from'));
   state.second = state.origin ? parsePoint(p.get('with')) : null;
-  if (p.get('w') === 'night') state.window = 'night';
+  state.when = whenFromParams(p);
+  state.window = windowName(state.when);
 }
 function parsePoint(v: string | null) {
   const [lat, lon] = (v ?? '').split(',').map(Number);
@@ -231,7 +233,7 @@ function writeUrl() {
   const p = new URLSearchParams();
   if (state.origin) p.set('from', pointParam(state.origin));
   if (state.second) p.set('with', pointParam(state.second));
-  if (state.window === 'night') p.set('w', 'night');
+  if (state.window !== windowName(DEFAULT_WHEN)) p.set('t', state.window);
   if (!state.routes) p.set('routes', '0');
   const layers = [state.freq && 'freq', state.desert && 'desert'].filter(Boolean).join(',');
   if (layers) p.set('layers', layers);
@@ -426,7 +428,7 @@ function showLayers() {
   const data = layerData[state.window];
   if ((state.freq || state.desert) && !data && !layersRequested.has(state.window)) {
     layersRequested.add(state.window);
-    send({ type: 'layers', window: state.window });
+    send({ type: 'layers', window: state.window, thresholds: desertThresholds(state.when) });
   }
   map.setLayoutProperty(STATIONS_LAYER, 'visibility', state.freq && data ? 'visible' : 'none');
   map.setLayoutProperty(DESERT_LAYER, 'visibility', state.desert && data ? 'visible' : 'none');
@@ -463,7 +465,7 @@ function renderLayerLegend() {
     );
   }
   if (state.desert) {
-    const [a, b] = DESERT_THRESHOLDS[state.window].map((x) => x / 60);
+    const [a, b] = desertThresholds(state.when).map((x) => x / 60);
     rows.push(
       `<div class="ll-row"><span class="ll-title">${t('desertLegend')}</span>` +
         `<span class="ll-box ll-light"></span><span>&gt;${a}</span>` +
@@ -568,7 +570,7 @@ map.on('click', (e: MapMouseEvent) => {
     return;
   } else {
     const secs = lastResult && state.origin ? gridSeconds(lastResult, lat, lng) : NaN;
-    const when = t(state.window === 'day' ? 'byDay' : 'atNight');
+    const when = whenText(state.when);
     const parts: string[] = [];
     if (secs === Infinity) parts.push(t('unreachable'));
     else if (secs >= 0 && lastResult?.each) {
@@ -625,19 +627,56 @@ $('readout-fav').addEventListener('click', async () => {
 $('meet-close').addEventListener('click', () => setSecond(null));
 
 // ---------- controls ----------
-function setWindow(w: Window) {
-  state.window = w;
-  for (const b of segButtons) b.setAttribute('aria-checked', String(b.dataset.window === w));
+/** "werktags ab 10 Uhr" / "weekends from 02:00", for the tap readout. */
+function whenText(w: When) {
+  return t(w.day === 'weekday' ? 'onWeekdays' : 'onWeekends', { hour: hourLabel(w.hour) });
+}
+const hourLabel = (h: number) =>
+  lang() === 'de' ? `${h} Uhr` : `${String(h).padStart(2, '0')}:00`;
+
+function renderWhen() {
+  const w = state.when;
+  whenBtn.querySelector('span')!.textContent = t(w.day === 'weekday' ? 'weekdayAt' : 'weekendAt', {
+    hour: hourLabel(w.hour),
+  });
+  for (const b of dayButtons) b.setAttribute('aria-checked', String(b.dataset.day === w.day));
+  for (const b of hourGrid.children)
+    b.setAttribute('aria-pressed', String(Number((b as HTMLElement).dataset.hour) === w.hour));
+}
+
+function setWhen(w: When) {
+  state.when = w;
+  state.window = windowName(w);
+  renderWhen();
   readout.hidden = true;
   renderFeedInfo();
   writeUrl();
   showLayers();
   if (state.origin) compute();
-  else send({ type: 'load', window: w });
+  else send({ type: 'load', window: state.window });
 }
-for (const b of segButtons)
-  b.addEventListener('click', () => setWindow(b.dataset.window as Window));
-setWindow(state.window);
+hourGrid.append(
+  ...Array.from({ length: 24 }, (_, h) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.hour = String(h);
+    b.textContent = String(h);
+    b.addEventListener('click', () => {
+      setWhen({ ...state.when, hour: h });
+      whenDialog.close();
+    });
+    return b;
+  }),
+);
+for (const b of dayButtons)
+  b.addEventListener('click', () => setWhen({ ...state.when, day: b.dataset.day as DayType }));
+whenBtn.addEventListener('click', () => {
+  closeSearch();
+  readout.hidden = true;
+  whenDialog.showModal();
+});
+$('when-close').addEventListener('click', () => whenDialog.close());
+setWhen(state.when);
 showOrigin();
 
 function setRoutes(on: boolean) {
@@ -674,7 +713,7 @@ $('about-btn').addEventListener('click', () => {
   infoDialog.showModal();
 });
 // A tap on the backdrop (outside the panel) closes either sheet.
-for (const d of [menuDialog, infoDialog]) {
+for (const d of [menuDialog, infoDialog, whenDialog]) {
   d.addEventListener('click', (e) => {
     if (e.target === d) d.close();
   });
@@ -686,6 +725,7 @@ function applyLang(l: Lang, remember: boolean) {
   renderFeedInfo();
   renderLayerLegend();
   renderFavourites();
+  renderWhen();
   statusEl.textContent = state.status();
   readout.hidden = true;
   searchCache.clear();

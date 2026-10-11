@@ -17,7 +17,7 @@ export interface BuildInfo {
   files: Record<string, FileInfo>;
 }
 
-/** Writes timetable-day.json, timetable-night.json, stops.json and build-info.json. */
+/** Writes timetable-<window>.json for every window, stops.json and build-info.json. */
 export function writeOutputs(result: BuildResult, outDir: string, extra: object = {}): BuildInfo {
   mkdirSync(outDir, { recursive: true });
   const files: Record<string, FileInfo> = {};
@@ -26,8 +26,7 @@ export function writeOutputs(result: BuildResult, outDir: string, extra: object 
     writeFileSync(join(outDir, name), data);
     files[name] = { bytes: data.length, gzipBytes: gzipSync(data, { level: 9 }).length };
   };
-  write('timetable-day.json', result.timetables.day);
-  write('timetable-night.json', result.timetables.night);
+  for (const [name, tt] of Object.entries(result.timetables)) write(`timetable-${name}.json`, tt);
   write('stops.json', result.stopsFile);
   const info: BuildInfo = {
     version: 1,

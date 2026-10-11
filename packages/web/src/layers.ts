@@ -149,9 +149,6 @@ export function accessGrid(tt: PreparedTimetable, perHour: Float32Array): HeatGr
   );
 }
 
-/** [light, strong] access-time thresholds in seconds per window, as chosen by Hendrik. */
-export const DESERT_THRESHOLDS = { day: [600, 900], night: [1200, 1800] } as const;
-
 /** 0 = served, 1 = poorly served, 2 = very poorly served (or no stop within 15 min). */
 export function desertLevel(
   seconds: number,

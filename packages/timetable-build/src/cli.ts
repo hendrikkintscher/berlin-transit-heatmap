@@ -4,7 +4,7 @@ import { buildTimetables } from './build.ts';
 import { openGtfs } from './source.ts';
 import { writeOutputs } from './output.ts';
 
-const USAGE = `Usage: build-timetable --gtfs <feed.zip|dir> --out <dir> [--feed-version <s>] [--date YYYY-MM-DD]`;
+const USAGE = `Usage: build-timetable --gtfs <feed.zip|dir> --out <dir> [--feed-version <s>] [--date YYYY-MM-DD] [--no-hourly]`;
 
 const { values } = parseArgs({
   options: {
@@ -12,6 +12,7 @@ const { values } = parseArgs({
     out: { type: 'string' },
     'feed-version': { type: 'string' },
     date: { type: 'string' },
+    'no-hourly': { type: 'boolean' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -30,6 +31,7 @@ try {
   const result = await buildTimetables(source, {
     feedVersion: values['feed-version'],
     serviceDate: values.date,
+    hourly: !values['no-hourly'],
     log,
   });
   const info = writeOutputs(result, resolve(values.out));

@@ -3,24 +3,44 @@ import {
   isoDate,
   parseCalendarRow,
   pickReferenceDay,
+  pickWeekendDay,
   ServiceCalendar,
 } from './calendar.ts';
 import { parseTime, readCsv } from './csv.ts';
 import { BERLIN_BBOX, type BBox, forEachNearbyPair, inBBox } from './geo.ts';
 import type { GtfsSource } from './source.ts';
-import type { Mode, Route, Stop, StopsFile, Timetable, Transfer, WindowName } from './types.ts';
+import type { DayType, Mode, Route, Stop, StopsFile, Timetable, Transfer } from './types.ts';
 
 export interface WindowSpec {
-  name: WindowName;
+  name: string;
+  /** Which reference day the window's times count from. */
+  day: DayType;
   start: number;
   end: number;
 }
 
 /** Day 10:00–12:00 and night 02:00–04:00 of the following night (26:00–28:00 in GTFS terms). */
 export const WINDOWS: WindowSpec[] = [
-  { name: 'day', start: 10 * 3600, end: 12 * 3600 },
-  { name: 'night', start: 26 * 3600, end: 28 * 3600 },
+  { name: 'day', day: 'weekday', start: 10 * 3600, end: 12 * 3600 },
+  { name: 'night', day: 'weekday', start: 26 * 3600, end: 28 * 3600 },
 ];
+
+/**
+ * One-hour windows for every hour of a weekday and of a Saturday, named e.g. "weekday-10"
+ * or "weekend-02". Hours 00–04 of the Saturday are the Friday-to-Saturday night.
+ */
+export const HOURLY_WINDOWS: WindowSpec[] = (['weekday', 'weekend'] as const).flatMap((day) =>
+  Array.from({ length: 24 }, (_, h) => ({
+    name: hourlyName(day, h),
+    day,
+    start: h * 3600,
+    end: (h + 1) * 3600,
+  })),
+);
+
+export function hourlyName(day: DayType, hour: number): string {
+  return `${day}-${String(hour).padStart(2, '0')}`;
+}
 
 /** Trips are kept if they depart within [start, end + TAIL] so trips started in the window can finish. */
 export const WINDOW_TAIL_SECONDS = 2 * 3600;
@@ -35,6 +55,8 @@ export interface BuildOptions {
   feedVersion?: string;
   /** Overrides the reference day, YYYY-MM-DD. */
   serviceDate?: string;
+  /** Also build the 48 one-hour windows (weekday and weekend). Default false. */
+  hourly?: boolean;
   log?: (message: string) => void;
 }
 
@@ -46,14 +68,17 @@ export interface WindowStats {
 }
 
 export interface BuildResult {
-  timetables: Record<WindowName, Timetable>;
+  /** "day", "night" and, when built, the hourly windows such as "weekday-10". */
+  timetables: Record<string, Timetable>;
   stopsFile: StopsFile;
   stats: {
     serviceDate: string;
+    /** The Saturday used for the weekend windows. */
+    weekendDate: string;
     feedVersion: string;
     stops: number;
     stations: number;
-    windows: Record<WindowName, WindowStats>;
+    windows: Record<string, WindowStats>;
   };
 }
 
@@ -151,11 +176,22 @@ export async function buildTimetables(
   const serviceDay = options.serviceDate
     ? options.serviceDate.replaceAll('-', '')
     : pickReferenceDay(calendar.startDate());
+  const weekendDay = pickWeekendDay(serviceDay);
+  const days: Record<DayType, string> = { weekday: serviceDay, weekend: weekendDay };
+  const windows = options.hourly ? [...WINDOWS, ...HOURLY_WINDOWS] : WINDOWS;
   // Trips of the previous and next service day can run inside our windows
   // (e.g. the night window is also served by next-day trips at 02:00–04:00).
   const dayOffsets = [-1, 0, 1];
-  const activeByOffset = dayOffsets.map((o) => calendar.activeServices(addDays(serviceDay, o)));
-  log(`reference day ${isoDate(serviceDay)}; active services ${activeByOffset[1]!.size}`);
+  const activeByDay = {
+    weekday: dayOffsets.map((o) => calendar.activeServices(addDays(serviceDay, o))),
+    weekend: dayOffsets.map((o) => calendar.activeServices(addDays(weekendDay, o))),
+  };
+  const usedDays = new Set(windows.map((w) => w.day));
+  const anyActive = (serviceId: string) =>
+    [...usedDays].some((d) => activeByDay[d].some((set) => set.has(serviceId)));
+  log(
+    `reference days ${isoDate(serviceDay)} (weekday), ${isoDate(weekendDay)} (weekend); active services ${activeByDay.weekday[1]!.size}`,
+  );
 
   let feedVersion = options.feedVersion ?? '';
   if (!feedVersion && source.has('feed_info.txt')) {
@@ -169,7 +205,7 @@ export async function buildTimetables(
   const trips = new Map<string, TripRows>();
   await readCsv(await source.open('trips.txt'), (get) => {
     const serviceId = get('service_id');
-    if (!activeByOffset.some((s) => s.has(serviceId))) return;
+    if (!anyActive(serviceId)) return;
     if (!routes.has(get('route_id'))) return;
     trips.set(get('trip_id'), {
       routeId: get('route_id'),
@@ -205,19 +241,20 @@ export async function buildTimetables(
   trips.clear();
 
   // --- per-window routes -------------------------------------------------
-  const windowRoutes = new Map<
-    WindowName,
-    { routeId: string; stops: number[]; trips: number[][] }[]
-  >();
-  for (const w of WINDOWS) {
+  const windowRoutes = new Map<string, { routeId: string; stops: number[]; trips: number[][] }[]>();
+  for (const w of windows) {
+    const activeByOffset = activeByDay[w.day];
     const candidates: CandidateTrip[] = [];
     const seen = new Set<string>();
     for (const trip of ordered) {
       dayOffsets.forEach((offset, k) => {
         if (!activeByOffset[k]!.has(trip.serviceId)) return;
         const shift = offset * 86400;
+        // Times are non-decreasing, so the first and last bound the trip.
+        const first = trip.time[0]! + shift;
+        const last = trip.time.at(-1)! + shift;
+        if (last < w.start || first > w.end + WINDOW_TAIL_SECONDS) return;
         const times = trip.time.map((t) => t + shift);
-        if (!times.some((t) => t >= w.start && t <= w.end + WINDOW_TAIL_SECONDS)) return;
         const key = `${trip.stop.join(',')}|${times.join(',')}`;
         if (seen.has(key)) return; // duplicate trip
         seen.add(key);
@@ -262,9 +299,9 @@ export async function buildTimetables(
   const transfers = await buildTransfers(source, rawStops, stopIndex, served, parentOf, newIndex);
 
   // --- assemble ----------------------------------------------------------
-  const timetables = {} as Record<WindowName, Timetable>;
-  const windowStats = {} as Record<WindowName, WindowStats>;
-  for (const w of WINDOWS) {
+  const timetables: Record<string, Timetable> = {};
+  const windowStats: Record<string, WindowStats> = {};
+  for (const w of windows) {
     const list = windowRoutes.get(w.name)!;
     const out: Route[] = list.map((r) => ({
       name: routes.get(r.routeId)!.name,
@@ -275,7 +312,7 @@ export async function buildTimetables(
     timetables[w.name] = {
       version: 1,
       window: w.name,
-      serviceDate: isoDate(serviceDay),
+      serviceDate: isoDate(days[w.day]),
       windowStart: w.start,
       windowEnd: w.end,
       feedVersion,
@@ -296,6 +333,7 @@ export async function buildTimetables(
     stopsFile: { version: 1, serviceDate: isoDate(serviceDay), feedVersion, stops },
     stats: {
       serviceDate: isoDate(serviceDay),
+      weekendDate: isoDate(weekendDay),
       feedVersion,
       stops: stops.length,
       stations: stops.length - served.size,

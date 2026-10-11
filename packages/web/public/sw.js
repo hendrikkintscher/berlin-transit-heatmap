@@ -1,6 +1,8 @@
 // Service worker: offline app shell + cached timetable files.
 // Bump VERSION to drop old caches after a breaking change.
-const VERSION = 'v1';
+const VERSION = 'v2';
+// Hourly timetables are 0.5–0.7 MB gzipped each: keep only the most recently used ones.
+const MAX_DATA = 6;
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 
@@ -44,7 +46,7 @@ self.addEventListener('fetch', (event) => {
       caches.open(DATA).then(async (c) => {
         const cached = await c.match(req);
         const fresh = fetch(req).then((res) => {
-          if (res.ok) c.put(req, res.clone());
+          if (res.ok) c.put(req, res.clone()).then(() => trim(c));
           return res;
         });
         if (cached) {
@@ -71,3 +73,9 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+async function trim(cache) {
+  // Cache keys come back in insertion order; re-putting a file on refresh moves it to the end.
+  const keys = await cache.keys();
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - MAX_DATA)).map((k) => cache.delete(k)));
+}

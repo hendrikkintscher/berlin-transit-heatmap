@@ -705,3 +705,48 @@ dialog.menu[open] {
 #readout i.p2 {
   border-color: #0e8a7e;
 }
+
+/* Departure time: a pill in the top bar opens a sheet with weekday/weekend and the hour. */
+.when-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 46px;
+  padding: 0 16px 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+dialog.when {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+.hour-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.hour-grid button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0ecf4;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hour-grid button:nth-child(-n + 5) {
+  background: #e3dcef;
+}
+.hour-grid button[aria-pressed='true'] {
+  background: var(--accent);
+  color: #fff;
+}

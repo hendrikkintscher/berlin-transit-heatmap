@@ -22,14 +22,27 @@
     <div id="loadbar" hidden><div></div></div>
 
     <header class="top">
-      <div class="seg" role="radiogroup" aria-label="Zeitfenster" data-t-label="timeWindow">
-        <button role="radio" data-window="day" aria-checked="true">
-          <span data-t="day">Tag</span> <small>10–12</small>
-        </button>
-        <button role="radio" data-window="night" aria-checked="false">
-          <span data-t="night">Nacht</span> <small>2–4</small>
-        </button>
-      </div>
+      <button
+        id="when-btn"
+        class="pill when-pill"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="when"
+        aria-label="Abfahrtszeit wählen"
+        data-t-label="whenOpen"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2" />
+          <path
+            d="M12 7v5l3 2"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+          />
+        </svg>
+        <span>Werktag 10 Uhr</span>
+      </button>
       <button
         id="search-btn"
         class="round"
@@ -140,6 +153,32 @@
       </div>
     </footer>
 
+    <dialog id="when" class="menu when" aria-labelledby="when-title">
+      <div class="menu-head">
+        <h2 id="when-title" data-t="whenTitle">Abfahrt</h2>
+        <button
+          id="when-close"
+          class="menu-x"
+          type="button"
+          aria-label="Schließen"
+          data-t-label="close"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="seg seg-wide" role="radiogroup" aria-label="Tag" data-t-label="whenDay">
+        <button role="radio" data-day="weekday" aria-checked="true" data-t="weekday">
+          Werktag
+        </button>
+        <button role="radio" data-day="weekend" aria-checked="false" data-t="weekend">
+          Wochenende
+        </button>
+      </div>
+      <h3 data-t="whenHour">Abfahrt zwischen … und … Uhr</h3>
+      <div id="hour-grid" class="hour-grid"></div>
+      <p class="menu-note" data-t="whenNote"></p>
+    </dialog>
+
     <dialog id="menu" class="menu" aria-labelledby="menu-title">
       <div class="menu-head">
         <h2 id="menu-title" data-t="title">Berlin in Minuten</h2>
@@ -175,7 +214,8 @@
         <span class="toggle-text">
           <b data-t="desert">ÖPNV-Wüsten</b>
           <small data-t="desertHint"
-            >Wo Fußweg zur Haltestelle plus Wartezeit über 10 Min. liegt (nachts 20 Min.)</small
+            >Wo Fußweg zur Haltestelle plus Wartezeit über 10 Min. liegt (0 bis 5 Uhr: 20
+            Min.)</small
           >
         </span>
         <input id="desert-toggle" type="checkbox" role="switch" />

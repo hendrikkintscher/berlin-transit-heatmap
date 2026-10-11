@@ -72,6 +72,16 @@ export function pickReferenceDay(feedStart: string): string {
   throw new Error(`No suitable reference weekday found after ${feedStart}`);
 }
 
+/** The first Saturday after `weekday` that is not a public holiday (nor is the Sunday after it). */
+export function pickWeekendDay(weekday: string): string {
+  let date = addDays(weekday, 1);
+  for (let i = 0; i < 60; i++, date = addDays(date, 1)) {
+    if (toDate(date).getUTCDay() !== 6) continue;
+    if (!isBerlinHoliday(date) && !isBerlinHoliday(addDays(date, 1))) return date;
+  }
+  throw new Error(`No suitable reference Saturday found after ${weekday}`);
+}
+
 export interface CalendarRow {
   serviceId: string;
   days: boolean[]; // indexed Sunday = 0 … Saturday = 6
