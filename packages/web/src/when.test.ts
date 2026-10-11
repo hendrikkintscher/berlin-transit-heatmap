@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { computeWindow, desertThresholds, parseWhen, whenFromParams, windowName } from './when';
+import {
+  computeWindow,
+  desertThresholds,
+  parseWhen,
+  whenAt,
+  whenFromParams,
+  windowName,
+} from './when';
 
 const params = (q: string) => new URLSearchParams(q);
 
@@ -14,6 +21,18 @@ describe('when', () => {
     expect(whenFromParams(params('w=night'))).toEqual({ day: 'weekday', hour: 2 });
     expect(whenFromParams(params(''))).toEqual({ day: 'weekday', hour: 10 });
     expect(whenFromParams(params('t=weekday-24'))).toEqual({ day: 'weekday', hour: 10 });
+  });
+
+  it('opens at the current day type and hour in Berlin', () => {
+    // 2026-10-13 is a Tuesday; Berlin is UTC+2 in October and UTC+1 in January.
+    expect(whenAt(new Date('2026-10-13T07:30:00Z'))).toEqual({ day: 'weekday', hour: 9 });
+    expect(whenAt(new Date('2026-10-16T22:10:00Z'))).toEqual({ day: 'weekend', hour: 0 });
+    expect(whenAt(new Date('2026-10-18T21:59:00Z'))).toEqual({ day: 'weekend', hour: 23 });
+    expect(whenAt(new Date('2027-01-11T23:00:00Z'))).toEqual({ day: 'weekday', hour: 0 });
+    expect(whenFromParams(params(''), { day: 'weekend', hour: 3 })).toEqual({
+      day: 'weekend',
+      hour: 3,
+    });
   });
 
   it('uses the night desert thresholds before 05:00', () => {

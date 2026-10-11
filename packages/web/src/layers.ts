@@ -155,7 +155,13 @@ export function accessGrid(
   return heatGrid(
     tt,
     { stopSeconds: waitSeconds, computedInMs: 0 },
-    { cellSizeM: DESERT_CELL_M, maxFinalWalkSeconds: MAX_ACCESS_WALK_S, walk, walkSpeedMps },
+    {
+      cellSizeM: DESERT_CELL_M,
+      maxFinalWalkSeconds: MAX_ACCESS_WALK_S,
+      maxFallbackWalkSeconds: MAX_ACCESS_WALK_S,
+      walk,
+      walkSpeedMps,
+    },
   );
 }
 

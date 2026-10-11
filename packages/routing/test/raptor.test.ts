@@ -71,9 +71,15 @@ describe('travelTimes on the mini network', () => {
     const r = travelTimes(day, origin);
     expect(r.stopSeconds[A]).toBe(500);
     expect(r.stopSeconds[B]).toBe(620);
-    const short = travelTimes(day, origin, { maxInitialWalkSeconds: 300 });
+    const short = travelTimes(day, origin, {
+      maxInitialWalkSeconds: 300,
+      maxFallbackWalkSeconds: 300,
+    });
     expect(short.stopSeconds[A]).toBe(Infinity);
     expect(short.stopSeconds[D]).toBe(Infinity);
+    // With no stop in range, the longer fallback walk (twice the limit) is allowed.
+    const fallback = travelTimes(day, origin, { maxInitialWalkSeconds: 300 });
+    expect(fallback.stopSeconds[A]).toBe(500);
   });
 
   it('counts walking from the origin to nearby stops even without a departure', () => {

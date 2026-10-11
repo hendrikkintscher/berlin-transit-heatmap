@@ -21,6 +21,8 @@ export const NETWORK_WALK_SPEED_MPS = 4 / 3.6;
 export const DETOUR_FACTOR = 1.25;
 /** Points further than this from the network are not snapped to it. */
 export const MAX_SNAP_M = 300;
+/** Grid cells snap further, so fields, woods and lakeshores get the walk across them. */
+export const MAX_CELL_SNAP_M = 1000;
 const BUCKET_M = 50;
 
 /**
@@ -580,7 +582,7 @@ export function snapCells(
       }
     }
   }
-  const maxD2 = MAX_SNAP_M * MAX_SNAP_M;
+  const maxD2 = MAX_CELL_SNAP_M * MAX_CELL_SNAP_M;
   for (let k = 0; k < cols * rows; k++) {
     if (dist[k] <= maxD2) metres[k] = Math.sqrt(dist[k]);
     else {

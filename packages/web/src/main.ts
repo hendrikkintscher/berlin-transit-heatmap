@@ -25,9 +25,9 @@ import {
 } from './i18n';
 import {
   computeWindow,
-  DEFAULT_WHEN,
   desertThresholds,
   parseWhen,
+  whenAt,
   whenFromParams,
   windowName,
   type DayType,
@@ -68,6 +68,8 @@ const TRIP_SOURCE = 'trip';
 const TRIP_STOPS_SOURCE = 'trip-stops';
 const BOLD_FONT = ['Noto Sans Bold'];
 const DEFAULT_OPACITY = 80;
+/** The map opens at the current day type and hour in Berlin, unless a link says otherwise. */
+const NOW_WHEN = whenAt(new Date());
 /** Walking speeds offered in the menu, in km/h; 4 is the default. */
 const WALK_SPEEDS = [3, 4, 5, 6];
 const DEFAULT_WALK_KMH = 4;
@@ -156,8 +158,8 @@ const state: {
   /** Re-renders the status line, so it follows a language switch. */
   status: () => string;
 } = {
-  when: DEFAULT_WHEN,
-  window: windowName(DEFAULT_WHEN),
+  when: NOW_WHEN,
+  window: windowName(NOW_WHEN),
   direction: 'depart',
   measure: 'typical',
   compare: null,
@@ -358,7 +360,7 @@ function readUrl() {
   state.iso = layers.includes('iso');
   state.origin = parsePoint(p.get('from'));
   state.second = state.origin ? parsePoint(p.get('with')) : null;
-  state.when = whenFromParams(p);
+  state.when = whenFromParams(p, NOW_WHEN);
   state.window = windowName(state.when);
   if (p.get('dir') === 'arr') state.direction = 'arrive';
   if (p.get('m') === 'best') state.measure = 'best';
@@ -374,7 +376,7 @@ function writeUrl() {
   const p = new URLSearchParams();
   if (state.origin) p.set('from', pointParam(state.origin));
   if (state.second) p.set('with', pointParam(state.second));
-  if (state.window !== windowName(DEFAULT_WHEN)) p.set('t', state.window);
+  if (state.window !== windowName(NOW_WHEN)) p.set('t', state.window);
   if (state.direction === 'arrive') p.set('dir', 'arr');
   if (state.measure === 'best') p.set('m', 'best');
   if (state.compare) p.set('cmp', windowName(state.compare));
@@ -1448,7 +1450,10 @@ locateBtn.addEventListener('click', () => {
 
 // ---------- share ----------
 $('share-btn').addEventListener('click', async () => {
-  const url = location.href;
+  // A shared map keeps its time, even when that is the current one here.
+  const shared = new URL(location.href);
+  shared.searchParams.set('t', state.window);
+  const url = shared.href;
   if (navigator.share) {
     try {
       await navigator.share({ title: t('title'), text: t('shareText'), url });

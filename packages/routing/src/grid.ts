@@ -38,6 +38,7 @@ export function heatGrid(
 ): HeatGrid {
   const cellSizeM = opts.cellSizeM ?? DEFAULT_CELL_M;
   const maxWalk = opts.maxFinalWalkSeconds ?? DEFAULT_MAX_FINAL_WALK_S;
+  const fallbackWalk = Math.max(maxWalk, opts.maxFallbackWalkSeconds ?? 2 * maxWalk);
   const [minLon, minLat, maxLon0, maxLat] = opts.bbox ?? DEFAULT_BBOX;
   if (!(cellSizeM > 0)) throw new Error('cellSizeM must be positive');
 
@@ -53,7 +54,7 @@ export function heatGrid(
   const nearest = opts.trackStops ? new Int32Array(cols * rows).fill(-1) : null;
 
   const speeds = walkSpeeds(opts.walkSpeedMps);
-  const radiusM = maxWalk * speeds.straight;
+  const radiusM = fallbackWalk * speeds.straight;
   const radCols = Math.ceil(radiusM / cellSizeM) + 1;
   const r2 = radiusM * radiusM;
   const invSpeed = 1 / speeds.straight;
@@ -104,6 +105,7 @@ export function heatGrid(
   if (net && stopSnap) {
     const pace = 1 / speeds.network;
     const maxM = maxWalk * speeds.network;
+    const fallbackM = fallbackWalk * speeds.network;
     const sources = new WalkSources(pace);
     // Stops sitting on each edge, so cells on the same edge can walk straight to them.
     const edgeStop = new Map<number, number[]>();
@@ -123,7 +125,7 @@ export function heatGrid(
       sources.times,
       sources.walked,
       sources.tags,
-      maxM,
+      fallbackM,
       pace,
       sharedLabels(net),
     );
@@ -142,32 +144,67 @@ export function heatGrid(
       const db = len + 2 * off - da;
       const a = edgeA[e];
       const b = edgeB[e];
+      // Walks within maxM win; longer ones up to fallbackM count only where none is.
       let v = Infinity;
       let from = -1;
-      if (walk[a] + da <= maxM) {
-        v = time[a] + da * pace;
-        from = source[a];
+      let fv = Infinity;
+      let ffrom = -1;
+      let w: number;
+      let t: number;
+      w = walk[a] + da;
+      t = time[a] + da * pace;
+      if (w <= maxM) {
+        if (t < v) {
+          v = t;
+          from = source[a];
+        }
+      } else if (w <= fallbackM && t < fv) {
+        fv = t;
+        ffrom = source[a];
       }
-      if (walk[b] + db <= maxM && time[b] + db * pace < v) {
-        v = time[b] + db * pace;
-        from = source[b];
+      w = walk[b] + db;
+      t = time[b] + db * pace;
+      if (w <= maxM) {
+        if (t < v) {
+          v = t;
+          from = source[b];
+        }
+      } else if (w <= fallbackM && t < fv) {
+        fv = t;
+        ffrom = source[b];
       }
       // Sources on the cell's own edge walk straight along it.
       const here = edgeStop.size > 0 ? edgeStop.get(e) : undefined;
       if (here)
         for (const s of here) {
-          const w = sameEdgeMetres(net, stopSnap, s, cells, k);
-          if (w <= maxM && stopSeconds[s] + w * pace < v) {
-            v = stopSeconds[s] + w * pace;
-            from = s;
+          w = sameEdgeMetres(net, stopSnap, s, cells, k);
+          t = stopSeconds[s] + w * pace;
+          if (w <= maxM) {
+            if (t < v) {
+              v = t;
+              from = s;
+            }
+          } else if (w <= fallbackM && t < fv) {
+            fv = t;
+            ffrom = s;
           }
         }
       if (e === originEdge) {
-        const w = sameEdgeMetres(net, originSnap!, 0, cells, k);
-        if (w <= maxM && w * pace < v) {
-          v = w * pace;
-          from = -1;
+        w = sameEdgeMetres(net, originSnap!, 0, cells, k);
+        t = w * pace;
+        if (w <= maxM) {
+          if (t < v) {
+            v = t;
+            from = -1;
+          }
+        } else if (w <= fallbackM && t < fv) {
+          fv = t;
+          ffrom = -1;
         }
+      }
+      if (v === Infinity) {
+        v = fv;
+        from = ffrom;
       }
       if (v < seconds[k]) {
         seconds[k] = v;
