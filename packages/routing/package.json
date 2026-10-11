@@ -14,7 +14,8 @@
     "test:slow": "ROUTING_SLOW=1 vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "bench": "tsx bench/bench.ts",
-    "fetch-data": "tsx bench/fetch-data.ts"
+    "fetch-data": "tsx bench/fetch-data.ts",
+    "smoke": "tsx bench/smoke.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",

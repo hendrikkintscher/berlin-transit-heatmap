@@ -5,7 +5,7 @@ export type Window = 'day' | 'night';
 
 export type ToWorker =
   | { type: 'init'; dataBase: string }
-  | { type: 'load'; window: Window }
+  | { type: 'load'; window: Window; quiet?: boolean }
   | { type: 'compute'; id: number; window: Window; lat: number; lon: number };
 
 export interface TimetableInfo {

@@ -61,11 +61,23 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     (map.getSource(HEAT_SOURCE) as GeoJSONSource | undefined)?.setData(m.geojson);
     loadbar.hidden = true;
     statusEl.textContent = `Computed in ${(m.totalMs / 1000).toFixed(1)} s · tap the map for minutes`;
+    prefetchOtherWindow();
   } else if (m.type === 'error') {
     loadbar.hidden = true;
     statusEl.textContent = `Something went wrong: ${m.message}`;
   }
 };
+
+// Only the visible window is downloaded on first load; once a heatmap is on screen,
+// fetch the other one quietly so the Day/Night toggle is instant.
+let prefetched = false;
+function prefetchOtherWindow() {
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  if (prefetched || conn?.saveData) return;
+  prefetched = true;
+  const other: Window = state.window === 'day' ? 'night' : 'day';
+  setTimeout(() => send({ type: 'load', window: other, quiet: true }), 1500);
+}
 
 function renderFeedInfo() {
   const i = state.info[state.window];

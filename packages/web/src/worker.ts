@@ -69,7 +69,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     if (msg.type === 'init') {
       dataBase = msg.dataBase;
     } else if (msg.type === 'load') {
-      await ensure(msg.window);
+      // A quiet (background) load that fails is retried when the window is actually needed.
+      await (msg.quiet ? ensure(msg.window).catch(() => undefined) : ensure(msg.window));
     } else if (msg.type === 'compute') {
       const t0 = performance.now();
       const tt = await ensure(msg.window);
