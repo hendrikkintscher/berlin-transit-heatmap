@@ -256,6 +256,8 @@ Walking is measured today as a straight line at 1.2 m/s, to the first stop and f
 
 ### Walking times on the OSM footpath network
 
+**Done** (with group 8's PR): walks to the first stop, from the last stop and between stops follow real streets and paths from OpenStreetMap at 4.8 km/h, so rivers, canals, rail lines and fenced areas now cost the detour to the next bridge or crossing. The build ships the network as `walk.bin` (2.1 MB gzipped, about 430k nodes), which the app loads in the background after the first map: the first map appears at once with straight lines and sharpens a moment later. Per tap the walking search costs about the same as the old straight-line spreading, so taps stay as fast as before. Instead of precomputed stop-to-cell tables, the browser runs one Dijkstra over the network per map, which was smaller to ship and exact. A monthly workflow refreshes the OSM data.
+
 Precompute walking times on the OpenStreetMap footpath network in timetable-build: from each stop to the grid cells around it (up to the 15-minute walking limit), and between nearby stops for transfers. Ship them as a compact file next to the timetables; the router reads walking times from it instead of straight-line distance.
 
 Why it comes after groups 5 to 7: it is the largest item so far (several days, a new data pipeline), while groups 5 to 7 are quick and help every visit. Its value is high, though, so it comes before the new modes in group 9, which build on it (bike times on real streets).

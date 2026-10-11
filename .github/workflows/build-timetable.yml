@@ -6,7 +6,7 @@ name: Build timetable
 
 on:
   workflow_run:
-    workflows: ['Refresh VBB GTFS']
+    workflows: ['Refresh VBB GTFS', 'Refresh OSM footpaths']
     types: [completed]
   workflow_dispatch:
 
@@ -19,6 +19,7 @@ concurrency:
 
 env:
   GTFS_TAG: gtfs-latest
+  OSM_TAG: osm-latest
   TIMETABLE_TAG: timetable-latest
   # Budget from the alpha plan, per timetable file.
   MAX_BYTES: 8000000
@@ -46,9 +47,18 @@ jobs:
           gh release download "$GTFS_TAG" -p GTFS.zip -p manifest.json -D work --clobber
           cat work/manifest.json
 
+      - name: Download OSM footpaths
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Optional: without it the build falls back to straight-line walking.
+          gh release download "$OSM_TAG" -p walkways.opl.gz -D work --clobber || echo "::warning::No $OSM_TAG release; building without the walking network."
+
       - name: Build timetable files
         run: |
-          pnpm build-timetable --gtfs work/GTFS.zip --out work/out
+          osm=""
+          if [ -f work/walkways.opl.gz ]; then osm="--osm work/walkways.opl.gz"; fi
+          NODE_OPTIONS=--max-old-space-size=6144 pnpm build-timetable --gtfs work/GTFS.zip --out work/out $osm
           # Record which feed the files were built from.
           jq --slurpfile gtfs work/manifest.json '. + {gtfs: $gtfs[0]}' work/out/build-info.json > work/build-info.json
           mv work/build-info.json work/out/build-info.json
@@ -81,3 +91,6 @@ jobs:
           gh release upload "$TIMETABLE_TAG" \
             work/out/timetable-*.json \
             work/out/stops.json work/out/build-info.json --clobber
+          if [ -f work/out/walk.bin ]; then
+            gh release upload "$TIMETABLE_TAG" work/out/walk.bin --clobber
+          fi

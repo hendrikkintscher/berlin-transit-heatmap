@@ -7,11 +7,9 @@ name: Refresh OSM footpaths
 
 on:
   schedule:
-    # 03:47 UTC on the 2nd of every month, before the GTFS refresh.
-    - cron: '47 3 2 * *'
+    # 03:47 UTC on the 1st of every month; the timetable build follows it and the GTFS refresh.
+    - cron: '47 3 1 * *'
   workflow_dispatch:
-  push:
-    paths: ['.github/workflows/osm-refresh.yml']
 
 permissions:
   contents: write

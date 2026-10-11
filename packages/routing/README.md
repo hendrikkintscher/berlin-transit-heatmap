@@ -26,10 +26,12 @@ consume it directly with no build step.
   with a trip leaving an access stop is scanned, latest first, keeping labels between scans. A
   stop's value is the minimum over departures of `arrival - departure`, i.e. the shortest trip
   that starts in the window without waiting at the origin.
-- **Walking** is straight-line distance at 1.2 m/s: from the origin to stops within
-  `maxInitialWalkSeconds` (default 900), along the timetable's footpaths after leaving a vehicle
-  (never two footpaths in a row), and from stops to cell centres within `maxFinalWalkSeconds`
-  (default 900). Cells near the origin also get the direct walk.
+- **Walking** follows the footpath network when one is passed (`walk` option, see below) at
+  4.8 km/h: from the origin to stops within `maxInitialWalkSeconds` (default 900), and from stops
+  to cell centres within `maxFinalWalkSeconds` (default 900). Without a network, or for points
+  more than 300 m from it, walking is a straight line at 1.2 m/s. Transfers between vehicles use
+  the timetable's footpaths (never two in a row), which timetable-build also measures on the
+  network.
 - **Rounds.** `maxRounds` (default 6) is the maximum number of vehicles used.
 - **Overtaking trips.** Contract 1 routes whose trips overtake each other are split into FIFO
   sub-routes at load time, so the earliest-catchable-trip search stays exact.
@@ -52,6 +54,24 @@ All additive; nothing in the contract changed.
 - `routeUsage(tt, result, grid, { minShare })` uses both to weight every stop-to-stop hop by the
   number of grid cells whose fastest journey rides it. The web app draws these as the "Lines"
   overlay. Costs about 50 ms extra per origin in Node.
+
+## Walking network (Contract 3)
+
+`walk.bin` is built by timetable-build from OpenStreetMap (`--osm`) and published next to the
+timetables. `loadWalkNetwork(buffer)` decodes it; pass the result as `walk` to `travelTimes` and
+`heatGrid`.
+
+- Format: u32 magic `BTHW`, u8 version 1, then LEB128 varints: node count, edge count, per node
+  the zig-zag delta of lon and lat in 1e-5 degrees, per node the number of edges to higher
+  nodes followed by (index delta, length in metres) for each. About 430k nodes, 2.1 MB gzipped.
+- Points (origin, stops, grid cells) snap to the nearest edge within 300 m and enter the network
+  at both of its ends. Cells on the same edge as a source walk straight along it.
+- The final walk is one multi-source Dijkstra (a bucket queue by whole seconds) from all reached
+  stops and the origin, so a grid costs about the same as the straight-line scatter (about
+  100 ms at 50 m in Node). Snapping a grid layout to the network takes about 0.25 s once and is
+  cached.
+- `pnpm --filter @berlin-transit-heatmap/routing exec tsx bench/walk.ts <build-out-dir>`
+  compares per-tap timings and travel times with and without the network.
 
 ## Tests and benchmark
 

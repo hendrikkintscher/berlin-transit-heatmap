@@ -101,8 +101,9 @@ async function loadWalk(): Promise<void> {
     snapCells(net, layout.bbox, layout.cols, layout.rows);
     walk = net;
     post({ type: 'walk' });
-  } catch {
+  } catch (err) {
     // Straight-line walking stays in place.
+    console.warn('Walking network not used:', err);
   }
 }
 
