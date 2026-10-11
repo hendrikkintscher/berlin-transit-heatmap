@@ -1,18 +1,17 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1, 2, 4, 6, 7 and 8 are done; groups 3 and 5 each have one open item added later. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 and 6–8 are done; group 5 has one open item added later. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
-State on 2026-10-11, live through PR #35. Build in this order, one step per PR:
+State on 2026-10-11, live through PR #37. Build in this order, one step per PR:
 
-1. **Next:** Meeting point scale in extra minutes (group 3)
-2. Visual polish: round buttons, legend at the bottom, clearer ✕ (group 5)
-3. Step-free mode (group 9)
-4. Bike + transit and bike only (group 9)
-5. Smaller, faster first load (group 10)
-6. Android app, starting with a TWA (group 11)
-7. Ersatzverkehr and other temporary changes (group 12)
+1. **Next:** Visual polish: round buttons, legend at the bottom, clearer ✕ (group 5)
+2. Step-free mode (group 9)
+3. Bike + transit and bike only (group 9)
+4. Smaller, faster first load (group 10)
+5. Android app, starting with a TWA (group 11)
+6. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -93,6 +92,8 @@ Once a start is set, picking a search result asks what the place is for, with th
 Notes: today a search result always replaces the start (pickPlace in main.ts). The three actions already exist for taps on the map (trip on tap, "2. Start" in the tap card), so this is mostly a small choice sheet after the search. Small effort; added from Hendrik's request on 2026-10-11, built together with the suggested meeting points.
 
 ### Meeting point scale in extra minutes
+
+**Done** (PR #37): with two starts, the colours and outlines show extra minutes over the best slower-of-both time on the grid; the legend reads +0 … +60, +120, and a tap shows both times plus "+N Min. gegenüber dem besten Treffpunkt". The single-start map is unchanged.
 
 With two starts, the colours show **extra minutes** instead of the slower trip's minutes: the best meeting places on the map are 0 and green, and every other place shows how many minutes more the slower of the two people needs than there. So the map answers "how much worse than the best spot is this?", and the best area is always green whether the two starts are close together or far apart. The legend reads "+0, +5, +10 … Min."; tapping a place still shows both people's actual times, plus the extra minutes.
 
