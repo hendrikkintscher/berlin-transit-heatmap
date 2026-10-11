@@ -1,5 +1,9 @@
 /// <reference lib="webworker" />
 import {
+  BIKE_ONLY_MAX_SECONDS,
+  BIKE_SPEED_MPS,
+  BIKE_STATION_SECONDS,
+  bikeTimetable,
   gridLayout,
   heatGrid,
   journeyTo,
@@ -32,6 +36,7 @@ import type {
   RasterLayer,
   RouteProps,
   ToWorker,
+  Travel,
   TripLeg,
   Window,
 } from './protocol';
@@ -130,8 +135,20 @@ function rawTimetable(window: Window): Promise<Timetable> {
   return p;
 }
 
-function ensure(window: Window, stepFree = false): Promise<PreparedTimetable> {
-  const key = stepFree ? `${window}|step-free` : window;
+/** Filtered timetables: step-free, and without the lines that do not take bikes. */
+interface Variant {
+  stepFree?: boolean;
+  bike?: boolean;
+}
+const variantKey = (window: Window, v: Variant) =>
+  window + (v.stepFree ? '|step-free' : '') + (v.bike ? '|bike' : '');
+function filtered(json: Timetable, v: Variant): Timetable {
+  const sf = v.stepFree ? stepFreeTimetable(json) : json;
+  return v.bike ? bikeTimetable(sf) : sf;
+}
+
+function ensure(window: Window, variant: Variant = {}): Promise<PreparedTimetable> {
+  const key = variantKey(window, variant);
   let p = loading.get(key);
   if (p) {
     // Most recently used last.
@@ -140,7 +157,7 @@ function ensure(window: Window, stepFree = false): Promise<PreparedTimetable> {
   } else {
     const raw = rawTimetable(window);
     p = raw.then((json) => {
-      const tt = loadTimetable(stepFree ? stepFreeTimetable(json) : json);
+      const tt = loadTimetable(filtered(json, variant));
       void loadWalk();
       post({
         type: 'loaded',
@@ -161,7 +178,7 @@ function ensure(window: Window, stepFree = false): Promise<PreparedTimetable> {
 }
 
 /** Reversed timetables for "arrive by", kept alongside the forward ones. */
-/** Keyed by window, plus "|step-free" for the step-free variant. */
+/** Keyed like the forward ones (variantKey). */
 const reversed = new Map<string, Promise<PreparedTimetable>>();
 const raws = new Map<Window, Promise<Timetable>>();
 
@@ -172,19 +189,15 @@ const raws = new Map<Window, Promise<Timetable>>();
 async function prepared(
   window: Window,
   direction: Direction,
-  stepFree = false,
+  variant: Variant = {},
 ): Promise<PreparedTimetable> {
-  if (direction === 'depart') return ensure(window, stepFree);
-  const key = stepFree ? `${window}|step-free` : window;
+  if (direction === 'depart') return ensure(window, variant);
+  const key = variantKey(window, variant);
   let p = reversed.get(key);
   if (!p) {
     p = rawTimetable(window).then((json) =>
       loadTimetable(
-        reverseTimetable(
-          stepFree ? stepFreeTimetable(json) : json,
-          json.windowEnd,
-          json.windowEnd + 3600,
-        ),
+        reverseTimetable(filtered(json, variant), json.windowEnd, json.windowEnd + 3600),
       ),
     );
     p.catch(() => reversed.delete(key));
@@ -219,7 +232,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'compute') {
       const t0 = performance.now();
       walkSpeedMps = msg.walkKmh / 3.6;
-      const tt = await prepared(msg.window, msg.direction, msg.stepFree);
+      const travel = msg.travel ?? 'walk';
+      const variant = { stepFree: msg.stepFree, bike: travel === 'bike' };
+      const tt = await prepared(msg.window, msg.direction, variant);
       const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
       const typical = msg.measure === 'typical';
       // Next connection: plain RAPTOR from one moment (reversed files count backwards).
@@ -229,22 +244,22 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           : msg.direction === 'depart'
             ? t.windowStart + (msg.leaveOffset ?? 0)
             : t.windowEnd;
-      const runs = starts.map((o) => run(tt, o, typical, true, leaveAt(tt)));
+      const runs = starts.map((o) => run(tt, o, typical, travel, true, leaveAt(tt)));
       const shown = (r: Run) => r.shown;
       const grid =
         runs.length === 1 ? runs[0].shown : slowerOf(...(runs.map(shown) as [HeatGrid, HeatGrid]));
       const used = runs.flatMap((r) => r.used);
       const routes = usageGeoJSON(tt, used);
       const labels = labelLines(tt, used);
-      lastTrip = { tt, runs, direction: msg.direction };
+      lastTrip = { tt, runs, direction: msg.direction, travel };
 
       let image: ReturnType<typeof paint>;
       let outlines: ReturnType<typeof contours>;
       let compare: Float32Array<ArrayBuffer> | undefined;
       let extraBase: number | undefined;
       if (msg.compare) {
-        const tt2 = await prepared(msg.compare, msg.direction, msg.stepFree);
-        const other = starts.map((o) => run(tt2, o, typical, false, leaveAt(tt2)).shown);
+        const tt2 = await prepared(msg.compare, msg.direction, variant);
+        const other = starts.map((o) => run(tt2, o, typical, travel, false, leaveAt(tt2)).shown);
         const g2 = other.length === 1 ? other[0] : slowerOf(other[0], other[1]);
         compare = g2.seconds as Float32Array<ArrayBuffer>;
         image = paintDiff(grid, g2);
@@ -362,10 +377,36 @@ function run(
   tt: PreparedTimetable,
   origin: Origin,
   typical: boolean,
+  travel: Travel,
   usage = true,
   leaveAt?: number,
 ): Run {
-  const w = { walk, walkSpeedMps };
+  if (travel === 'bikeonly') {
+    // Cycling all the way: no stops, just the street network out to an hour.
+    const w = { walk, walkSpeedMps: BIKE_SPEED_MPS };
+    const reach = {
+      maxFinalWalkSeconds: BIKE_ONLY_MAX_SECONDS,
+      maxFallbackWalkSeconds: BIKE_ONLY_MAX_SECONDS,
+    };
+    const access = travelTimes(tt, origin, { trackLegs: usage, maxRounds: 0, ...w });
+    const result = { ...access, stopSeconds: new Float32Array(tt.stopCount).fill(Infinity) };
+    const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, ...w, ...reach });
+    return { result, best, shown: best, used: [] };
+  }
+  const w =
+    travel === 'bike'
+      ? {
+          walk,
+          walkSpeedMps: BIKE_SPEED_MPS,
+          accessPenaltySeconds: BIKE_STATION_SECONDS,
+          egressPenaltySeconds: BIKE_STATION_SECONDS,
+          // Cycling all the way stays an option where it beats the trains.
+          maxOriginSeconds: BIKE_ONLY_MAX_SECONDS,
+          // Until the street network is in, straight-line rides spread over ten
+          // minutes only, so the first map is as quick as on foot.
+          ...(walk ? {} : { maxFinalWalkSeconds: 600, maxFallbackWalkSeconds: 600 }),
+        }
+      : { walk, walkSpeedMps };
   const result = travelTimes(tt, origin, { trackLegs: usage, typical, leaveAt, ...w });
   const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, ...w });
   const shown =
@@ -377,7 +418,12 @@ function run(
 }
 
 /** The last computed map, kept for trip lookups on tap. */
-let lastTrip: { tt: PreparedTimetable; runs: Run[]; direction: Direction } | null = null;
+let lastTrip: {
+  tt: PreparedTimetable;
+  runs: Run[];
+  direction: Direction;
+  travel: Travel;
+} | null = null;
 
 /** The fastest journey to (or, arriving, from) the tapped spot, in travel order. */
 function trip(
@@ -415,11 +461,13 @@ function tripMessage(
   };
   // Walks follow the footpaths their minutes were measured on, once walk.bin is in;
   // until then (or off the network) they stay straight.
-  const walkLine = (a: [number, number], b: [number, number]) => {
+  // Cycled legs (to the first and from the last stop) are drawn solid and thin.
+  const walkLine = (a: [number, number], b: [number, number], bike = false) => {
     if (a[0] === b[0] && a[1] === b[1]) return;
     const path = walk && walkPath(walk, { lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] });
-    line(path ?? [a, b], 'walk', true);
+    line(path ?? [a, b], bike ? 'bike' : 'walk', true);
   };
+  const cycling = lastTrip?.travel !== undefined && lastTrip.travel !== 'walk';
   const stops = new Map<
     number,
     Extract<FromWorker, { type: 'trip' }>['stops']['features'][number]
@@ -437,12 +485,18 @@ function tripMessage(
     const pos = (s: number): [number, number] => [tt.stopLon[s], tt.stopLat[s]];
     let at = f.start;
     const legs: TripLeg[] = [];
-    for (const l of f.journey.legs) {
+    const all = f.journey.legs;
+    const firstRide = all.findIndex((l) => l.type === 'ride');
+    const lastRide = all.length - 1 - [...all].reverse().findIndex((l) => l.type === 'ride');
+    // With a bike, the ways to the first stop and from the last one are cycled.
+    const cycled = (i: number) => cycling && (firstRide < 0 || i < firstRide || i > lastRide);
+    for (const [i, l] of all.entries()) {
       if (l.type === 'walk') {
-        legs.push({ type: 'walk', minutes: Math.max(1, Math.round(l.seconds / 60)) });
+        const minutes = Math.max(1, Math.round(l.seconds / 60));
+        legs.push(cycled(i) ? { type: 'walk', minutes, bike: true } : { type: 'walk', minutes });
         continue;
       }
-      walkLine(at, pos(l.from));
+      walkLine(at, pos(l.from), i === firstRide && cycling);
       line(l.stops.map(pos), l.mode, false);
       stopPoint(l.from);
       stopPoint(l.to);
@@ -456,7 +510,7 @@ function tripMessage(
         stops: l.stops.length - 1,
       });
     }
-    walkLine(at, f.end);
+    walkLine(at, f.end, cycling);
     return { legs, transfers: f.journey.transfers };
   });
   return {

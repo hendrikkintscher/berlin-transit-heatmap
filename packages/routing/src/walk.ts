@@ -406,12 +406,15 @@ export function walkFrom(
   const { offset, target, metres } = net;
   // Dial's algorithm: a bucket per whole second, scanned in order. A node improved
   // within the bucket being scanned goes back into it, so the labels stay exact.
-  let maxStart = 0;
+  // The latest time any source can still walk to.
+  let maxEnd = 0;
   for (let i = 0; i < nodes.length; i++) {
     const t = times[i];
-    if (nodes[i] >= 0 && t < Infinity && walked[i] <= maxWalkMetres && t > maxStart) maxStart = t;
+    if (nodes[i] < 0 || !(t < Infinity) || walked[i] > maxWalkMetres) continue;
+    const end = t + (maxWalkMetres - walked[i]) * pace;
+    if (end > maxEnd) maxEnd = end;
   }
-  const bucketCount = Math.floor(maxStart + maxWalkMetres * pace) + 2;
+  const bucketCount = Math.floor(maxEnd) + 2;
   const head = new Int32Array(bucketCount).fill(-1);
   let next = new Int32Array(Math.max(1024, n));
   let entry = new Int32Array(next.length);

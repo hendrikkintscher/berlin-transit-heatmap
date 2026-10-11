@@ -41,6 +41,7 @@ import type {
   StationProps,
   TimetableInfo,
   ToWorker,
+  Travel,
   Window,
 } from './protocol';
 
@@ -74,6 +75,10 @@ const NOW_WHEN = whenAt(new Date());
 const WALK_SPEEDS = [3, 4, 5, 6];
 const DEFAULT_WALK_KMH = 4;
 const walkSpeed = (v: number) => (WALK_SPEEDS.includes(v) ? v : DEFAULT_WALK_KMH);
+/** Ways of getting around, in menu order (stored by index on the device). */
+const TRAVELS: Travel[] = ['walk', 'bike', 'bikeonly'];
+const travelOf = (v: string | null): Travel =>
+  TRAVELS.includes(v as Travel) ? (v as Travel) : 'walk';
 
 // Line colours roughly follow the usual Berlin map conventions.
 const MODE_COLORS: Record<string, string> = {
@@ -119,6 +124,7 @@ const favList = $<HTMLUListElement>('fav-list');
 const secondBtn = $<HTMLButtonElement>('readout-second');
 const menuDialog = $<HTMLDialogElement>('menu');
 const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
+const travelButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-travel]')];
 const walkButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-walk]')];
 const isoToggle = $<HTMLInputElement>('iso-toggle');
 const stepFreeToggle = $<HTMLInputElement>('stepfree-toggle');
@@ -158,6 +164,8 @@ const state: {
   walkKmh: number;
   /** Step-free journeys only; remembered on this device, carried in shared links. */
   stepFree: boolean;
+  /** Walking, cycling to and from stations, or cycling only; remembered, carried in links. */
+  travel: Travel;
   /** Re-renders the status line, so it follows a language switch. */
   status: () => string;
 } = {
@@ -179,6 +187,7 @@ const state: {
   opacity: readNumber('heat-opacity', DEFAULT_OPACITY),
   walkKmh: walkSpeed(readNumber('walk-kmh', DEFAULT_WALK_KMH)),
   stepFree: readNumber('step-free', 0) > 0,
+  travel: TRAVELS[readNumber('travel', 0)] ?? 'walk',
   status: () => '',
 };
 type Result = Extract<FromWorker, { type: 'result' }>;
@@ -361,6 +370,7 @@ function compute() {
     ...(state.measure === 'next' ? { leaveOffset: leaveOffset() } : {}),
     walkKmh: state.walkKmh,
     ...(state.stepFree ? { stepFree: true } : {}),
+    ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
     ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
     ...(state.second ? { second: state.second } : {}),
@@ -384,6 +394,7 @@ function readUrl() {
   state.compare = parseWhen(p.get('cmp'));
   if (p.has('walk')) state.walkKmh = walkSpeed(Number(p.get('walk')));
   if (p.has('sf')) state.stepFree = p.get('sf') === '1';
+  if (p.has('go')) state.travel = travelOf(p.get('go'));
 }
 function parsePoint(v: string | null) {
   const [lat, lon] = (v ?? '').split(',').map(Number);
@@ -400,6 +411,7 @@ function writeUrl() {
   if (state.compare) p.set('cmp', windowName(state.compare));
   if (state.walkKmh !== DEFAULT_WALK_KMH) p.set('walk', String(state.walkKmh));
   if (state.stepFree) p.set('sf', '1');
+  if (state.travel !== 'walk') p.set('go', state.travel);
   if (!state.routes) p.set('routes', '0');
   const layers = [state.freq && 'freq', state.desert && 'desert', state.iso && 'iso']
     .filter(Boolean)
@@ -785,7 +797,8 @@ map.on('load', () => {
     },
     'routes-label',
   );
-  // The connection to a tapped spot: rides in their line colours, walks dashed.
+  // The connection to a tapped spot: rides in their line colours, walks dashed, rides
+  // by bike as a thin solid line.
   map.addSource(TRIP_SOURCE, { type: 'geojson', data: empty });
   const tripLines = ['==', ['get', 'walk'], false] as maplibregl.FilterSpecification;
   map.addLayer({
@@ -808,9 +821,17 @@ map.on('load', () => {
     id: 'trip-walk',
     type: 'line',
     source: TRIP_SOURCE,
-    filter: ['==', ['get', 'walk'], true],
+    filter: ['all', ['==', ['get', 'walk'], true], ['!=', ['get', 'mode'], 'bike']],
     layout: { 'line-cap': 'round' },
     paint: { 'line-color': '#1d1530', 'line-width': 3, 'line-dasharray': [0.4, 1.6] },
+  });
+  map.addLayer({
+    id: 'trip-bike',
+    type: 'line',
+    source: TRIP_SOURCE,
+    filter: ['==', ['get', 'mode'], 'bike'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#1d1530', 'line-width': 3.5 },
   });
   map.addSource(TRIP_STOPS_SOURCE, { type: 'geojson', data: empty });
   map.addLayer({
@@ -1249,7 +1270,8 @@ function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
     .map((j, i) => {
       const mark = two ? `<i class="p${i + 1}"></i>` : '';
       if (!j) return `<span class="trip-sum">${mark}${t('tripNone')}</span>`;
-      const walk = j.legs.reduce((a, l) => a + (l.type === 'walk' ? l.minutes : 0), 0);
+      const walk = j.legs.reduce((a, l) => a + (l.type === 'walk' && !l.bike ? l.minutes : 0), 0);
+      const bike = j.legs.reduce((a, l) => a + (l.type === 'walk' && l.bike ? l.minutes : 0), 0);
       const rides = j.legs.filter((l) => l.type === 'ride');
       const badges = rides
         .map(
@@ -1263,6 +1285,7 @@ function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
               n: j.transfers,
             })
           : '',
+        bike ? t('tripBike', { n: bike }) : '',
         walk ? t('tripWalk', { n: walk }) : '',
       ].filter(Boolean);
       // Stops where you get on, change and get off.
@@ -1289,7 +1312,8 @@ function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
 /** Google Maps public-transport directions; opens the app on phones. */
 function googleTransit(from: { lat: number; lon: number }, to: { lat: number; lon: number }) {
   const p = (o: { lat: number; lon: number }) => `${o.lat.toFixed(5)},${o.lon.toFixed(5)}`;
-  return `https://www.google.com/maps/dir/?api=1&origin=${p(from)}&destination=${p(to)}&travelmode=transit`;
+  const mode = state.travel === 'bikeonly' ? 'bicycling' : 'transit';
+  return `https://www.google.com/maps/dir/?api=1&origin=${p(from)}&destination=${p(to)}&travelmode=${mode}`;
 }
 
 /** VBB names carry the town: "U Hermannplatz (Berlin)", "Berlin, Greifswalder Str." */
@@ -1363,11 +1387,13 @@ function renderWhen() {
         ? 'weekendArr'
         : 'weekendAt';
   const offset = !arrive && state.measure === 'next' ? leaveOffset() : 0;
-  // A wheelchair sign in the pill shows the step-free mode is on.
+  // Signs in the pill show step-free and bike modes are on.
   whenBtn.querySelector('span')!.textContent =
-    t(pill, {
-      hour: offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-    }) + (state.stepFree ? ' ♿' : '');
+    (state.travel === 'bikeonly'
+      ? t('travelBikeOnlyPill')
+      : t(pill, {
+          hour: offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
+        }) + (state.travel === 'bike' ? ' 🚲' : '')) + (state.stepFree ? ' ♿' : '');
   $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
   for (const b of dirButtons)
     b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));
@@ -1523,6 +1549,24 @@ for (const b of walkButtons)
     redoWalks();
   });
 renderWalk();
+
+function renderTravel() {
+  for (const b of travelButtons)
+    b.setAttribute('aria-checked', String(b.dataset.travel === state.travel));
+}
+for (const b of travelButtons)
+  b.addEventListener('click', () => {
+    const travel = travelOf(b.dataset.travel ?? null);
+    if (travel === state.travel) return;
+    state.travel = travel;
+    remember('travel', String(TRAVELS.indexOf(travel)));
+    renderTravel();
+    renderWhen();
+    hideReadout();
+    writeUrl();
+    compute();
+  });
+renderTravel();
 
 stepFreeToggle.checked = state.stepFree;
 stepFreeToggle.addEventListener('change', () => {

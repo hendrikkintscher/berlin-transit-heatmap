@@ -45,6 +45,7 @@ export function travelTimes(
   const fallbackWalk = Math.max(maxWalk, opts.maxFallbackWalkSeconds ?? 2 * maxWalk);
   const maxRounds = Math.max(0, Math.floor(opts.maxRounds ?? DEFAULT_MAX_ROUNDS));
   const S = tt.stopCount;
+  const penalty = opts.accessPenaltySeconds ?? 0;
 
   // Access stops: everything within walking range of the origin. Where nothing is in
   // range (outskirts, fields, woods), allow the longer fallback walk instead.
@@ -82,13 +83,13 @@ export function travelTimes(
             : d / speeds.straight;
         if (t <= maxWalk) {
           accessStops.push(s);
-          accessWalk.push(Math.round(t));
+          accessWalk.push(Math.round(t + penalty));
         }
       });
     } else {
       forStopsWithin(tt, ox, oy, maxWalk * speeds.straight, (s, d) => {
         accessStops.push(s);
-        accessWalk.push(Math.round(d / speeds.straight));
+        accessWalk.push(Math.round(d / speeds.straight + penalty));
       });
     }
   };

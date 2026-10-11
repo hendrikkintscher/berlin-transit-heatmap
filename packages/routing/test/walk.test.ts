@@ -181,6 +181,36 @@ describe('walking network', () => {
     expect(j?.legs[0]).toMatchObject({ type: 'walk', seconds: Math.round(south) });
   });
 
+  it('adds the bike station time at both ends, not on the way straight there', () => {
+    const o = { walk: net };
+    const plain = travelTimes(tt, origin, o);
+    const bike = travelTimes(tt, origin, { ...o, accessPenaltySeconds: 120 });
+    expect(bike.stopSeconds[0]).toBe(plain.stopSeconds[0] + 120);
+    // From the south stop only: every cell pays the time to get the bike out.
+    const fromStop = { stopSeconds: Float32Array.of(Infinity, 0), computedInMs: 0 };
+    const at = (egressPenaltySeconds: number) =>
+      gridValueAt(
+        heatGrid(tt, fromStop, { cellSizeM: 50, egressPenaltySeconds, ...o }),
+        LAT_S,
+        LON0 + 3 * STEP,
+      );
+    expect(at(120)).toBeCloseTo(at(0) + 120, 3);
+    // Straight from the origin there is no station to pass.
+    const grid = heatGrid(tt, plain, { cellSizeM: 50, egressPenaltySeconds: 120, ...o });
+    expect(gridValueAt(grid, LAT_N, LON0 + STEP)).toBeLessThan(120);
+  });
+
+  it('lets the way from the origin go further than from the stops', () => {
+    // As with a bike: stops then never tie with the way straight from the origin.
+    const o = { walk: net, maxFallbackWalkSeconds: 900, egressPenaltySeconds: 120 };
+    const r = travelTimes(tt, origin, o);
+    const capped = heatGrid(tt, r, { cellSizeM: 50, ...o });
+    expect(gridValueAt(capped, LAT_S, LON0 + STEP)).toBe(Infinity);
+    const far = heatGrid(tt, r, { cellSizeM: 50, maxOriginSeconds: 3600, ...o });
+    expect(gridValueAt(far, LAT_S, LON0 + STEP)).toBeGreaterThan(1500);
+    expect(gridValueAt(far, LAT_S, LON0 + STEP)).toBeLessThan(2400);
+  });
+
   it('snaps grid cells like single points', () => {
     const bbox: [number, number, number, number] = [13.398, 52.497, 13.43, 52.503];
     const cols = 40;

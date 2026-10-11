@@ -7,10 +7,12 @@ import type { MeetSuggestion } from './meet';
 export type Window = string;
 export type Direction = 'depart' | 'arrive';
 export type Measure = 'typical' | 'best' | 'next';
+/** How people get around: walking to and from stops, cycling instead, or cycling all the way. */
+export type Travel = 'walk' | 'bike' | 'bikeonly';
 
 /** One leg of the journey shown for a tapped spot, in travel order. */
 export type TripLeg =
-  | { type: 'walk'; minutes: number }
+  | { type: 'walk'; minutes: number; bike?: true }
   | { type: 'ride'; name: string; mode: string; from: string; to: string; stops: number };
 
 export type ToWorker =
@@ -40,6 +42,8 @@ export type ToWorker =
       walkKmh: number;
       /** Step-free: only accessible trips and platforms with a lift or ramp. */
       stepFree?: boolean;
+      /** Cycling to and from stations, or all the way (default walking). */
+      travel?: Travel;
     }
   | { type: 'trip'; id: number; lat: number; lon: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number };
