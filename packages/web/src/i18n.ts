@@ -127,10 +127,14 @@ const de = {
   measureTitle: 'Reisezeit',
   measureTypical: 'Typisch',
   measureBest: 'Bestfall',
+  measureNext: 'Nächste',
   measureNoteTypical: 'Durchschnitt über die Stunde, Warten auf die Abfahrt eingerechnet.',
   measureNoteTypicalArr:
     'Durchschnitt über die Stunde: wie früh du los musst, um rechtzeitig da zu sein.',
   measureNoteBest: 'Die schnellste Fahrt in der Stunde, wenn du genau passend losgehst.',
+  measureNoteNext:
+    'Die nächste Verbindung, wenn du jetzt losgehst, Warten eingerechnet. Zu einer anderen Stunde: Abfahrt zur vollen Stunde.',
+  measureNoteNextArr: 'Die letzte Verbindung, mit der du zur vollen Stunde ankommst.',
   compareTitle: 'Vergleichen mit',
   compareOff: 'Aus',
   compareDay: 'Vergleichstag',
@@ -276,9 +280,13 @@ const en: Record<Key, string> = {
   measureTitle: 'Travel time',
   measureTypical: 'Typical',
   measureBest: 'Best case',
+  measureNext: 'Next',
   measureNoteTypical: 'Average over the hour, including the wait for the departure.',
   measureNoteTypicalArr: 'Average over the hour: how early you need to leave to get there in time.',
   measureNoteBest: 'The fastest trip in the hour, if you time your departure exactly.',
+  measureNoteNext:
+    'The next connection if you leave now, waiting included. For another hour: leaving on the hour.',
+  measureNoteNextArr: 'The last connection that gets you there on the hour.',
   compareTitle: 'Compare with',
   compareOff: 'Off',
   compareDay: 'Comparison day',

@@ -343,6 +343,7 @@ function compute() {
     window: computedWindow(),
     direction: state.direction,
     measure: state.measure,
+    ...(state.measure === 'next' ? { leaveOffset: leaveOffset() } : {}),
     walkKmh: state.walkKmh,
     ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
@@ -363,7 +364,7 @@ function readUrl() {
   state.when = whenFromParams(p, NOW_WHEN);
   state.window = windowName(state.when);
   if (p.get('dir') === 'arr') state.direction = 'arrive';
-  if (p.get('m') === 'best') state.measure = 'best';
+  if (p.get('m') === 'best' || p.get('m') === 'next') state.measure = p.get('m') as Measure;
   state.compare = parseWhen(p.get('cmp'));
   if (p.has('walk')) state.walkKmh = walkSpeed(Number(p.get('walk')));
 }
@@ -378,7 +379,7 @@ function writeUrl() {
   if (state.second) p.set('with', pointParam(state.second));
   if (state.window !== windowName(NOW_WHEN)) p.set('t', state.window);
   if (state.direction === 'arrive') p.set('dir', 'arr');
-  if (state.measure === 'best') p.set('m', 'best');
+  if (state.measure !== 'typical') p.set('m', state.measure);
   if (state.compare) p.set('cmp', windowName(state.compare));
   if (state.walkKmh !== DEFAULT_WALK_KMH) p.set('walk', String(state.walkKmh));
   if (!state.routes) p.set('routes', '0');
@@ -1254,6 +1255,20 @@ function whenText(w: When) {
 }
 const hourLabel = (h: number) =>
   lang() === 'de' ? `${h} Uhr` : `${String(h).padStart(2, '0')}:00`;
+const clockLabel = (h: number, m: number) =>
+  `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` + (lang() === 'de' ? ' Uhr' : '');
+
+/**
+ * "Nächste" leaves now when the chosen hour is the current one in Berlin, otherwise on
+ * the hour: seconds into the chosen hour.
+ */
+function leaveOffset(): number {
+  const now = new Date();
+  const w = whenAt(now);
+  if (w.day !== state.when.day || w.hour !== state.when.hour) return 0;
+  // Berlin is a whole number of hours from UTC, so minutes and seconds match.
+  return now.getUTCMinutes() * 60 + now.getUTCSeconds();
+}
 
 function renderWhen() {
   const w = state.when;
@@ -1266,7 +1281,10 @@ function renderWhen() {
       : arrive
         ? 'weekendArr'
         : 'weekendAt';
-  whenBtn.querySelector('span')!.textContent = t(pill, { hour: hourLabel(w.hour) });
+  const offset = !arrive && state.measure === 'next' ? leaveOffset() : 0;
+  whenBtn.querySelector('span')!.textContent = t(pill, {
+    hour: offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
+  });
   $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
   for (const b of dirButtons)
     b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));
@@ -1275,9 +1293,13 @@ function renderWhen() {
   $('measure-note').textContent = t(
     state.measure === 'best'
       ? 'measureNoteBest'
-      : arrive
-        ? 'measureNoteTypicalArr'
-        : 'measureNoteTypical',
+      : state.measure === 'next'
+        ? arrive
+          ? 'measureNoteNextArr'
+          : 'measureNoteNext'
+        : arrive
+          ? 'measureNoteTypicalArr'
+          : 'measureNoteTypical',
   );
   const c = state.compare;
   cmpDay.value = c?.day ?? '';
@@ -1418,6 +1440,13 @@ for (const b of walkButtons)
     redoWalks();
   });
 renderWalk();
+
+// "Nächste" follows the clock: coming back to the app recomputes from the new "now".
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible' || state.measure !== 'next') return;
+  renderWhen();
+  compute();
+});
 
 // ---------- my location ----------
 locateBtn.addEventListener('click', () => {

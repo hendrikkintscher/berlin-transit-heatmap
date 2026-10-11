@@ -44,6 +44,16 @@ describe('travelTimes on the mini network', () => {
     expect(minutes(fromA.stopSeconds[H])).toBe(12);
   });
 
+  it('takes the next connection when leaving at a set time', () => {
+    const next = travelTimes(day, STOP_POS[A], { leaveAt: day.windowStart });
+    expect(next.departures).toBe(1);
+    expect(next.stopSeconds[A]).toBe(0);
+    // Leaving at 10:00 the best trip to H takes 22 min, waiting included (see above).
+    expect(minutes(next.stopSeconds[H])).toBe(22);
+    for (let s = 0; s < day.stopCount; s++)
+      expect(next.stopSeconds[s]).toBeGreaterThanOrEqual(fromA.stopSeconds[s]);
+  });
+
   it('leaves stops without service unreachable', () => {
     expect(fromA.stopSeconds[I]).toBe(Infinity);
   });

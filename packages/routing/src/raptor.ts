@@ -103,7 +103,12 @@ export function travelTimes(
 
   const typical = opts.typical === true;
   const horizon = typical ? (opts.typicalHorizonSeconds ?? DEFAULT_TYPICAL_HORIZON_S) : 0;
-  const departures = departureTimes(tt, accessStops, accessWalk, horizon);
+  // Leaving at a fixed time is plain RAPTOR: one departure, the next trips from there.
+  const leaveAt = opts.leaveAt;
+  const departures =
+    leaveAt === undefined
+      ? departureTimes(tt, accessStops, accessWalk, horizon)
+      : Int32Array.of(Math.round(leaveAt));
   const ws = tt.windowStart;
   const we = tt.windowEnd;
 
