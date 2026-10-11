@@ -2,6 +2,7 @@ import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent }
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import { BAND_COLORS, BAND_EDGES_MIN, bandLabel } from './colors';
+import { searchPlaces, type Place } from './search';
 import type { FromWorker, TimetableInfo, ToWorker, Window } from './protocol';
 
 const BERLIN: [number, number] = [13.405, 52.515];
@@ -314,7 +315,13 @@ function gridSeconds(r: Result, lat: number, lon: number): number {
   return seconds[row * cols + c];
 }
 
+// A tap that only closes the search panel should not also set a point.
+let ignoreClick = false;
 map.on('click', (e: MapMouseEvent) => {
+  if (ignoreClick) {
+    ignoreClick = false;
+    return;
+  }
   const { lat, lng } = e.lngLat;
   if (!state.origin) {
     setOrigin(lat, lng);
@@ -384,6 +391,138 @@ $('info-btn').addEventListener('click', () => infoDialog.showModal());
 infoDialog.addEventListener('click', (e) => {
   if (e.target === infoDialog) infoDialog.close();
 });
+
+// ---------- address search ----------
+const searchBtn = $<HTMLButtonElement>('search-btn');
+const searchPanel = $('search');
+const searchInput = $<HTMLInputElement>('search-input');
+const searchResults = $<HTMLUListElement>('search-results');
+const searchMsg = $('search-msg');
+let searchTimer = 0;
+let searchAbort: AbortController | null = null;
+let places: Place[] = [];
+let active = -1;
+const searchCache = new Map<string, Place[]>();
+
+function openSearch() {
+  searchPanel.hidden = false;
+  readout.hidden = true;
+  hint.hidden = true;
+  searchInput.focus();
+  searchInput.select();
+}
+function closeSearch() {
+  searchPanel.hidden = true;
+  hint.hidden = !!state.origin;
+  searchAbort?.abort();
+  clearTimeout(searchTimer);
+  searchInput.blur();
+}
+function showMsg(text: string) {
+  searchMsg.textContent = text;
+  searchMsg.hidden = !text;
+}
+function renderPlaces(list: Place[]) {
+  places = list;
+  active = -1;
+  searchResults.replaceChildren(
+    ...list.map((p, i) => {
+      const li = document.createElement('li');
+      li.id = `place-${i}`;
+      li.setAttribute('role', 'option');
+      const b = document.createElement('b');
+      b.textContent = p.label;
+      li.append(b);
+      if (p.detail) {
+        const s = document.createElement('span');
+        s.textContent = p.detail;
+        li.append(s);
+      }
+      // pointerdown fires before the input loses focus, so the list stays put on phones.
+      li.addEventListener('pointerdown', (e) => e.preventDefault());
+      li.addEventListener('click', () => pickPlace(p));
+      return li;
+    }),
+  );
+  searchResults.hidden = list.length === 0;
+  searchInput.setAttribute('aria-expanded', String(list.length > 0));
+  searchInput.removeAttribute('aria-activedescendant');
+}
+function setActive(i: number) {
+  if (!places.length) return;
+  active = (i + places.length) % places.length;
+  [...searchResults.children].forEach((li, j) =>
+    li.setAttribute('aria-selected', String(j === active)),
+  );
+  searchInput.setAttribute('aria-activedescendant', `place-${active}`);
+  searchResults.children[active]?.scrollIntoView({ block: 'nearest' });
+}
+
+async function runSearch(q: string) {
+  const key = q.toLowerCase();
+  const cached = searchCache.get(key);
+  if (cached) {
+    renderPlaces(cached);
+    showMsg(cached.length ? '' : 'No matches in Berlin');
+    return;
+  }
+  searchAbort?.abort();
+  const ctrl = (searchAbort = new AbortController());
+  const c = map.getCenter();
+  try {
+    const list = await searchPlaces(q, { lat: c.lat, lon: c.lng }, ctrl.signal);
+    searchCache.set(key, list);
+    if (ctrl.signal.aborted) return;
+    renderPlaces(list);
+    showMsg(list.length ? '' : 'No matches in Berlin');
+  } catch {
+    if (ctrl.signal.aborted) return;
+    renderPlaces([]);
+    showMsg(navigator.onLine ? 'Search is not reachable right now' : 'Search needs a connection');
+  }
+}
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 3) {
+    searchAbort?.abort();
+    renderPlaces([]);
+    showMsg('');
+    return;
+  }
+  searchTimer = window.setTimeout(() => runSearch(q), 250);
+});
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown') setActive(active + 1);
+  else if (e.key === 'ArrowUp') setActive(active - 1);
+  else if (e.key === 'Escape') closeSearch();
+  else if (e.key === 'Enter') {
+    const p = places[Math.max(active, 0)];
+    if (p) pickPlace(p);
+    else if (searchInput.value.trim().length >= 3) {
+      clearTimeout(searchTimer);
+      runSearch(searchInput.value.trim());
+    }
+  } else return;
+  e.preventDefault();
+});
+
+function pickPlace(p: Place) {
+  closeSearch();
+  searchInput.value = p.label;
+  setOrigin(p.lat, p.lon);
+  map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
+}
+
+searchBtn.addEventListener('click', () => (searchPanel.hidden ? openSearch() : closeSearch()));
+$('search-close').addEventListener('click', closeSearch);
+for (const ev of ['mousedown', 'touchstart'] as const) {
+  map.on(ev, () => {
+    ignoreClick = !searchPanel.hidden;
+    if (ignoreClick) closeSearch();
+  });
+}
 
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
