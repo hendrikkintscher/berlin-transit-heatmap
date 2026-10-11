@@ -1,12 +1,12 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1, 2, 4, 6, 7 and 8 are done; groups 3 and 5 each have open items added later. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1, 2, 4, 6, 7 and 8 are done; groups 3 and 5 each have one open item added later. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
-State on 2026-10-11, live through PR #33. Build in this order, one step per PR:
+State on 2026-10-11, live through PR #35. Build in this order, one step per PR:
 
-1. **Next:** Suggested meeting points + Search result: new start, destination or second start (group 3, built together)
+1. **Next:** Meeting point scale in extra minutes (group 3)
 2. Visual polish: round buttons, legend at the bottom, clearer ✕ (group 5)
 3. Step-free mode (group 9)
 4. Bike + transit and bike only (group 9)
@@ -78,15 +78,25 @@ Notes: run the router twice in the worker and combine the two grids; needs a sec
 
 ### Suggested meeting points
 
+**Done** (PR #35): with two starts, up to three stations (6+ departures an hour) with the smallest slower-of-both time, the sum as tie-breaker and at least 1.5 km apart, show as numbered pins (names from zoom 12.5); a tap shows both trips there.
+
 With two start points, suggest a few good places to meet (about three) and mark them on the map. Tapping one shows the connections for both people: each person's trip, drawn and listed in the trip card.
 
 Notes: candidates are the cells with the smallest slower-of-both time, with the sum of both times as a tie-breaker so neither person carries the whole trip. Pick the best, leave out everything within about 1.5 km of it, and repeat, so the suggestions are spread out. Prefer spots at a station or a named place and label them with the station or Ortsteil name. Trip on tap already draws and lists both trips when a second start is set, so tapping a suggestion reuses it. Small to medium effort; added from Hendrik's request on 2026-10-11, built together with the search result choice (Up next 1).
 
 ### Search result: new start, destination or second start
 
+**Done** (PR #35): with a start set, a picked search result shows the trip there with "Neuer Start", "2. Start" and "★ Merken" instead of replacing the start.
+
 Once a start is set, picking a search result asks what the place is for, with three buttons: **Neuer Start** (replaces the start, as today), **Ziel** (keeps the map and shows the trip there, as a tap on the place would), or **2. Start** (adds it as the second start for the meeting point). Without a start, a search result simply becomes the start, as now.
 
 Notes: today a search result always replaces the start (pickPlace in main.ts). The three actions already exist for taps on the map (trip on tap, "2. Start" in the tap card), so this is mostly a small choice sheet after the search. Small effort; added from Hendrik's request on 2026-10-11, built together with the suggested meeting points.
+
+### Meeting point scale in extra minutes
+
+With two starts, the colours show **extra minutes** instead of the slower trip's minutes: the best meeting places on the map are 0 and green, and every other place shows how many minutes more the slower of the two people needs than there. So the map answers "how much worse than the best spot is this?", and the best area is always green whether the two starts are close together or far apart. The legend reads "+0, +5, +10 … Min."; tapping a place still shows both people's actual times, plus the extra minutes.
+
+Notes: extra = slower-of-both time minus the smallest slower-of-both time on the grid (the same value the suggested meeting points start from), so it is one subtraction per cell after the grid is combined, with no effect on speed. The suggested meeting points sit in the 0 band. Applies to the two-start view only; the single-start map keeps absolute minutes. Small effort; added from Hendrik's request on 2026-10-11, built right after the suggested meeting points.
 
 ### Favourite places and a location score
 
