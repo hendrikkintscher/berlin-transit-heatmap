@@ -1205,6 +1205,13 @@ function showStartCard(which: 1 | 2) {
   if (tipKey === 'tap') hideTip();
 }
 removeBtn.addEventListener('click', () => removeStart(removeWhich));
+$('readout-close').addEventListener('click', hideReadout);
+
+// The map's (i) attribution sits just above the bottom panel, which changes height.
+const bottomPanel = document.querySelector<HTMLElement>('.bottom')!;
+new ResizeObserver(() =>
+  document.documentElement.style.setProperty('--bottom-h', `${bottomPanel.offsetHeight}px`),
+).observe(bottomPanel);
 
 function hideReadout() {
   readout.hidden = true;
