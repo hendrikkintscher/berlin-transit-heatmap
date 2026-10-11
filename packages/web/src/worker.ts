@@ -226,6 +226,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       let image: ReturnType<typeof paint>;
       let outlines: ReturnType<typeof contours>;
       let compare: Float32Array<ArrayBuffer> | undefined;
+      let extraBase: number | undefined;
       if (msg.compare) {
         const tt2 = await prepared(msg.compare, msg.direction);
         const other = starts.map((o) => run(tt2, o, typical, false, leaveAt(tt2)).shown);
@@ -234,10 +235,13 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         image = paintDiff(grid, g2);
         outlines = { type: 'FeatureCollection', features: [] };
       } else {
-        image = paint(grid);
+        // Meeting point: colour the extra minutes over the best spot, so it is always green.
+        extraBase = runs.length === 2 ? minFinite(grid.seconds) : 0;
+        const shownSeconds = extraBase ? grid.seconds.map((v) => v - extraBase!) : grid.seconds;
+        image = paint(grid, shownSeconds);
         // Outlines follow a more strongly blurred field, so walk bubbles round off.
         outlines = contours(
-          blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
+          blurSeconds(shownSeconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
           grid.cols,
           grid.rows,
           grid.bbox,
@@ -271,6 +275,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           grid: { cols: grid.cols, rows: grid.rows, seconds },
           each,
           meet,
+          ...(runs.length === 2 && extraBase !== undefined ? { extraBase } : {}),
           compare,
           routes,
           labels,
@@ -311,6 +316,13 @@ function meetCandidates(tt: PreparedTimetable): MeetCandidate[] {
     meetCache.set(tt, c);
   }
   return c;
+}
+
+/** The smallest finite value (0 when there is none). */
+function minFinite(values: Float32Array): number {
+  let m = Infinity;
+  for (const v of values) if (v < m) m = v;
+  return m < Infinity ? m : 0;
 }
 
 /** A grid's time at a point; Infinity outside it. */

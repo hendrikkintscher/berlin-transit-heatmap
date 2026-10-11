@@ -200,16 +200,16 @@ $('legend-bar').append(
     return s;
   }),
 );
-$('legend-ticks').append(
-  ...[0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
-    const tick = document.createElement('span');
-    const i = BAND_EDGES_MIN.indexOf(m);
-    tick.style.left = `${(100 * i) / BAND_COLORS.length}%`;
-    tick.textContent = String(m);
-    if (m === 120) tick.dataset.t = 'legendMax';
-    return tick;
-  }),
-);
+const legendTicks = [0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
+  const tick = document.createElement('span');
+  const i = BAND_EDGES_MIN.indexOf(m);
+  tick.style.left = `${(100 * i) / BAND_COLORS.length}%`;
+  tick.textContent = String(m);
+  tick.dataset.m = String(m);
+  if (m === 120) tick.dataset.t = 'legendMax';
+  return tick;
+});
+$('legend-ticks').append(...legendTicks);
 
 // Comparing two times: how many minutes longer (warm) or shorter (teal) the trip takes then.
 $('diff-bar').append(
@@ -228,10 +228,21 @@ $('diff-ticks').append(
   }),
   Object.assign(document.createElement('span'), { textContent: 'min' }),
 );
-function showLegend(diff: boolean) {
+/** The travel-time legend, the comparison legend, or (meeting point) extra minutes "+0 … +120". */
+function showLegend(diff: boolean, extra = false) {
   for (const id of ['legend-bar', 'legend-ticks']) $(id).hidden = diff;
   for (const id of ['diff-bar', 'diff-ticks']) $(id).hidden = !diff;
-  $('legend-bar').parentElement!.setAttribute('aria-label', t(diff ? 'legendDiff' : 'legend'));
+  $('legend-bar').parentElement!.setAttribute(
+    'aria-label',
+    t(diff ? 'legendDiff' : extra ? 'legendExtra' : 'legend'),
+  );
+  for (const tick of legendTicks) {
+    const m = Number(tick.dataset.m);
+    if (m === 120) {
+      tick.dataset.t = extra ? 'legendMaxExtra' : 'legendMax';
+      tick.textContent = t(tick.dataset.t as 'legendMax');
+    } else tick.textContent = extra ? `+${m}` : String(m);
+  }
 }
 
 /** Small per-device settings and "hint seen" flags; storage may be blocked. */
@@ -682,7 +693,7 @@ map.on('load', () => {
       visibility: isoVisibility,
       'symbol-placement': 'line',
       'symbol-spacing': 300,
-      'text-field': ['concat', ['to-string', ['get', 'min']], ' min'],
+      'text-field': outlineLabel(false),
       'text-font': font,
       'text-size': 11,
       'text-keep-upright': true,
@@ -987,10 +998,15 @@ const showMeetNames = () =>
 map.on('zoomend', showMeetNames);
 showMeetNames();
 
+/** Outline labels: "15 min", or "+15 min" (extra minutes) at a meeting point. */
+function outlineLabel(extra: boolean): maplibregl.ExpressionSpecification {
+  return ['concat', extra ? '+' : '', ['to-string', ['get', 'min']], ' min'];
+}
+
 function showResult(r: Result) {
   renderMeet(r.meet);
   renderFavourites();
-  showLegend(!!r.compare);
+  showLegend(!!r.compare, r.extraBase !== undefined);
   if (!mapReady) return;
   const { width, height, rgba } = r.image;
   heatCanvas.width = width;
@@ -1034,6 +1050,8 @@ function showResult(r: Result) {
   (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
   (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
   (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
+  if (map.getLayer('outlines-label'))
+    map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(r.extraBase !== undefined));
   map.triggerRepaint();
 }
 
@@ -1109,6 +1127,10 @@ function tapAt(
     else if (secs >= 0 && r?.each) {
       const [a, b] = r.each.map((v) => gridSeconds(r, lat, lng, v) / 60);
       parts.push(t('minutesBoth', { a: Math.round(a), b: Math.round(b) }));
+      if (r.extraBase !== undefined)
+        parts.push(
+          `<small>${t('extraMinutes', { n: Math.max(0, Math.round((secs - r.extraBase) / 60)) })}</small>`,
+        );
     } else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60) }));
     if (state.routes && state.origin) {
       const top = near(['routes-line']).sort((a, b) => b.properties.share - a.properties.share)[0];
