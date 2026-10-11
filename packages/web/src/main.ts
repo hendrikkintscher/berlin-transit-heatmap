@@ -397,8 +397,29 @@ marker2.on('dragend', () => {
   setSecond({ lat, lon: lng });
 });
 
+// Tapping a start marker offers to remove it; a drag must not count as that tap.
+let draggedAt = 0;
+for (const [m, el, which] of [
+  [marker, markerEl, 1],
+  [marker2, marker2El, 2],
+] as const) {
+  m.on('dragstart', () => (draggedAt = Date.now()));
+  m.on('dragend', () => (draggedAt = Date.now()));
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (Date.now() - draggedAt < 400) return;
+    showStartCard(which);
+  });
+}
+
 function showOrigin() {
-  if (!state.origin) return;
+  if (!state.origin) {
+    marker.remove();
+    marker2.remove();
+    meetChip.hidden = true;
+    hint.hidden = !$('search').hidden;
+    return;
+  }
   marker.setLngLat([state.origin.lon, state.origin.lat]).addTo(map);
   if (state.second) marker2.setLngLat([state.second.lon, state.second.lat]).addTo(map);
   else marker2.remove();
@@ -412,6 +433,34 @@ function setOrigin(lat: number, lon: number) {
   hideReadout();
   writeUrl();
   compute();
+}
+
+/** Removes a start; without the first, the second (if any) becomes the start. */
+function removeStart(which: 1 | 2) {
+  if (which === 1) {
+    state.origin = state.second;
+    state.second = null;
+  } else state.second = null;
+  showOrigin();
+  hideReadout();
+  writeUrl();
+  if (state.origin) compute();
+  else clearResult();
+}
+
+/** No start: drop the colours, lines and outlines. */
+function clearResult() {
+  state.requestId++;
+  lastResult = null;
+  loadbar.hidden = true;
+  setStatus(() => '');
+  renderFavourites();
+  showLegend(false);
+  if (!mapReady) return;
+  if (map.getLayer(HEAT_LAYER)) map.setLayoutProperty(HEAT_LAYER, 'visibility', 'none');
+  const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+  for (const id of [ROUTES_SOURCE, LABELS_SOURCE, OUTLINES_SOURCE])
+    (map.getSource(id) as GeoJSONSource | undefined)?.setData(empty);
 }
 
 /** Meeting point on (a second start) or off (null). */
@@ -766,6 +815,7 @@ function showResult(r: Result) {
       DESERT_LAYER,
     );
   } else {
+    map.setLayoutProperty(HEAT_LAYER, 'visibility', 'visible');
     src.setCoordinates(coordinates);
     // A non-animated canvas source re-reads its canvas only while "playing".
     src.play();
@@ -859,12 +909,29 @@ map.on('click', (e: MapMouseEvent) => {
     }
     html = parts.join('<br>') + tripSlot;
   }
-  readoutText.innerHTML = html;
+  showReadoutCard(html, false);
   state.pending = { lat, lon: lng };
   secondBtn.hidden = !state.origin;
-  readout.hidden = false;
   if (tipKey === 'tap') hideTip();
 });
+
+const removeBtn = $<HTMLButtonElement>('readout-remove');
+let removeWhich: 1 | 2 = 1;
+/** The card at the bottom: minutes for a spot, or a start point with a remove button. */
+function showReadoutCard(html: string, start: boolean) {
+  readoutText.innerHTML = html;
+  for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
+  removeBtn.hidden = !start;
+  readout.hidden = false;
+}
+function showStartCard(which: 1 | 2) {
+  hideReadout();
+  removeWhich = which;
+  const mark = state.second ? `<i class="p${which}"></i>` : '';
+  showReadoutCard(`${mark}<b>${t(which === 1 ? 'startPoint' : 'secondPoint')}</b>`, true);
+  if (tipKey === 'tap') hideTip();
+}
+removeBtn.addEventListener('click', () => removeStart(removeWhich));
 
 function hideReadout() {
   readout.hidden = true;
@@ -882,12 +949,20 @@ function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
   const el = document.getElementById('trip');
   if (!el) return;
   const two = m.journeys.length > 1;
+  const starts = [state.origin, state.second];
+  const here = state.pending;
   el.innerHTML = m.journeys
     .map((j, i) => {
       const mark = two ? `<i class="p${i + 1}"></i>` : '';
       if (!j) return `<span class="trip-sum">${mark}${t('tripNone')}</span>`;
       const walk = j.legs.reduce((a, l) => a + (l.type === 'walk' ? l.minutes : 0), 0);
       const rides = j.legs.filter((l) => l.type === 'ride');
+      const badges = rides
+        .map(
+          (l) =>
+            `<span class="line-badge" style="background:${MODE_COLORS[l.mode] ?? '#444'}">${escapeHtml(l.name)}</span>`,
+        )
+        .join('<span class="trip-sep">›</span>');
       const sum = [
         rides.length
           ? t(j.transfers === 0 ? 'noTransfer' : j.transfers === 1 ? 'oneTransfer' : 'transfers', {
@@ -896,25 +971,40 @@ function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
           : '',
         walk ? t('tripWalk', { n: walk }) : '',
       ].filter(Boolean);
+      // Stops where you get on, change and get off.
+      const stops = rides.length
+        ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
+        : [];
+      const start = starts[i];
+      const link =
+        start && here
+          ? `<a class="trip-link" href="${googleTransit(
+              state.direction === 'depart' ? start : here,
+              state.direction === 'depart' ? here : start,
+            )}" target="_blank" rel="noopener">${t('openGoogle')}</a>`
+          : '';
       return (
-        `<span class="trip-sum">${mark}${sum.join(' · ')}</span>` +
-        rides
-          .map(
-            (l) =>
-              `<span class="trip-ride"><span class="line-badge" style="background:${
-                MODE_COLORS[l.mode] ?? '#444'
-              }">${escapeHtml(l.name)}</span>${escapeHtml(stopName(l.from))} → ${escapeHtml(stopName(l.to))} ` +
-              `<small>· ${t('tripStops', { n: l.stops }).replace(' ', '\u00a0')}</small></span>`,
-          )
-          .join('')
+        `<span class="trip-sum">${mark}${badges}${link}</span>` +
+        `<small class="trip-stops">${[sum.join(' · '), stops.join(' → ')].filter(Boolean).join(' · ')}</small>`
       );
     })
     .join('');
   setTrip(m.lines);
 }
 
+/** Google Maps public-transport directions; opens the app on phones. */
+function googleTransit(from: { lat: number; lon: number }, to: { lat: number; lon: number }) {
+  const p = (o: { lat: number; lon: number }) => `${o.lat.toFixed(5)},${o.lon.toFixed(5)}`;
+  return `https://www.google.com/maps/dir/?api=1&origin=${p(from)}&destination=${p(to)}&travelmode=transit`;
+}
+
 /** VBB names carry the town: "U Hermannplatz (Berlin)", "Berlin, Greifswalder Str." */
 const stopName = (n: string) => n.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, '');
+/** Shorter still for the stop chain: "S+U Alexanderplatz Bhf" -> "Alexanderplatz". */
+const shortStop = (n: string) =>
+  stopName(n)
+    .replace(/^(S\+U|S|U) /, '')
+    .replace(/ Bhf\b/, '');
 
 function escapeHtml(t: string): string {
   return t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -938,7 +1028,7 @@ $('readout-fav').addEventListener('click', async () => {
   }
   addFavourites([{ label, ...at }]);
 });
-$('meet-close').addEventListener('click', () => setSecond(null));
+$('meet-close').addEventListener('click', () => removeStart(2));
 
 // ---------- controls ----------
 /** "werktags ab 10 Uhr" / "weekends from 02:00", for the tap readout. */
