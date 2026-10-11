@@ -29,3 +29,9 @@ Keep a list of the places you go to often (workplace, friends, favourite bars) a
 - Combine those times into one score for the location. Ranking or weighting the places (the workplace counts more than an occasional bar) makes the score more accurate.
 
 Notes: the routing already gives times to every point, so per-place times are lookups in the existing grid. The list lives in the browser (local storage, or a shareable URL or file), so no server is needed. The score formula (e.g. a weighted average of times, or the share of places within N minutes) is still to be chosen.
+
+## Address search limited to the covered area
+
+Only suggest addresses and places inside the area the map covers. If that's hard, limit them to Berlin addresses and places instead.
+
+Notes: the search (packages/web/src/search.ts) already sends Photon a rectangular bbox around Berlin. A rectangle still includes parts of Brandenburg, so the plan is to also drop results that fall outside the heatmap's covered area (or outside the Berlin state boundary) on the client, before showing them.
