@@ -4,13 +4,12 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-11, live through PR #40. Build in this order, one step per PR:
+State on 2026-10-11, live through PR #42. Build in this order, one step per PR:
 
-1. **Next:** Step-free mode (group 9)
-2. Bike + transit and bike only (group 9)
-3. Smaller, faster first load (group 10)
-4. Android app, starting with a TWA (group 11)
-5. Ersatzverkehr and other temporary changes (group 12)
+1. **Next:** Bike + transit and bike only (group 9)
+2. Smaller, faster first load (group 10)
+3. Android app, starting with a TWA (group 11)
+4. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -314,6 +313,8 @@ Notes:
 ## 9. More ways to travel
 
 ### Step-free mode
+
+**Done** (PR #42): a "Stufenlos" switch in the menu (remembered, `sf=1` in the link, ♿ in the time pill) uses only routes whose trips are marked wheelchair-accessible and skips platforms that pathways.txt connects to the street only by stairs or escalators (111 in the VBB feed, e.g. U Moritzplatz): trains pass them without stopping and no walks lead there. Street stops without the data count as step-free. The worker keeps step-free timetables next to the normal ones (about 25 ms to prepare).
 
 A switch that uses only stops and trips marked wheelchair-accessible in the VBB data, showing where travel with a pram, wheelchair or suitcase is much slower.
 
