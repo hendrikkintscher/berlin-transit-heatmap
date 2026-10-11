@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#2d0f5e" />
     <meta
       name="description"
-      content="How long does public transport take from any point in Berlin to everywhere else?"
+      content="Wie lange brauchst du mit Bus und Bahn von einem Punkt in Berlin überallhin?"
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -15,21 +15,28 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-    <title>Berlin Transit Heatmap</title>
+    <title>Berlin in Minuten</title>
   </head>
   <body>
-    <div id="map" aria-label="Map of Berlin"></div>
+    <div id="map" aria-label="Karte von Berlin" data-t-label="mapLabel"></div>
     <div id="loadbar" hidden><div></div></div>
 
     <header class="top">
-      <div class="seg" role="radiogroup" aria-label="Time window">
-        <button role="radio" data-window="day" aria-checked="true">Day <small>10–12</small></button>
+      <div class="seg" role="radiogroup" aria-label="Zeitfenster" data-t-label="timeWindow">
+        <button role="radio" data-window="day" aria-checked="true">
+          <span data-t="day">Tag</span> <small>10–12</small>
+        </button>
         <button role="radio" data-window="night" aria-checked="false">
-          Night <small>2–4</small>
+          <span data-t="night">Nacht</span> <small>2–4</small>
         </button>
       </div>
-      <button id="routes-btn" class="pill" type="button" aria-pressed="true">Lines</button>
-      <button id="search-btn" class="round" type="button" aria-label="Search for an address">
+      <button
+        id="search-btn"
+        class="round"
+        type="button"
+        aria-label="Adresse suchen"
+        data-t-label="searchOpen"
+      >
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
           <circle
             cx="10.5"
@@ -47,7 +54,24 @@
           />
         </svg>
       </button>
-      <button id="info-btn" class="round" aria-label="About this map">i</button>
+      <button
+        id="menu-btn"
+        class="round"
+        type="button"
+        aria-label="Menü"
+        data-t-label="menuOpen"
+        aria-haspopup="dialog"
+        aria-controls="menu"
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path
+            d="M4 7h16M4 12h16M4 17h16"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
     </header>
 
     <div id="search" class="search" role="search" hidden>
@@ -60,67 +84,87 @@
           autocorrect="off"
           autocapitalize="off"
           spellcheck="false"
-          placeholder="Street, place or station"
-          aria-label="Address"
+          placeholder="Straße, Ort oder Haltestelle"
+          data-t-placeholder="searchPlaceholder"
+          aria-label="Adresse"
+          data-t-label="searchField"
           role="combobox"
           aria-autocomplete="list"
           aria-controls="search-results"
           aria-expanded="false"
         />
-        <button id="search-close" type="button" aria-label="Close search">✕</button>
+        <button
+          id="search-close"
+          type="button"
+          aria-label="Suche schließen"
+          data-t-label="searchClose"
+        >
+          ✕
+        </button>
       </div>
       <ul id="search-results" class="search-results" role="listbox" hidden></ul>
       <div id="search-msg" class="search-msg" hidden></div>
     </div>
 
-    <div id="hint" class="chip">Tap the map or search to choose a start</div>
+    <div id="hint" class="chip" data-t="hint">Tippe auf die Karte oder suche einen Startpunkt</div>
 
     <footer class="bottom">
       <div id="readout" class="chip" hidden>
         <span id="readout-text"></span>
-        <button id="readout-start" type="button">Start here</button>
+        <button id="readout-start" type="button" data-t="startHere">Hier starten</button>
       </div>
       <div id="status" class="status" aria-live="polite"></div>
-      <div class="legend" aria-label="Travel time legend, minutes">
+      <div class="legend" aria-label="Legende Reisezeit in Minuten" data-t-label="legend">
         <div id="legend-bar"></div>
         <div id="legend-ticks" class="legend-ticks"></div>
       </div>
     </footer>
 
+    <dialog id="menu" class="menu" aria-labelledby="menu-title">
+      <div class="menu-head">
+        <h2 id="menu-title" data-t="title">Berlin in Minuten</h2>
+        <button
+          id="menu-close"
+          class="menu-x"
+          type="button"
+          aria-label="Menü schließen"
+          data-t-label="menuClose"
+        >
+          ✕
+        </button>
+      </div>
+
+      <h3 data-t="menuMap">Karte</h3>
+      <label class="toggle">
+        <span class="toggle-text">
+          <b data-t="lines">Linien</b>
+          <small data-t="linesHint"
+            >Die Verbindungen, über die du von deinem Start am schnellsten fährst</small
+          >
+        </span>
+        <input id="routes-toggle" type="checkbox" role="switch" checked />
+      </label>
+
+      <h3 data-t="menuLanguage">Sprache</h3>
+      <div class="seg seg-wide" role="radiogroup" aria-label="Sprache" data-t-label="menuLanguage">
+        <button role="radio" data-lang="de" aria-checked="true" lang="de">Deutsch</button>
+        <button role="radio" data-lang="en" aria-checked="false" lang="en">English</button>
+      </div>
+
+      <button id="about-btn" class="menu-link" type="button" data-t="about">
+        Über diese Karte
+      </button>
+    </dialog>
+
     <dialog id="info">
-      <h2>Berlin Transit Heatmap</h2>
-      <p>
-        Tap anywhere or search for an address to set a start point. Colours show the shortest
-        public-transport trip to each spot, including walking to and from stops: 5-minute bands up
-        to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond.
-      </p>
-      <p>
-        <b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from
-        your start point rely on. The thicker the line, the more of the map is reached over it. Tap
-        a line to see its name.
-      </p>
-      <p>
-        <b>Day</b> uses departures between 10:00 and 12:00 on a weekday. <b>Night</b> uses
-        departures between 02:00 and 04:00 the following night.
-      </p>
-      <p id="feed-info">Loading timetable…</p>
-      <p class="small">
-        Timetable data:
-        <a
-          href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/"
-          target="_blank"
-          rel="noopener"
-          >VBB open data</a
-        >
-        (CC BY 4.0). Map:
-        <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, ©
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener"
-          >OpenStreetMap</a
-        >
-        contributors. Address search:
-        <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> by Komoot.
-      </p>
-      <form method="dialog"><button>Close</button></form>
+      <h2 data-t="title">Berlin in Minuten</h2>
+      <p data-t-html="aboutHow"></p>
+      <p data-t-html="aboutLines"></p>
+      <p data-t-html="aboutWindows"></p>
+      <p data-t="aboutArea"></p>
+      <p id="feed-info"></p>
+      <p class="small" data-t-html="credits"></p>
+      <form method="dialog"><button data-t="close">Schließen</button></form>
     </dialog>
 
     <script type="module" src="/src/main.ts"></script>

@@ -21,4 +21,9 @@ pnpm --dir packages/web build     # -> packages/web/dist
   60–75, 75–90, 90–120, 120+. Hues run green, yellow, red, purple, navy.
 - The "Lines" overlay shows the transit hops the fastest trips rely on (`routeUsage`), line width
   by the share of the reachable map behind each hop, coloured by mode.
-- `?from=lat,lon&w=night&routes=0` in the URL restores a start point, window and the Lines toggle.
+- `?from=lat,lon&w=night&routes=0&lang=en` in the URL restores a start point, window, the Lines
+  toggle and the language.
+- Interface text lives in `src/i18n.ts`, German by default with English. Static text in
+  `index.html` names its string with `data-t`, `data-t-html`, `data-t-label` or
+  `data-t-placeholder`. The menu (burger button) holds Lines, the language switch and About.
+- Address search (`src/search.ts`) only suggests places inside the heatmap area (`DEFAULT_BBOX`).

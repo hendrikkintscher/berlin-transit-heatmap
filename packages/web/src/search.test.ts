@@ -53,3 +53,15 @@ describe('toPlaces', () => {
     expect(places.map((p) => p.label)).toEqual(['Torstraße 1', 'Torstraße']);
   });
 });
+
+describe('covered area', () => {
+  it('drops places outside the heatmap area', () => {
+    const list = toPlaces([
+      f({ name: 'Alexanderplatz', city: 'Berlin' }, 13.413, 52.522),
+      f({ name: 'Potsdam Hauptbahnhof', city: 'Potsdam' }, 13.067, 52.391),
+      f({ name: 'Bernau Bahnhof', city: 'Bernau' }, 13.588, 52.676),
+      f({ name: 'Oranienburg', city: 'Oranienburg' }, 13.237, 52.753),
+    ]);
+    expect(list.map((p) => p.label)).toEqual(['Alexanderplatz', 'Bernau Bahnhof']);
+  });
+});

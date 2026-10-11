@@ -1,9 +1,10 @@
 // Address search via Photon (https://photon.komoot.io), a free OpenStreetMap geocoder.
-// Results are limited to Berlin and its VBB surroundings.
+// Results are limited to the area the heatmap covers.
+import { DEFAULT_BBOX } from '@berlin-transit-heatmap/routing';
 
 const ENDPOINT = 'https://photon.komoot.io/api/';
-/** west, south, east, north: Berlin plus the inner ring of Brandenburg towns. */
-export const SEARCH_BBOX = [12.9, 52.25, 13.95, 52.75] as const;
+/** west, south, east, north: the heatmap grid's area (Berlin and its immediate edge). */
+export const SEARCH_BBOX = DEFAULT_BBOX;
 
 export interface Place {
   label: string;
@@ -32,6 +33,17 @@ interface PhotonFeature {
  * number, the plain address comes first and shops or offices at the same address are dropped.
  */
 export function toPlaces(features: PhotonFeature[], query = ''): Place[] {
+  // Photon's bbox is a hint for its ranking as much as a filter, so check each point again.
+  const [w, so, e, n] = SEARCH_BBOX;
+  features = features.filter(
+    ({
+      geometry: {
+        coordinates: [lon, lat],
+      },
+    }) => {
+      return lon >= w && lon <= e && lat >= so && lat <= n;
+    },
+  );
   if (/\d/.test(query)) {
     const plain = (f: PhotonFeature) => !f.properties.name && !!f.properties.housenumber;
     const addr = (f: PhotonFeature) =>
@@ -71,13 +83,14 @@ export async function searchPlaces(
   query: string,
   near: { lat: number; lon: number },
   signal: AbortSignal,
+  lang: 'de' | 'en' = 'de',
 ): Promise<Place[]> {
   const p = new URLSearchParams({
     q: query,
     lat: near.lat.toFixed(4),
     lon: near.lon.toFixed(4),
     bbox: SEARCH_BBOX.join(','),
-    lang: 'de',
+    lang,
     limit: '12',
   });
   const res = await fetch(`${ENDPOINT}?${p}`, { signal });
