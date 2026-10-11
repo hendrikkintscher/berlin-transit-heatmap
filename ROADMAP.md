@@ -1,6 +1,8 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done; groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), and group 11 is the Android app; they run from quick wins to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done apart from two items added to group 3 (suggested meeting points, search result choices); groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), group 11 is the Android app and group 12 temporary changes; they run from quick wins to bigger features. Within a group, items that others depend on come first.
+
+**Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
 ## 1. Interface and usability
 
@@ -61,6 +63,18 @@ Features that answer "how good is this location for me (or us)?".
 Pick two start points and show where both people can get to within the same time, as in Mapnificent and the ÖPNV-Isochronenkarte Deutschland. Shade each cell by the slower of the two trips (max of both travel times), so the map answers "where can we both be in N minutes?". Same Day/Night windows as the single-point map.
 
 Notes: run the router twice in the worker and combine the two grids; needs a second-marker UI and a URL parameter for the second point.
+
+### Suggested meeting points
+
+With two start points, suggest a few good places to meet (about three) and mark them on the map. Tapping one shows the connections for both people: each person's trip, drawn and listed in the trip card.
+
+Notes: candidates are the cells with the smallest slower-of-both time, with the sum of both times as a tie-breaker so neither person carries the whole trip. Pick the best, leave out everything within about 1.5 km of it, and repeat, so the suggestions are spread out. Prefer spots at a station or a named place and label them with the station or Ortsteil name. Trip on tap already draws and lists both trips when a second start is set, so tapping a suggestion reuses it. Small to medium effort; added from Hendrik's request on 2026-10-11 and built right after group 8.
+
+### Search result: new start, destination or second start
+
+Once a start is set, picking a search result asks what the place is for, with three buttons: **Neuer Start** (replaces the start, as today), **Ziel** (keeps the map and shows the trip there, as a tap on the place would), or **2. Start** (adds it as the second start for the meeting point). Without a start, a search result simply becomes the start, as now.
+
+Notes: today a search result always replaces the start (pickPlace in main.ts). The three actions already exist for taps on the map (trip on tap, "2. Start" in the tap card), so this is mostly a small choice sheet after the search. Small effort; added from Hendrik's request on 2026-10-11, built together with the suggested meeting points.
 
 ### Favourite places and a location score
 
@@ -232,11 +246,17 @@ Zoomed in to streets, the map should work like a normal city map:
 
 Small to medium.
 
+### Shorter tap info
+
+**Done** (with group 8): the info window shows just the minutes. The measure and time ("typisch, Werktag 10–11 Uhr") are already in the top bar, so Hendrik had them removed from the tap readout.
+
 ## 8. Realistic walking on real footpaths
 
 Walking is measured today as a straight line at 1.2 m/s, to the first stop and from the last. Across the Spree, rail corridors, canals, cemeteries and the edges of Tempelhofer Feld the real walk is much longer, so the map is too green next to barriers. Hendrik chose the proper solution over a flat detour factor.
 
 ### Walking times on the OSM footpath network
+
+**Done** (with group 8's PR): walks to the first stop, from the last stop and between stops follow real streets and paths from OpenStreetMap at 4.8 km/h, so rivers, canals, rail lines and fenced areas now cost the detour to the next bridge or crossing. The build ships the network as `walk.bin` (2.1 MB gzipped, about 430k nodes), which the app loads in the background after the first map: the first map appears at once with straight lines and sharpens a moment later. Per tap the walking search costs about the same as the old straight-line spreading, so taps stay as fast as before. Instead of precomputed stop-to-cell tables, the browser runs one Dijkstra over the network per map, which was smaller to ship and exact. A monthly workflow refreshes the OSM data.
 
 Precompute walking times on the OpenStreetMap footpath network in timetable-build: from each stop to the grid cells around it (up to the 15-minute walking limit), and between nearby stops for transfers. Ship them as a compact file next to the timetables; the router reads walking times from it instead of straight-line distance.
 
@@ -287,3 +307,17 @@ Ways to ship it:
 - **F-Droid:** free and open-source store; needs the app built from source with no proprietary dependencies, which suits this project.
 
 Suggested path: start with a TWA, test it with a direct APK on Hendrik's phone, then publish to Google Play; move to Capacitor only when a native feature is needed. This can be done at any point, since it doesn't depend on groups 5 to 10.
+
+## 12. Temporary changes
+
+### Ersatzverkehr and other temporary changes
+
+Find a good, low-effort way to show temporary changes such as Ersatzverkehr (rail replacement buses), closures and construction timetables, without slowing anything down.
+
+Today the build picks one reference weekday and one Saturday from the monthly VBB feed, so whatever construction happens on those days is baked into the whole month, and changes on other days are missing. Options, from least to most work:
+
+- **Pick a clean reference day:** compare several weekdays in the feed and choose one whose service matches the usual pattern, so a one-off closure does not colour the map for a month. Build-only, no app change.
+- **A weekly refresh and a notice:** refresh the feed weekly, and list lines whose service this week differs a lot from the usual pattern ("U2: Ersatzverkehr Pankow–Alexanderplatz") in a small banner. Build-time diff, a few lines of UI.
+- **"Diese Woche" as a second timetable:** offer the current week's actual service as an extra time option next to the typical one. Reuses the hourly files and the compare view; downloads only when chosen.
+
+Notes: VBB's static GTFS already contains planned Ersatzverkehr as normal trips; there is no open real-time feed, so live disruptions are out of scope. All options keep the work in the build, in line with the ground rule above.

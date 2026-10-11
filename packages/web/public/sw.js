@@ -76,6 +76,7 @@ self.addEventListener('fetch', (event) => {
 
 async function trim(cache) {
   // Cache keys come back in insertion order; re-putting a file on refresh moves it to the end.
-  const keys = await cache.keys();
+  // The walking network is needed for every map, so it never counts against the limit.
+  const keys = (await cache.keys()).filter((k) => !k.url.endsWith('/walk.bin'));
   await Promise.all(keys.slice(0, Math.max(0, keys.length - MAX_DATA)).map((k) => cache.delete(k)));
 }

@@ -1,4 +1,3 @@
-import { distanceM, WALK_SPEED_MPS } from './geo';
 import type { PreparedTimetable } from './prepare';
 import { LEG_ORIGIN, LEG_WALK } from './raptor';
 import type { HeatGrid, RouteMode, TravelTimeResult } from './types';
@@ -73,9 +72,8 @@ export function journeyTo(
       out.push({ type: 'walk', seconds: transferSeconds(tt, from, s), to: s });
       s = from;
     } else if (kind === LEG_ORIGIN) {
-      const o = result.origin;
-      const d = o ? distanceM(o.lat, o.lon, tt.stopLat[s], tt.stopLon[s]) : 0;
-      out.push({ type: 'walk', seconds: Math.round(d / WALK_SPEED_MPS), to: s });
+      // A stop reached on foot from the origin has the walk as its time.
+      out.push({ type: 'walk', seconds: Math.round(result.stopSeconds[s]), to: s });
       break;
     } else return null;
   }

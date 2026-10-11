@@ -24,20 +24,20 @@ const de = {
   legend: 'Legende Reisezeit in Minuten',
   close: 'Schließen',
   aboutHow:
-    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen: 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin. Tippe auf einen Startpunkt, um ihn zu entfernen.',
+    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen, gemessen auf echten Straßen und Wegen mit 4,8 km/h: 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin. Tippe auf einen Startpunkt, um ihn zu entfernen.',
   aboutLines:
     '<b>Linien</b> zeigt die Abschnitte von S-Bahn, U-Bahn, Tram und Bus, auf die die schnellsten Fahrten von deinem Startpunkt angewiesen sind. Je dicker die Linie, desto mehr der Karte erreichst du darüber. Tippe auf eine Linie, um ihren Namen zu sehen.',
   aboutWindows:
     'Oben wählst du die <b>Zeit</b>: Werktag oder Wochenende, die Stunde und ob du dann losfährst oder ankommst. <b>Typisch</b> ist der Durchschnitt über die Stunde mit Wartezeit, also was dich erwartet, wenn du ohne Blick auf den Fahrplan losgehst; <b>Bestfall</b> ist die schnellste Fahrt, wenn du genau passend zur Abfahrt gehst. Mit <b>Vergleichen</b> färbt die Karte, wie viel länger (rot) oder kürzer (grün) die Fahrt zu einer zweiten Zeit dauert.',
   aboutArea: 'Die Karte deckt Berlin und den nahen Rand ab; die Suche schlägt nur Orte darin vor.',
   credits:
-    'Fahrplandaten: <a href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/" target="_blank" rel="noopener">VBB Open Data</a> (CC BY 4.0). Karte: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende. Adresssuche: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> von Komoot.',
+    'Fahrplandaten: <a href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/" target="_blank" rel="noopener">VBB Open Data</a> (CC BY 4.0). Karte und Fußwege: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende (ODbL). Adresssuche: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> von Komoot.',
   feedLoading: 'Fahrplan wird geladen…',
   feedInfo: 'Fahrplan des VBB, Verkehrstag {date} (Datensatz {version}, {stops} Haltestellen).',
   computing: 'Wird berechnet…',
   computed: 'Berechnet in {s} s · tippe auf die Karte für Minuten',
   failed: 'Etwas ist schiefgelaufen: {message}',
-  minutes: '<b>{n} Min.</b> {when}',
+  minutes: '<b>{n} Min.</b>',
   unreachable: 'Im Zeitfenster nicht erreichbar',
   lineShare: '<b>{names}</b> · schnellster Weg zu {pct} % der Karte',
   noMatches: 'Keine Treffer im Kartengebiet',
@@ -55,7 +55,7 @@ const de = {
   accessNone: 'Keine Haltestelle in 15 Min. Fußweg',
   aboutLayers:
     '<b>Takt der Haltestellen</b> zeigt, wie oft im Zeitfenster abgefahren wird. <b>ÖPNV-Wüsten</b> schattiert Orte, an denen der Fußweg zur Haltestelle plus die durchschnittliche Wartezeit (halber Takt) über 10 und 15 Min. liegt, zwischen 0 und 5 Uhr über 20 und 30 Min.. Beide findest du im Menü.',
-  minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} Min.</b> {when}',
+  minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} Min.</b>',
   secondHere: '2. Start',
   favHere: '★ Merken',
   meet: 'Treffpunkt: Farben zeigen die längere der beiden Fahrten',
@@ -128,8 +128,6 @@ const de = {
   measureNoteTypicalArr:
     'Durchschnitt über die Stunde: wie früh du los musst, um rechtzeitig da zu sein.',
   measureNoteBest: 'Die schnellste Fahrt in der Stunde, wenn du genau passend losgehst.',
-  typical: 'typisch',
-  best: 'bestenfalls',
   compareTitle: 'Vergleichen mit',
   compareOff: 'Aus',
   compareDay: 'Vergleichstag',
@@ -171,7 +169,7 @@ const en: Record<Key, string> = {
   legend: 'Travel time legend, minutes',
   close: 'Close',
   aboutHow:
-    'Tap anywhere or search for an address to set a start point. Colours show the public-transport travel time to each spot, including walking to and from stops: 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there. Tap a start point to remove it.',
+    'Tap anywhere or search for an address to set a start point. Colours show the public-transport travel time to each spot, including walking to and from stops, measured along real streets and paths at 4.8 km/h: 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there. Tap a start point to remove it.',
   aboutLines:
     '<b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from your start point rely on. The thicker the line, the more of the map is reached over it. Tap a line to see its name.',
   aboutWindows:
@@ -179,13 +177,13 @@ const en: Record<Key, string> = {
   aboutArea:
     'The map covers Berlin and its immediate surroundings; search only suggests places inside it.',
   credits:
-    'Timetable data: <a href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/" target="_blank" rel="noopener">VBB open data</a> (CC BY 4.0). Map: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors. Address search: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> by Komoot.',
+    'Timetable data: <a href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/" target="_blank" rel="noopener">VBB open data</a> (CC BY 4.0). Map and footpaths: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors (ODbL). Address search: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> by Komoot.',
   feedLoading: 'Loading timetable…',
   feedInfo: 'Timetable from VBB, service day {date} (feed {version}, {stops} stops).',
   computing: 'Computing…',
   computed: 'Computed in {s} s · tap the map for minutes',
   failed: 'Something went wrong: {message}',
-  minutes: '<b>{n} min</b> {when}',
+  minutes: '<b>{n} min</b>',
   unreachable: 'Not reachable within the time window',
   lineShare: '<b>{names}</b> · fastest way to {pct}% of the map',
   noMatches: 'No matches in the map area',
@@ -203,7 +201,7 @@ const en: Record<Key, string> = {
   accessNone: 'No stop within a 15-minute walk',
   aboutLayers:
     '<b>Stop frequency</b> shows how often each stop is served in the time window. <b>Transit deserts</b> shades places where the walk to a stop plus the average wait (half the gap between departures) is over 10 and 15 min, or 20 and 30 min between 00:00 and 05:00. Both are in the menu.',
-  minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} min</b> {when}',
+  minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} min</b>',
   secondHere: '2nd start',
   favHere: '★ Save',
   meet: 'Meeting point: colours show the longer of the two trips',
@@ -275,8 +273,6 @@ const en: Record<Key, string> = {
   measureNoteTypical: 'Average over the hour, including the wait for the departure.',
   measureNoteTypicalArr: 'Average over the hour: how early you need to leave to get there in time.',
   measureNoteBest: 'The fastest trip in the hour, if you time your departure exactly.',
-  typical: 'typical',
-  best: 'best case',
   compareTitle: 'Compare with',
   compareOff: 'Off',
   compareDay: 'Comparison day',

@@ -5,6 +5,7 @@ Turns the VBB GTFS feed into the small timetable files the browser router loads 
 ```sh
 pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 # options: --feed-version <string>  --date YYYY-MM-DD (override the reference day)
+#          --osm work/walkways.opl.gz (walking network from release osm-latest)
 ```
 
 `--gtfs` takes the zip or an extracted folder. The run takes about 10 seconds on the full VBB feed and prints stats.
@@ -18,6 +19,7 @@ pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 | `timetable-weekday-HH.json`, `timetable-weekend-HH.json` | `Timetable` for one departure hour HH (00–23) on the weekday or weekend reference day; hours 00–04 are the night after the previous day (24:00–29:00 service time). Skip with `--no-hourly`. |
 | `stops.json`                                             | `{ version, serviceDate, feedVersion, stops }`, same `stops` as above                                                                                                                        |
 | `build-info.json`                                        | stats, file sizes (raw and gzipped), and the GTFS manifest in CI                                                                                                                             |
+| `walk.bin`                                               | with `--osm`: the walking network (Contract 3, see the routing README)                                                                                                                       |
 
 ## How the files are built
 
@@ -28,10 +30,14 @@ pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 - **Time filter:** a trip is kept if it departs any kept stop within `[windowStart, windowEnd + 2h]`.
 - **Routes:** identical trips are removed; trips are grouped by GTFS route and identical stop sequence, then split so no trip overtakes another (RAPTOR needs this). Trips are sorted by first departure.
 - **Missing times** are interpolated; times are made non-decreasing along a trip.
-- **Transfers** (shared by both windows, both directions always present): every pair of stops within 400 m, `distance / 1.2 m/s + 60 s`; platforms of the same station at most 120 s; `transfers.txt` rows of type 2 with `min_transfer_time` and no route/trip restriction override the walking estimate.
+- **Transfers** (shared by both windows, both directions always present): every pair of stops within 400 m, `network distance / 4.8 km/h + 60 s` with `--osm` (pairs whose walk is over 800 m, e.g. across a river, get none), else `distance / 1.2 m/s + 60 s`; platforms of the same station at most 120 s; `transfers.txt` rows of type 2 with `min_transfer_time` and no route/trip restriction override the walking estimate.
 
 ## Notes for consumers
 
 - `stops` is identical in both window files (and `stops.json`), so a stop index means the same stop in day and night.
 - Parent stations are included as entries so that `parent` can point at them. They have no routes and no transfers; routing can treat them as ordinary stops.
 - Coordinates are rounded to 5 decimals (about 1 m).
+
+## Walking network
+
+`--osm` reads the walkable OpenStreetMap ways that the "Refresh OSM footpaths" workflow publishes as `walkways.opl.gz` on release `osm-latest` (Geofabrik Berlin + Brandenburg, cut to the app's area). [`src/walk.ts`](src/walk.ts) keeps streets, paths, steps and platforms (no motorways, private ways, driveways or parking aisles), cuts them into edges at junctions and at least every 100 m, drops dead ends under 30 m, and keeps the largest connected piece. Reading takes about 15 s and 1 GB of memory.

@@ -1,0 +1,68 @@
+name: Refresh OSM footpaths
+
+# Downloads the OpenStreetMap extracts for Berlin and Brandenburg from Geofabrik,
+# keeps only walkable ways inside the area the app covers, and publishes them as
+# `walkways.opl.gz` on the release `osm-latest`. The timetable build turns this
+# into the walking network the router uses.
+
+on:
+  schedule:
+    # 03:47 UTC on the 1st of every month; the timetable build follows it and the GTFS refresh.
+    - cron: '47 3 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: osm-refresh
+  cancel-in-progress: false
+
+env:
+  OSM_TAG: osm-latest
+  # DEFAULT_BBOX of the router plus a margin of more than a 15-minute walk.
+  BBOX: '12.98,52.27,13.87,52.74'
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install osmium
+        run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+
+      - name: Download extracts
+        run: |
+          mkdir -p work
+          for region in berlin brandenburg; do
+            curl -fsSL --retry 4 --retry-delay 10 -o "work/$region.osm.pbf" \
+              "https://download.geofabrik.de/europe/germany/$region-latest.osm.pbf"
+          done
+          ls -la work
+
+      - name: Filter walkable ways
+        run: |
+          cd work
+          osmium merge berlin.osm.pbf brandenburg.osm.pbf -o merged.osm.pbf
+          osmium extract -b "$BBOX" --strategy complete_ways merged.osm.pbf -o area.osm.pbf
+          osmium tags-filter -t area.osm.pbf \
+            w/highway w/railway=platform w/public_transport=platform \
+            -o walkways.osm.pbf
+          osmium cat -f opl,add_metadata=false walkways.osm.pbf | gzip -9 > walkways.opl.gz
+          osmium fileinfo -e walkways.osm.pbf | grep -E 'Number of (nodes|ways)|Timestamp'
+          ls -la walkways.opl.gz
+          osmium fileinfo -g header.option.osmosis_replication_timestamp berlin.osm.pbf > timestamp.txt || true
+          cat timestamp.txt
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          stamp=$(cat work/timestamp.txt)
+          notes="Walkable OpenStreetMap ways around Berlin (bbox $BBOX), from Geofabrik extracts dated ${stamp:-unknown}. © OpenStreetMap contributors, ODbL."
+          if ! gh release view "$OSM_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$OSM_TAG" --repo "$GITHUB_REPOSITORY" --title "OSM footpaths (latest)" --notes "$notes" --latest=false
+          else
+            gh release edit "$OSM_TAG" --repo "$GITHUB_REPOSITORY" --notes "$notes"
+          fi
+          gh release upload "$OSM_TAG" --repo "$GITHUB_REPOSITORY" work/walkways.opl.gz --clobber

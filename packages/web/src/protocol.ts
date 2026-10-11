@@ -67,6 +67,8 @@ export interface RasterLayer {
 export type FromWorker =
   | { type: 'progress'; window: Window; loaded: number; total: number }
   | { type: 'loaded'; info: TimetableInfo }
+  /** The footpath network has arrived: maps computed so far used straight-line walks. */
+  | { type: 'walk' }
   | {
       type: 'result';
       id: number;

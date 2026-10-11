@@ -1,7 +1,12 @@
 // Map layers that do not depend on the start point: how often each stop is served, and
 // how far a place is from frequent service ("transit deserts"). Both are computed in the
 // worker from the timetable already loaded for routing.
-import { heatGrid, type HeatGrid, type PreparedTimetable } from '@berlin-transit-heatmap/routing';
+import {
+  heatGrid,
+  type HeatGrid,
+  type PreparedTimetable,
+  type WalkNetwork,
+} from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, Point } from 'geojson';
 import type { StationProps } from './protocol';
 
@@ -137,7 +142,11 @@ function compareLines(a: string, b: string): number {
  * on its own, since platforms are mostly one direction each. Infinity = no stop with
  * service within a 15-minute walk.
  */
-export function accessGrid(tt: PreparedTimetable, perHour: Float32Array): HeatGrid {
+export function accessGrid(
+  tt: PreparedTimetable,
+  perHour: Float32Array,
+  walk?: WalkNetwork,
+): HeatGrid {
   const waitSeconds = new Float32Array(tt.stopCount);
   for (let s = 0; s < tt.stopCount; s++) {
     waitSeconds[s] = perHour[s] > 0 ? 1800 / perHour[s] : Infinity;
@@ -145,7 +154,7 @@ export function accessGrid(tt: PreparedTimetable, perHour: Float32Array): HeatGr
   return heatGrid(
     tt,
     { stopSeconds: waitSeconds, computedInMs: 0 },
-    { cellSizeM: DESERT_CELL_M, maxFinalWalkSeconds: MAX_ACCESS_WALK_S },
+    { cellSizeM: DESERT_CELL_M, maxFinalWalkSeconds: MAX_ACCESS_WALK_S, walk },
   );
 }
 

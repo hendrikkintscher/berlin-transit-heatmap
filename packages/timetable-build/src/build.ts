@@ -9,6 +9,7 @@ import {
 import { parseTime, readCsv } from './csv.ts';
 import { BERLIN_BBOX, type BBox, forEachNearbyPair, inBBox } from './geo.ts';
 import type { GtfsSource } from './source.ts';
+import { NETWORK_WALK_SPEED_MPS, WalkDistances, type WalkGraph } from './walk.ts';
 import type { DayType, Mode, Route, Stop, StopsFile, Timetable, Transfer } from './types.ts';
 
 export interface WindowSpec {
@@ -48,6 +49,8 @@ export const WALK_SPEED_MPS = 1.2;
 export const TRANSFER_RADIUS_M = 400;
 export const TRANSFER_PENALTY_S = 60;
 export const SAME_STATION_TRANSFER_S = 120;
+/** Stops further than this from any footpath keep straight-line transfers. */
+export const MAX_STOP_SNAP_M = 150;
 
 export interface BuildOptions {
   bbox?: BBox;
@@ -57,6 +60,8 @@ export interface BuildOptions {
   serviceDate?: string;
   /** Also build the 48 one-hour windows (weekday and weekend). Default false. */
   hourly?: boolean;
+  /** Walking network for transfer times; without it transfers use straight lines. */
+  walk?: WalkGraph;
   log?: (message: string) => void;
 }
 
@@ -296,7 +301,16 @@ export async function buildTimetables(
   });
 
   // --- transfers (shared by both windows) --------------------------------
-  const transfers = await buildTransfers(source, rawStops, stopIndex, served, parentOf, newIndex);
+  const walk = options.walk ? new WalkDistances(options.walk) : undefined;
+  const transfers = await buildTransfers(
+    source,
+    rawStops,
+    stopIndex,
+    served,
+    parentOf,
+    newIndex,
+    walk,
+  );
 
   // --- assemble ----------------------------------------------------------
   const timetables: Record<string, Timetable> = {};
@@ -421,20 +435,46 @@ async function buildTransfers(
   served: Set<number>,
   parentOf: (s: number) => number | undefined,
   newIndex: Map<number, number>,
+  walk: WalkDistances | undefined,
 ): Promise<Transfer[]> {
   const seconds = new Map<string, number>(); // "from,to" in new indices
   const set = (a: number, b: number, s: number) => seconds.set(`${a},${b}`, s);
   const servedList = [...served];
   const points = servedList.map((s) => rawStops[s]!);
 
-  // Walking between nearby stops.
-  forEachNearbyPair(points, TRANSFER_RADIUS_M, (i, j, metres) => {
-    const s = Math.round(metres / WALK_SPEED_MPS + TRANSFER_PENALTY_S);
-    const a = newIndex.get(servedList[i]!)!;
-    const b = newIndex.get(servedList[j]!)!;
-    set(a, b, s);
-    set(b, a, s);
-  });
+  // Walking between nearby stops: on the footpath network when there is one (a pair
+  // whose walk is more than twice the radius gets no transfer), else in a straight line.
+  const pairs: [number, number, number][] = [];
+  forEachNearbyPair(points, TRANSFER_RADIUS_M, (i, j, metres) => pairs.push([i, j, metres]));
+  const snaps = walk ? points.map((p) => walk.snap(p.lat, p.lon, MAX_STOP_SNAP_M)) : [];
+  const byFirst = new Map<number, [number, number][]>();
+  for (const [i, j, metres] of pairs) {
+    const list = byFirst.get(i);
+    if (list) list.push([j, metres]);
+    else byFirst.set(i, [[j, metres]]);
+  }
+  for (const [i, list] of byFirst) {
+    const from = walk ? snaps[i] : null;
+    const network =
+      walk && from
+        ? walk.distances(
+            from,
+            list.map(([j]) => snaps[j] ?? null),
+            2 * TRANSFER_RADIUS_M,
+          )
+        : null;
+    list.forEach(([j, metres], k) => {
+      let s: number;
+      if (network && snaps[j]) {
+        if (network[k] === Infinity) return;
+        s = Math.round(network[k]! / NETWORK_WALK_SPEED_MPS + TRANSFER_PENALTY_S);
+      } else s = Math.round(metres / WALK_SPEED_MPS + TRANSFER_PENALTY_S);
+      const a = newIndex.get(servedList[i]!)!;
+      const b = newIndex.get(servedList[j]!)!;
+      set(a, b, s);
+      set(b, a, s);
+    });
+  }
 
   // Platforms of the same station: at most SAME_STATION_TRANSFER_S apart.
   const byStation = new Map<number, number[]>();
