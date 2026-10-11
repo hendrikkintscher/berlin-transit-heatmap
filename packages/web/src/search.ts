@@ -104,6 +104,14 @@ export async function reversePlace(
   at: { lat: number; lon: number },
   lang: 'de' | 'en' = 'de',
 ): Promise<string | null> {
+  return (await reverseAddress(at, lang))?.label ?? null;
+}
+
+/** The nearest address or named place to a point, with its own position. */
+export async function reverseAddress(
+  at: { lat: number; lon: number },
+  lang: 'de' | 'en' = 'de',
+): Promise<Place | null> {
   const p = new URLSearchParams({
     lat: at.lat.toFixed(5),
     lon: at.lon.toFixed(5),
@@ -113,5 +121,5 @@ export async function reversePlace(
   const res = await fetch(`https://photon.komoot.io/reverse?${p}`);
   if (!res.ok) throw new Error(`reverse lookup failed (${res.status})`);
   const json = (await res.json()) as { features: PhotonFeature[] };
-  return toPlaces(json.features)[0]?.label ?? null;
+  return toPlaces(json.features)[0] ?? null;
 }

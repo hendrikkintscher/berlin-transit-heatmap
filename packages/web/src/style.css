@@ -962,3 +962,8 @@ dialog.when .seg-wide + .seg-wide {
 #readout small b {
   font-size: inherit;
 }
+#readout small.addr {
+  margin: 0 0 2px;
+  font-weight: 600;
+  color: var(--ink);
+}
