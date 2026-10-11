@@ -68,7 +68,7 @@ export type FromWorker =
       routes: FeatureCollection<LineString, RouteProps>;
       /** The busier hops chained into longer lines per name set, for labels. */
       labels: FeatureCollection<LineString, { names: string }>;
-      /** Isochrone outlines at 15, 30 and 45 minutes. */
+      /** Isochrone outlines every 5 minutes up to an hour. */
       outlines: FeatureCollection<LineString, ContourProps>;
       computedInMs: number;
       totalMs: number;

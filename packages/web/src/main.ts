@@ -55,8 +55,10 @@ const FREQ_STEPS = [4, 12, 30, 60];
 const FREQ_COLORS = ['#c6dbef', '#6baed6', '#2171b5', '#08519c', '#08306b'];
 const OUTLINES_SOURCE = 'outlines';
 const OUTLINE_LAYERS = ['outlines-line', 'outlines-label'];
+/** Labelled, bolder outlines; the other 5-minute steps are drawn thin. */
+const MAJOR_OUTLINES = [15, 30, 45];
 const AREA_SOURCE = 'area';
-const DEFAULT_OPACITY = 70;
+const DEFAULT_OPACITY = 80;
 
 // Line colours roughly follow the usual Berlin map conventions.
 const MODE_COLORS: Record<string, string> = {
@@ -362,6 +364,24 @@ map.on('load', () => {
   // Start with the attribution collapsed to its (i) button so it does not cover the legend.
   document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
   const firstSymbol = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
+  // The colours go under the basemap's roads, so streets stay readable on top of them.
+  const firstRoad =
+    map.getStyle().layers.find((l) => 'source-layer' in l && l['source-layer'] === 'transportation')
+      ?.id ?? ROUTE_LAYERS[0];
+  // Faint roads in the city view, full strength once zoomed in to street level.
+  for (const l of map.getStyle().layers) {
+    if (l.type === 'line' && 'source-layer' in l && l['source-layer'] === 'transportation') {
+      map.setPaintProperty(l.id, 'line-opacity', [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10,
+        0.45,
+        13,
+        1,
+      ]);
+    }
+  }
   const font = textFont();
   const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
   map.addSource(ROUTES_SOURCE, { type: 'geojson', data: empty });
@@ -438,7 +458,7 @@ map.on('load', () => {
       layout: { visibility: 'none' },
       paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear' },
     },
-    ROUTE_LAYERS[0],
+    firstRoad,
   );
   map.addSource(OUTLINES_SOURCE, { type: 'geojson', data: empty });
   const isoVisibility = state.iso ? 'visible' : 'none';
@@ -450,16 +470,16 @@ map.on('load', () => {
       layout: { 'line-join': 'round', visibility: isoVisibility },
       paint: {
         'line-color': '#1d1530',
-        'line-opacity': ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 0.6],
-        // 15 min boldest, 45 min thinnest and dashed, so the rings tell apart.
+        'line-opacity': ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4],
+        // 15 min boldest, then 30 and 45; the other 5-minute steps are hairlines.
         'line-width': [
           'interpolate',
           ['linear'],
           ['zoom'],
           9,
-          ['match', ['get', 'min'], 15, 2, 30, 1.5, 1.1],
+          ['match', ['get', 'min'], 15, 2, 30, 1.5, 45, 1.1, 0.5],
           14,
-          ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 1.8],
+          ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
         ],
       },
     },
@@ -469,6 +489,7 @@ map.on('load', () => {
     id: 'outlines-label',
     type: 'symbol',
     source: OUTLINES_SOURCE,
+    filter: ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]],
     layout: {
       visibility: isoVisibility,
       'symbol-placement': 'line',
