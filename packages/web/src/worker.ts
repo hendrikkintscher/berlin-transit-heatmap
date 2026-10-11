@@ -11,6 +11,7 @@ import {
 import type { FeatureCollection, LineString } from 'geojson';
 import { colorLut } from './colors';
 import { blurSeconds, warpField } from './soften';
+import { contours } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
 import type { FromWorker, RasterLayer, RouteProps, ToWorker, Window } from './protocol';
 
@@ -23,6 +24,8 @@ const MIN_LABEL_SHARE = 0.03;
 /** The image has UPSAMPLE x UPSAMPLE pixels per grid cell (25 m pixels). */
 const UPSAMPLE = 2;
 const UPSAMPLE_SHIFT = 1;
+/** Blur for the isochrone outlines, in grid cells (50 m). */
+const OUTLINE_BLUR_CELLS = 6;
 /** Softening, in grid cells (50 m) and seconds. Purely visual; the readout uses the raw grid. */
 const SOFT = { blurCells: 2, warpCells: 2.5, warpWavelengthCells: 9, featherSeconds: 45 };
 const LUT = colorLut(SOFT.featherSeconds);
@@ -125,6 +128,13 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const routes = usageGeoJSON(tt, used);
       const labels = labelLines(tt, used);
       const image = paint(grid);
+      // Outlines follow a more strongly blurred field, so walk bubbles round off.
+      const outlines = contours(
+        blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
+        grid.cols,
+        grid.rows,
+        grid.bbox,
+      );
       const seconds = grid.seconds as Float32Array<ArrayBuffer>;
       const each =
         runs.length === 2
@@ -144,6 +154,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           each,
           routes,
           labels,
+          outlines,
           computedInMs: runs.reduce((a, r) => a + r.result.computedInMs, 0),
           totalMs: performance.now() - t0,
         } satisfies FromWorker,
