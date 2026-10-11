@@ -140,6 +140,18 @@ A one-time hint to add the app to the home screen (Android and iOS), and a first
 - A left-aligned app title ("Berlin in Minuten") in the top bar, so screenshots explain themselves.
 - A faint outline of the computed area, showing where the heatmap ends.
 
+### Thin 5-minute outlines
+
+Hendrik's follow-up to the outlines: thin lines every 5 minutes, with the 15, 30 and 45-minute lines staying bolder and labelled, so the map reads like a contour map.
+
+Notes: the worker already traces outlines per level (contours.ts), so this adds levels 5, 10, 20, 25 and so on up to 60 with a thin, lighter line. Possibly only from zoom 11, so the city view doesn't get crowded; the outline payload grows a few times but stays small.
+
+### Blending the heatmap with the streets
+
+A way of drawing the heatmap so both the colours and the streets and labels read well, instead of trading one for the other with the opacity slider.
+
+Notes: options to try and compare on the phone: draw the heatmap under the basemap's roads and labels (inserting the layer below the road layers, so streets sit on top of the colour); a "multiply"-style look by lightening the basemap and raising the heatmap's contrast; or a muted basemap style. MapLibre has no layer blend modes, so layer order and the basemap's own colours are the main levers. Pick one default and keep the opacity slider.
+
 ## 6. Trips you can trust
 
 Features that explain and sharpen the travel times. Each is a day or two of work and reuses the router as it is; together they turn the heatmap from a colour picture into something you act on.
