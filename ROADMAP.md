@@ -56,11 +56,15 @@ Features that answer "how good is this location for me (or us)?".
 
 ### Meeting point: intersect two start points
 
+**Done** (PR #17): after setting a start, tap another place and choose "2. Start". The map then shades each spot by the slower of the two trips, a banner explains it and removes the second point, and tapping shows both times. The second point is kept in the URL (`with=lat,lon`) and can be dragged.
+
 Pick two start points and show where both people can get to within the same time, as in Mapnificent and the ÖPNV-Isochronenkarte Deutschland. Shade each cell by the slower of the two trips (max of both travel times), so the map answers "where can we both be in N minutes?". Same Day/Night windows as the single-point map.
 
 Notes: run the router twice in the worker and combine the two grids; needs a second-marker UI and a URL parameter for the second point.
 
 ### Favourite places and a location score
+
+**Done** (PR #17): the menu holds a list of favourite places, added by address search, by "★ Merken" on any tapped spot, or imported from Google Takeout (Saved Places .json, saved-list .csv; places without a position are looked up by name) or from the app's own export. Each has a weight (Wichtig 3, Normal 2, Ab und zu 1). With a start point, stars on the map and the list show the trip time to each place, and a chip shows the score Hendrik chose: the weighted average in minutes, unreachable places counting as 120. The list stays in the browser. LLM suggestions for hotel stays are not built.
 
 Keep a list of the places you go to often (workplace, friends, favourite bars) and see at once how well a chosen location reaches them. This helps when checking out places to move to, or when picking a hotel. For a hotel, the list could also come from an LLM that suggests interesting places based on your interests.
 

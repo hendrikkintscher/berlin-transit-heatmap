@@ -106,13 +106,32 @@
       <div id="search-msg" class="search-msg" hidden></div>
     </div>
 
+    <div id="meet" class="chip meet" hidden>
+      <span data-t="meet">Treffpunkt: Farben zeigen die längere der beiden Fahrten</span>
+      <button
+        id="meet-close"
+        type="button"
+        aria-label="Zweiten Startpunkt entfernen"
+        data-t-label="meetClose"
+      >
+        ✕
+      </button>
+    </div>
+
     <div id="hint" class="chip" data-t="hint">Tippe auf die Karte oder suche einen Startpunkt</div>
 
     <footer class="bottom">
       <div id="readout" class="chip" hidden>
         <span id="readout-text"></span>
-        <button id="readout-start" type="button" data-t="startHere">Hier starten</button>
+        <span class="readout-btns">
+          <button id="readout-start" type="button" data-t="startHere">Hier starten</button>
+          <button id="readout-second" class="alt" type="button" data-t="secondHere" hidden>
+            2. Start
+          </button>
+          <button id="readout-fav" class="alt" type="button" data-t="favHere">★ Merken</button>
+        </span>
       </div>
+      <button id="fav-score" class="chip fav-score" type="button" hidden></button>
       <div id="status" class="status" aria-live="polite"></div>
       <div id="layer-legend" class="layer-legend" hidden></div>
       <div class="legend" aria-label="Legende Reisezeit in Minuten" data-t-label="legend">
@@ -162,6 +181,23 @@
         <input id="desert-toggle" type="checkbox" role="switch" />
       </label>
 
+      <h3 id="fav-title" data-t="favTitle">Lieblingsorte</h3>
+      <ul id="fav-list" class="fav-list"></ul>
+      <p id="fav-empty" class="menu-note" data-t="favEmpty"></p>
+      <div class="fav-actions">
+        <button id="fav-add" type="button" data-t="favAdd">+ Ort suchen</button>
+        <button id="fav-import" type="button" data-t="favImport">Liste importieren</button>
+        <button id="fav-export" type="button" data-t="favExport" hidden>Exportieren</button>
+      </div>
+      <input
+        id="fav-file"
+        type="file"
+        accept=".csv,.json,.geojson,text/csv,application/json"
+        hidden
+      />
+      <p id="fav-msg" class="menu-note" aria-live="polite"></p>
+      <p class="menu-note" data-t="favHelp"></p>
+
       <h3 data-t="menuLanguage">Sprache</h3>
       <div class="seg seg-wide" role="radiogroup" aria-label="Sprache" data-t-label="menuLanguage">
         <button role="radio" data-lang="de" aria-checked="true" lang="de">Deutsch</button>
@@ -179,6 +215,7 @@
       <p data-t-html="aboutLines"></p>
       <p data-t-html="aboutWindows"></p>
       <p data-t-html="aboutLayers"></p>
+      <p data-t-html="aboutCompare"></p>
       <p data-t="aboutArea"></p>
       <p id="feed-info"></p>
       <p class="small" data-t-html="credits"></p>

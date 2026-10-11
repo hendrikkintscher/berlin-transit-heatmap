@@ -60,6 +60,30 @@ const de = {
   accessNone: 'Keine Haltestelle in 15 Min. Fußweg',
   aboutLayers:
     '<b>Takt der Haltestellen</b> zeigt, wie oft im Zeitfenster abgefahren wird. <b>ÖPNV-Wüsten</b> schattiert Orte, an denen der Fußweg zur Haltestelle plus die durchschnittliche Wartezeit (halber Takt) tagsüber über 10 und 15 Min., nachts über 20 und 30 Min. liegt. Beide findest du im Menü.',
+  minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} Min.</b> {when}',
+  secondHere: '2. Start',
+  favHere: '★ Merken',
+  meet: 'Treffpunkt: Farben zeigen die längere der beiden Fahrten',
+  meetClose: 'Zweiten Startpunkt entfernen',
+  favTitle: 'Lieblingsorte',
+  favEmpty:
+    'Noch keine Orte. Füge Arbeit, Freunde oder Lieblingsbars hinzu: Mit Startpunkt siehst du die Fahrzeit zu jedem und einen Schnitt.',
+  favAdd: '+ Ort suchen',
+  favImport: 'Liste importieren',
+  favExport: 'Exportieren',
+  favHelp:
+    'Import: Google Takeout (Maps „Gespeicherte Orte“ als .json oder Listen als .csv) oder eine exportierte Liste.',
+  favWeight: 'Wichtigkeit',
+  weight3: 'Wichtig',
+  weight2: 'Normal',
+  weight1: 'Ab und zu',
+  favRemove: '{name} entfernen',
+  favScore: '★ Ø {n} Min. zu {count} Lieblingsorten',
+  favImporting: 'Importiere {i} von {n}…',
+  favImported: '{n} Orte importiert, {missing} nicht gefunden.',
+  favImportFailed: 'Die Datei konnte nicht gelesen werden.',
+  aboutCompare:
+    '<b>Treffpunkt:</b> Tippe nach dem Start auf einen zweiten Ort und wähle „2. Start“. Die Farben zeigen dann die längere der beiden Fahrten, also wo ihr beide in N Minuten sein könnt. <b>Lieblingsorte</b> (im Menü) zeigen für den Startpunkt die Fahrzeit zu jedem Ort und einen nach Wichtigkeit gewichteten Schnitt; nicht erreichbare Orte zählen mit 120 Min. Die Liste bleibt in deinem Browser.',
   legendMax: '120+ min',
 };
 export type Key = keyof typeof de;
@@ -121,6 +145,30 @@ const en: Record<Key, string> = {
   accessNone: 'No stop within a 15-minute walk',
   aboutLayers:
     '<b>Stop frequency</b> shows how often each stop is served in the time window. <b>Transit deserts</b> shades places where the walk to a stop plus the average wait (half the gap between departures) is over 10 and 15 min by day, or 20 and 30 min at night. Both are in the menu.',
+  minutesBoth: '<b><i class="p1"></i>{a} · <i class="p2"></i>{b} min</b> {when}',
+  secondHere: '2nd start',
+  favHere: '★ Save',
+  meet: 'Meeting point: colours show the longer of the two trips',
+  meetClose: 'Remove the second start',
+  favTitle: 'Favourite places',
+  favEmpty:
+    'No places yet. Add work, friends or favourite bars: with a start point you see the trip time to each and an average.',
+  favAdd: '+ Search a place',
+  favImport: 'Import a list',
+  favExport: 'Export',
+  favHelp:
+    'Import: Google Takeout (Maps "Saved Places" as .json or lists as .csv) or a list exported here.',
+  favWeight: 'Importance',
+  weight3: 'Important',
+  weight2: 'Normal',
+  weight1: 'Now and then',
+  favRemove: 'Remove {name}',
+  favScore: '★ avg {n} min to {count} favourite places',
+  favImporting: 'Importing {i} of {n}…',
+  favImported: '{n} places imported, {missing} not found.',
+  favImportFailed: 'The file could not be read.',
+  aboutCompare:
+    '<b>Meeting point:</b> after setting a start, tap a second place and choose "2nd start". Colours then show the longer of the two trips, so where you can both be in N minutes. <b>Favourite places</b> (in the menu) show the trip time from the start point to each place and an average weighted by importance; unreachable places count as 120 min. The list stays in your browser.',
   legendMax: '120+ min',
 };
 

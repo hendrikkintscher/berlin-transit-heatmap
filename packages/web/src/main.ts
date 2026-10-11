@@ -2,7 +2,16 @@ import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent }
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import { BAND_COLORS, BAND_EDGES_MIN, bandLabel } from './colors';
-import { searchPlaces, type Place } from './search';
+import { reversePlace, searchPlaces, type Place } from './search';
+import {
+  loadFavourites,
+  newId,
+  parseImport,
+  saveFavourites,
+  score,
+  WEIGHTS,
+  type Weight,
+} from './favourites';
 import {
   formatDecimal,
   formatNumber,
@@ -62,12 +71,18 @@ const routesToggle = $<HTMLInputElement>('routes-toggle');
 const freqToggle = $<HTMLInputElement>('freq-toggle');
 const desertToggle = $<HTMLInputElement>('desert-toggle');
 const layerLegend = $('layer-legend');
+const meetChip = $('meet');
+const favChip = $<HTMLButtonElement>('fav-score');
+const favList = $<HTMLUListElement>('fav-list');
+const secondBtn = $<HTMLButtonElement>('readout-second');
 const menuDialog = $<HTMLDialogElement>('menu');
 const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
 
 const state: {
   window: Window;
   origin: { lat: number; lon: number } | null;
+  /** Meeting point: the second person's start. */
+  second: { lat: number; lon: number } | null;
   pending: { lat: number; lon: number } | null;
   requestId: number;
   info: Partial<Record<Window, TimetableInfo>>;
@@ -80,6 +95,7 @@ const state: {
 } = {
   window: 'day',
   origin: null,
+  second: null,
   pending: null,
   requestId: 0,
   info: {},
@@ -186,7 +202,13 @@ function compute() {
   loadbar.hidden = false;
   loadbar.classList.add('indeterminate');
   setStatus(() => t('computing'));
-  send({ type: 'compute', id: state.requestId, window: state.window, ...state.origin });
+  send({
+    type: 'compute',
+    id: state.requestId,
+    window: state.window,
+    ...state.origin,
+    ...(state.second ? { second: state.second } : {}),
+  });
 }
 
 // ---------- URL state (?from=lat,lon&w=night&routes=0&lang=en) ----------
@@ -196,13 +218,19 @@ function readUrl() {
   const layers = (p.get('layers') ?? '').split(',');
   state.freq = layers.includes('freq');
   state.desert = layers.includes('desert');
-  const [lat, lon] = (p.get('from') ?? '').split(',').map(Number);
-  if (Number.isFinite(lat) && Number.isFinite(lon) && lat && lon) state.origin = { lat, lon };
+  state.origin = parsePoint(p.get('from'));
+  state.second = state.origin ? parsePoint(p.get('with')) : null;
   if (p.get('w') === 'night') state.window = 'night';
 }
+function parsePoint(v: string | null) {
+  const [lat, lon] = (v ?? '').split(',').map(Number);
+  return Number.isFinite(lat) && Number.isFinite(lon) && lat && lon ? { lat, lon } : null;
+}
+const pointParam = (o: { lat: number; lon: number }) => `${o.lat.toFixed(5)},${o.lon.toFixed(5)}`;
 function writeUrl() {
   const p = new URLSearchParams();
-  if (state.origin) p.set('from', `${state.origin.lat.toFixed(5)},${state.origin.lon.toFixed(5)}`);
+  if (state.origin) p.set('from', pointParam(state.origin));
+  if (state.second) p.set('with', pointParam(state.second));
   if (state.window === 'night') p.set('w', 'night');
   if (!state.routes) p.set('routes', '0');
   const layers = [state.freq && 'freq', state.desert && 'desert'].filter(Boolean).join(',');
@@ -238,14 +266,34 @@ marker.on('dragend', () => {
   setOrigin(lat, lng);
 });
 
+const marker2El = document.createElement('div');
+marker2El.className = 'origin-marker second';
+const marker2 = new maplibregl.Marker({ element: marker2El, draggable: true });
+marker2.on('dragend', () => {
+  const { lat, lng } = marker2.getLngLat();
+  setSecond({ lat, lon: lng });
+});
+
 function showOrigin() {
   if (!state.origin) return;
   marker.setLngLat([state.origin.lon, state.origin.lat]).addTo(map);
+  if (state.second) marker2.setLngLat([state.second.lon, state.second.lat]).addTo(map);
+  else marker2.remove();
+  meetChip.hidden = !state.second;
   hint.hidden = true;
 }
 
 function setOrigin(lat: number, lon: number) {
   state.origin = { lat, lon };
+  showOrigin();
+  readout.hidden = true;
+  writeUrl();
+  compute();
+}
+
+/** Meeting point on (a second start) or off (null). */
+function setSecond(p: { lat: number; lon: number } | null) {
+  state.second = p;
   showOrigin();
   readout.hidden = true;
   writeUrl();
@@ -436,6 +484,7 @@ function textFont(): string[] {
 }
 
 function showResult(r: Result) {
+  renderFavourites();
   if (!mapReady) return;
   const { width, height, rgba } = r.image;
   heatCanvas.width = width;
@@ -480,13 +529,13 @@ function showResult(r: Result) {
   map.triggerRepaint();
 }
 
-function gridSeconds(r: RasterLayer, lat: number, lon: number): number {
+function gridSeconds(r: RasterLayer, lat: number, lon: number, values = r.grid.seconds): number {
   const [w, s, e, n] = r.bbox;
-  const { cols, rows, seconds } = r.grid;
+  const { cols, rows } = r.grid;
   const c = Math.floor(((lon - w) / (e - w)) * cols);
   const row = Math.floor(((n - lat) / (n - s)) * rows);
   if (c < 0 || c >= cols || row < 0 || row >= rows) return Infinity;
-  return seconds[row * cols + c];
+  return values[row * cols + c];
 }
 
 // A tap that only closes the search panel should not also set a point.
@@ -522,7 +571,10 @@ map.on('click', (e: MapMouseEvent) => {
     const when = t(state.window === 'day' ? 'byDay' : 'atNight');
     const parts: string[] = [];
     if (secs === Infinity) parts.push(t('unreachable'));
-    else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60), when }));
+    else if (secs >= 0 && lastResult?.each) {
+      const [a, b] = lastResult.each.map((v) => gridSeconds(lastResult!, lat, lng, v) / 60);
+      parts.push(t('minutesBoth', { a: Math.round(a), b: Math.round(b), when }));
+    } else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60), when }));
     if (state.routes && state.origin) {
       const top = near(['routes-line']).sort((a, b) => b.properties.share - a.properties.share)[0];
       if (top) {
@@ -544,6 +596,7 @@ map.on('click', (e: MapMouseEvent) => {
   }
   readoutText.innerHTML = html;
   state.pending = { lat, lon: lng };
+  secondBtn.hidden = !state.origin;
   readout.hidden = false;
 });
 
@@ -554,6 +607,22 @@ function escapeHtml(t: string): string {
 $('readout-start').addEventListener('click', () => {
   if (state.pending) setOrigin(state.pending.lat, state.pending.lon);
 });
+secondBtn.addEventListener('click', () => {
+  if (state.pending) setSecond(state.pending);
+});
+$('readout-fav').addEventListener('click', async () => {
+  const at = state.pending;
+  if (!at) return;
+  readout.hidden = true;
+  let label = `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`;
+  try {
+    label = (await reversePlace(at, lang())) ?? label;
+  } catch {
+    // Offline or Photon down: keep the coordinates as the name.
+  }
+  addFavourites([{ label, ...at }]);
+});
+$('meet-close').addEventListener('click', () => setSecond(null));
 
 // ---------- controls ----------
 function setWindow(w: Window) {
@@ -616,6 +685,7 @@ function applyLang(l: Lang, remember: boolean) {
   for (const b of langButtons) b.setAttribute('aria-checked', String(b.dataset.lang === l));
   renderFeedInfo();
   renderLayerLegend();
+  renderFavourites();
   statusEl.textContent = state.status();
   readout.hidden = true;
   searchCache.clear();
@@ -742,14 +812,27 @@ searchInput.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
+/** What a picked search result does: set the start, or add a favourite place. */
+let searchFor: 'start' | 'favourite' = 'start';
 function pickPlace(p: Place) {
   closeSearch();
+  if (searchFor === 'favourite') {
+    searchFor = 'start';
+    searchInput.value = '';
+    addFavourites([{ label: p.label, lat: p.lat, lon: p.lon }]);
+    menuDialog.showModal();
+    return;
+  }
   searchInput.value = p.label;
   setOrigin(p.lat, p.lon);
   map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
 }
 
-searchBtn.addEventListener('click', () => (searchPanel.hidden ? openSearch() : closeSearch()));
+searchBtn.addEventListener('click', () => {
+  searchFor = 'start';
+  if (searchPanel.hidden) openSearch();
+  else closeSearch();
+});
 $('search-close').addEventListener('click', closeSearch);
 for (const ev of ['mousedown', 'touchstart'] as const) {
   map.on(ev, () => {
@@ -758,6 +841,155 @@ for (const ev of ['mousedown', 'touchstart'] as const) {
   });
 }
 
+// ---------- favourite places ----------
+let favourites = loadFavourites();
+const favMarkers = new Map<string, maplibregl.Marker>();
+
+function addFavourites(places: { label: string; lat: number; lon: number }[]) {
+  favourites = [
+    ...favourites,
+    ...places.map((p) => ({
+      id: newId(),
+      label: p.label,
+      lat: p.lat,
+      lon: p.lon,
+      weight: 2 as Weight,
+    })),
+  ];
+  saveFavourites(favourites);
+  renderFavourites();
+}
+
+function favouriteTimes() {
+  const r = lastResult;
+  return r && state.origin ? score(favourites, (lat, lon) => gridSeconds(r, lat, lon)) : null;
+}
+
+/** Redraws the list in the menu, the star markers on the map and the score chip. */
+function renderFavourites() {
+  const times = favouriteTimes();
+  favList.replaceChildren(
+    ...favourites.map((f, i) => {
+      const li = document.createElement('li');
+      const name = document.createElement('span');
+      name.className = 'fav-name';
+      name.textContent = f.label;
+      const min = document.createElement('span');
+      min.className = 'fav-min';
+      const m = times?.minutes[i];
+      min.textContent = times ? (m === null ? '–' : `${m} ${t('min')}`) : '';
+      const weight = document.createElement('select');
+      weight.setAttribute('aria-label', t('favWeight'));
+      for (const w of WEIGHTS) {
+        const o = document.createElement('option');
+        o.value = String(w);
+        o.textContent = t(`weight${w}` as const);
+        o.selected = f.weight === w;
+        weight.append(o);
+      }
+      weight.addEventListener('change', () => {
+        f.weight = Number(weight.value) as Weight;
+        saveFavourites(favourites);
+        renderFavourites();
+      });
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'fav-del';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', t('favRemove', { name: f.label }));
+      del.addEventListener('click', () => {
+        favourites = favourites.filter((x) => x !== f);
+        saveFavourites(favourites);
+        renderFavourites();
+      });
+      li.append(name, min, weight, del);
+      return li;
+    }),
+  );
+  $('fav-empty').hidden = favourites.length > 0;
+  $('fav-export').hidden = favourites.length === 0;
+
+  const keep = new Set(favourites.map((f) => f.id));
+  for (const [id, m] of favMarkers) {
+    if (!keep.has(id)) {
+      m.remove();
+      favMarkers.delete(id);
+    }
+  }
+  favourites.forEach((f, i) => {
+    let m = favMarkers.get(f.id);
+    if (!m) {
+      const el = document.createElement('div');
+      el.className = 'fav-marker';
+      m = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([f.lon, f.lat])
+        .addTo(map);
+      favMarkers.set(f.id, m);
+    }
+    const mins = times?.minutes[i];
+    m.getElement().textContent = times ? `★ ${mins === null ? '–' : mins}` : '★';
+    m.getElement().title = f.label;
+  });
+
+  favChip.hidden = !(times && times.average !== null);
+  if (times?.average != null) {
+    favChip.textContent = t('favScore', { n: times.average, count: favourites.length });
+  }
+}
+
+favChip.addEventListener('click', () => {
+  menuDialog.showModal();
+  $('fav-title').scrollIntoView({ block: 'start' });
+});
+$('fav-add').addEventListener('click', () => {
+  menuDialog.close();
+  searchFor = 'favourite';
+  openSearch();
+});
+const favFile = $<HTMLInputElement>('fav-file');
+$('fav-import').addEventListener('click', () => favFile.click());
+favFile.addEventListener('change', async () => {
+  const file = favFile.files?.[0];
+  favFile.value = '';
+  if (!file) return;
+  const msg = $('fav-msg');
+  try {
+    const places = parseImport(await file.text());
+    const found: { label: string; lat: number; lon: number }[] = [];
+    let missing = 0;
+    for (const [i, p] of places.entries()) {
+      msg.textContent = t('favImporting', { i: i + 1, n: places.length });
+      if (p.lat !== undefined && p.lon !== undefined) {
+        found.push({ label: p.label, lat: p.lat, lon: p.lon });
+        continue;
+      }
+      // No position in the file: look the name up, one request at a time to be kind to Photon.
+      const hit = (
+        await searchPlaces(
+          p.query ?? p.label,
+          { lat: BERLIN[1], lon: BERLIN[0] },
+          new AbortController().signal,
+          lang(),
+        ).catch(() => [] as Place[])
+      )[0];
+      if (hit) found.push({ label: p.label, lat: hit.lat, lon: hit.lon });
+      else missing++;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    addFavourites(found);
+    msg.textContent = t('favImported', { n: found.length, missing });
+  } catch {
+    msg.textContent = t('favImportFailed');
+  }
+});
+$('fav-export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(favourites, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'lieblingsorte.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
 applyLang(lang(), false);
 
 // ---------- PWA ----------
