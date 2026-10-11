@@ -146,6 +146,7 @@ export function accessGrid(
   tt: PreparedTimetable,
   perHour: Float32Array,
   walk?: WalkNetwork,
+  walkSpeedMps?: number,
 ): HeatGrid {
   const waitSeconds = new Float32Array(tt.stopCount);
   for (let s = 0; s < tt.stopCount; s++) {
@@ -154,7 +155,7 @@ export function accessGrid(
   return heatGrid(
     tt,
     { stopSeconds: waitSeconds, computedInMs: 0 },
-    { cellSizeM: DESERT_CELL_M, maxFinalWalkSeconds: MAX_ACCESS_WALK_S, walk },
+    { cellSizeM: DESERT_CELL_M, maxFinalWalkSeconds: MAX_ACCESS_WALK_S, walk, walkSpeedMps },
   );
 }
 

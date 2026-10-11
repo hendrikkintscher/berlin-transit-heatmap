@@ -68,6 +68,10 @@ const TRIP_SOURCE = 'trip';
 const TRIP_STOPS_SOURCE = 'trip-stops';
 const BOLD_FONT = ['Noto Sans Bold'];
 const DEFAULT_OPACITY = 80;
+/** Walking speeds offered in the menu, in km/h; 4 is the default. */
+const WALK_SPEEDS = [3, 4, 5, 6];
+const DEFAULT_WALK_KMH = 4;
+const walkSpeed = (v: number) => (WALK_SPEEDS.includes(v) ? v : DEFAULT_WALK_KMH);
 
 // Line colours roughly follow the usual Berlin map conventions.
 const MODE_COLORS: Record<string, string> = {
@@ -113,6 +117,7 @@ const favList = $<HTMLUListElement>('fav-list');
 const secondBtn = $<HTMLButtonElement>('readout-second');
 const menuDialog = $<HTMLDialogElement>('menu');
 const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
+const walkButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-walk]')];
 const isoToggle = $<HTMLInputElement>('iso-toggle');
 const opacityInput = $<HTMLInputElement>('opacity');
 const locateBtn = $<HTMLButtonElement>('locate-btn');
@@ -146,6 +151,8 @@ const state: {
   iso: boolean;
   /** Heatmap opacity in percent; remembered on this device. */
   opacity: number;
+  /** Walking speed in km/h; remembered on this device, carried in shared links. */
+  walkKmh: number;
   /** Re-renders the status line, so it follows a language switch. */
   status: () => string;
 } = {
@@ -165,6 +172,7 @@ const state: {
   desert: false,
   iso: false,
   opacity: readNumber('heat-opacity', DEFAULT_OPACITY),
+  walkKmh: walkSpeed(readNumber('walk-kmh', DEFAULT_WALK_KMH)),
   status: () => '',
 };
 type Result = Extract<FromWorker, { type: 'result' }>;
@@ -272,10 +280,7 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     renderFeedInfo();
   } else if (m.type === 'walk') {
     // Footpaths arrived: redo what was computed with straight-line walks.
-    for (const w of Object.keys(layerData)) delete layerData[w];
-    layersRequested.clear();
-    showLayers();
-    compute();
+    redoWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
     lastResult = m;
@@ -313,6 +318,14 @@ function formatDate(iso: string) {
   });
 }
 
+/** Recomputes the map and the walk-based layers, e.g. after a walking-speed change. */
+function redoWalks() {
+  for (const w of Object.keys(layerData)) delete layerData[w];
+  layersRequested.clear();
+  showLayers();
+  compute();
+}
+
 /** The timetable file the map is computed from (arriving uses the hour before). */
 const computedWindow = () => computeWindow(state.when, state.direction);
 
@@ -328,6 +341,7 @@ function compute() {
     window: computedWindow(),
     direction: state.direction,
     measure: state.measure,
+    walkKmh: state.walkKmh,
     ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
     ...(state.second ? { second: state.second } : {}),
@@ -349,6 +363,7 @@ function readUrl() {
   if (p.get('dir') === 'arr') state.direction = 'arrive';
   if (p.get('m') === 'best') state.measure = 'best';
   state.compare = parseWhen(p.get('cmp'));
+  if (p.has('walk')) state.walkKmh = walkSpeed(Number(p.get('walk')));
 }
 function parsePoint(v: string | null) {
   const [lat, lon] = (v ?? '').split(',').map(Number);
@@ -363,6 +378,7 @@ function writeUrl() {
   if (state.direction === 'arrive') p.set('dir', 'arr');
   if (state.measure === 'best') p.set('m', 'best');
   if (state.compare) p.set('cmp', windowName(state.compare));
+  if (state.walkKmh !== DEFAULT_WALK_KMH) p.set('walk', String(state.walkKmh));
   if (!state.routes) p.set('routes', '0');
   const layers = [state.freq && 'freq', state.desert && 'desert', state.iso && 'iso']
     .filter(Boolean)
@@ -874,7 +890,12 @@ function showLayers() {
   const data = layerData[state.window];
   if ((state.freq || state.desert) && !data && !layersRequested.has(state.window)) {
     layersRequested.add(state.window);
-    send({ type: 'layers', window: state.window, thresholds: desertThresholds(state.when) });
+    send({
+      type: 'layers',
+      window: state.window,
+      thresholds: desertThresholds(state.when),
+      walkKmh: state.walkKmh,
+    });
   }
   map.setLayoutProperty(STATIONS_LAYER, 'visibility', state.freq && data ? 'visible' : 'none');
   map.setLayoutProperty(DESERT_LAYER, 'visibility', state.desert && data ? 'visible' : 'none');
@@ -1379,6 +1400,22 @@ opacityInput.addEventListener('input', () => {
   remember('heat-opacity', opacityInput.value);
   if (map.getLayer(HEAT_LAYER)) map.setPaintProperty(HEAT_LAYER, 'raster-opacity', heatOpacity());
 });
+
+function renderWalk() {
+  for (const b of walkButtons)
+    b.setAttribute('aria-checked', String(Number(b.dataset.walk) === state.walkKmh));
+}
+for (const b of walkButtons)
+  b.addEventListener('click', () => {
+    const kmh = Number(b.dataset.walk);
+    if (kmh === state.walkKmh) return;
+    state.walkKmh = kmh;
+    remember('walk-kmh', String(kmh));
+    renderWalk();
+    writeUrl();
+    redoWalks();
+  });
+renderWalk();
 
 // ---------- my location ----------
 locateBtn.addEventListener('click', () => {

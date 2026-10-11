@@ -1,12 +1,13 @@
-import { M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
+import { M_PER_DEG_LAT, metresPerDegLon } from './geo';
 import type { PreparedTimetable } from './prepare';
 import {
-  sameEdgeSeconds,
+  sameEdgeMetres,
   snapCells,
   snapOrigin,
   sharedLabels,
   snapStops,
   walkFrom,
+  walkSpeeds,
   WalkSources,
 } from './walk';
 import type {
@@ -51,10 +52,11 @@ export function heatGrid(
   const seconds = new Float32Array(cols * rows).fill(Infinity);
   const nearest = opts.trackStops ? new Int32Array(cols * rows).fill(-1) : null;
 
-  const radiusM = maxWalk * WALK_SPEED_MPS;
+  const speeds = walkSpeeds(opts.walkSpeedMps);
+  const radiusM = maxWalk * speeds.straight;
   const radCols = Math.ceil(radiusM / cellSizeM) + 1;
   const r2 = radiusM * radiusM;
-  const invSpeed = 1 / WALK_SPEED_MPS;
+  const invSpeed = 1 / speeds.straight;
 
   // Scatter one source (a stop or the origin) onto nearby cells.
   const scatter = (lat: number, lon: number, startSeconds: number, stop: number): void => {
@@ -100,7 +102,9 @@ export function heatGrid(
     scatter(result.origin.lat, result.origin.lon, 0, -1);
 
   if (net && stopSnap) {
-    const sources = new WalkSources();
+    const pace = 1 / speeds.network;
+    const maxM = maxWalk * speeds.network;
+    const sources = new WalkSources(pace);
     // Stops sitting on each edge, so cells on the same edge can walk straight to them.
     const edgeStop = new Map<number, number[]>();
     for (let s = 0; s < tt.stopCount; s++) {
@@ -119,19 +123,20 @@ export function heatGrid(
       sources.times,
       sources.walked,
       sources.tags,
-      maxWalk,
+      maxM,
+      pace,
       sharedLabels(net),
     );
     const cells = snapCells(net, [minLon, gridMinLat, maxLon, maxLat], cols, rows);
-    const { edgeA, edgeB, edgeSeconds } = net;
+    const { edgeA, edgeB, edgeMetres } = net;
     const { time, walk, source } = labels;
     const cellEdge = cells.edge;
     const cellAlong = cells.along;
-    const cellOff = cells.seconds;
+    const cellOff = cells.metres;
     for (let k = 0; k < cols * rows; k++) {
       const e = cellEdge[k];
       if (e < 0) continue;
-      const len = edgeSeconds[e];
+      const len = edgeMetres[e];
       const off = cellOff[k];
       const da = cellAlong[k] * len + off;
       const db = len + 2 * off - da;
@@ -139,28 +144,28 @@ export function heatGrid(
       const b = edgeB[e];
       let v = Infinity;
       let from = -1;
-      if (walk[a] + da <= maxWalk) {
-        v = time[a] + da;
+      if (walk[a] + da <= maxM) {
+        v = time[a] + da * pace;
         from = source[a];
       }
-      if (walk[b] + db <= maxWalk && time[b] + db < v) {
-        v = time[b] + db;
+      if (walk[b] + db <= maxM && time[b] + db * pace < v) {
+        v = time[b] + db * pace;
         from = source[b];
       }
       // Sources on the cell's own edge walk straight along it.
       const here = edgeStop.size > 0 ? edgeStop.get(e) : undefined;
       if (here)
         for (const s of here) {
-          const w = sameEdgeSeconds(net, stopSnap, s, cells, k);
-          if (w <= maxWalk && stopSeconds[s] + w < v) {
-            v = stopSeconds[s] + w;
+          const w = sameEdgeMetres(net, stopSnap, s, cells, k);
+          if (w <= maxM && stopSeconds[s] + w * pace < v) {
+            v = stopSeconds[s] + w * pace;
             from = s;
           }
         }
       if (e === originEdge) {
-        const w = sameEdgeSeconds(net, originSnap!, 0, cells, k);
-        if (w <= maxWalk && w < v) {
-          v = w;
+        const w = sameEdgeMetres(net, originSnap!, 0, cells, k);
+        if (w <= maxM && w * pace < v) {
+          v = w * pace;
           from = -1;
         }
       }

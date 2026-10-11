@@ -30,11 +30,13 @@ export type { Snaps, WalkLabels, WalkNetwork } from './walk';
 export {
   loadWalkNetwork,
   NETWORK_WALK_SPEED_MPS,
+  sameEdgeMetres,
   snapCells,
   snapOrigin,
   snapPoint,
   snapStops,
   timeAt,
   walkFrom,
+  walkSpeeds,
   WalkSources,
 } from './walk';

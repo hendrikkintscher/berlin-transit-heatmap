@@ -30,9 +30,11 @@ export type ToWorker =
       measure: Measure;
       /** Compare: a second timetable file; the map then shows how much longer trips take there. */
       compare?: Window;
+      /** Walking speed in km/h (menu setting). */
+      walkKmh: number;
     }
   | { type: 'trip'; id: number; lat: number; lon: number }
-  | { type: 'layers'; window: Window; thresholds: readonly [number, number] };
+  | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number };
 
 export interface TimetableInfo {
   window: Window;

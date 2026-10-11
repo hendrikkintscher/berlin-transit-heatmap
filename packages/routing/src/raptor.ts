@@ -1,13 +1,12 @@
-import { WALK_SPEED_MPS } from './geo';
 import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
 import type { Origin, TravelTimeOptions, TravelTimeResult } from './types';
 import {
-  NETWORK_WALK_SPEED_MPS,
-  sameEdgeSeconds,
+  sameEdgeMetres,
   snapOrigin,
   snapStops,
   timeAt,
   walkFrom,
+  walkSpeeds,
   WalkSources,
 } from './walk';
 
@@ -52,10 +51,13 @@ export function travelTimes(
   const ox = (origin.lon - tt.proj.lon0) * tt.proj.mPerLon;
   const oy = (origin.lat - tt.proj.lat0) * tt.proj.mPerLat;
   const net = opts.walk;
+  const speeds = walkSpeeds(opts.walkSpeedMps);
   const originSnap = net ? snapOrigin(net, origin) : null;
   if (net && originSnap && originSnap.edge[0] >= 0) {
     // Walk the footpath network; stops off the network fall back to a straight line.
-    const sources = new WalkSources();
+    const pace = 1 / speeds.network;
+    const maxM = maxWalk * speeds.network;
+    const sources = new WalkSources(pace);
     sources.add(net, originSnap, 0, 0, 0, -1);
     const labels = walkFrom(
       net,
@@ -63,26 +65,27 @@ export function travelTimes(
       sources.times,
       sources.walked,
       sources.tags,
-      maxWalk,
+      maxM,
+      pace,
     );
     const snaps = snapStops(net, tt);
-    forStopsWithin(tt, ox, oy, maxWalk * NETWORK_WALK_SPEED_MPS, (s, d) => {
+    forStopsWithin(tt, ox, oy, maxM, (s, d) => {
       const t =
         snaps.edge[s] >= 0
           ? Math.min(
-              timeAt(net, labels, snaps, s, maxWalk),
-              sameEdgeSeconds(net, originSnap, 0, snaps, s),
+              timeAt(net, labels, snaps, s, maxM, pace),
+              sameEdgeMetres(net, originSnap, 0, snaps, s) * pace,
             )
-          : d / WALK_SPEED_MPS;
+          : d / speeds.straight;
       if (t <= maxWalk) {
         accessStops.push(s);
         accessWalk.push(Math.round(t));
       }
     });
   } else {
-    forStopsWithin(tt, ox, oy, maxWalk * WALK_SPEED_MPS, (s, d) => {
+    forStopsWithin(tt, ox, oy, maxWalk * speeds.straight, (s, d) => {
       accessStops.push(s);
-      accessWalk.push(Math.round(d / WALK_SPEED_MPS));
+      accessWalk.push(Math.round(d / speeds.straight));
     });
   }
 
