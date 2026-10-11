@@ -238,6 +238,10 @@ Zoomed in to streets, the map should work like a normal city map:
 
 Small to medium.
 
+### Shorter tap info
+
+**Done** (with group 8): the info window shows just the minutes. The measure and time ("typisch, Werktag 10–11 Uhr") are already in the top bar, so Hendrik had them removed from the tap readout.
+
 ## 8. Realistic walking on real footpaths
 
 Walking is measured today as a straight line at 1.2 m/s, to the first stop and from the last. Across the Spree, rail corridors, canals, cemeteries and the edges of Tempelhofer Feld the real walk is much longer, so the map is too green next to barriers. Hendrik chose the proper solution over a flat detour factor.

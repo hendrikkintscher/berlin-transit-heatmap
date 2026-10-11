@@ -1020,7 +1020,6 @@ map.on('click', (e: MapMouseEvent) => {
   } else {
     const r = lastResult;
     const secs = r && state.origin ? gridSeconds(r, lat, lng) : NaN;
-    const when = `${t(state.measure)}, ${whenText(state.when)}`;
     const parts: string[] = [];
     let tripSlot = '';
     if (secs >= 0 && r?.compare) {
@@ -1037,8 +1036,8 @@ map.on('click', (e: MapMouseEvent) => {
     } else if (secs === Infinity) parts.push(t('unreachable'));
     else if (secs >= 0 && r?.each) {
       const [a, b] = r.each.map((v) => gridSeconds(r, lat, lng, v) / 60);
-      parts.push(t('minutesBoth', { a: Math.round(a), b: Math.round(b), when }));
-    } else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60), when }));
+      parts.push(t('minutesBoth', { a: Math.round(a), b: Math.round(b) }));
+    } else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60) }));
     if (state.routes && state.origin) {
       const top = near(['routes-line']).sort((a, b) => b.properties.share - a.properties.share)[0];
       if (top) {
