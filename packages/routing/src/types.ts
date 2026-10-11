@@ -84,6 +84,12 @@ export interface TravelTimeOptions {
    * leaving at a uniformly random moment of the window, waiting included. Default false.
    */
   typical?: boolean;
+  /**
+   * Leave at this time (seconds since midnight of the service day, in the window)
+   * instead of any time in the window: stopSeconds is then the time to each stop on the
+   * next connection, waiting included. (Addition to Contract 2.)
+   */
+  leaveAt?: number;
   /** With `typical`, how far past the window departures are scanned, in seconds. Default 2700. */
   typicalHorizonSeconds?: number;
 }

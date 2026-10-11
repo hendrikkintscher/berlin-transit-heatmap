@@ -5,7 +5,7 @@ import type { ContourProps } from './contours';
 /** A timetable window, e.g. "weekday-10" (see when.ts). */
 export type Window = string;
 export type Direction = 'depart' | 'arrive';
-export type Measure = 'typical' | 'best';
+export type Measure = 'typical' | 'best' | 'next';
 
 /** One leg of the journey shown for a tapped spot, in travel order. */
 export type TripLeg =
@@ -26,8 +26,13 @@ export type ToWorker =
       second?: { lat: number; lon: number };
       /** 'depart': from the point leaving in the hour; 'arrive': to the point arriving in the hour after the file's window. */
       direction: Direction;
-      /** 'typical' averages over the hour, waiting included; 'best' is the shortest trip in it. */
+      /**
+       * 'typical' averages over the hour, waiting included; 'best' is the shortest trip in
+       * it; 'next' takes the next connection (departing: from leaveOffset seconds into the
+       * hour; arriving: the last one arriving on the hour).
+       */
       measure: Measure;
+      leaveOffset?: number;
       /** Compare: a second timetable file; the map then shows how much longer trips take there. */
       compare?: Window;
       /** Walking speed in km/h (menu setting). */

@@ -206,7 +206,14 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const tt = await prepared(msg.window, msg.direction);
       const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
       const typical = msg.measure === 'typical';
-      const runs = starts.map((o) => run(tt, o, typical));
+      // Next connection: plain RAPTOR from one moment (reversed files count backwards).
+      const leaveAt = (t: PreparedTimetable) =>
+        msg.measure !== 'next'
+          ? undefined
+          : msg.direction === 'depart'
+            ? t.windowStart + (msg.leaveOffset ?? 0)
+            : t.windowEnd;
+      const runs = starts.map((o) => run(tt, o, typical, true, leaveAt(tt)));
       const shown = (r: Run) => r.shown;
       const grid =
         runs.length === 1 ? runs[0].shown : slowerOf(...(runs.map(shown) as [HeatGrid, HeatGrid]));
@@ -220,7 +227,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       let compare: Float32Array<ArrayBuffer> | undefined;
       if (msg.compare) {
         const tt2 = await prepared(msg.compare, msg.direction);
-        const other = starts.map((o) => run(tt2, o, typical, false).shown);
+        const other = starts.map((o) => run(tt2, o, typical, false, leaveAt(tt2)).shown);
         const g2 = other.length === 1 ? other[0] : slowerOf(other[0], other[1]);
         compare = g2.seconds as Float32Array<ArrayBuffer>;
         image = paintDiff(grid, g2);
@@ -285,9 +292,15 @@ interface Run {
   used: UsedSegment[];
 }
 
-function run(tt: PreparedTimetable, origin: Origin, typical: boolean, usage = true): Run {
+function run(
+  tt: PreparedTimetable,
+  origin: Origin,
+  typical: boolean,
+  usage = true,
+  leaveAt?: number,
+): Run {
   const w = { walk, walkSpeedMps };
-  const result = travelTimes(tt, origin, { trackLegs: usage, typical, ...w });
+  const result = travelTimes(tt, origin, { trackLegs: usage, typical, leaveAt, ...w });
   const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, ...w });
   const shown =
     typical && result.typicalSeconds
