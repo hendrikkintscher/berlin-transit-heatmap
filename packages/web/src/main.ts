@@ -3,6 +3,16 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import { BAND_COLORS, BAND_EDGES_MIN, bandLabel } from './colors';
 import { searchPlaces, type Place } from './search';
+import {
+  formatDecimal,
+  formatNumber,
+  initialLang,
+  lang,
+  readStoredLang,
+  setLang,
+  t,
+  type Lang,
+} from './i18n';
 import type { FromWorker, TimetableInfo, ToWorker, Window } from './protocol';
 
 const BERLIN: [number, number] = [13.405, 52.515];
@@ -32,8 +42,10 @@ const readoutText = $('readout-text');
 const statusEl = $('status');
 const feedInfo = $('feed-info');
 const infoDialog = $<HTMLDialogElement>('info');
-const segButtons = [...document.querySelectorAll<HTMLButtonElement>('.seg button')];
-const routesBtn = $<HTMLButtonElement>('routes-btn');
+const segButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-window]')];
+const routesToggle = $<HTMLInputElement>('routes-toggle');
+const menuDialog = $<HTMLDialogElement>('menu');
+const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
 
 const state: {
   window: Window;
@@ -42,7 +54,17 @@ const state: {
   requestId: number;
   info: Partial<Record<Window, TimetableInfo>>;
   routes: boolean;
-} = { window: 'day', origin: null, pending: null, requestId: 0, info: {}, routes: true };
+  /** Re-renders the status line, so it follows a language switch. */
+  status: () => string;
+} = {
+  window: 'day',
+  origin: null,
+  pending: null,
+  requestId: 0,
+  info: {},
+  routes: true,
+  status: () => '',
+};
 type Result = Extract<FromWorker, { type: 'result' }>;
 let lastResult: Result | null = null;
 
@@ -62,13 +84,19 @@ $('legend-bar').append(
 );
 $('legend-ticks').append(
   ...[0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
-    const t = document.createElement('span');
+    const tick = document.createElement('span');
     const i = BAND_EDGES_MIN.indexOf(m);
-    t.style.left = `${(100 * i) / BAND_COLORS.length}%`;
-    t.textContent = m === 120 ? '120+ min' : String(m);
-    return t;
+    tick.style.left = `${(100 * i) / BAND_COLORS.length}%`;
+    tick.textContent = String(m);
+    if (m === 120) tick.dataset.t = 'legendMax';
+    return tick;
   }),
 );
+
+function setStatus(render: () => string) {
+  state.status = render;
+  statusEl.textContent = render();
+}
 
 // ---------- worker ----------
 const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
@@ -93,11 +121,12 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     lastResult = m;
     showResult(m);
     loadbar.hidden = true;
-    statusEl.textContent = `Computed in ${(m.totalMs / 1000).toFixed(1)} s · tap the map for minutes`;
+    const s = m.totalMs / 1000;
+    setStatus(() => t('computed', { s: formatDecimal(s, 1) }));
     prefetchOtherWindow();
   } else if (m.type === 'error') {
     loadbar.hidden = true;
-    statusEl.textContent = `Something went wrong: ${m.message}`;
+    setStatus(() => t('failed', { message: m.message }));
   }
 };
 
@@ -114,11 +143,9 @@ function prefetchOtherWindow() {
 
 function renderFeedInfo() {
   const i = state.info[state.window];
-  if (!i) {
-    feedInfo.textContent = 'Loading timetable…';
-  } else {
-    feedInfo.textContent = `Timetable from VBB, service day ${i.serviceDate} (feed ${i.feedVersion}, ${i.stops.toLocaleString('en')} stops).`;
-  }
+  feedInfo.textContent = i
+    ? t('feedInfo', { date: i.serviceDate, version: i.feedVersion, stops: formatNumber(i.stops) })
+    : t('feedLoading');
 }
 
 function compute() {
@@ -126,11 +153,11 @@ function compute() {
   state.requestId++;
   loadbar.hidden = false;
   loadbar.classList.add('indeterminate');
-  statusEl.textContent = 'Computing…';
+  setStatus(() => t('computing'));
   send({ type: 'compute', id: state.requestId, window: state.window, ...state.origin });
 }
 
-// ---------- URL state (?from=lat,lon&w=night) ----------
+// ---------- URL state (?from=lat,lon&w=night&routes=0&lang=en) ----------
 function readUrl() {
   const p = new URLSearchParams(location.search);
   if (p.get('routes') === '0') state.routes = false;
@@ -143,10 +170,14 @@ function writeUrl() {
   if (state.origin) p.set('from', `${state.origin.lat.toFixed(5)},${state.origin.lon.toFixed(5)}`);
   if (state.window === 'night') p.set('w', 'night');
   if (!state.routes) p.set('routes', '0');
+  // Keep an explicit ?lang= so a shared English link stays English.
+  if (urlLang && urlLang === lang()) p.set('lang', urlLang);
   const q = p.toString();
   history.replaceState(null, '', q ? `?${q}` : location.pathname);
 }
 readUrl();
+const urlLang = new URLSearchParams(location.search).get('lang');
+setLang(initialLang(location.search, readStoredLang()), false);
 
 // ---------- map ----------
 const map = new maplibregl.Map({
@@ -328,11 +359,9 @@ map.on('click', (e: MapMouseEvent) => {
     return;
   }
   const secs = lastResult ? gridSeconds(lastResult, lat, lng) : Infinity;
-  const label = state.window === 'day' ? 'by day' : 'at night';
+  const when = t(state.window === 'day' ? 'byDay' : 'atNight');
   let html =
-    secs === Infinity
-      ? 'Not reachable within the time window'
-      : `<b>${Math.round(secs / 60)} min</b> ${label}`;
+    secs === Infinity ? t('unreachable') : t('minutes', { n: Math.round(secs / 60), when });
   if (state.routes) {
     const { x, y } = e.point;
     const hit = map.queryRenderedFeatures(
@@ -345,7 +374,7 @@ map.on('click', (e: MapMouseEvent) => {
     const top = hit.sort((a, b) => b.properties.share - a.properties.share)[0];
     if (top) {
       const pct = Math.round(100 * (top.properties.share as number));
-      html = `<b>${escapeHtml(String(top.properties.names))}</b> · fastest way to ${pct}% of the map`;
+      html = t('lineShare', { names: escapeHtml(String(top.properties.names)), pct });
     }
   }
   readoutText.innerHTML = html;
@@ -378,19 +407,46 @@ showOrigin();
 
 function setRoutes(on: boolean) {
   state.routes = on;
-  routesBtn.setAttribute('aria-pressed', String(on));
+  routesToggle.checked = on;
   if (mapReady) {
     for (const id of ROUTE_LAYERS) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
   }
   writeUrl();
 }
-routesBtn.addEventListener('click', () => setRoutes(!state.routes));
-routesBtn.setAttribute('aria-pressed', String(state.routes));
+routesToggle.addEventListener('change', () => setRoutes(routesToggle.checked));
+routesToggle.checked = state.routes;
 
-$('info-btn').addEventListener('click', () => infoDialog.showModal());
-infoDialog.addEventListener('click', (e) => {
-  if (e.target === infoDialog) infoDialog.close();
+// ---------- menu and language ----------
+$('menu-btn').addEventListener('click', () => {
+  closeSearch();
+  readout.hidden = true;
+  menuDialog.showModal();
 });
+$('menu-close').addEventListener('click', () => menuDialog.close());
+$('about-btn').addEventListener('click', () => {
+  menuDialog.close();
+  infoDialog.showModal();
+});
+// A tap on the backdrop (outside the panel) closes either sheet.
+for (const d of [menuDialog, infoDialog]) {
+  d.addEventListener('click', (e) => {
+    if (e.target === d) d.close();
+  });
+}
+
+function applyLang(l: Lang, remember: boolean) {
+  setLang(l, remember);
+  for (const b of langButtons) b.setAttribute('aria-checked', String(b.dataset.lang === l));
+  renderFeedInfo();
+  statusEl.textContent = state.status();
+  readout.hidden = true;
+  searchCache.clear();
+}
+for (const b of langButtons)
+  b.addEventListener('click', () => {
+    applyLang(b.dataset.lang as Lang, true);
+    writeUrl();
+  });
 
 // ---------- address search ----------
 const searchBtn = $<HTMLButtonElement>('search-btn');
@@ -463,22 +519,22 @@ async function runSearch(q: string) {
   const cached = searchCache.get(key);
   if (cached) {
     renderPlaces(cached);
-    showMsg(cached.length ? '' : 'No matches in Berlin');
+    showMsg(cached.length ? '' : t('noMatches'));
     return;
   }
   searchAbort?.abort();
   const ctrl = (searchAbort = new AbortController());
   const c = map.getCenter();
   try {
-    const list = await searchPlaces(q, { lat: c.lat, lon: c.lng }, ctrl.signal);
+    const list = await searchPlaces(q, { lat: c.lat, lon: c.lng }, ctrl.signal, lang());
     searchCache.set(key, list);
     if (ctrl.signal.aborted) return;
     renderPlaces(list);
-    showMsg(list.length ? '' : 'No matches in Berlin');
+    showMsg(list.length ? '' : t('noMatches'));
   } catch {
     if (ctrl.signal.aborted) return;
     renderPlaces([]);
-    showMsg(navigator.onLine ? 'Search is not reachable right now' : 'Search needs a connection');
+    showMsg(t(navigator.onLine ? 'searchDown' : 'searchOffline'));
   }
 }
 
@@ -523,6 +579,8 @@ for (const ev of ['mousedown', 'touchstart'] as const) {
     if (ignoreClick) closeSearch();
   });
 }
+
+applyLang(lang(), false);
 
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

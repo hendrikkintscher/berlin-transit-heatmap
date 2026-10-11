@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Nothing here is built yet. The groups run from small interface fixes to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. The groups run from small interface fixes to bigger features. Within a group, items that others depend on come first.
 
 ## 1. Interface and usability
 
@@ -8,17 +8,23 @@ Small changes to the app shell. They make room for everything below, so they com
 
 ### Burger menu
 
+**Done** (PR #15): the menu button sits next to search and opens a panel with the Lines switch, the language switch and the About text. Day/Night stays in the top bar.
+
 A menu button that opens a panel for secondary controls, so the map stays uncluttered on a phone. It holds the language switch and the map-feature toggles (Day/Night, Lines and later the layers from group 2), plus the About text.
 
 Notes: the top bar today holds the search, Day/Night and Lines; on narrow screens the Day/Night hours are already hidden (PR #10). Search and the most-used toggle stay in the bar; the rest move into the menu.
 
 ### German by default, English switch
 
+**Done** (PR #15): the app opens in German; the menu switches to English. The choice is remembered, and `?lang=en` in a link opens it in English.
+
 The app speaks German by default, with a switch to English in the burger menu.
 
 Notes: the interface is in English today (`<html lang="en">`). All UI text moves into one small string table per language. The choice is remembered in the browser and can be set by a URL parameter (e.g. `lang=en`); the address search already asks Photon for German results.
 
 ### Address search limited to the covered area
+
+**Done** (PR #15): suggestions are limited to the heatmap's area (Berlin plus a narrow edge, the same rectangle the map is computed for), both in the Photon query and again on the device.
 
 Only suggest addresses and places inside the area the map covers. If that's hard, limit them to Berlin addresses and places instead.
 
