@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done; groups 5–9 come from a review of the live app, and group 10 is the Android app and run from quick wins to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done; groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), and group 11 is the Android app; they run from quick wins to bigger features. Within a group, items that others depend on come first.
 
 ## 1. Interface and usability
 
@@ -192,7 +192,41 @@ Colour each place by how much longer the trip takes at one time than another, fo
 
 Notes: both grids already come from the same router; needs a second time choice in the picker and a diverging colour scale.
 
-## 7. Realistic walking on real footpaths
+## 7. Reading the map
+
+From Hendrik's review of group 6: the tapped route looks too much like the Lines layer, the colours still hide too much of the base map to tell which part of Berlin you are looking at, and at street level it should be easy to pick an exact street or address. These continue the blending work from group 5. Each is small to medium and helps every visit, so they come before the footpath work. Order: smallest and most visible first.
+
+### Tell the route apart from the Lines layer
+
+While a route is shown, the Lines layer steps back (about 30 % opacity, thinner, no labels) and the route comes forward: thicker, with a dark outline instead of the white casing the Lines use, round stop dots where you get on, change and get off (with the stop names), and walking legs as a dark dotted line. Closing the card brings the Lines back. Small.
+
+### Orientation: which part of Berlin am I looking at?
+
+The features that tell people where they are, most useful first:
+
+1. **Water**: the Spree, Havel, Landwehrkanal and the big lakes (Müggelsee, Wannsee, Tegeler See). The strongest shape cue in Berlin, and today it is hidden under the colours. Draw water on top of the heatmap in a clear blue-grey, with the river names.
+2. **Large green spaces**: Tiergarten, Tempelhofer Feld, Grunewald, the Volksparks. Shown as a soft outline or a light veil over the colours, named at city zoom.
+3. **District names**: the twelve Bezirke at city zoom, and well-known Ortsteile (Kreuzberg, Prenzlauer Berg, Neukölln, Charlottenburg) from about zoom 12, in a bolder label with a halo so they read on any colour.
+4. **The Ringbahn** as a faint frame that stays visible even with Lines switched off: most Berliners place themselves "inside" or "outside the Ring".
+5. **Motorways and main roads** (A100, the Bundesstraßen) already sit on top of the colours; keep them.
+6. **A few landmarks** as small symbols at city zoom: Fernsehturm, Brandenburger Tor, Tempelhof, Olympiastadion, BER.
+
+Faint district boundaries are optional; they tend to clutter the picture at phone size.
+
+Notes: in the Positron basemap, water and parks are drawn below the roads, so the colours cover them. Fix this by drawing a copy of the water and park layers above the heatmap. The vector tiles (OpenMapTiles schema) already hold suburb and quarter places, POIs and house numbers that Positron doesn't style, so no new data is needed. The landmark list can be hand-picked. Medium effort.
+
+### Street level: pick an exact street or address
+
+Zoomed in to streets, the map should work like a normal city map:
+
+- From about zoom 14 the colours fade (to roughly 40 % at zoom 16), so street names read clearly. The opacity slider still sets the city-view strength.
+- From zoom 17, show house numbers. The tiles have them; Positron doesn't draw them.
+- Tapping at street level names the street and house number in the card, via Photon reverse geocoding (already used for favourites), so "Hier starten" picks an exact address.
+- The start marker snaps to that address.
+
+Small to medium.
+
+## 8. Realistic walking on real footpaths
 
 Walking is measured today as a straight line at 1.2 m/s, to the first stop and from the last. Across the Spree, rail corridors, canals, cemeteries and the edges of Tempelhofer Feld the real walk is much longer, so the map is too green next to barriers. Hendrik chose the proper solution over a flat detour factor.
 
@@ -200,7 +234,7 @@ Walking is measured today as a straight line at 1.2 m/s, to the first stop and f
 
 Precompute walking times on the OpenStreetMap footpath network in timetable-build: from each stop to the grid cells around it (up to the 15-minute walking limit), and between nearby stops for transfers. Ship them as a compact file next to the timetables; the router reads walking times from it instead of straight-line distance.
 
-Why it comes after groups 5 and 6: it is the largest item so far (several days, a new data pipeline), while groups 5 and 6 are quick and help every visit. Its value is high, though, so it comes before the new modes in group 8, which build on it (bike times on real streets).
+Why it comes after groups 5 to 7: it is the largest item so far (several days, a new data pipeline), while groups 5 to 7 are quick and help every visit. Its value is high, though, so it comes before the new modes in group 9, which build on it (bike times on real streets).
 
 Notes:
 
@@ -208,7 +242,7 @@ Notes:
 - Size: roughly 45k platforms times nearby cells; with quantised times and delta encoding this should stay a few MB gzipped, downloaded once and cached. To be measured in a prototype first.
 - Until then, a detour factor of about 1.3 on straight-line distances would be a one-line stopgap if the green next to barriers bothers anyone.
 
-## 8. More ways to travel
+## 9. More ways to travel
 
 ### Step-free mode
 
@@ -220,15 +254,15 @@ Notes: VBB GTFS has wheelchair_boarding for many stops and trips, but coverage m
 
 A mode that cycles (about 15 km/h) to and from stations instead of walking, and a bike-only map for comparison. Taking the bike on the train and parking it can be a fixed time penalty.
 
-Notes: the routing change is small; most effort is in the UI and defaults. Uses the street network from group 7 when available, a straight line with a detour factor otherwise. Large overall.
+Notes: the routing change is small; most effort is in the UI and defaults. Uses the street network from group 8 when available, a straight line with a detour factor otherwise. Large overall.
 
-## 9. Performance
+## 10. Performance
 
 ### Smaller, faster first load
 
 First load is about 1.2 MB (JS about 300 KB gzipped plus one hourly timetable of 0.55–0.7 MB). If it becomes a problem: load the map style and timetable in parallel, move rarely used code (favourites import) into a lazy chunk, and store timetables in a binary format instead of JSON. Low priority now that the hourly files are smaller than the old Day file.
 
-## 10. Android app
+## 11. Android app
 
 ### Native Android app and how to ship it
 
@@ -246,4 +280,4 @@ Ways to ship it:
 - **Direct APK** (from GitHub Releases): free and immediate, but users must allow installs from unknown sources and there are no automatic updates.
 - **F-Droid:** free and open-source store; needs the app built from source with no proprietary dependencies, which suits this project.
 
-Suggested path: start with a TWA, test it with a direct APK on Hendrik's phone, then publish to Google Play; move to Capacitor only when a native feature is needed. This can be done at any point, since it doesn't depend on groups 5 to 9.
+Suggested path: start with a TWA, test it with a direct APK on Hendrik's phone, then publish to Google Play; move to Capacitor only when a native feature is needed. This can be done at any point, since it doesn't depend on groups 5 to 10.
