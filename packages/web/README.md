@@ -29,4 +29,7 @@ pnpm --dir packages/web build     # -> packages/web/dist
 - Map layers (`src/layers.ts`, in the menu, `?layers=freq,desert`): stop frequency (departures per
   hour per station) and transit deserts (walk to a platform + half its gap between departures, on a
   100 m grid; thresholds in `DESERT_THRESHOLDS`). The worker computes both per window on first use.
+- Meeting point: `?with=lat,lon` adds a second start; the worker routes both and the map shows
+  the slower trip per cell. Favourite places (`src/favourites.ts`) live in localStorage, with
+  Takeout/CSV/JSON import and a weighted-average score.
 - Address search (`src/search.ts`) only suggests places inside the heatmap area (`DEFAULT_BBOX`).

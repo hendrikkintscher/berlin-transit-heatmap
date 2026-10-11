@@ -6,7 +6,15 @@ export type Window = 'day' | 'night';
 export type ToWorker =
   | { type: 'init'; dataBase: string }
   | { type: 'load'; window: Window; quiet?: boolean }
-  | { type: 'compute'; id: number; window: Window; lat: number; lon: number }
+  | {
+      type: 'compute';
+      id: number;
+      window: Window;
+      lat: number;
+      lon: number;
+      /** Meeting point: a second start; the map then shows the slower of the two trips. */
+      second?: { lat: number; lon: number };
+    }
   | { type: 'layers'; window: Window };
 
 export interface TimetableInfo {
@@ -52,6 +60,8 @@ export type FromWorker =
       bbox: [number, number, number, number];
       /** Grid travel times for the tap readout (row 0 = north, rows evenly spaced in latitude). */
       grid: { cols: number; rows: number; seconds: Float32Array<ArrayBuffer> };
+      /** With a second start: each start's own times on the same grid (the map shows their max). */
+      each?: [Float32Array<ArrayBuffer>, Float32Array<ArrayBuffer>];
       /** Network hops the fastest journeys rely on, with share of reachable map. */
       routes: FeatureCollection<LineString, RouteProps>;
       /** The busier hops chained into longer lines per name set, for labels. */

@@ -98,3 +98,20 @@ export async function searchPlaces(
   const json = (await res.json()) as { features: PhotonFeature[] };
   return toPlaces(json.features, query).slice(0, 6);
 }
+
+/** Best-effort name for a point (street and number, or a named place), via Photon's reverse lookup. */
+export async function reversePlace(
+  at: { lat: number; lon: number },
+  lang: 'de' | 'en' = 'de',
+): Promise<string | null> {
+  const p = new URLSearchParams({
+    lat: at.lat.toFixed(5),
+    lon: at.lon.toFixed(5),
+    lang,
+    limit: '1',
+  });
+  const res = await fetch(`https://photon.komoot.io/reverse?${p}`);
+  if (!res.ok) throw new Error(`reverse lookup failed (${res.status})`);
+  const json = (await res.json()) as { features: PhotonFeature[] };
+  return toPlaces(json.features)[0]?.label ?? null;
+}

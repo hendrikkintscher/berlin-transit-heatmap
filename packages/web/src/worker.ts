@@ -106,13 +106,25 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'compute') {
       const t0 = performance.now();
       const tt = await ensure(msg.window);
-      const result = travelTimes(tt, { lat: msg.lat, lon: msg.lon }, { trackLegs: true });
-      const grid = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: true });
-      const used = routeUsage(tt, result, grid, { minShare: MIN_ROUTE_SHARE });
+      const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
+      const runs = starts.map((o) => {
+        const result = travelTimes(tt, o, { trackLegs: true });
+        const grid = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: true });
+        return { result, grid, used: routeUsage(tt, result, grid, { minShare: MIN_ROUTE_SHARE }) };
+      });
+      const grid = runs.length === 1 ? runs[0].grid : slowerOf(runs[0].grid, runs[1].grid);
+      const used = runs.flatMap((r) => r.used);
       const routes = usageGeoJSON(tt, used);
       const labels = labelLines(tt, used);
       const image = paint(grid);
       const seconds = grid.seconds as Float32Array<ArrayBuffer>;
+      const each =
+        runs.length === 2
+          ? (runs.map((r) => r.grid.seconds) as [
+              Float32Array<ArrayBuffer>,
+              Float32Array<ArrayBuffer>,
+            ])
+          : undefined;
       ctx.postMessage(
         {
           type: 'result',
@@ -121,18 +133,26 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           image,
           bbox: grid.bbox,
           grid: { cols: grid.cols, rows: grid.rows, seconds },
+          each,
           routes,
           labels,
-          computedInMs: result.computedInMs,
+          computedInMs: runs.reduce((a, r) => a + r.result.computedInMs, 0),
           totalMs: performance.now() - t0,
         } satisfies FromWorker,
-        [image.rgba.buffer, seconds.buffer],
+        [image.rgba.buffer, seconds.buffer, ...(each ? each.map((e) => e.buffer) : [])],
       );
     }
   } catch (err) {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
   }
 };
+
+/** Meeting point: each cell gets the slower of the two trips ("where can we both be in N min?"). */
+function slowerOf(a: HeatGrid, b: HeatGrid): HeatGrid {
+  const seconds = new Float32Array(a.seconds.length);
+  for (let i = 0; i < seconds.length; i++) seconds[i] = Math.max(a.seconds[i], b.seconds[i]);
+  return { ...a, seconds, stop: undefined };
+}
 
 const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
 

@@ -550,3 +550,158 @@ dialog.menu[open] {
 .ll-strong {
   background: rgba(36, 22, 64, 0.64);
 }
+
+/* Meeting point: the second start marker and the banner that explains the colours. */
+.origin-marker.second {
+  border-color: #0e8a7e;
+}
+.meet {
+  position: fixed;
+  z-index: 3;
+  top: calc(var(--st) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 4px 4px 4px 12px;
+  border-left: 4px solid #0e8a7e;
+}
+.meet button {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+.readout-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#readout-start,
+#readout .alt {
+  flex: none;
+  white-space: nowrap;
+}
+#readout .alt {
+  border: 0;
+  background: #efe8f6;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 10px;
+  min-height: 30px;
+  cursor: pointer;
+}
+
+/* Favourite places: score chip, star markers and the list in the menu. */
+.fav-score {
+  border: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.fav-marker {
+  background: #fff;
+  color: #8a5a00;
+  border: 2px solid #e0a100;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+.fav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.fav-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  border-bottom: 1px solid #f0ecf4;
+  font-size: 14px;
+}
+.fav-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fav-min {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fav-list select {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid #ddd5e6;
+  border-radius: 8px;
+  padding: 4px;
+  background: #fff;
+  color: var(--ink);
+  max-width: 96px;
+}
+.fav-del {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.fav-actions button {
+  border: 0;
+  background: #f0ecf4;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.menu-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+.menu-note:empty {
+  display: none;
+}
+#readout i.p1,
+#readout i.p2 {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  vertical-align: 1px;
+}
+#readout i.p2 {
+  border-color: #0e8a7e;
+}
