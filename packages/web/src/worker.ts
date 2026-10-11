@@ -1,19 +1,33 @@
 /// <reference lib="webworker" />
 import {
   heatGrid,
+  journeyTo,
   loadTimetable,
+  reverseTimetable,
   routeUsage,
   travelTimes,
   type HeatGrid,
+  type Journey,
+  type Origin,
   type PreparedTimetable,
   type Timetable,
+  type TravelTimeResult,
+  type UsedSegment,
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
-import { colorLut } from './colors';
+import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut } from './colors';
 import { blurSeconds, warpField } from './soften';
 import { contours } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
-import type { FromWorker, RasterLayer, RouteProps, ToWorker, Window } from './protocol';
+import type {
+  Direction,
+  FromWorker,
+  RasterLayer,
+  RouteProps,
+  ToWorker,
+  TripLeg,
+  Window,
+} from './protocol';
 
 /** Raster cell size. 50 m keeps walking detail around stops; ~60 ms per origin in Node. */
 const CELL_M = 50;
@@ -29,7 +43,7 @@ const OUTLINE_BLUR_CELLS = 6;
 /** Softening, in grid cells (50 m) and seconds. Purely visual; the readout uses the raw grid. */
 const SOFT = { blurCells: 2, warpCells: 2.5, warpWavelengthCells: 9, featherSeconds: 45 };
 const LUT = colorLut(SOFT.featherSeconds);
-const LUT_MAX = LUT.length / 4 - 1;
+const DIFF_LUT = diffLut();
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 const post = (m: FromWorker) => ctx.postMessage(m);
@@ -66,6 +80,21 @@ async function fetchTimetable(window: Window): Promise<Timetable> {
 /** Prepared timetables kept in memory; older hours are dropped and fetched again if needed. */
 const KEEP_LOADED = 3;
 
+/** The parsed file, shared by the forward and reversed timetables; a few kept. */
+function rawTimetable(window: Window): Promise<Timetable> {
+  let p = raws.get(window);
+  if (p) {
+    raws.delete(window);
+  } else {
+    p = fetchTimetable(window);
+    p.catch(() => raws.delete(window));
+  }
+  raws.set(window, p);
+  // Parsed files are large; keep only the latest (the browser cache has the rest).
+  while (raws.size > 1) raws.delete(raws.keys().next().value!);
+  return p;
+}
+
 function ensure(window: Window): Promise<PreparedTimetable> {
   let p = loading.get(window);
   if (p) {
@@ -73,7 +102,8 @@ function ensure(window: Window): Promise<PreparedTimetable> {
     loading.delete(window);
     loading.set(window, p);
   } else {
-    p = fetchTimetable(window).then((json) => {
+    const raw = rawTimetable(window);
+    p = raw.then((json) => {
       const tt = loadTimetable(json);
       post({
         type: 'loaded',
@@ -89,6 +119,28 @@ function ensure(window: Window): Promise<PreparedTimetable> {
     p.catch(() => loading.delete(window));
     loading.set(window, p);
     while (loading.size > KEEP_LOADED) loading.delete(loading.keys().next().value!);
+  }
+  return p;
+}
+
+/** Reversed timetables for "arrive by", kept alongside the forward ones. */
+const reversed = new Map<Window, Promise<PreparedTimetable>>();
+const raws = new Map<Window, Promise<Timetable>>();
+
+/**
+ * The prepared timetable for a direction. Arriving uses the file of the hour before
+ * and asks for arrivals in the hour after its window, run on the time-reversed timetable.
+ */
+async function prepared(window: Window, direction: Direction): Promise<PreparedTimetable> {
+  if (direction === 'depart') return ensure(window);
+  let p = reversed.get(window);
+  if (!p) {
+    p = rawTimetable(window).then((json) =>
+      loadTimetable(reverseTimetable(json, json.windowEnd, json.windowEnd + 3600)),
+    );
+    p.catch(() => reversed.delete(window));
+    reversed.set(window, p);
+    while (reversed.size > KEEP_LOADED) reversed.delete(reversed.keys().next().value!);
   }
   return p;
 }
@@ -116,29 +168,43 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       );
     } else if (msg.type === 'compute') {
       const t0 = performance.now();
-      const tt = await ensure(msg.window);
+      const tt = await prepared(msg.window, msg.direction);
       const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
-      const runs = starts.map((o) => {
-        const result = travelTimes(tt, o, { trackLegs: true });
-        const grid = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: true });
-        return { result, grid, used: routeUsage(tt, result, grid, { minShare: MIN_ROUTE_SHARE }) };
-      });
-      const grid = runs.length === 1 ? runs[0].grid : slowerOf(runs[0].grid, runs[1].grid);
+      const typical = msg.measure === 'typical';
+      const runs = starts.map((o) => run(tt, o, typical));
+      const shown = (r: Run) => r.shown;
+      const grid =
+        runs.length === 1 ? runs[0].shown : slowerOf(...(runs.map(shown) as [HeatGrid, HeatGrid]));
       const used = runs.flatMap((r) => r.used);
       const routes = usageGeoJSON(tt, used);
       const labels = labelLines(tt, used);
-      const image = paint(grid);
-      // Outlines follow a more strongly blurred field, so walk bubbles round off.
-      const outlines = contours(
-        blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
-        grid.cols,
-        grid.rows,
-        grid.bbox,
-      );
-      const seconds = grid.seconds as Float32Array<ArrayBuffer>;
+      lastTrip = { tt, runs, direction: msg.direction };
+
+      let image: ReturnType<typeof paint>;
+      let outlines: ReturnType<typeof contours>;
+      let compare: Float32Array<ArrayBuffer> | undefined;
+      if (msg.compare) {
+        const tt2 = await prepared(msg.compare, msg.direction);
+        const other = starts.map((o) => run(tt2, o, typical, false).shown);
+        const g2 = other.length === 1 ? other[0] : slowerOf(other[0], other[1]);
+        compare = g2.seconds as Float32Array<ArrayBuffer>;
+        image = paintDiff(grid, g2);
+        outlines = { type: 'FeatureCollection', features: [] };
+      } else {
+        image = paint(grid);
+        // Outlines follow a more strongly blurred field, so walk bubbles round off.
+        outlines = contours(
+          blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
+          grid.cols,
+          grid.rows,
+          grid.bbox,
+        );
+      }
+      // The grids stay here for trip lookups, so the UI gets copies.
+      const seconds = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
       const each =
         runs.length === 2
-          ? (runs.map((r) => r.grid.seconds) as [
+          ? (runs.map((r) => Float32Array.from(r.shown.seconds)) as [
               Float32Array<ArrayBuffer>,
               Float32Array<ArrayBuffer>,
             ])
@@ -152,19 +218,113 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           bbox: grid.bbox,
           grid: { cols: grid.cols, rows: grid.rows, seconds },
           each,
+          compare,
           routes,
           labels,
           outlines,
           computedInMs: runs.reduce((a, r) => a + r.result.computedInMs, 0),
           totalMs: performance.now() - t0,
         } satisfies FromWorker,
-        [image.rgba.buffer, seconds.buffer, ...(each ? each.map((e) => e.buffer) : [])],
+        [
+          image.rgba.buffer,
+          seconds.buffer,
+          ...(each ? each.map((e) => e.buffer) : []),
+          ...(compare ? [compare.buffer] : []),
+        ],
       );
+    } else if (msg.type === 'trip') {
+      const journeys = (lastTrip?.runs ?? []).map((r) => trip(lastTrip!, r, msg));
+      post({ type: 'trip', id: msg.id, ...tripMessage(journeys) });
     }
   } catch (err) {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
   }
 };
+
+interface Run {
+  result: TravelTimeResult;
+  /** Best-case grid with the stop each cell is reached from (lines and trips follow it). */
+  best: HeatGrid;
+  /** The grid the map shows: best case, or typical with waiting included. */
+  shown: HeatGrid;
+  used: UsedSegment[];
+}
+
+function run(tt: PreparedTimetable, origin: Origin, typical: boolean, usage = true): Run {
+  const result = travelTimes(tt, origin, { trackLegs: usage, typical });
+  const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage });
+  const shown =
+    typical && result.typicalSeconds
+      ? heatGrid(tt, { ...result, stopSeconds: result.typicalSeconds }, { cellSizeM: CELL_M })
+      : best;
+  const used = usage ? routeUsage(tt, result, best, { minShare: MIN_ROUTE_SHARE }) : [];
+  return { result, best, shown, used };
+}
+
+/** The last computed map, kept for trip lookups on tap. */
+let lastTrip: { tt: PreparedTimetable; runs: Run[]; direction: Direction } | null = null;
+
+/** The fastest journey to (or, arriving, from) the tapped spot, in travel order. */
+function trip(
+  last: NonNullable<typeof lastTrip>,
+  r: Run,
+  at: { lat: number; lon: number },
+): { journey: Journey; start: [number, number]; end: [number, number] } | null {
+  const j = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
+  if (!j) return null;
+  const o = r.result.origin!;
+  const here: [number, number] = [at.lon, at.lat];
+  const point: [number, number] = [o.lon, o.lat];
+  if (last.direction === 'depart') return { journey: j, start: point, end: here };
+  // Arriving: the tree runs backwards in time from the destination, so flip it.
+  const legs = [...j.legs]
+    .reverse()
+    .map((l) =>
+      l.type === 'ride' ? { ...l, from: l.to, to: l.from, stops: [...l.stops].reverse() } : l,
+    );
+  return { journey: { ...j, legs }, start: here, end: point };
+}
+
+function tripMessage(
+  found: ReturnType<typeof trip>[],
+): Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'> {
+  const tt = lastTrip?.tt;
+  const features: Extract<FromWorker, { type: 'trip' }>['lines']['features'] = [];
+  const line = (coordinates: [number, number][], mode: string, walk: boolean) => {
+    if (coordinates.length >= 2)
+      features.push({
+        type: 'Feature',
+        properties: { mode, walk },
+        geometry: { type: 'LineString', coordinates },
+      });
+  };
+  const journeys = found.map((f) => {
+    if (!f || !tt) return null;
+    const pos = (s: number): [number, number] => [tt.stopLon[s], tt.stopLat[s]];
+    let at = f.start;
+    const legs: TripLeg[] = [];
+    for (const l of f.journey.legs) {
+      if (l.type === 'walk') {
+        legs.push({ type: 'walk', minutes: Math.max(1, Math.round(l.seconds / 60)) });
+        continue;
+      }
+      line([at, pos(l.from)], 'walk', true);
+      line(l.stops.map(pos), l.mode, false);
+      at = pos(l.to);
+      legs.push({
+        type: 'ride',
+        name: l.name,
+        mode: l.mode,
+        from: tt.stops[l.from].name,
+        to: tt.stops[l.to].name,
+        stops: l.stops.length - 1,
+      });
+    }
+    line([at, f.end], 'walk', true);
+    return { legs, transfers: f.journey.transfers };
+  });
+  return { journeys, lines: { type: 'FeatureCollection', features } };
+}
 
 /** Meeting point: each cell gets the slower of the two trips ("where can we both be in N min?"). */
 function slowerOf(a: HeatGrid, b: HeatGrid): HeatGrid {
@@ -183,9 +343,10 @@ const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) /
  * grid's rows are evenly spaced in latitude but the map is Web Mercator, so each
  * image row samples the grid at its own latitude.
  */
-function paint(grid: HeatGrid) {
+function paint(grid: HeatGrid, values?: Float32Array, lut = LUT, offset = 0) {
   const { cols, rows } = grid;
-  const seconds = blurSeconds(grid.seconds, cols, rows, SOFT.blurCells);
+  const lutMax = lut.length / 4 - 1;
+  const seconds = blurSeconds(values ?? grid.seconds, cols, rows, SOFT.blurCells);
   const [, south, , north] = grid.bbox;
   const width = cols * UPSAMPLE;
   const height = rows * UPSAMPLE;
@@ -225,14 +386,36 @@ function paint(grid: HeatGrid) {
         v = ry < 0.5 ? (rx < 0.5 ? a : b) : rx < 0.5 ? d : e;
         if (!(v < Infinity)) continue;
       }
-      const k = (v >= LUT_MAX ? LUT_MAX : (v + 0.5) | 0) * 4;
-      rgba[o] = LUT[k];
-      rgba[o + 1] = LUT[k + 1];
-      rgba[o + 2] = LUT[k + 2];
+      const i = v + offset;
+      const k = (i >= lutMax ? lutMax : i <= 0 ? 0 : (i + 0.5) | 0) * 4;
+      rgba[o] = lut[k];
+      rgba[o + 1] = lut[k + 1];
+      rgba[o + 2] = lut[k + 2];
       rgba[o + 3] = 255;
     }
   }
   return { width, height, rgba };
+}
+
+/**
+ * Comparing two times: colours how much longer (or shorter) each trip takes at the
+ * second time. Places reachable at only one of them get the strongest colour.
+ */
+function paintDiff(a: HeatGrid, b: HeatGrid) {
+  const diff = new Float32Array(a.seconds.length);
+  for (let i = 0; i < diff.length; i++) {
+    const x = a.seconds[i];
+    const y = b.seconds[i];
+    diff[i] =
+      x < Infinity && y < Infinity
+        ? Math.max(DIFF_MIN_S, Math.min(DIFF_MAX_S, y - x))
+        : x < Infinity
+          ? DIFF_MAX_S
+          : y < Infinity
+            ? DIFF_MIN_S
+            : Infinity;
+  }
+  return paint(a, diff, DIFF_LUT, -DIFF_MIN_S);
 }
 
 /** Desert shading: one dark tint, stronger past the second threshold, edges feathered. */

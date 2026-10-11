@@ -162,11 +162,15 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 
 ### Show the trip on tap
 
+**Done** (PR #24): tapping a place lists the connection under the minutes (changes, walking minutes, each line with its first and last stop) and draws it on the map, rides in line colours and walks dotted. The link to the BVG or Google app is left out for now.
+
 Tapping a place shows how you get there, not just the minutes: "8 Min. Fußweg · U8 bis Hermannplatz · M41 · 4 Min. Fußweg, 1 Umstieg", with the route drawn on the map. Optionally a link to open the trip in the BVG or Google app.
 
 Notes: the router already tracks legs for the Lines layer (trackLegs/trackStops), so this is reconstructing one journey for the tapped cell.
 
 ### Typical time instead of best case
+
+**Done** (PR #24): the map now shows the typical time by default (averaged over leaving at any minute in the hour, waiting included); "Bestfall" is a choice in the time sheet and kept in the link (`m=best`).
 
 Today each place shows the shortest trip starting anywhere in the hour, which assumes you leave at exactly the right minute. A "typical" time, the average over leaving at a random minute with waiting included, is closer to real door-to-door time, especially at night and in the outskirts. "Typisch" would become the default, with "Bestfall" as an option, and the About text says which is shown.
 
@@ -174,11 +178,15 @@ Notes: range RAPTOR already scans every departure in the hour, so the average co
 
 ### "Ankommen bis": travel times to a place
 
+**Done** (PR #24): the time sheet has "Losfahren" and "Ankommen"; arriving colours how long it takes from everywhere to the start point, arriving within the chosen hour (`dir=arr`). Works for typical and best case and with the meeting point.
+
 Reverse the direction: how long from everywhere to a chosen place (work, a venue), arriving within the chosen hour. Useful for flat hunting, where the question is the commute to the office.
 
 Notes: a reverse RAPTOR pass over the same timetable; grid, colours and layers stay the same. A switch next to the departure time ("Abfahrt ab" / "Ankunft bis").
 
 ### Compare two times
+
+**Done** (PR #24): "Vergleichen mit" in the time sheet picks a second day and hour; the map then shows minutes longer (red) or shorter (green) with its own legend, and a tap shows both times (`cmp=weekend-02`).
 
 Colour each place by how much longer the trip takes at one time than another, for example weekday 10 Uhr against weekend 2 Uhr. Shows where the night or weekend network leaves gaps; pairs well with the transit-desert layer.
 

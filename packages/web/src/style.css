@@ -866,3 +866,86 @@ dialog.when {
   width: 100%;
   accent-color: var(--accent);
 }
+
+/* When dialog: compare with a second time. */
+.compare-row {
+  display: flex;
+  gap: 8px;
+}
+.compare-row select {
+  flex: 1;
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0ecf4;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  padding: 0 10px;
+}
+.compare-row select:disabled {
+  opacity: 0.5;
+}
+dialog.when .seg-wide + .seg-wide {
+  margin-top: 8px;
+}
+/* Both chips at once: the compare chip goes below the meeting-point chip. */
+#meet:not([hidden]) ~ #cmp {
+  top: calc(var(--st) + 108px);
+}
+
+/* Diverging legend while comparing. */
+#diff-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+#diff-bar span {
+  flex: 1;
+  opacity: 0.85;
+}
+#diff-bar[hidden],
+#diff-ticks[hidden],
+#legend-bar[hidden],
+#legend-ticks[hidden] {
+  display: none;
+}
+#diff-ticks span:first-child {
+  transform: translateX(-50%);
+}
+
+/* The connection to a tapped spot, under the minutes. */
+#readout .trip {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+}
+#readout .trip:empty {
+  display: none;
+}
+.trip-sum,
+.trip-ride {
+  display: block;
+  line-height: 1.5;
+}
+.trip-sum {
+  color: var(--muted);
+}
+.trip-ride small {
+  display: inline !important;
+}
+.line-badge {
+  display: inline-block;
+  min-width: 26px;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+#readout small b {
+  font-size: inherit;
+}

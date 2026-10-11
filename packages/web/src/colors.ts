@@ -128,3 +128,44 @@ export function colorLut(
   }
   return lut;
 }
+
+// Difference map (comparing two times): how many minutes longer the trip takes at the
+// second time. Teals = faster, a light neutral around zero, warm to purple = slower.
+
+/** Lower band edges in minutes of difference; the first and last bands are open-ended. */
+export const DIFF_EDGES_MIN = [-Infinity, -20, -10, -5, -2, 2, 5, 10, 20, 30];
+export const DIFF_COLORS = [
+  '#0b5d63',
+  '#24908a',
+  '#6cc1b2',
+  '#b9e2d6',
+  '#efece6',
+  '#fcd28a',
+  '#f59e4c',
+  '#e2583b',
+  '#b8294f',
+  '#6c1a72',
+];
+/** Differences are clamped to this range before colouring, in seconds. */
+export const DIFF_MIN_S = -40 * 60;
+export const DIFF_MAX_S = 60 * 60;
+
+/** Band index for a difference in seconds. */
+export function diffBandOf(seconds: number): number {
+  const min = seconds / 60;
+  let b = 0;
+  while (b < DIFF_EDGES_MIN.length - 1 && min >= DIFF_EDGES_MIN[b + 1]) b++;
+  return b;
+}
+
+/** RGBA lookup for differences, indexed by (seconds - DIFF_MIN_S). */
+export function diffLut(): Uint8Array {
+  const n = DIFF_MAX_S - DIFF_MIN_S + 1;
+  const lut = new Uint8Array(n * 4);
+  const rgb = DIFF_COLORS.map(hexToRgb);
+  for (let i = 0; i < n; i++) {
+    const c = rgb[diffBandOf(i + DIFF_MIN_S)];
+    lut.set([c[0], c[1], c[2], 255], i * 4);
+  }
+  return lut;
+}

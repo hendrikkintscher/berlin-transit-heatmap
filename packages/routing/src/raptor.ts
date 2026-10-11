@@ -9,6 +9,8 @@ export const LEG_NONE = -3;
 export const LEG_ORIGIN = -2;
 export const LEG_WALK = -1;
 const DEFAULT_MAX_ROUNDS = 6;
+/** With `typical`, departures this long after the window are scanned too, so leaving late in the window still finds a next trip. */
+const DEFAULT_TYPICAL_HORIZON_S = 2700;
 
 const now: () => number =
   typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -51,7 +53,41 @@ export function travelTimes(
     if (accessWalk[a] < best[s]) best[s] = accessWalk[a];
   }
 
-  const departures = departureTimes(tt, accessStops, accessWalk);
+  const typical = opts.typical === true;
+  const horizon = typical ? (opts.typicalHorizonSeconds ?? DEFAULT_TYPICAL_HORIZON_S) : 0;
+  const departures = departureTimes(tt, accessStops, accessWalk, horizon);
+  const ws = tt.windowStart;
+  const we = tt.windowEnd;
+
+  // Typical time: the average over leaving at any moment t in [ws, we] of
+  // (earliest arrival when leaving at t or later) - t, waiting at the start included.
+  // Departures are scanned latest first and tauStar only improves, so after a
+  // departure d tauStar[s] is the earliest arrival for anyone leaving in
+  // (next earlier departure, d]. Each stop's integral is accumulated piecewise,
+  // when its value changes: the old value covered (d, since[s]]. Late in the window a
+  // far stop may have no journey left within the timetable's horizon; the average then
+  // covers only the part of the window before that (coverEnd).
+  const integral = new Float64Array(typical ? S : 0);
+  const since = new Float64Array(typical ? S : 0).fill(Infinity);
+  const lastValue = new Float64Array(typical ? S : 0).fill(Infinity);
+  const coverEnd = new Float64Array(typical ? S : 0);
+  /** Adds the old value of stop s over (lo, since[s]] clipped to the window. */
+  const settle = (s: number, lo: number) => {
+    const v = lastValue[s];
+    if (v === Infinity) {
+      coverEnd[s] = Math.max(ws, Math.min(lo, we));
+      return;
+    }
+    const a = Math.max(lo, ws);
+    const b = Math.min(since[s], we);
+    if (b > a) integral[s] += v * (b - a) - (b * b - a * a) / 2;
+  };
+  const walkOnly = new Float64Array(typical ? S : 0).fill(Infinity);
+  if (typical)
+    for (let a = 0; a < accessStops.length; a++) {
+      const s = accessStops[a];
+      if (accessWalk[a] < walkOnly[s]) walkOnly[s] = accessWalk[a];
+    }
 
   // Last leg of each stop's best journey (see TravelLegs). starLeg* describe how
   // tauStar was last improved within the current departure; they are copied to
@@ -246,12 +282,17 @@ export function travelTimes(
         markedCount = nextCount;
       }
 
-      // Fold this departure into the best travel times.
+      // Fold this departure into the best travel times (departures after the window only feed `typical`).
       for (let m = 0; m < touchedCount; m++) {
         const s = touched[m];
         isTouched[s] = 0;
+        if (typical) {
+          settle(s, dep);
+          since[s] = dep;
+          lastValue[s] = tauStar[s];
+        }
         const t = tauStar[s] - dep;
-        if (t < best[s]) {
+        if (dep <= we && t < best[s]) {
           best[s] = t;
           if (track) {
             legKind[s] = starKind[s];
@@ -264,8 +305,22 @@ export function travelTimes(
     }
   }
 
+  let typicalSeconds: Float32Array | undefined;
+  if (typical) {
+    typicalSeconds = new Float32Array(S).fill(Infinity);
+    for (let s = 0; s < S; s++) {
+      if (since[s] < Infinity) settle(s, -Infinity);
+      const covered = coverEnd[s] - ws;
+      let v = since[s] < Infinity && covered > 0 ? integral[s] / covered : Infinity;
+      // Walking straight from the origin needs no waiting, so it caps the average.
+      if (walkOnly[s] < v) v = walkOnly[s];
+      typicalSeconds[s] = v;
+    }
+  }
+
   return {
     stopSeconds: best,
+    ...(typicalSeconds ? { typicalSeconds } : {}),
     computedInMs: now() - t0,
     origin: { lat: origin.lat, lon: origin.lon },
     departures: departures.length,
@@ -281,6 +336,7 @@ function departureTimes(
   tt: PreparedTimetable,
   accessStops: number[],
   accessWalk: number[],
+  horizon = 0,
 ): Int32Array {
   const {
     routeStopOffset,
@@ -292,7 +348,7 @@ function departureTimes(
     stopRouteIndex,
   } = tt;
   const lo = tt.windowStart;
-  const hi = tt.windowEnd;
+  const hi = tt.windowEnd + horizon;
   const out: number[] = [];
   for (let a = 0; a < accessStops.length; a++) {
     const s = accessStops[a];

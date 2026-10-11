@@ -1,7 +1,7 @@
 import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
-import { BAND_COLORS, BAND_EDGES_MIN, bandLabel } from './colors';
+import { BAND_COLORS, BAND_EDGES_MIN, DIFF_COLORS, DIFF_EDGES_MIN, bandLabel } from './colors';
 import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import {
   loadFavourites,
@@ -23,15 +23,19 @@ import {
   type Lang,
 } from './i18n';
 import {
+  computeWindow,
   DEFAULT_WHEN,
   desertThresholds,
+  parseWhen,
   whenFromParams,
   windowName,
   type DayType,
+  type Direction,
   type When,
 } from './when';
 import type {
   FromWorker,
+  Measure,
   RasterLayer,
   StationProps,
   TimetableInfo,
@@ -58,6 +62,7 @@ const OUTLINE_LAYERS = ['outlines-line', 'outlines-label'];
 /** Labelled, bolder outlines; the other 5-minute steps are drawn thin. */
 const MAJOR_OUTLINES = [15, 30, 45];
 const AREA_SOURCE = 'area';
+const TRIP_SOURCE = 'trip';
 const DEFAULT_OPACITY = 80;
 
 // Line colours roughly follow the usual Berlin map conventions.
@@ -69,6 +74,13 @@ const MODE_COLORS: Record<string, string> = {
   regional: '#8a1c1c',
   ferry: '#0090c8',
 };
+
+const modeColor = [
+  'match',
+  ['get', 'mode'],
+  ...Object.entries(MODE_COLORS).flat(),
+  '#444444',
+] as unknown as maplibregl.ExpressionSpecification;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const loadbar = $('loadbar');
@@ -82,6 +94,11 @@ const whenBtn = $<HTMLButtonElement>('when-btn');
 const whenDialog = $<HTMLDialogElement>('when');
 const dayButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-day]')];
 const hourGrid = $('hour-grid');
+const dirButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-dir]')];
+const measureButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-measure]')];
+const cmpDay = $<HTMLSelectElement>('cmp-day');
+const cmpHour = $<HTMLSelectElement>('cmp-hour');
+const cmpChip = $('cmp');
 const routesToggle = $<HTMLInputElement>('routes-toggle');
 const freqToggle = $<HTMLInputElement>('freq-toggle');
 const desertToggle = $<HTMLInputElement>('desert-toggle');
@@ -104,11 +121,18 @@ const state: {
   /** Weekday or weekend, and the departure hour; `window` names its timetable file. */
   when: When;
   window: Window;
+  /** Leave in the chosen hour, or arrive in it. */
+  direction: Direction;
+  /** Typical (averaged over the hour, waiting included) or best-case minutes. */
+  measure: Measure;
+  /** Compare: a second time; the map then shows how much longer trips take then. */
+  compare: When | null;
   origin: { lat: number; lon: number } | null;
   /** Meeting point: the second person's start. */
   second: { lat: number; lon: number } | null;
   pending: { lat: number; lon: number } | null;
   requestId: number;
+  tripId: number;
   info: Partial<Record<Window, TimetableInfo>>;
   routes: boolean;
   /** Stop-frequency dots and transit-desert shading. */
@@ -123,10 +147,14 @@ const state: {
 } = {
   when: DEFAULT_WHEN,
   window: windowName(DEFAULT_WHEN),
+  direction: 'depart',
+  measure: 'typical',
+  compare: null,
   origin: null,
   second: null,
   pending: null,
   requestId: 0,
+  tripId: 0,
   info: {},
   routes: true,
   freq: false,
@@ -169,6 +197,29 @@ $('legend-ticks').append(
   }),
 );
 
+// Comparing two times: how many minutes longer (warm) or shorter (teal) the trip takes then.
+$('diff-bar').append(
+  ...DIFF_COLORS.map((c) => {
+    const s = document.createElement('span');
+    s.style.background = c;
+    return s;
+  }),
+);
+$('diff-ticks').append(
+  ...[-20, -10, -5, 5, 10, 20, 30].map((m) => {
+    const tick = document.createElement('span');
+    tick.style.left = `${(100 * DIFF_EDGES_MIN.indexOf(m)) / DIFF_COLORS.length}%`;
+    tick.textContent = m > 0 ? `+${m}` : `−${-m}`;
+    return tick;
+  }),
+  Object.assign(document.createElement('span'), { textContent: 'min' }),
+);
+function showLegend(diff: boolean) {
+  for (const id of ['legend-bar', 'legend-ticks']) $(id).hidden = diff;
+  for (const id of ['diff-bar', 'diff-ticks']) $(id).hidden = !diff;
+  $('legend-bar').parentElement!.setAttribute('aria-label', t(diff ? 'legendDiff' : 'legend'));
+}
+
 /** Small per-device settings and "hint seen" flags; storage may be blocked. */
 function readNumber(key: string, fallback: number): number {
   try {
@@ -205,7 +256,7 @@ send({ type: 'init', dataBase: new URL('data/', document.baseURI).href });
 worker.onmessage = (ev: MessageEvent<FromWorker>) => {
   const m = ev.data;
   if (m.type === 'progress') {
-    if (m.window !== state.window) return;
+    if (m.window !== computedWindow() && m.window !== state.window) return;
     loadbar.hidden = false;
     loadbar.classList.toggle('indeterminate', !m.total || m.loaded > m.total);
     (loadbar.firstElementChild as HTMLElement).style.width = m.total
@@ -213,7 +264,7 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
       : '';
   } else if (m.type === 'loaded') {
     state.info[m.info.window] = m.info;
-    if (m.info.window === state.window) loadbar.hidden = true;
+    if (m.info.window === computedWindow()) loadbar.hidden = true;
     renderFeedInfo();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
@@ -223,6 +274,8 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     const s = m.totalMs / 1000;
     setStatus(() => t('computed', { s: formatDecimal(s, 1) }), true);
     showTips();
+  } else if (m.type === 'trip') {
+    if (m.id === state.tripId && !readout.hidden) showTrip(m);
   } else if (m.type === 'layers') {
     layerData[m.window] = m;
     if (m.window === state.window) showLayers();
@@ -233,7 +286,7 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
 };
 
 function renderFeedInfo() {
-  const i = state.info[state.window];
+  const i = state.info[state.window] ?? state.info[computedWindow()];
   feedInfo.textContent = i
     ? t('feedInfo', { date: i.serviceDate, version: i.feedVersion, stops: formatNumber(i.stops) })
     : t('feedLoading');
@@ -250,6 +303,9 @@ function formatDate(iso: string) {
   });
 }
 
+/** The timetable file the map is computed from (arriving uses the hour before). */
+const computedWindow = () => computeWindow(state.when, state.direction);
+
 function compute() {
   if (!state.origin) return;
   state.requestId++;
@@ -259,7 +315,10 @@ function compute() {
   send({
     type: 'compute',
     id: state.requestId,
-    window: state.window,
+    window: computedWindow(),
+    direction: state.direction,
+    measure: state.measure,
+    ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
     ...(state.second ? { second: state.second } : {}),
   });
@@ -277,6 +336,9 @@ function readUrl() {
   state.second = state.origin ? parsePoint(p.get('with')) : null;
   state.when = whenFromParams(p);
   state.window = windowName(state.when);
+  if (p.get('dir') === 'arr') state.direction = 'arrive';
+  if (p.get('m') === 'best') state.measure = 'best';
+  state.compare = parseWhen(p.get('cmp'));
 }
 function parsePoint(v: string | null) {
   const [lat, lon] = (v ?? '').split(',').map(Number);
@@ -288,6 +350,9 @@ function writeUrl() {
   if (state.origin) p.set('from', pointParam(state.origin));
   if (state.second) p.set('with', pointParam(state.second));
   if (state.window !== windowName(DEFAULT_WHEN)) p.set('t', state.window);
+  if (state.direction === 'arrive') p.set('dir', 'arr');
+  if (state.measure === 'best') p.set('m', 'best');
+  if (state.compare) p.set('cmp', windowName(state.compare));
   if (!state.routes) p.set('routes', '0');
   const layers = [state.freq && 'freq', state.desert && 'desert', state.iso && 'iso']
     .filter(Boolean)
@@ -344,7 +409,7 @@ function showOrigin() {
 function setOrigin(lat: number, lon: number) {
   state.origin = { lat, lon };
   showOrigin();
-  readout.hidden = true;
+  hideReadout();
   writeUrl();
   compute();
 }
@@ -353,7 +418,7 @@ function setOrigin(lat: number, lon: number) {
 function setSecond(p: { lat: number; lon: number } | null) {
   state.second = p;
   showOrigin();
-  readout.hidden = true;
+  hideReadout();
   writeUrl();
   compute();
 }
@@ -413,12 +478,7 @@ map.on('load', () => {
       source: ROUTES_SOURCE,
       layout: { 'line-cap': 'round', 'line-join': 'round', visibility },
       paint: {
-        'line-color': [
-          'match',
-          ['get', 'mode'],
-          ...Object.entries(MODE_COLORS).flat(),
-          '#444444',
-        ] as unknown as maplibregl.ExpressionSpecification,
+        'line-color': modeColor,
         'line-width': width(0),
       },
     },
@@ -564,6 +624,42 @@ map.on('load', () => {
     },
     'routes-label',
   );
+  // The connection to a tapped spot: rides in their line colours, walks dashed.
+  map.addSource(TRIP_SOURCE, { type: 'geojson', data: empty });
+  const tripLines = ['==', ['get', 'walk'], false] as maplibregl.FilterSpecification;
+  map.addLayer(
+    {
+      id: 'trip-casing',
+      type: 'line',
+      source: TRIP_SOURCE,
+      filter: tripLines,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': 8 },
+    },
+    'routes-label',
+  );
+  map.addLayer(
+    {
+      id: 'trip-line',
+      type: 'line',
+      source: TRIP_SOURCE,
+      filter: tripLines,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': modeColor, 'line-width': 4.5 },
+    },
+    'routes-label',
+  );
+  map.addLayer(
+    {
+      id: 'trip-walk',
+      type: 'line',
+      source: TRIP_SOURCE,
+      filter: ['==', ['get', 'walk'], true],
+      layout: { 'line-cap': 'round' },
+      paint: { 'line-color': '#1d1530', 'line-width': 2.5, 'line-dasharray': [0.5, 2] },
+    },
+    'routes-label',
+  );
   if (lastResult) showResult(lastResult);
   showLayers();
 });
@@ -635,6 +731,7 @@ function textFont(): string[] {
 
 function showResult(r: Result) {
   renderFavourites();
+  showLegend(!!r.compare);
   if (!mapReady) return;
   const { width, height, rgba } = r.image;
   heatCanvas.width = width;
@@ -718,24 +815,41 @@ map.on('click', (e: MapMouseEvent) => {
     setOrigin(lat, lng);
     return;
   } else {
-    const secs = lastResult && state.origin ? gridSeconds(lastResult, lat, lng) : NaN;
-    const when = whenText(state.when);
+    const r = lastResult;
+    const secs = r && state.origin ? gridSeconds(r, lat, lng) : NaN;
+    const when = `${t(state.measure)}, ${whenText(state.when)}`;
     const parts: string[] = [];
-    if (secs === Infinity) parts.push(t('unreachable'));
-    else if (secs >= 0 && lastResult?.each) {
-      const [a, b] = lastResult.each.map((v) => gridSeconds(lastResult!, lat, lng, v) / 60);
+    let tripSlot = '';
+    if (secs >= 0 && r?.compare) {
+      const b = gridSeconds(r, lat, lng, r.compare);
+      const fmt = (v: number) => (v < Infinity ? String(Math.round(v / 60)) : '–');
+      const d = Math.round(b / 60) - Math.round(secs / 60);
+      parts.push(
+        t('cmpMinutes', {
+          a: fmt(secs),
+          b: fmt(b),
+          d: Number.isFinite(d) ? (d > 0 ? `+${d}` : d < 0 ? `−${-d}` : '±0') : '–',
+        }) + `<small>${whenText(state.when)} → ${whenText(state.compare!)}</small>`,
+      );
+    } else if (secs === Infinity) parts.push(t('unreachable'));
+    else if (secs >= 0 && r?.each) {
+      const [a, b] = r.each.map((v) => gridSeconds(r, lat, lng, v) / 60);
       parts.push(t('minutesBoth', { a: Math.round(a), b: Math.round(b), when }));
     } else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60), when }));
     if (state.routes && state.origin) {
       const top = near(['routes-line']).sort((a, b) => b.properties.share - a.properties.share)[0];
       if (top) {
         const pct = Math.round(100 * (top.properties.share as number));
-        parts.splice(
-          0,
-          1,
-          t('lineShare', { names: escapeHtml(String(top.properties.names)), pct }),
+        parts.push(
+          `<small>${t('lineShare', { names: escapeHtml(String(top.properties.names)), pct })}</small>`,
         );
       }
+    }
+    // The connection itself arrives from the worker a moment later.
+    if (secs < Infinity && r) {
+      state.tripId++;
+      send({ type: 'trip', id: state.tripId, lat, lon: lng });
+      tripSlot = '<span id="trip" class="trip"></span>';
     }
     if (state.desert && data) {
       const access = gridSeconds(data.desert, lat, lng);
@@ -743,7 +857,7 @@ map.on('click', (e: MapMouseEvent) => {
         access === Infinity ? t('accessNone') : t('access', { n: Math.round(access / 60) }),
       );
     }
-    html = parts.join('<br>');
+    html = parts.join('<br>') + tripSlot;
   }
   readoutText.innerHTML = html;
   state.pending = { lat, lon: lng };
@@ -751,6 +865,56 @@ map.on('click', (e: MapMouseEvent) => {
   readout.hidden = false;
   if (tipKey === 'tap') hideTip();
 });
+
+function hideReadout() {
+  readout.hidden = true;
+  state.tripId++;
+  setTrip(null);
+}
+
+function setTrip(lines: Extract<FromWorker, { type: 'trip' }>['lines'] | null) {
+  const src = mapReady ? (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined) : undefined;
+  src?.setData(lines ?? { type: 'FeatureCollection', features: [] });
+}
+
+/** The journey to the tapped spot: changes and walking, then one row per ride. */
+function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
+  const el = document.getElementById('trip');
+  if (!el) return;
+  const two = m.journeys.length > 1;
+  el.innerHTML = m.journeys
+    .map((j, i) => {
+      const mark = two ? `<i class="p${i + 1}"></i>` : '';
+      if (!j) return `<span class="trip-sum">${mark}${t('tripNone')}</span>`;
+      const walk = j.legs.reduce((a, l) => a + (l.type === 'walk' ? l.minutes : 0), 0);
+      const rides = j.legs.filter((l) => l.type === 'ride');
+      const sum = [
+        rides.length
+          ? t(j.transfers === 0 ? 'noTransfer' : j.transfers === 1 ? 'oneTransfer' : 'transfers', {
+              n: j.transfers,
+            })
+          : '',
+        walk ? t('tripWalk', { n: walk }) : '',
+      ].filter(Boolean);
+      return (
+        `<span class="trip-sum">${mark}${sum.join(' · ')}</span>` +
+        rides
+          .map(
+            (l) =>
+              `<span class="trip-ride"><span class="line-badge" style="background:${
+                MODE_COLORS[l.mode] ?? '#444'
+              }">${escapeHtml(l.name)}</span>${escapeHtml(stopName(l.from))} → ${escapeHtml(stopName(l.to))} ` +
+              `<small>· ${t('tripStops', { n: l.stops }).replace(' ', '\u00a0')}</small></span>`,
+          )
+          .join('')
+      );
+    })
+    .join('');
+  setTrip(m.lines);
+}
+
+/** VBB names carry the town: "U Hermannplatz (Berlin)", "Berlin, Greifswalder Str." */
+const stopName = (n: string) => n.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, '');
 
 function escapeHtml(t: string): string {
   return t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -765,7 +929,7 @@ secondBtn.addEventListener('click', () => {
 $('readout-fav').addEventListener('click', async () => {
   const at = state.pending;
   if (!at) return;
-  readout.hidden = true;
+  hideReadout();
   let label = `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`;
   try {
     label = (await reversePlace(at, lang())) ?? label;
@@ -779,6 +943,11 @@ $('meet-close').addEventListener('click', () => setSecond(null));
 // ---------- controls ----------
 /** "werktags ab 10 Uhr" / "weekends from 02:00", for the tap readout. */
 function whenText(w: When) {
+  if (state.direction === 'arrive')
+    return t(w.day === 'weekday' ? 'onWeekdaysArr' : 'onWeekendsArr', {
+      hour: hourLabel(w.hour),
+      next: hourLabel((w.hour + 1) % 24),
+    });
   return t(w.day === 'weekday' ? 'onWeekdays' : 'onWeekends', { hour: hourLabel(w.hour) });
 }
 const hourLabel = (h: number) =>
@@ -786,24 +955,73 @@ const hourLabel = (h: number) =>
 
 function renderWhen() {
   const w = state.when;
-  whenBtn.querySelector('span')!.textContent = t(w.day === 'weekday' ? 'weekdayAt' : 'weekendAt', {
-    hour: hourLabel(w.hour),
-  });
+  const arrive = state.direction === 'arrive';
+  const pill =
+    w.day === 'weekday'
+      ? arrive
+        ? 'weekdayArr'
+        : 'weekdayAt'
+      : arrive
+        ? 'weekendArr'
+        : 'weekendAt';
+  whenBtn.querySelector('span')!.textContent = t(pill, { hour: hourLabel(w.hour) });
+  $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
+  for (const b of dirButtons)
+    b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));
+  for (const b of measureButtons)
+    b.setAttribute('aria-checked', String(b.dataset.measure === state.measure));
+  $('measure-note').textContent = t(
+    state.measure === 'best'
+      ? 'measureNoteBest'
+      : arrive
+        ? 'measureNoteTypicalArr'
+        : 'measureNoteTypical',
+  );
+  const c = state.compare;
+  cmpDay.value = c?.day ?? '';
+  cmpHour.disabled = !c;
+  if (cmpHour.options.length !== 24)
+    cmpHour.replaceChildren(
+      ...Array.from({ length: 24 }, (_, h) => new Option(hourLabel(h), String(h))),
+    );
+  for (const o of cmpHour.options) o.textContent = hourLabel(Number(o.value));
+  cmpHour.value = String(c?.hour ?? w.hour);
+  cmpChip.hidden = !c;
+  if (c)
+    $('cmp-text').textContent = t('compareChip', {
+      a: whenBtn.querySelector('span')!.textContent ?? '',
+      b: t(
+        c.day === 'weekday'
+          ? arrive
+            ? 'weekdayArr'
+            : 'weekdayAt'
+          : arrive
+            ? 'weekendArr'
+            : 'weekendAt',
+        {
+          hour: hourLabel(c.hour),
+        },
+      ),
+    });
   for (const b of dayButtons) b.setAttribute('aria-checked', String(b.dataset.day === w.day));
   for (const b of hourGrid.children)
     b.setAttribute('aria-pressed', String(Number((b as HTMLElement).dataset.hour) === w.hour));
 }
 
-function setWhen(w: When) {
+function setWhen(
+  w: When,
+  more: Partial<Pick<typeof state, 'direction' | 'measure' | 'compare'>> = {},
+) {
+  Object.assign(state, more);
   state.when = w;
   state.window = windowName(w);
   renderWhen();
-  readout.hidden = true;
+  hideReadout();
   renderFeedInfo();
   writeUrl();
   showLayers();
   if (state.origin) compute();
-  else send({ type: 'load', window: state.window });
+  else send({ type: 'load', window: computedWindow() });
 }
 hourGrid.append(
   ...Array.from({ length: 24 }, (_, h) => {
@@ -820,9 +1038,23 @@ hourGrid.append(
 );
 for (const b of dayButtons)
   b.addEventListener('click', () => setWhen({ ...state.when, day: b.dataset.day as DayType }));
+for (const b of dirButtons)
+  b.addEventListener('click', () => setWhen(state.when, { direction: b.dataset.dir as Direction }));
+for (const b of measureButtons)
+  b.addEventListener('click', () => setWhen(state.when, { measure: b.dataset.measure as Measure }));
+const readCompare = (): When | null =>
+  cmpDay.value ? { day: cmpDay.value as DayType, hour: Number(cmpHour.value) } : null;
+cmpDay.addEventListener('change', () => {
+  // Turning it on for the same day suggests the other end of it: night by day, 10 Uhr by night.
+  const c = readCompare();
+  if (c && !state.compare && c.day === state.when.day) c.hour = state.when.hour >= 5 ? 2 : 10;
+  setWhen(state.when, { compare: c });
+});
+cmpHour.addEventListener('change', () => setWhen(state.when, { compare: readCompare() }));
+$('cmp-close').addEventListener('click', () => setWhen(state.when, { compare: null }));
 whenBtn.addEventListener('click', () => {
   closeSearch();
-  readout.hidden = true;
+  hideReadout();
   whenDialog.showModal();
 });
 $('when-close').addEventListener('click', () => whenDialog.close());
@@ -842,7 +1074,7 @@ routesToggle.checked = state.routes;
 
 function setLayer(name: 'freq' | 'desert', on: boolean) {
   state[name] = on;
-  readout.hidden = true;
+  hideReadout();
   showLayers();
   writeUrl();
 }
@@ -982,7 +1214,7 @@ tipAction.addEventListener('click', () => void install());
 // ---------- menu and language ----------
 $('menu-btn').addEventListener('click', () => {
   closeSearch();
-  readout.hidden = true;
+  hideReadout();
   menuDialog.showModal();
 });
 $('menu-close').addEventListener('click', () => menuDialog.close());
@@ -1006,7 +1238,7 @@ function applyLang(l: Lang, remember: boolean) {
   renderWhen();
   renderTip();
   statusEl.textContent = state.status();
-  readout.hidden = true;
+  hideReadout();
   searchCache.clear();
 }
 for (const b of langButtons)
@@ -1029,7 +1261,7 @@ const searchCache = new Map<string, Place[]>();
 
 function openSearch() {
   searchPanel.hidden = false;
-  readout.hidden = true;
+  hideReadout();
   hint.hidden = true;
   searchInput.focus();
   searchInput.select();
