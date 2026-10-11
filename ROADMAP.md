@@ -19,3 +19,13 @@ Notes: can be precomputed in timetable-build from stop_times per window and ship
 A layer highlighting places that public transport serves poorly, e.g. areas far from any stop or only near stops with low frequency.
 
 Notes: builds on the stop-frequency data (walking distance to the nearest stop weighted by its frequency); the exact definition and thresholds are still to be chosen.
+
+## Favourite places and a location score
+
+Keep a list of the places you go to often (workplace, friends, favourite bars) and see at once how well a chosen location reaches them. This helps when checking out places to move to, or when picking a hotel. For a hotel, the list could also come from an LLM that suggests interesting places based on your interests.
+
+- Enter places by address search, or import a list (for example a Google Maps saved list, via its Takeout export).
+- When you tap a location, show the travel time from it to each favourite place, using the same Day/Night windows.
+- Combine those times into one score for the location. Ranking or weighting the places (the workplace counts more than an occasional bar) makes the score more accurate.
+
+Notes: the routing already gives times to every point, so per-place times are lookups in the existing grid. The list lives in the browser (local storage, or a shareable URL or file), so no server is needed. The score formula (e.g. a weighted average of times, or the share of places within N minutes) is still to be chosen.
