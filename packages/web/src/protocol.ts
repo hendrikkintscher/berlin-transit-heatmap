@@ -91,6 +91,11 @@ export type FromWorker =
       each?: [Float32Array<ArrayBuffer>, Float32Array<ArrayBuffer>];
       /** With a second start: up to three suggested meeting points, best first. */
       meet?: MeetSuggestion[];
+      /**
+       * With a second start (not comparing): the smallest slower-of-both time on the grid.
+       * The image and outlines show extra minutes over it; `grid` keeps the actual times.
+       */
+      extraBase?: number;
       /** When comparing: times at the second time on the same grid; the image shows the difference. */
       compare?: Float32Array<ArrayBuffer>;
       /** Network hops the fastest journeys rely on, with share of reachable map. */
