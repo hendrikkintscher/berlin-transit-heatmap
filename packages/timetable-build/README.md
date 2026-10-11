@@ -11,16 +11,18 @@ pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 
 ## Outputs
 
-| File                   | Contents                                                              |
-| ---------------------- | --------------------------------------------------------------------- |
-| `timetable-day.json`   | `Timetable` for 10:00–12:00 on the reference day                      |
-| `timetable-night.json` | `Timetable` for 02:00–04:00 the following night (93600–100800 s)      |
-| `stops.json`           | `{ version, serviceDate, feedVersion, stops }`, same `stops` as above |
-| `build-info.json`      | stats, file sizes (raw and gzipped), and the GTFS manifest in CI      |
+| File                                                     | Contents                                                                                                                                                                                     |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `timetable-day.json`                                     | `Timetable` for 10:00–12:00 on the reference day                                                                                                                                             |
+| `timetable-night.json`                                   | `Timetable` for 02:00–04:00 the following night (93600–100800 s)                                                                                                                             |
+| `timetable-weekday-HH.json`, `timetable-weekend-HH.json` | `Timetable` for one departure hour HH (00–23) on the weekday or weekend reference day; hours 00–04 are the night after the previous day (24:00–29:00 service time). Skip with `--no-hourly`. |
+| `stops.json`                                             | `{ version, serviceDate, feedVersion, stops }`, same `stops` as above                                                                                                                        |
+| `build-info.json`                                        | stats, file sizes (raw and gzipped), and the GTFS manifest in CI                                                                                                                             |
 
 ## How the files are built
 
 - **Reference day:** the first Tuesday–Thursday at least 3 days after the feed start that is not a Berlin public holiday (computed, including Easter-based dates).
+- **Weekend reference day:** the first Saturday after the weekday reference day where neither that Saturday nor the Sunday after is a public holiday. `weekend-00` to `weekend-04` are the night from Friday to Saturday.
 - **Services:** `calendar.txt` plus `calendar_dates.txt`. Trips of the previous and next service day are included when their shifted times fall in the window, so the night window also contains trips the feed lists as 02:xx on the next day.
 - **Area:** stops inside lon 13.05–13.80, lat 52.33–52.70; trips keep only their stops inside. Stops where the vehicle neither picks up nor drops off are skipped.
 - **Time filter:** a trip is kept if it departs any kept stop within `[windowStart, windowEnd + 2h]`.

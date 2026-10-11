@@ -11,7 +11,7 @@ import {
 import type { FeatureCollection, LineString } from 'geojson';
 import { colorLut } from './colors';
 import { blurSeconds, warpField } from './soften';
-import { accessGrid, departuresPerHour, DESERT_THRESHOLDS, stations } from './layers';
+import { accessGrid, departuresPerHour, stations } from './layers';
 import type { FromWorker, RasterLayer, RouteProps, ToWorker, Window } from './protocol';
 
 /** Raster cell size. 50 m keeps walking detail around stops; ~60 ms per origin in Node. */
@@ -60,9 +60,16 @@ async function fetchTimetable(window: Window): Promise<Timetable> {
   return JSON.parse(new TextDecoder().decode(buf)) as Timetable;
 }
 
+/** Prepared timetables kept in memory; older hours are dropped and fetched again if needed. */
+const KEEP_LOADED = 3;
+
 function ensure(window: Window): Promise<PreparedTimetable> {
   let p = loading.get(window);
-  if (!p) {
+  if (p) {
+    // Most recently used last.
+    loading.delete(window);
+    loading.set(window, p);
+  } else {
     p = fetchTimetable(window).then((json) => {
       const tt = loadTimetable(json);
       post({
@@ -78,6 +85,7 @@ function ensure(window: Window): Promise<PreparedTimetable> {
     });
     p.catch(() => loading.delete(window));
     loading.set(window, p);
+    while (loading.size > KEEP_LOADED) loading.delete(loading.keys().next().value!);
   }
   return p;
 }
@@ -93,7 +101,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'layers') {
       const tt = await ensure(msg.window);
       const perHour = departuresPerHour(tt);
-      const desert = paintDesert(accessGrid(tt, perHour), DESERT_THRESHOLDS[msg.window]);
+      const desert = paintDesert(accessGrid(tt, perHour), msg.thresholds);
       ctx.postMessage(
         {
           type: 'layers',

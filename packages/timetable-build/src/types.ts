@@ -4,12 +4,16 @@
 
 export type Mode = 'sbahn' | 'ubahn' | 'tram' | 'bus' | 'ferry' | 'regional' | 'other';
 
-export type WindowName = 'day' | 'night';
+/** "day" (10–12) and "night" (02–04) on a weekday, or an hourly window such as "weekday-10" / "weekend-02". */
+export type WindowName = string;
+
+/** Weekday = a Tuesday–Thursday; weekend = the following Saturday (00–04 is Friday night). */
+export type DayType = 'weekday' | 'weekend';
 
 export interface Timetable {
   version: 1;
   window: WindowName;
-  /** YYYY-MM-DD, the reference weekday used. */
+  /** YYYY-MM-DD, the reference day used (a weekday, or the Saturday for weekend windows). */
   serviceDate: string;
   /** Seconds since midnight of serviceDate, e.g. 36000 for 10:00. */
   windowStart: number;

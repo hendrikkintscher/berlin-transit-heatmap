@@ -8,7 +8,7 @@ pnpm --dir packages/web test
 pnpm --dir packages/web build     # -> packages/web/dist
 ```
 
-- Timetables are fetched from `./data/timetable-{day,night}.json` (copied in by `deploy-pages.yml`
+- Timetables are fetched from `./data/timetable-{weekday,weekend}-HH.json` (one file per departure hour, chosen with the clock button) (copied in by `deploy-pages.yml`
   from the `timetable-latest` release). For local testing, drop the release files into
   `packages/web/public/data/`.
 - Routing runs in a Web Worker (`src/worker.ts`) using `@berlin-transit-heatmap/routing`.

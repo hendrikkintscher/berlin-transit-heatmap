@@ -24,8 +24,8 @@ beforeAll(async () => {
   const source = await openGtfs(FIXTURE);
   result = await buildTimetables(source, { feedVersion: 'test-feed' });
   source.close();
-  day = result.timetables.day;
-  night = result.timetables.night;
+  day = result.timetables.day!;
+  night = result.timetables.night!;
 });
 
 describe('buildTimetables on the mini fixture', () => {
@@ -165,5 +165,50 @@ describe('writeOutputs', () => {
       'timetable-day.json',
       'timetable-night.json',
     ]);
+  });
+});
+
+describe('hourly windows', () => {
+  let hourly: BuildResult;
+  beforeAll(async () => {
+    const source = await openGtfs(FIXTURE);
+    hourly = await buildTimetables(source, { feedVersion: 'test-feed', hourly: true });
+    source.close();
+  });
+  const firstTimes = (tt: Timetable, name: string) =>
+    routeNamed(tt, name)
+      .flatMap((r) => r.trips.map((trip) => trip[0]))
+      .sort((a, b) => a! - b!);
+
+  it('builds 24 weekday and 24 weekend hours next to day and night', () => {
+    const names = Object.keys(hourly.timetables);
+    expect(names).toHaveLength(50);
+    expect(names).toContain('weekday-00');
+    expect(names).toContain('weekend-23');
+    expect(hourly.timetables['weekday-10']).toMatchObject({
+      window: 'weekday-10',
+      serviceDate: '2026-10-13',
+      windowStart: t('10:00'),
+      windowEnd: t('11:00'),
+    });
+  });
+
+  it('uses the following Saturday for the weekend', () => {
+    expect(hourly.stats.weekendDate).toBe('2026-10-17');
+    expect(hourly.timetables['weekend-10']!.serviceDate).toBe('2026-10-17');
+    // Only the weekend bus t11 runs on Saturday morning; the weekday buses do not.
+    expect(firstTimes(hourly.timetables['weekend-10']!, '100')).toEqual([t('10:00')]);
+    // On a weekday the same hour has the weekday bus t10 (11:00) instead.
+    expect(firstTimes(hourly.timetables['weekday-10']!, '100')).toEqual([t('11:00')]);
+  });
+
+  it('counts the Friday night bus as Saturday 02:xx', () => {
+    // t7 runs on weekdays at 26:30, i.e. 02:30 on Saturday after a Friday.
+    expect(firstTimes(hourly.timetables['weekend-02']!, 'N9')).toEqual([t('02:30')]);
+  });
+
+  it('keeps one shared stop list for every window', () => {
+    for (const tt of Object.values(hourly.timetables))
+      expect(tt.stops).toEqual(hourly.stopsFile.stops);
   });
 });

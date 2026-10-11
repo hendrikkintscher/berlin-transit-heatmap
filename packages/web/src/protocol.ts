@@ -1,7 +1,8 @@
 // Messages between the UI thread (main.ts) and the routing worker (worker.ts).
 import type { FeatureCollection, LineString, Point } from 'geojson';
 
-export type Window = 'day' | 'night';
+/** A timetable window, e.g. "weekday-10" (see when.ts). */
+export type Window = string;
 
 export type ToWorker =
   | { type: 'init'; dataBase: string }
@@ -15,7 +16,7 @@ export type ToWorker =
       /** Meeting point: a second start; the map then shows the slower of the two trips. */
       second?: { lat: number; lon: number };
     }
-  | { type: 'layers'; window: Window };
+  | { type: 'layers'; window: Window; thresholds: readonly [number, number] };
 
 export interface TimetableInfo {
   window: Window;

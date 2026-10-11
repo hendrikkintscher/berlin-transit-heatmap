@@ -56,7 +56,8 @@ jobs:
 
       - name: Check size budget
         run: |
-          for f in timetable-day.json timetable-night.json; do
+          for path in work/out/timetable-*.json; do
+            f=$(basename "$path")
             bytes=$(jq ".files[\"$f\"].bytes" work/out/build-info.json)
             gz=$(jq ".files[\"$f\"].gzipBytes" work/out/build-info.json)
             echo "$f: $bytes bytes, $gz gzipped"
@@ -78,5 +79,5 @@ jobs:
             gh release edit "$TIMETABLE_TAG" --notes "$notes"
           fi
           gh release upload "$TIMETABLE_TAG" \
-            work/out/timetable-day.json work/out/timetable-night.json \
+            work/out/timetable-*.json \
             work/out/stops.json work/out/build-info.json --clobber

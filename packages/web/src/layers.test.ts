@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { loadTimetable, type Timetable } from '@berlin-transit-heatmap/routing';
-import {
-  accessGrid,
-  departuresPerHour,
-  DESERT_THRESHOLDS,
-  desertLevel,
-  stationName,
-  stations,
-} from './layers';
+import { desertThresholds } from './when';
+import { accessGrid, departuresPerHour, desertLevel, stationName, stations } from './layers';
 
 // Two platforms of one station (A1, A2 under parent A) and a stop B 1 km east.
 const tt = loadTimetable({
@@ -76,10 +70,10 @@ describe('access time', () => {
   });
 
   it('grades deserts by the chosen thresholds', () => {
-    expect(desertLevel(540, DESERT_THRESHOLDS.day)).toBe(0);
-    expect(desertLevel(700, DESERT_THRESHOLDS.day)).toBe(1);
-    expect(desertLevel(1000, DESERT_THRESHOLDS.day)).toBe(2);
-    expect(desertLevel(1000, DESERT_THRESHOLDS.night)).toBe(0);
-    expect(desertLevel(Infinity, DESERT_THRESHOLDS.night)).toBe(2);
+    expect(desertLevel(540, desertThresholds({ day: 'weekday', hour: 10 }))).toBe(0);
+    expect(desertLevel(700, desertThresholds({ day: 'weekday', hour: 10 }))).toBe(1);
+    expect(desertLevel(1000, desertThresholds({ day: 'weekday', hour: 10 }))).toBe(2);
+    expect(desertLevel(1000, desertThresholds({ day: 'weekday', hour: 2 }))).toBe(0);
+    expect(desertLevel(Infinity, desertThresholds({ day: 'weekday', hour: 2 }))).toBe(2);
   });
 });
