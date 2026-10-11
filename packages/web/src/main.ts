@@ -2,7 +2,8 @@ import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent }
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import { BAND_COLORS, BAND_EDGES_MIN, DIFF_COLORS, DIFF_EDGES_MIN, bandLabel } from './colors';
-import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
+import { reverseAddress, reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
+import { bezirke, landmarks, ringLine } from './orientation';
 import {
   loadFavourites,
   newId,
@@ -62,7 +63,10 @@ const OUTLINE_LAYERS = ['outlines-line', 'outlines-label'];
 /** Labelled, bolder outlines; the other 5-minute steps are drawn thin. */
 const MAJOR_OUTLINES = [15, 30, 45];
 const AREA_SOURCE = 'area';
+const WATER = '#a9c7dc';
 const TRIP_SOURCE = 'trip';
+const TRIP_STOPS_SOURCE = 'trip-stops';
+const BOLD_FONT = ['Noto Sans Bold'];
 const DEFAULT_OPACITY = 80;
 
 // Line colours roughly follow the usual Berlin map conventions.
@@ -374,7 +378,7 @@ const map = new maplibregl.Map({
   center: state.origin ? [state.origin.lon, state.origin.lat] : BERLIN,
   zoom: 10.3,
   minZoom: 8,
-  maxZoom: 17,
+  maxZoom: 18,
   attributionControl: { compact: true },
   dragRotate: false,
   pitchWithRotate: false,
@@ -569,6 +573,55 @@ map.on('load', () => {
     },
     firstRoad,
   );
+  // Orientation on top of the colours: water in clear blue, parks and woods under a light
+  // green veil, and the Ringbahn as a faint frame.
+  const tiles = 'openmaptiles';
+  map.addLayer(
+    {
+      id: 'green-veil',
+      type: 'fill',
+      source: tiles,
+      'source-layer': 'park',
+      paint: { 'fill-color': '#e4eedb', 'fill-opacity': 0.45 },
+    },
+    firstRoad,
+  );
+  map.addLayer(
+    {
+      id: 'wood-veil',
+      type: 'fill',
+      source: tiles,
+      'source-layer': 'landcover',
+      filter: ['==', ['get', 'class'], 'wood'],
+      paint: { 'fill-color': '#e4eedb', 'fill-opacity': 0.35 },
+    },
+    firstRoad,
+  );
+  map.addLayer(
+    {
+      id: 'water-top',
+      type: 'fill',
+      source: tiles,
+      'source-layer': 'water',
+      filter: ['!=', ['get', 'brunnel'], 'tunnel'],
+      paint: { 'fill-color': WATER },
+    },
+    firstRoad,
+  );
+  map.addLayer(
+    {
+      id: 'waterway-top',
+      type: 'line',
+      source: tiles,
+      'source-layer': 'waterway',
+      filter: ['!=', ['get', 'brunnel'], 'tunnel'],
+      paint: {
+        'line-color': WATER,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 14, 3],
+      },
+    },
+    firstRoad,
+  );
   map.addSource(OUTLINES_SOURCE, { type: 'geojson', data: empty });
   const isoVisibility = state.iso ? 'visible' : 'none';
   map.addLayer(
@@ -610,6 +663,21 @@ map.on('load', () => {
     },
     paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
   });
+  map.addSource('ring', { type: 'geojson', data: ringLine });
+  map.addLayer(
+    {
+      id: 'ring-line',
+      type: 'line',
+      source: 'ring',
+      layout: { 'line-join': 'round' },
+      paint: {
+        'line-color': '#1d1530',
+        'line-opacity': 0.35,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 14, 3],
+      },
+    },
+    ROUTE_LAYERS[0],
+  );
   // A faint frame where the computed area ends.
   const [aw, as, ae, an] = SEARCH_BBOX;
   map.addSource(AREA_SOURCE, {
@@ -676,39 +744,118 @@ map.on('load', () => {
   // The connection to a tapped spot: rides in their line colours, walks dashed.
   map.addSource(TRIP_SOURCE, { type: 'geojson', data: empty });
   const tripLines = ['==', ['get', 'walk'], false] as maplibregl.FilterSpecification;
-  map.addLayer(
-    {
-      id: 'trip-casing',
-      type: 'line',
-      source: TRIP_SOURCE,
-      filter: tripLines,
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#ffffff', 'line-width': 8 },
+  map.addLayer({
+    id: 'trip-casing',
+    type: 'line',
+    source: TRIP_SOURCE,
+    filter: tripLines,
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#1d1530', 'line-width': 9.5 },
+  });
+  map.addLayer({
+    id: 'trip-line',
+    type: 'line',
+    source: TRIP_SOURCE,
+    filter: tripLines,
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': modeColor, 'line-width': 5.5 },
+  });
+  map.addLayer({
+    id: 'trip-walk',
+    type: 'line',
+    source: TRIP_SOURCE,
+    filter: ['==', ['get', 'walk'], true],
+    layout: { 'line-cap': 'round' },
+    paint: { 'line-color': '#1d1530', 'line-width': 3, 'line-dasharray': [0.4, 1.6] },
+  });
+  map.addSource(TRIP_STOPS_SOURCE, { type: 'geojson', data: empty });
+  map.addLayer({
+    id: 'trip-stops',
+    type: 'circle',
+    source: TRIP_STOPS_SOURCE,
+    paint: {
+      'circle-radius': 5,
+      'circle-color': '#ffffff',
+      'circle-stroke-color': '#1d1530',
+      'circle-stroke-width': 2.5,
     },
-    'routes-label',
-  );
-  map.addLayer(
-    {
-      id: 'trip-line',
-      type: 'line',
-      source: TRIP_SOURCE,
-      filter: tripLines,
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': modeColor, 'line-width': 4.5 },
+  });
+  map.addLayer({
+    id: 'trip-stop-label',
+    type: 'symbol',
+    source: TRIP_STOPS_SOURCE,
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': BOLD_FONT,
+      'text-size': 12,
+      'text-anchor': 'left',
+      'text-offset': [0.8, 0],
+      'text-optional': true,
     },
-    'routes-label',
-  );
-  map.addLayer(
-    {
-      id: 'trip-walk',
-      type: 'line',
-      source: TRIP_SOURCE,
-      filter: ['==', ['get', 'walk'], true],
-      layout: { 'line-cap': 'round' },
-      paint: { 'line-color': '#1d1530', 'line-width': 2.5, 'line-dasharray': [0.5, 2] },
+    paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
+  });
+  // Bezirke at city zoom; the basemap's Ortsteil names take over from zoom 11.5.
+  map.addSource('bezirke', { type: 'geojson', data: bezirke });
+  map.addLayer({
+    id: 'bezirke-label',
+    type: 'symbol',
+    source: 'bezirke',
+    maxzoom: 11.5,
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': BOLD_FONT,
+      'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 11, 13],
+      'text-transform': 'uppercase',
+      'text-letter-spacing': 0.06,
+      'text-max-width': 7,
     },
-    'routes-label',
-  );
+    paint: {
+      'text-color': '#2a2140',
+      'text-opacity': 0.8,
+      'text-halo-color': '#ffffff',
+      'text-halo-width': 1.8,
+    },
+  });
+  if (map.getLayer('label_other')) {
+    map.setLayoutProperty('label_other', 'text-font', BOLD_FONT);
+    map.setLayoutProperty('label_other', 'text-size', [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      11,
+      11,
+      14,
+      14,
+    ]);
+    map.setPaintProperty('label_other', 'text-color', '#2a2140');
+    map.setPaintProperty('label_other', 'text-halo-width', 1.8);
+  }
+  map.addSource('landmarks', { type: 'geojson', data: landmarks });
+  map.addLayer({
+    id: 'landmarks',
+    type: 'symbol',
+    source: 'landmarks',
+    minzoom: 10.5,
+    layout: {
+      'text-field': ['concat', '◆ ', ['get', 'name']],
+      'text-font': font,
+      'text-size': 11,
+      'text-anchor': 'left',
+      'text-offset': [-0.45, 0],
+      'text-optional': true,
+    },
+    paint: { 'text-color': '#4a3d63', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
+  });
+  // House numbers at street level, so a tap can pick an exact address.
+  map.addLayer({
+    id: 'housenumbers',
+    type: 'symbol',
+    source: tiles,
+    'source-layer': 'housenumber',
+    minzoom: 17,
+    layout: { 'text-field': ['get', 'housenumber'], 'text-font': font, 'text-size': 11 },
+    paint: { 'text-color': '#4a4458', 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 },
+  });
   if (lastResult) showResult(lastResult);
   showLayers();
 });
@@ -778,6 +925,12 @@ function textFont(): string[] {
   return ['Noto Sans Regular'];
 }
 
+/** The chosen opacity in the city view, fading at street level so names and numbers read. */
+function heatOpacity(): maplibregl.ExpressionSpecification {
+  const o = state.opacity / 100;
+  return ['interpolate', ['linear'], ['zoom'], 13, o, 16, o * 0.45];
+}
+
 function showResult(r: Result) {
   renderFavourites();
   showLegend(!!r.compare);
@@ -807,7 +960,7 @@ function showResult(r: Result) {
         type: 'raster',
         source: HEAT_SOURCE,
         paint: {
-          'raster-opacity': state.opacity / 100,
+          'raster-opacity': heatOpacity(),
           'raster-fade-duration': 0,
           'raster-resampling': 'linear',
         },
@@ -912,8 +1065,32 @@ map.on('click', (e: MapMouseEvent) => {
   showReadoutCard(html, false);
   state.pending = { lat, lon: lng };
   secondBtn.hidden = !state.origin;
+  if (map.getZoom() >= 15) showAddress(state.pending);
   if (tipKey === 'tap') hideTip();
 });
+
+/**
+ * At street level, names the address under the tap; "Hier starten" then starts there, so the
+ * start sits on the house rather than a few metres off it.
+ */
+async function showAddress(at: { lat: number; lon: number }) {
+  let place: Place | null = null;
+  try {
+    place = await reverseAddress(at, lang());
+  } catch {
+    return; // Offline or Photon down: the card works without it.
+  }
+  if (!place || state.pending !== at || readout.hidden) return;
+  // Only snap to an address close to the tap (about 60 m).
+  const dy = (place.lat - at.lat) * 111_000;
+  const dx = (place.lon - at.lon) * 111_000 * Math.cos((at.lat * Math.PI) / 180);
+  if (Math.hypot(dx, dy) > 60) return;
+  const el = document.createElement('small');
+  el.className = 'addr';
+  el.textContent = place.label;
+  readoutText.prepend(el);
+  state.pending = { lat: place.lat, lon: place.lon };
+}
 
 const removeBtn = $<HTMLButtonElement>('readout-remove');
 let removeWhich: 1 | 2 = 1;
@@ -939,9 +1116,16 @@ function hideReadout() {
   setTrip(null);
 }
 
-function setTrip(lines: Extract<FromWorker, { type: 'trip' }>['lines'] | null) {
-  const src = mapReady ? (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined) : undefined;
-  src?.setData(lines ?? { type: 'FeatureCollection', features: [] });
+type Trip = Extract<FromWorker, { type: 'trip' }>;
+/** Draws a journey (or clears it); while one is shown the Lines layer steps back. */
+function setTrip(trip: Pick<Trip, 'lines' | 'stops'> | null) {
+  if (!mapReady) return;
+  const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+  (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.lines ?? empty);
+  (map.getSource(TRIP_STOPS_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.stops ?? empty);
+  map.setPaintProperty('routes-line', 'line-opacity', trip ? 0.3 : 1);
+  map.setPaintProperty('routes-casing', 'line-opacity', trip ? 0.2 : 0.9);
+  map.setLayoutProperty('routes-label', 'visibility', state.routes && !trip ? 'visible' : 'none');
 }
 
 /** The journey to the tapped spot: changes and walking, then one row per ride. */
@@ -989,7 +1173,7 @@ function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
       );
     })
     .join('');
-  setTrip(m.lines);
+  setTrip(m);
 }
 
 /** Google Maps public-transport directions; opens the app on phones. */
@@ -1188,8 +1372,7 @@ opacityInput.value = String(state.opacity);
 opacityInput.addEventListener('input', () => {
   state.opacity = Number(opacityInput.value);
   remember('heat-opacity', opacityInput.value);
-  if (map.getLayer(HEAT_LAYER))
-    map.setPaintProperty(HEAT_LAYER, 'raster-opacity', state.opacity / 100);
+  if (map.getLayer(HEAT_LAYER)) map.setPaintProperty(HEAT_LAYER, 'raster-opacity', heatOpacity());
 });
 
 // ---------- my location ----------

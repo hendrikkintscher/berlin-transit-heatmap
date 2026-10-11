@@ -104,5 +104,7 @@ export type FromWorker =
       journeys: ({ legs: TripLeg[]; transfers: number } | null)[];
       /** The journeys drawn on the map: rides coloured by mode, walks dashed. */
       lines: FeatureCollection<LineString, { mode: string; walk: boolean }>;
+      /** Where the journeys get on, change and get off. */
+      stops: FeatureCollection<Point, { name: string }>;
     }
   | { type: 'error'; message: string };

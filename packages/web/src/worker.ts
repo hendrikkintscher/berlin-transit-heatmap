@@ -298,6 +298,18 @@ function tripMessage(
         geometry: { type: 'LineString', coordinates },
       });
   };
+  const stops = new Map<
+    number,
+    Extract<FromWorker, { type: 'trip' }>['stops']['features'][number]
+  >();
+  const stopPoint = (s: number) => {
+    if (!tt || stops.has(s)) return;
+    stops.set(s, {
+      type: 'Feature',
+      properties: { name: tt.stops[s].name.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, '') },
+      geometry: { type: 'Point', coordinates: [tt.stopLon[s], tt.stopLat[s]] },
+    });
+  };
   const journeys = found.map((f) => {
     if (!f || !tt) return null;
     const pos = (s: number): [number, number] => [tt.stopLon[s], tt.stopLat[s]];
@@ -310,6 +322,8 @@ function tripMessage(
       }
       line([at, pos(l.from)], 'walk', true);
       line(l.stops.map(pos), l.mode, false);
+      stopPoint(l.from);
+      stopPoint(l.to);
       at = pos(l.to);
       legs.push({
         type: 'ride',
@@ -323,7 +337,11 @@ function tripMessage(
     line([at, f.end], 'walk', true);
     return { legs, transfers: f.journey.transfers };
   });
-  return { journeys, lines: { type: 'FeatureCollection', features } };
+  return {
+    journeys,
+    lines: { type: 'FeatureCollection', features },
+    stops: { type: 'FeatureCollection', features: [...stops.values()] },
+  };
 }
 
 /** Meeting point: each cell gets the slower of the two trips ("where can we both be in N min?"). */

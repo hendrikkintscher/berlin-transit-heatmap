@@ -198,9 +198,13 @@ From Hendrik's review of group 6: the tapped route looks too much like the Lines
 
 ### Tell the route apart from the Lines layer
 
+**Done** (PR #27): while a route is shown the Lines fade to 30 % without labels; the route has a dark outline, white stop dots with names where you get on, change and get off, and dark dotted walks.
+
 While a route is shown, the Lines layer steps back (about 30 % opacity, thinner, no labels) and the route comes forward: thicker, with a dark outline instead of the white casing the Lines use, round stop dots where you get on, change and get off (with the stop names), and walking legs as a dark dotted line. Closing the card brings the Lines back. Small.
 
 ### Orientation: which part of Berlin am I looking at?
+
+**Done** (PR #27): water (rivers, canals, lakes) is drawn over the colours in clear blue; parks and woods get a light green veil; the twelve Bezirke are named at city zoom and the basemap's Ortsteil names are bolder from zoom 11.5; the Ringbahn is a faint frame; seven landmarks are marked from zoom 10.5. District boundaries left out.
 
 The features that tell people where they are, most useful first:
 
@@ -216,6 +220,8 @@ Faint district boundaries are optional; they tend to clutter the picture at phon
 Notes: in the Positron basemap, water and parks are drawn below the roads, so the colours cover them. Fix this by drawing a copy of the water and park layers above the heatmap. The vector tiles (OpenMapTiles schema) already hold suburb and quarter places, POIs and house numbers that Positron doesn't style, so no new data is needed. The landmark list can be hand-picked. Medium effort.
 
 ### Street level: pick an exact street or address
+
+**Done** (PR #27): the colours fade from zoom 13 to 45 % of the chosen opacity at zoom 16; house numbers from zoom 17 (max zoom now 18); a tap from zoom 15 names the nearest address (within 60 m) and "Hier starten" starts exactly there.
 
 Zoomed in to streets, the map should work like a normal city map:
 
