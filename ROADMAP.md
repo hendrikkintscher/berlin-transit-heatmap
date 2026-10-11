@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done apart from the suggested meeting points added to group 3; groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), group 11 is the Android app and group 12 temporary changes; they run from quick wins to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done apart from two items added to group 3 (suggested meeting points, search result choices); groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), group 11 is the Android app and group 12 temporary changes; they run from quick wins to bigger features. Within a group, items that others depend on come first.
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -69,6 +69,12 @@ Notes: run the router twice in the worker and combine the two grids; needs a sec
 With two start points, suggest a few good places to meet (about three) and mark them on the map. Tapping one shows the connections for both people: each person's trip, drawn and listed in the trip card.
 
 Notes: candidates are the cells with the smallest slower-of-both time, with the sum of both times as a tie-breaker so neither person carries the whole trip. Pick the best, leave out everything within about 1.5 km of it, and repeat, so the suggestions are spread out. Prefer spots at a station or a named place and label them with the station or Ortsteil name. Trip on tap already draws and lists both trips when a second start is set, so tapping a suggestion reuses it. Small to medium effort; added from Hendrik's request on 2026-10-11 and built right after group 8.
+
+### Search result: new start, destination or second start
+
+Once a start is set, picking a search result asks what the place is for, with three buttons: **Neuer Start** (replaces the start, as today), **Ziel** (keeps the map and shows the trip there, as a tap on the place would), or **2. Start** (adds it as the second start for the meeting point). Without a start, a search result simply becomes the start, as now.
+
+Notes: today a search result always replaces the start (pickPlace in main.ts). The three actions already exist for taps on the map (trip on tap, "2. Start" in the tap card), so this is mostly a small choice sheet after the search. Small effort; added from Hendrik's request on 2026-10-11, built together with the suggested meeting points.
 
 ### Favourite places and a location score
 
