@@ -3,6 +3,7 @@ import {
   gridLayout,
   heatGrid,
   journeyTo,
+  walkPath,
   loadTimetable,
   loadWalkNetwork,
   snapCells,
@@ -412,6 +413,13 @@ function tripMessage(
         geometry: { type: 'LineString', coordinates },
       });
   };
+  // Walks follow the footpaths their minutes were measured on, once walk.bin is in;
+  // until then (or off the network) they stay straight.
+  const walkLine = (a: [number, number], b: [number, number]) => {
+    if (a[0] === b[0] && a[1] === b[1]) return;
+    const path = walk && walkPath(walk, { lon: a[0], lat: a[1] }, { lon: b[0], lat: b[1] });
+    line(path ?? [a, b], 'walk', true);
+  };
   const stops = new Map<
     number,
     Extract<FromWorker, { type: 'trip' }>['stops']['features'][number]
@@ -434,7 +442,7 @@ function tripMessage(
         legs.push({ type: 'walk', minutes: Math.max(1, Math.round(l.seconds / 60)) });
         continue;
       }
-      line([at, pos(l.from)], 'walk', true);
+      walkLine(at, pos(l.from));
       line(l.stops.map(pos), l.mode, false);
       stopPoint(l.from);
       stopPoint(l.to);
@@ -448,7 +456,7 @@ function tripMessage(
         stops: l.stops.length - 1,
       });
     }
-    line([at, f.end], 'walk', true);
+    walkLine(at, f.end);
     return { legs, transfers: f.journey.transfers };
   });
   return {

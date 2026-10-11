@@ -593,3 +593,133 @@ export function snapCells(
   byLayout.set(key, snap);
   return snap;
 }
+
+/**
+ * The walk from one point to another along the network, as [lon, lat] coordinates
+ * from `from` to `to`, or null when either point is off the network or no path is
+ * found within reach. For drawing a single trip: an A* search with predecessors
+ * that only explores around the two points, so it costs a few milliseconds per walk.
+ */
+export function walkPath(
+  net: WalkNetwork,
+  from: { lat: number; lon: number },
+  to: { lat: number; lon: number },
+  maxSnapM: number = MAX_CELL_SNAP_M,
+): [number, number][] | null {
+  const snaps = makeSnaps(2);
+  snapPoint(net, from.lat, from.lon, snaps, 0, maxSnapM);
+  snapPoint(net, to.lat, to.lon, snaps, 1, maxSnapM);
+  const e0 = snaps.edge[0];
+  const e1 = snaps.edge[1];
+  if (e0 < 0 || e1 < 0) return null;
+  const { x, y, edgeA, edgeB, edgeMetres, offset, target, metres } = net;
+  const onEdge = (e: number, f: number): [number, number] => {
+    const a = edgeA[e];
+    const b = edgeB[e];
+    return [net.lon[a] + f * (net.lon[b] - net.lon[a]), net.lat[a] + f * (net.lat[b] - net.lat[a])];
+  };
+  const start: [number, number] = [from.lon, from.lat];
+  const end: [number, number] = [to.lon, to.lat];
+  const p0 = onEdge(e0, snaps.along[0]);
+  const p1 = onEdge(e1, snaps.along[1]);
+  if (e0 === e1) return [start, p0, p1, end];
+
+  // Goal: either end of the target edge, plus the rest of that edge to the snapped point.
+  const goalCost = new Map<number, number>([
+    [edgeA[e1], snaps.along[1] * edgeMetres[e1]],
+    [edgeB[e1], (1 - snaps.along[1]) * edgeMetres[e1]],
+  ]);
+  const gx = x[edgeA[e1]] + snaps.along[1] * (x[edgeB[e1]] - x[edgeA[e1]]);
+  const gy = y[edgeA[e1]] + snaps.along[1] * (y[edgeB[e1]] - y[edgeA[e1]]);
+  // Each edge length is at least the straight distance between its ends, so this
+  // never overestimates and the path found is the shortest.
+  const h = (v: number) => Math.hypot(x[v] - gx, y[v] - gy);
+  const dist = new Map<number, number>();
+  const prev = new Map<number, number>();
+  const heap = new MinHeap();
+  const seed = (v: number, d: number) => {
+    if (d < (dist.get(v) ?? Infinity)) {
+      dist.set(v, d);
+      prev.set(v, -1);
+      heap.push(d + h(v), v);
+    }
+  };
+  seed(edgeA[e0], snaps.along[0] * edgeMetres[e0]);
+  seed(edgeB[e0], (1 - snaps.along[0]) * edgeMetres[e0]);
+  // Give up beyond a generous detour, so a point across a river with no bridge nearby
+  // cannot make the search sweep the whole city.
+  const limit = 3 * Math.hypot(x[edgeA[e0]] - gx, y[edgeA[e0]] - gy) + 2000;
+  let best = Infinity;
+  let bestNode = -1;
+  while (heap.size) {
+    const [key, v] = heap.pop();
+    if (key >= best || key > limit) break;
+    const d = dist.get(v)!;
+    if (key - h(v) > d + 1e-6) continue; // stale entry
+    const g = goalCost.get(v);
+    if (g !== undefined && d + g < best) {
+      best = d + g;
+      bestNode = v;
+    }
+    for (let k = offset[v]; k < offset[v + 1]; k++) {
+      const u = target[k];
+      const nd = d + metres[k];
+      if (nd < (dist.get(u) ?? Infinity)) {
+        dist.set(u, nd);
+        prev.set(u, v);
+        heap.push(nd + h(u), u);
+      }
+    }
+  }
+  if (bestNode < 0) return null;
+  const nodes: [number, number][] = [];
+  for (let v = bestNode; v >= 0; v = prev.get(v)!) nodes.push([net.lon[v], net.lat[v]]);
+  nodes.reverse();
+  return [start, p0, ...nodes, p1, end];
+}
+
+/** A binary min-heap of (key, value) pairs. */
+class MinHeap {
+  private keys: number[] = [];
+  private vals: number[] = [];
+  get size(): number {
+    return this.keys.length;
+  }
+  push(key: number, val: number): void {
+    const { keys, vals } = this;
+    let i = keys.length;
+    keys.push(key);
+    vals.push(val);
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (keys[p] <= key) break;
+      keys[i] = keys[p];
+      vals[i] = vals[p];
+      i = p;
+    }
+    keys[i] = key;
+    vals[i] = val;
+  }
+  pop(): [number, number] {
+    const { keys, vals } = this;
+    const top: [number, number] = [keys[0], vals[0]];
+    const key = keys.pop()!;
+    const val = vals.pop()!;
+    const n = keys.length;
+    if (n) {
+      let i = 0;
+      for (;;) {
+        let c = 2 * i + 1;
+        if (c >= n) break;
+        if (c + 1 < n && keys[c + 1] < keys[c]) c++;
+        if (keys[c] >= key) break;
+        keys[i] = keys[c];
+        vals[i] = vals[c];
+        i = c;
+      }
+      keys[i] = key;
+      vals[i] = val;
+    }
+    return top;
+  }
+}

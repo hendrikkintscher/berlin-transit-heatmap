@@ -10,6 +10,7 @@ import {
   snapPoint,
   travelTimes,
   walkFrom,
+  walkPath,
   type Timetable,
 } from '../src';
 
@@ -201,5 +202,37 @@ describe('walking network', () => {
       );
       expect(cells.metres[k]).toBeCloseTo(one.metres[0], 1);
     }
+  });
+});
+
+describe('walkPath', () => {
+  const near = (p: [number, number], lon: number, lat: number) =>
+    Math.abs(p[0] - lon) < 1e-6 && Math.abs(p[1] - lat) < 1e-6;
+
+  it('goes round by the bridge across the river', () => {
+    const from = { lat: LAT_N + 0.0002, lon: LON0 + 2.5 * STEP };
+    const to = { lat: LAT_S - 0.0002, lon: LON0 + 2.5 * STEP };
+    const path = walkPath(net, from, to)!;
+    expect(path[0]).toEqual([from.lon, from.lat]);
+    expect(path[path.length - 1]).toEqual([to.lon, to.lat]);
+    const bridgeN = path.findIndex((p) => near(p, net.lon[10], net.lat[10]));
+    const bridgeS = path.findIndex((p) => near(p, net.lon[31], net.lat[31]));
+    expect(bridgeN).toBeGreaterThan(0);
+    expect(bridgeS).toBe(bridgeN + 1);
+    // Along the north street east to the bridge: nodes 3 to 10, then 31 back to 23.
+    expect(path.length).toBe(2 + 8 + 8 + 2);
+  });
+
+  it('walks straight along one street', () => {
+    const path = walkPath(
+      net,
+      { lat: LAT_N, lon: LON0 + 2.2 * STEP },
+      { lat: LAT_N, lon: LON0 + 2.8 * STEP },
+    )!;
+    expect(path).toHaveLength(4);
+  });
+
+  it('gives up off the network', () => {
+    expect(walkPath(net, { lat: 52.6, lon: 13.4 }, { lat: LAT_N, lon: LON0 })).toBeNull();
   });
 });
