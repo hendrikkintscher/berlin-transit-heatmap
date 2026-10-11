@@ -38,6 +38,7 @@ export {
   snapStops,
   timeAt,
   walkFrom,
+  walkPath,
   walkSpeeds,
   WalkSources,
 } from './walk';
