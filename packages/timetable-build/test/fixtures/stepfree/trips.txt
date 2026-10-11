@@ -1,0 +1,14 @@
+route_id,service_id,trip_id,wheelchair_accessible
+R1,WD,t1,1
+R1,WD,t1dup,1
+R1,WD,t2,1
+R1,WD,t3,1
+R2,WD,t4,1
+R2,WD,t5,1
+R2,WD,t6,1
+R3,WD,t7,0
+R3,NX,t8,0
+R2,WD,t9,1
+R2,WD,t10,1
+R2,WE,t11,1
+R4,WD,t12,1

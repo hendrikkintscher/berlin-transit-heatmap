@@ -8,6 +8,7 @@ import {
   snapCells,
   reverseTimetable,
   routeUsage,
+  stepFreeTimetable,
   travelTimes,
   type HeatGrid,
   type Journey,
@@ -128,16 +129,17 @@ function rawTimetable(window: Window): Promise<Timetable> {
   return p;
 }
 
-function ensure(window: Window): Promise<PreparedTimetable> {
-  let p = loading.get(window);
+function ensure(window: Window, stepFree = false): Promise<PreparedTimetable> {
+  const key = stepFree ? `${window}|step-free` : window;
+  let p = loading.get(key);
   if (p) {
     // Most recently used last.
-    loading.delete(window);
-    loading.set(window, p);
+    loading.delete(key);
+    loading.set(key, p);
   } else {
     const raw = rawTimetable(window);
     p = raw.then((json) => {
-      const tt = loadTimetable(json);
+      const tt = loadTimetable(stepFree ? stepFreeTimetable(json) : json);
       void loadWalk();
       post({
         type: 'loaded',
@@ -150,30 +152,42 @@ function ensure(window: Window): Promise<PreparedTimetable> {
       });
       return tt;
     });
-    p.catch(() => loading.delete(window));
-    loading.set(window, p);
+    p.catch(() => loading.delete(key));
+    loading.set(key, p);
     while (loading.size > KEEP_LOADED) loading.delete(loading.keys().next().value!);
   }
   return p;
 }
 
 /** Reversed timetables for "arrive by", kept alongside the forward ones. */
-const reversed = new Map<Window, Promise<PreparedTimetable>>();
+/** Keyed by window, plus "|step-free" for the step-free variant. */
+const reversed = new Map<string, Promise<PreparedTimetable>>();
 const raws = new Map<Window, Promise<Timetable>>();
 
 /**
  * The prepared timetable for a direction. Arriving uses the file of the hour before
  * and asks for arrivals in the hour after its window, run on the time-reversed timetable.
  */
-async function prepared(window: Window, direction: Direction): Promise<PreparedTimetable> {
-  if (direction === 'depart') return ensure(window);
-  let p = reversed.get(window);
+async function prepared(
+  window: Window,
+  direction: Direction,
+  stepFree = false,
+): Promise<PreparedTimetable> {
+  if (direction === 'depart') return ensure(window, stepFree);
+  const key = stepFree ? `${window}|step-free` : window;
+  let p = reversed.get(key);
   if (!p) {
     p = rawTimetable(window).then((json) =>
-      loadTimetable(reverseTimetable(json, json.windowEnd, json.windowEnd + 3600)),
+      loadTimetable(
+        reverseTimetable(
+          stepFree ? stepFreeTimetable(json) : json,
+          json.windowEnd,
+          json.windowEnd + 3600,
+        ),
+      ),
     );
-    p.catch(() => reversed.delete(window));
-    reversed.set(window, p);
+    p.catch(() => reversed.delete(key));
+    reversed.set(key, p);
     while (reversed.size > KEEP_LOADED) reversed.delete(reversed.keys().next().value!);
   }
   return p;
@@ -204,7 +218,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'compute') {
       const t0 = performance.now();
       walkSpeedMps = msg.walkKmh / 3.6;
-      const tt = await prepared(msg.window, msg.direction);
+      const tt = await prepared(msg.window, msg.direction, msg.stepFree);
       const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
       const typical = msg.measure === 'typical';
       // Next connection: plain RAPTOR from one moment (reversed files count backwards).
@@ -228,7 +242,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       let compare: Float32Array<ArrayBuffer> | undefined;
       let extraBase: number | undefined;
       if (msg.compare) {
-        const tt2 = await prepared(msg.compare, msg.direction);
+        const tt2 = await prepared(msg.compare, msg.direction, msg.stepFree);
         const other = starts.map((o) => run(tt2, o, typical, false, leaveAt(tt2)).shown);
         const g2 = other.length === 1 ? other[0] : slowerOf(other[0], other[1]);
         compare = g2.seconds as Float32Array<ArrayBuffer>;

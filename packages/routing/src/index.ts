@@ -19,6 +19,7 @@ export type { PreparedTimetable } from './prepare';
 export { loadTimetable } from './prepare';
 export { travelTimes } from './raptor';
 export { reverseTimetable } from './reverse';
+export { stepFreeTimetable } from './stepfree';
 export { DEFAULT_BBOX, gridLayout, gridToGeoJSON, gridValueAt, heatGrid } from './grid';
 export { distanceM, WALK_SPEED_MPS } from './geo';
 export { LEG_NONE, LEG_ORIGIN, LEG_WALK } from './raptor';

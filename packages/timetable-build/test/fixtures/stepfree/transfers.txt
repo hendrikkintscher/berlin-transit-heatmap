@@ -1,0 +1,4 @@
+from_stop_id,to_stop_id,transfer_type,min_transfer_time,from_route_id,to_route_id,from_trip_id,to_trip_id
+A,C,2,300,,,,
+A,E,2,200,R1,R2,,
+C,C,2,60,,,,

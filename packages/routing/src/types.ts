@@ -30,6 +30,8 @@ export interface Stop {
   lon: number;
   /** Index of the parent stop group, if any. */
   parent?: number;
+  /** false: reached only by stairs or escalators. Absent: step-free or unknown. (Addition to Contract 1.) */
+  stepFree?: false;
 }
 
 export type RouteMode = 'sbahn' | 'ubahn' | 'tram' | 'bus' | 'ferry' | 'regional' | 'other';
@@ -42,6 +44,8 @@ export interface Route {
   stops: number[];
   /** trips[t][i] = departure time at stops[i] (arrival == departure); sorted by first departure. */
   trips: number[][];
+  /** false: trips not marked wheelchair-accessible. Absent: accessible or unknown. (Addition to Contract 1.) */
+  stepFree?: false;
 }
 
 export interface Transfer {
