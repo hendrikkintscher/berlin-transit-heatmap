@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildTimetables, type BuildResult } from '../src/build.ts';
 import { writeOutputs } from '../src/output.ts';
+import { decodeTimetable } from '../../routing/src/ttbin.ts';
 import { openGtfs } from '../src/source.ts';
 import type { Timetable } from '../src/types.ts';
 
@@ -145,7 +146,7 @@ describe('writeOutputs', () => {
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  it('writes the three data files and build-info.json', () => {
+  it('writes the data files, binary timetables and build-info.json', () => {
     const info = writeOutputs(result, dir);
     const read = (name: string) => JSON.parse(readFileSync(join(dir, name), 'utf8'));
     expect(read('timetable-day.json')).toEqual(day);
@@ -160,9 +161,19 @@ describe('writeOutputs', () => {
       serviceDate: '2026-10-13',
       stats: result.stats,
     });
+    // The binary file reads back as the JSON one, without stop ids and with the
+    // footpaths in stop order.
+    const bin = decodeTimetable(readFileSync(join(dir, 'timetable-day.bin')));
+    expect(bin).toEqual({
+      ...day,
+      stops: day.stops.map((s) => ({ ...s, id: '' })),
+      transfers: [...day.transfers].sort((a, b) => a.from - b.from || a.to - b.to),
+    });
     expect(Object.keys(info.files).sort()).toEqual([
       'stops.json',
+      'timetable-day.bin',
       'timetable-day.json',
+      'timetable-night.bin',
       'timetable-night.json',
     ]);
   });

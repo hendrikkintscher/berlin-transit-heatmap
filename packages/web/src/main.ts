@@ -1,6 +1,5 @@
 import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
-import 'maplibre-gl/dist/maplibre-gl.css';
-import './style.css';
+import { listen, send } from './boot';
 import { BAND_COLORS, BAND_EDGES_MIN, DIFF_COLORS, DIFF_EDGES_MIN, bandLabel } from './colors';
 import { reverseAddress, reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import { bezirke, landmarks, ringLine } from './orientation';
@@ -40,7 +39,6 @@ import type {
   RasterLayer,
   StationProps,
   TimetableInfo,
-  ToWorker,
   Travel,
   Window,
 } from './protocol';
@@ -287,11 +285,8 @@ function setStatus(render: () => string, fade = false) {
 }
 
 // ---------- worker ----------
-const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-const send = (m: ToWorker) => worker.postMessage(m);
-send({ type: 'init', dataBase: new URL('data/', document.baseURI).href });
-
-worker.onmessage = (ev: MessageEvent<FromWorker>) => {
+// Started by boot.ts before this module loaded, so the timetable is already on its way.
+listen((ev: MessageEvent<FromWorker>) => {
   const m = ev.data;
   if (m.type === 'progress') {
     if (m.window !== computedWindow() && m.window !== state.window) return;
@@ -324,7 +319,7 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     loadbar.hidden = true;
     setStatus(() => t('failed', { message: m.message }));
   }
-};
+});
 
 function renderFeedInfo() {
   const i = state.info[state.window] ?? state.info[computedWindow()];
