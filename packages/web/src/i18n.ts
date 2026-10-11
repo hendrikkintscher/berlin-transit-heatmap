@@ -48,6 +48,18 @@ const de = {
   noMatches: 'Keine Treffer im Kartengebiet',
   searchDown: 'Die Suche ist gerade nicht erreichbar',
   searchOffline: 'Die Suche braucht eine Internetverbindung',
+  freq: 'Takt der Haltestellen',
+  freqHint: 'Abfahrten pro Stunde, alle Linien und Richtungen zusammen',
+  desert: 'ÖPNV-Wüsten',
+  desertHint: 'Wo Fußweg zur Haltestelle plus Wartezeit über 10 Min. liegt (nachts 20 Min.)',
+  freqLegend: 'Abfahrten/h',
+  desertLegend: 'Fußweg + Warten',
+  min: 'Min.',
+  stationFreq: '<b>{name}</b> · {n} Abfahrten/h',
+  access: 'Fußweg + Warten bis zur Abfahrt: {n} Min.',
+  accessNone: 'Keine Haltestelle in 15 Min. Fußweg',
+  aboutLayers:
+    '<b>Takt der Haltestellen</b> zeigt, wie oft im Zeitfenster abgefahren wird. <b>ÖPNV-Wüsten</b> schattiert Orte, an denen der Fußweg zur Haltestelle plus die durchschnittliche Wartezeit (halber Takt) tagsüber über 10 und 15 Min., nachts über 20 und 30 Min. liegt. Beide findest du im Menü.',
   legendMax: '120+ min',
 };
 export type Key = keyof typeof de;
@@ -97,6 +109,18 @@ const en: Record<Key, string> = {
   noMatches: 'No matches in the map area',
   searchDown: 'Search is not reachable right now',
   searchOffline: 'Search needs a connection',
+  freq: 'Stop frequency',
+  freqHint: 'Departures per hour, all lines and directions together',
+  desert: 'Transit deserts',
+  desertHint: 'Where the walk to a stop plus the wait is over 10 min (20 min at night)',
+  freqLegend: 'Departures/h',
+  desertLegend: 'Walk + wait',
+  min: 'min',
+  stationFreq: '<b>{name}</b> · {n} departures/h',
+  access: 'Walk + wait for a departure: {n} min',
+  accessNone: 'No stop within a 15-minute walk',
+  aboutLayers:
+    '<b>Stop frequency</b> shows how often each stop is served in the time window. <b>Transit deserts</b> shades places where the walk to a stop plus the average wait (half the gap between departures) is over 10 and 15 min by day, or 20 and 30 min at night. Both are in the menu.',
   legendMax: '120+ min',
 };
 

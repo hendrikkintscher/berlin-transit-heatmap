@@ -114,6 +114,7 @@
         <button id="readout-start" type="button" data-t="startHere">Hier starten</button>
       </div>
       <div id="status" class="status" aria-live="polite"></div>
+      <div id="layer-legend" class="layer-legend" hidden></div>
       <div class="legend" aria-label="Legende Reisezeit in Minuten" data-t-label="legend">
         <div id="legend-bar"></div>
         <div id="legend-ticks" class="legend-ticks"></div>
@@ -144,6 +145,22 @@
         </span>
         <input id="routes-toggle" type="checkbox" role="switch" checked />
       </label>
+      <label class="toggle">
+        <span class="toggle-text">
+          <b data-t="freq">Takt der Haltestellen</b>
+          <small data-t="freqHint">Abfahrten pro Stunde, alle Linien und Richtungen zusammen</small>
+        </span>
+        <input id="freq-toggle" type="checkbox" role="switch" />
+      </label>
+      <label class="toggle">
+        <span class="toggle-text">
+          <b data-t="desert">ÖPNV-Wüsten</b>
+          <small data-t="desertHint"
+            >Wo Fußweg zur Haltestelle plus Wartezeit über 10 Min. liegt (nachts 20 Min.)</small
+          >
+        </span>
+        <input id="desert-toggle" type="checkbox" role="switch" />
+      </label>
 
       <h3 data-t="menuLanguage">Sprache</h3>
       <div class="seg seg-wide" role="radiogroup" aria-label="Sprache" data-t-label="menuLanguage">
@@ -161,6 +178,7 @@
       <p data-t-html="aboutHow"></p>
       <p data-t-html="aboutLines"></p>
       <p data-t-html="aboutWindows"></p>
+      <p data-t-html="aboutLayers"></p>
       <p data-t="aboutArea"></p>
       <p id="feed-info"></p>
       <p class="small" data-t-html="credits"></p>
