@@ -12,8 +12,8 @@ import { createInterface } from 'node:readline';
 import { createGunzip } from 'node:zlib';
 import { inBBox, type BBox } from './geo.ts';
 
-/** Walking speed on the network, 4.8 km/h. */
-export const NETWORK_WALK_SPEED_MPS = 4.8 / 3.6;
+/** Walking speed for transfers between stops, 4 km/h (the router's default walking speed). */
+export const NETWORK_WALK_SPEED_MPS = 4 / 3.6;
 /** Graph nodes are kept at least this often along a path. */
 export const NODE_SPACING_M = 100;
 /** Dead ends shorter than this are left out. */

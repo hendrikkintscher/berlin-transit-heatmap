@@ -89,7 +89,8 @@ describe('walking network', () => {
     expect(net.edgeCount).toBe(41);
     expect(net.lat[0]).toBeCloseTo(LAT_N, 5);
     expect(net.lon[20]).toBeCloseTo(LON0 + 20 * STEP, 5);
-    expect(net.edgeSeconds[0]).toBeCloseTo(100 / NETWORK_WALK_SPEED_MPS, 3);
+    expect(net.edgeMetres[0]).toBe(100);
+    expect(NETWORK_WALK_SPEED_MPS).toBeCloseTo(4 / 3.6, 6);
   });
 
   it('rejects other files', () => {
@@ -100,24 +101,24 @@ describe('walking network', () => {
     const snaps = {
       edge: new Int32Array(1),
       along: new Float32Array(1),
-      seconds: new Float32Array(1),
+      metres: new Float32Array(1),
     };
     snapPoint(net, LAT_N + 0.0003, LON0 + 2.5 * STEP, snaps);
     expect(net.edgeA[snaps.edge[0]]).toBe(2);
     expect(net.edgeB[snaps.edge[0]]).toBe(3);
     expect(snaps.along[0]).toBeCloseTo(0.5, 1);
-    expect(snaps.seconds[0] * NETWORK_WALK_SPEED_MPS).toBeCloseTo(33, 0);
+    expect(snaps.metres[0]).toBeCloseTo(33, 0);
     snapPoint(net, 52.6, 13.4, snaps);
     expect(snaps.edge[0]).toBe(-1);
   });
 
   it('runs a capped multi-source Dijkstra', () => {
-    const l = walkFrom(net, [0, 20], [0, 50], [0, 0], [7, 8], 900);
-    expect(l.time[5]).toBeCloseTo(500 / NETWORK_WALK_SPEED_MPS, 3);
+    const l = walkFrom(net, [0, 20], [0, 50], [0, 0], [7, 8], 1200, 0.9);
+    expect(l.time[5]).toBeCloseTo(450, 3);
     expect(l.source[5]).toBe(7);
     expect(l.source[19]).toBe(8);
-    // Across the bridge: 1 km + 200 m from node 0 is 900 s, right at the cap.
-    expect(l.time[31]).toBeCloseTo(1200 / NETWORK_WALK_SPEED_MPS, 3);
+    // Across the bridge: 1 km + 200 m from node 0, right at the 1200 m cap.
+    expect(l.time[31]).toBeCloseTo(1080, 3);
     expect(l.time[32]).toBe(Infinity);
   });
 
@@ -130,9 +131,27 @@ describe('walking network', () => {
     expect(walked.stopSeconds[1]).toBe(Infinity); // 2.3 km round the bridge
   });
 
+  it('walks at 4 km/h unless told otherwise', () => {
+    const at = (o: { walkSpeedMps?: number }) =>
+      gridValueAt(
+        heatGrid(tt, travelTimes(tt, origin, { walk: net, ...o }), {
+          cellSizeM: 50,
+          walk: net,
+          ...o,
+        }),
+        LAT_N,
+        LON0 + 6 * STEP,
+      );
+    const slow = at({});
+    expect(slow).toBeGreaterThan(500 * 0.9);
+    expect(slow).toBeLessThan(600 * 0.9);
+    expect(at({ walkSpeedMps: 4.8 / 3.6 })).toBeCloseTo(slow * (4 / 4.8), 0);
+  });
+
   it('colours the far bank by the walk over the bridge', () => {
-    const r = travelTimes(tt, origin, { walk: net });
-    const grid = heatGrid(tt, r, { cellSizeM: 50, walk: net, trackStops: true });
+    const o = { walk: net, walkSpeedMps: 4.8 / 3.6 };
+    const r = travelTimes(tt, origin, o);
+    const grid = heatGrid(tt, r, { cellSizeM: 50, trackStops: true, ...o });
     const north = gridValueAt(grid, LAT_N, LON0 + 6 * STEP);
     const south = gridValueAt(grid, LAT_S, LON0 + 10 * STEP);
     expect(north).toBeLessThan(900);
@@ -145,7 +164,7 @@ describe('walking network', () => {
     // The trip there is one walk, however it is split at the stop on the way.
     const j = journeyTo(
       tt,
-      travelTimes(tt, origin, { walk: net, trackLegs: true }),
+      travelTimes(tt, origin, { ...o, trackLegs: true }),
       grid,
       LAT_S,
       LON0 + 10 * STEP,
@@ -162,7 +181,7 @@ describe('walking network', () => {
     const one = {
       edge: new Int32Array(1),
       along: new Float32Array(1),
-      seconds: new Float32Array(1),
+      metres: new Float32Array(1),
     };
     for (let k = 0; k < cols * rows; k += 7) {
       const r = Math.floor(k / cols);
@@ -173,7 +192,7 @@ describe('walking network', () => {
         bbox[0] + ((c + 0.5) * (bbox[2] - bbox[0])) / cols,
         one,
       );
-      expect(cells.seconds[k]).toBeCloseTo(one.seconds[0], 1);
+      expect(cells.metres[k]).toBeCloseTo(one.metres[0], 1);
     }
   });
 });

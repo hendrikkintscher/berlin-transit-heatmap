@@ -24,7 +24,7 @@ const de = {
   legend: 'Legende Reisezeit in Minuten',
   close: 'Schließen',
   aboutHow:
-    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen, gemessen auf echten Straßen und Wegen mit 4,8 km/h: 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin. Tippe auf einen Startpunkt, um ihn zu entfernen.',
+    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen, gemessen auf echten Straßen und Wegen mit 4 km/h (im Menü einstellbar): 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin. Tippe auf einen Startpunkt, um ihn zu entfernen.',
   aboutLines:
     '<b>Linien</b> zeigt die Abschnitte von S-Bahn, U-Bahn, Tram und Bus, auf die die schnellsten Fahrten von deinem Startpunkt angewiesen sind. Je dicker die Linie, desto mehr der Karte erreichst du darüber. Tippe auf eine Linie, um ihren Namen zu sehen.',
   aboutWindows:
@@ -105,6 +105,9 @@ const de = {
   isoHint: 'Linien alle 5 Minuten, kräftiger bei 15, 30 und 45 Minuten',
   opacity: 'Deckkraft der Farben',
   opacityHint: 'Weniger, um Straßennamen besser zu sehen',
+  walkTitle: 'Gehtempo',
+  walkHelp:
+    'Für den Weg zur ersten Haltestelle und vom Ausstieg zum Ziel. Umsteigen rechnet mit 4 km/h.',
   dataNote: 'Fahrplan vom {date}. Baustellen und Störungen sind nicht berücksichtigt.',
   aboutData:
     'Die Karte nutzt den regulären Fahrplan eines Werktags (Dienstag bis Donnerstag) und eines Samstags. Baustellen, Ersatzverkehr und Störungen an anderen Tagen sind nicht berücksichtigt.',
@@ -169,7 +172,7 @@ const en: Record<Key, string> = {
   legend: 'Travel time legend, minutes',
   close: 'Close',
   aboutHow:
-    'Tap anywhere or search for an address to set a start point. Colours show the public-transport travel time to each spot, including walking to and from stops, measured along real streets and paths at 4.8 km/h: 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there. Tap a start point to remove it.',
+    'Tap anywhere or search for an address to set a start point. Colours show the public-transport travel time to each spot, including walking to and from stops, measured along real streets and paths at 4 km/h (adjustable in the menu): 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there. Tap a start point to remove it.',
   aboutLines:
     '<b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from your start point rely on. The thicker the line, the more of the map is reached over it. Tap a line to see its name.',
   aboutWindows:
@@ -251,6 +254,9 @@ const en: Record<Key, string> = {
   isoHint: 'Lines every 5 minutes, bolder at 15, 30 and 45',
   opacity: 'Colour opacity',
   opacityHint: 'Lower it to read street names',
+  walkTitle: 'Walking speed',
+  walkHelp:
+    'For the walk to the first stop and from the last stop to the spot. Changing trains assumes 4 km/h.',
   dataNote: 'Timetable of {date}. Engineering works and disruptions are not included.',
   aboutData:
     'The map uses the regular timetable of a weekday (Tuesday to Thursday) and a Saturday. Engineering works, replacement services and disruptions on other days are not included.',

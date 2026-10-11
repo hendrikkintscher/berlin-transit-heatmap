@@ -64,6 +64,12 @@ export interface TravelTimeOptions {
    * and origins off the network still use the straight line. (Addition to Contract 2.)
    */
   walk?: WalkNetwork;
+  /**
+   * Walking speed on the network in m/s (default 4 km/h); straight lines then use it
+   * divided by a detour factor of 1.25. Without it straight lines keep 1.2 m/s.
+   * (Addition to Contract 2.)
+   */
+  walkSpeedMps?: number;
   /** Maximum number of transit legs. Default 6. */
   maxRounds?: number;
   /** Also record the last leg of each stop's fastest journey (result.legs). Default false. */
@@ -114,6 +120,8 @@ export interface HeatGridOptions {
   maxFinalWalkSeconds?: number;
   /** Walk on this footpath network, as in TravelTimeOptions. (Addition to Contract 2.) */
   walk?: WalkNetwork;
+  /** Walking speed, as in TravelTimeOptions. (Addition to Contract 2.) */
+  walkSpeedMps?: number;
   /** [minLon, minLat, maxLon, maxLat]. Default DEFAULT_BBOX (Berlin). (Addition to Contract 2.) */
   bbox?: [number, number, number, number];
   /** Also record which stop each cell's time comes from (grid.stop). Default false. (Addition to Contract 2.) */

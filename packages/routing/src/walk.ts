@@ -1,4 +1,4 @@
-import { M_PER_DEG_LAT, metresPerDegLon } from './geo';
+import { M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 import type { PreparedTimetable } from './prepare';
 
 /**
@@ -12,11 +12,27 @@ import type { PreparedTimetable } from './prepare';
 const MAGIC = 0x57485442;
 const COORD_SCALE = 1e5;
 
-/** Walking speed on the footpath network, 4.8 km/h. */
-export const NETWORK_WALK_SPEED_MPS = 4.8 / 3.6;
+/** Default walking speed on the footpath network, 4 km/h (Hendrik's choice; the app lets people change it). */
+export const NETWORK_WALK_SPEED_MPS = 4 / 3.6;
+/**
+ * Straight lines (no network, or points far from it) are this much shorter than the
+ * walk along streets, so they are walked this much slower to match.
+ */
+export const DETOUR_FACTOR = 1.25;
 /** Points further than this from the network are not snapped to it. */
 export const MAX_SNAP_M = 300;
 const BUCKET_M = 50;
+
+/**
+ * Walking speeds for a chosen network speed: on the network, and in a straight line
+ * (no network, or points far from it). Without a choice the straight line keeps the
+ * plan's 1.2 m/s and the network uses NETWORK_WALK_SPEED_MPS.
+ */
+export function walkSpeeds(networkMps?: number): { network: number; straight: number } {
+  if (networkMps === undefined || !(networkMps > 0))
+    return { network: NETWORK_WALK_SPEED_MPS, straight: WALK_SPEED_MPS };
+  return { network: networkMps, straight: networkMps / DETOUR_FACTOR };
+}
 
 export interface WalkNetwork {
   readonly nodeCount: number;
@@ -28,15 +44,15 @@ export interface WalkNetwork {
   readonly lat0: number;
   readonly lon0: number;
   readonly mPerLon: number;
-  /** Neighbours of node v: target[offset[v] .. offset[v+1]), with the walk in seconds. */
+  /** Neighbours of node v: target[offset[v] .. offset[v+1]), with the length in metres. */
   readonly offset: Int32Array;
   readonly target: Int32Array;
-  readonly seconds: Float32Array;
-  /** The undirected edges, each once, with the walk along them in seconds. */
+  readonly metres: Float32Array;
+  /** The undirected edges, each once, with their length in metres. */
   readonly edgeCount: number;
   readonly edgeA: Int32Array;
   readonly edgeB: Int32Array;
-  readonly edgeSeconds: Float32Array;
+  readonly edgeMetres: Float32Array;
   /** Bucket grid over the edges (each listed in every bucket its bounding box touches). */
   readonly bucketCols: number;
   readonly bucketRows: number;
@@ -111,15 +127,15 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
   for (let v = 0; v < n; v++) offset[v + 1] += offset[v];
   const fill = offset.slice(0, n);
   const target = new Int32Array(2 * m);
-  const seconds = new Float32Array(2 * m);
-  const edgeSeconds = new Float32Array(m);
+  const metres = new Float32Array(2 * m);
+  const edgeMetres = new Float32Array(m);
   for (let k = 0; k < m; k++) {
-    const s = em[k] / NETWORK_WALK_SPEED_MPS;
-    edgeSeconds[k] = s;
+    const s = em[k];
+    edgeMetres[k] = s;
     target[fill[ea[k]]] = eb[k];
-    seconds[fill[ea[k]]++] = s;
+    metres[fill[ea[k]]++] = s;
     target[fill[eb[k]]] = ea[k];
-    seconds[fill[eb[k]]++] = s;
+    metres[fill[eb[k]]++] = s;
   }
 
   const lat0 = n ? minLat : 0;
@@ -158,11 +174,11 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
     mPerLon,
     offset,
     target,
-    seconds,
+    metres,
     edgeCount: m,
     edgeA: ea,
     edgeB: eb,
-    edgeSeconds,
+    edgeMetres,
     bucketCols,
     bucketRows,
     bucketOffset,
@@ -171,18 +187,18 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
 }
 
 /** Where points meet the network: the nearest edge (-1 if none within MAX_SNAP_M),
- * how far along it from edgeA (0..1), and the walk from the point to it in seconds. */
+ * how far along it from edgeA (0..1), and the distance from the point to it in metres. */
 export interface Snaps {
   edge: Int32Array;
   along: Float32Array;
-  seconds: Float32Array;
+  metres: Float32Array;
 }
 
 function makeSnaps(n: number): Snaps {
   return {
     edge: new Int32Array(n).fill(-1),
     along: new Float32Array(n),
-    seconds: new Float32Array(n).fill(Infinity),
+    metres: new Float32Array(n).fill(Infinity),
   };
 }
 
@@ -236,7 +252,7 @@ export function snapPoint(
   }
   out.edge[i] = best;
   out.along[i] = bestF;
-  out.seconds[i] = best >= 0 ? Math.sqrt(bestD2) / NETWORK_WALK_SPEED_MPS : Infinity;
+  out.metres[i] = best >= 0 ? Math.sqrt(bestD2) : Infinity;
 }
 
 /** A one-slot snap of an origin. */
@@ -251,16 +267,10 @@ export function snapOrigin(net: WalkNetwork, origin: { lat: number; lon: number 
  * (Infinity when they are on different edges). Going through the edge's ends,
  * as Dijkstra does, would overstate it.
  */
-export function sameEdgeSeconds(
-  net: WalkNetwork,
-  a: Snaps,
-  i: number,
-  b: Snaps,
-  j: number,
-): number {
+export function sameEdgeMetres(net: WalkNetwork, a: Snaps, i: number, b: Snaps, j: number): number {
   const e = a.edge[i];
   if (e < 0 || e !== b.edge[j]) return Infinity;
-  return Math.abs(a.along[i] - b.along[j]) * net.edgeSeconds[e] + a.seconds[i] + b.seconds[j];
+  return Math.abs(a.along[i] - b.along[j]) * net.edgeMetres[e] + a.metres[i] + b.metres[j];
 }
 
 const stopSnaps = new WeakMap<WalkNetwork, WeakMap<PreparedTimetable, Snaps>>();
@@ -283,15 +293,22 @@ export class WalkSources {
   times: number[] = [];
   walked: number[] = [];
   tags: number[] = [];
-  /** Adds snap slot i of `snaps`, reached at `time` after `walked` seconds of walking, as `tag`. */
+  /** Seconds per metre of walking. */
+  readonly pace: number;
+  constructor(pace: number) {
+    this.pace = pace;
+  }
+  /** Adds snap slot i of `snaps`, reached at `time` after `walked` metres of walking, as `tag`. */
   add(net: WalkNetwork, snaps: Snaps, i: number, time: number, walked: number, tag: number): void {
     const e = snaps.edge[i];
     if (e < 0) return;
-    const len = net.edgeSeconds[e];
+    const len = net.edgeMetres[e];
     const f = snaps.along[i];
-    const off = snaps.seconds[i];
-    this.push(net.edgeA[e], time + off + f * len, walked + off + f * len, tag);
-    this.push(net.edgeB[e], time + off + (1 - f) * len, walked + off + (1 - f) * len, tag);
+    const off = snaps.metres[i];
+    const da = off + f * len;
+    const db = off + (1 - f) * len;
+    this.push(net.edgeA[e], time + da * this.pace, walked + da, tag);
+    this.push(net.edgeB[e], time + db * this.pace, walked + db, tag);
   }
   private push(node: number, time: number, walked: number, tag: number) {
     this.nodes.push(node);
@@ -304,38 +321,39 @@ export class WalkSources {
 /**
  * The time at snap slot i from a walk's labels (Infinity if out of reach), with
  * the source it came from in `src[0]`. The walk from the last node to the point
- * counts towards `maxWalkSeconds`.
+ * counts towards `maxWalkMetres`; `pace` is seconds per metre.
  */
 export function timeAt(
   net: WalkNetwork,
   labels: WalkLabels,
   snaps: Snaps,
   i: number,
-  maxWalkSeconds: number,
+  maxWalkMetres: number,
+  pace: number,
   src?: Int32Array,
 ): number {
   const e = snaps.edge[i];
   if (e < 0) return Infinity;
-  const len = net.edgeSeconds[e];
+  const len = net.edgeMetres[e];
   const f = snaps.along[i];
-  const off = snaps.seconds[i];
+  const off = snaps.metres[i];
   const a = net.edgeA[e];
   const b = net.edgeB[e];
   const da = f * len + off;
   const db = (1 - f) * len + off;
   let best = Infinity;
-  if (labels.walk[a] + da <= maxWalkSeconds) {
-    best = labels.time[a] + da;
+  if (labels.walk[a] + da <= maxWalkMetres) {
+    best = labels.time[a] + da * pace;
     if (src) src[0] = labels.source[a];
   }
-  if (labels.walk[b] + db <= maxWalkSeconds && labels.time[b] + db < best) {
-    best = labels.time[b] + db;
+  if (labels.walk[b] + db <= maxWalkMetres && labels.time[b] + db * pace < best) {
+    best = labels.time[b] + db * pace;
     if (src) src[0] = labels.source[b];
   }
   return best;
 }
 
-/** Labels of a walk: time since the start (Infinity = not reached), the walking part of it, and its source tag. */
+/** Labels of a walk: time since the start in seconds (Infinity = not reached), metres walked, and the source tag. */
 export interface WalkLabels {
   time: Float64Array;
   walk: Float32Array;
@@ -360,9 +378,10 @@ export function sharedLabels(net: WalkNetwork): WalkLabels {
 
 /**
  * Multi-source Dijkstra on the walking network. Source i starts at node
- * `nodes[i]` at time `times[i]` having walked `walked[i]` seconds already; a node
- * keeps the earliest time over all sources, and the source it came from. Walks
- * longer than `maxWalkSeconds` (start included) are not followed.
+ * `nodes[i]` at time `times[i]` having walked `walked[i]` metres already; a node
+ * keeps the earliest time over all sources, and the source it came from. Walking
+ * takes `pace` seconds per metre; walks longer than `maxWalkMetres` (start
+ * included) are not followed.
  */
 export function walkFrom(
   net: WalkNetwork,
@@ -370,7 +389,8 @@ export function walkFrom(
   times: ArrayLike<number>,
   walked: ArrayLike<number>,
   tags: ArrayLike<number>,
-  maxWalkSeconds: number,
+  maxWalkMetres: number,
+  pace: number,
   labels?: WalkLabels,
 ): WalkLabels {
   const n = net.nodeCount;
@@ -381,15 +401,15 @@ export function walkFrom(
   };
   const { time, walk, source } = out;
   time.fill(Infinity);
-  const { offset, target, seconds } = net;
+  const { offset, target, metres } = net;
   // Dial's algorithm: a bucket per whole second, scanned in order. A node improved
   // within the bucket being scanned goes back into it, so the labels stay exact.
   let maxStart = 0;
   for (let i = 0; i < nodes.length; i++) {
     const t = times[i];
-    if (nodes[i] >= 0 && t < Infinity && walked[i] <= maxWalkSeconds && t > maxStart) maxStart = t;
+    if (nodes[i] >= 0 && t < Infinity && walked[i] <= maxWalkMetres && t > maxStart) maxStart = t;
   }
-  const bucketCount = Math.floor(maxStart + maxWalkSeconds) + 2;
+  const bucketCount = Math.floor(maxStart + maxWalkMetres * pace) + 2;
   const head = new Int32Array(bucketCount).fill(-1);
   let next = new Int32Array(Math.max(1024, n));
   let entry = new Int32Array(next.length);
@@ -410,7 +430,7 @@ export function walkFrom(
   for (let i = 0; i < nodes.length; i++) {
     const v = nodes[i];
     const t = times[i];
-    if (v < 0 || !(t < time[v]) || walked[i] > maxWalkSeconds) continue;
+    if (v < 0 || !(t < time[v]) || walked[i] > maxWalkMetres) continue;
     time[v] = t;
     walk[v] = walked[i];
     source[v] = tags[i];
@@ -429,10 +449,10 @@ export function walkFrom(
       const src = source[v];
       for (let k = offset[v]; k < offset[v + 1]; k++) {
         const u = target[k];
-        const nt = t + seconds[k];
+        const nt = t + metres[k] * pace;
         if (nt < time[u]) {
-          const nw = w + seconds[k];
-          if (nw > maxWalkSeconds) continue;
+          const nw = w + metres[k];
+          if (nw > maxWalkMetres) continue;
           time[u] = nt;
           walk[u] = nw;
           source[u] = src;
@@ -465,9 +485,9 @@ export function snapCells(
   const dLon = (maxLon - minLon) / cols;
   const dLat = (maxLat - minLat) / rows;
   snap = makeSnaps(cols * rows);
-  const { edge, along, seconds } = snap;
-  // Squared distances in metres while scattering; turned into seconds at the end.
-  const dist = seconds;
+  const { edge, along, metres } = snap;
+  // Squared distances while scattering; square-rooted at the end.
+  const dist = metres;
   // Cell centres in the network's metre frame: x = cx0 + c * cw, y = cy0 - r * ch.
   const cw = dLon * net.mPerLon;
   const ch = dLat * M_PER_DEG_LAT;
@@ -562,10 +582,10 @@ export function snapCells(
   }
   const maxD2 = MAX_SNAP_M * MAX_SNAP_M;
   for (let k = 0; k < cols * rows; k++) {
-    if (dist[k] <= maxD2) seconds[k] = Math.sqrt(dist[k]) / NETWORK_WALK_SPEED_MPS;
+    if (dist[k] <= maxD2) metres[k] = Math.sqrt(dist[k]);
     else {
       edge[k] = -1;
-      seconds[k] = Infinity;
+      metres[k] = Infinity;
     }
   }
   byLayout.set(key, snap);

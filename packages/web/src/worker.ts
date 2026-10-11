@@ -88,6 +88,8 @@ async function fetchTimetable(window: Window): Promise<Timetable> {
  */
 let walk: WalkNetwork | undefined;
 let walkStarted = false;
+/** Walking speed from the menu, set by each compute and layers request. */
+let walkSpeedMps: number | undefined;
 
 async function loadWalk(): Promise<void> {
   if (walkStarted) return;
@@ -185,9 +187,10 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       // A quiet (background) load that fails is retried when the window is actually needed.
       await (msg.quiet ? ensure(msg.window).catch(() => undefined) : ensure(msg.window));
     } else if (msg.type === 'layers') {
+      walkSpeedMps = msg.walkKmh / 3.6;
       const tt = await ensure(msg.window);
       const perHour = departuresPerHour(tt);
-      const desert = paintDesert(accessGrid(tt, perHour, walk), msg.thresholds);
+      const desert = paintDesert(accessGrid(tt, perHour, walk, walkSpeedMps), msg.thresholds);
       ctx.postMessage(
         {
           type: 'layers',
@@ -199,6 +202,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       );
     } else if (msg.type === 'compute') {
       const t0 = performance.now();
+      walkSpeedMps = msg.walkKmh / 3.6;
       const tt = await prepared(msg.window, msg.direction);
       const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
       const typical = msg.measure === 'typical';
@@ -282,11 +286,12 @@ interface Run {
 }
 
 function run(tt: PreparedTimetable, origin: Origin, typical: boolean, usage = true): Run {
-  const result = travelTimes(tt, origin, { trackLegs: usage, typical, walk });
-  const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, walk });
+  const w = { walk, walkSpeedMps };
+  const result = travelTimes(tt, origin, { trackLegs: usage, typical, ...w });
+  const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, ...w });
   const shown =
     typical && result.typicalSeconds
-      ? heatGrid(tt, { ...result, stopSeconds: result.typicalSeconds }, { cellSizeM: CELL_M, walk })
+      ? heatGrid(tt, { ...result, stopSeconds: result.typicalSeconds }, { cellSizeM: CELL_M, ...w })
       : best;
   const used = usage ? routeUsage(tt, result, best, { minShare: MIN_ROUTE_SHARE }) : [];
   return { result, best, shown, used };
