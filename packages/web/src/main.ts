@@ -481,6 +481,7 @@ function removeStart(which: 1 | 2) {
 function clearResult() {
   state.requestId++;
   lastResult = null;
+  renderMeet(undefined);
   loadbar.hidden = true;
   setStatus(() => '');
   renderFavourites();
@@ -961,7 +962,33 @@ function heatOpacity(): maplibregl.ExpressionSpecification {
   return ['interpolate', ['linear'], ['zoom'], 13, o, 16, o * 0.45];
 }
 
+// ---------- suggested meeting points ----------
+let meetMarkers: maplibregl.Marker[] = [];
+/** Pins for the suggested meeting points; a tap shows both trips there. */
+function renderMeet(list: Result['meet']) {
+  for (const m of meetMarkers) m.remove();
+  meetMarkers = (list ?? []).map((s, i) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'meet-marker';
+    el.innerHTML = `<i>${i + 1}</i><span>${escapeHtml(shortStop(s.name))}</span>`;
+    el.title = t('meetSuggestion', { name: stopName(s.name), a: s.a, b: s.b });
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tapAt(s.lat, s.lon, undefined, stopName(s.name));
+    });
+    return new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(map);
+  });
+}
+// In the city view the pins show just their number, so they do not cover each other.
+const MEET_NAMES_ZOOM = 12.5;
+const showMeetNames = () =>
+  map.getContainer().classList.toggle('meet-names', map.getZoom() >= MEET_NAMES_ZOOM);
+map.on('zoomend', showMeetNames);
+showMeetNames();
+
 function showResult(r: Result) {
+  renderMeet(r.meet);
   renderFavourites();
   showLegend(!!r.compare);
   if (!mapReady) return;
@@ -1026,16 +1053,31 @@ map.on('click', (e: MapMouseEvent) => {
     ignoreClick = false;
     return;
   }
-  const { lat, lng } = e.lngLat;
-  const { x, y } = e.point;
+  tapAt(e.lngLat.lat, e.lngLat.lng, e.point);
+});
+
+/**
+ * The card for a spot: minutes, line, access time and the trip there. `at` is the spot on
+ * screen, for picking up a station dot or line under the finger; `title` names the spot
+ * (a meeting-point suggestion or a search result).
+ */
+function tapAt(
+  lat: number,
+  lng: number,
+  at?: { x: number; y: number },
+  title = '',
+  searched = false,
+) {
   const near = (layers: string[]) =>
-    map.queryRenderedFeatures(
-      [
-        [x - 8, y - 8],
-        [x + 8, y + 8],
-      ],
-      { layers },
-    );
+    at
+      ? map.queryRenderedFeatures(
+          [
+            [at.x - 8, at.y - 8],
+            [at.x + 8, at.y + 8],
+          ],
+          { layers },
+        )
+      : [];
   const data = layerData[state.window];
   const station = state.freq && data ? near([STATIONS_LAYER])[0] : undefined;
   let html: string;
@@ -1091,12 +1133,13 @@ map.on('click', (e: MapMouseEvent) => {
     }
     html = parts.join('<br>') + tripSlot;
   }
-  showReadoutCard(html, false);
+  if (title) html = `<b class="spot-name">${escapeHtml(title)}</b>${html}`;
+  showReadoutCard(html, false, searched);
   state.pending = { lat, lon: lng };
   secondBtn.hidden = !state.origin;
-  if (map.getZoom() >= 15) showAddress(state.pending);
+  if (!title && map.getZoom() >= 15) showAddress(state.pending);
   if (tipKey === 'tap') hideTip();
-});
+}
 
 /**
  * At street level, names the address under the tap; "Hier starten" then starts there, so the
@@ -1124,8 +1167,10 @@ async function showAddress(at: { lat: number; lon: number }) {
 const removeBtn = $<HTMLButtonElement>('readout-remove');
 let removeWhich: 1 | 2 = 1;
 /** The card at the bottom: minutes for a spot, or a start point with a remove button. */
-function showReadoutCard(html: string, start: boolean) {
+function showReadoutCard(html: string, start: boolean, searched = false) {
   readoutText.innerHTML = html;
+  // A search result offers "Neuer Start" next to "2. Start"; the trip shown is the "Ziel".
+  $('readout-start').textContent = t(searched ? 'newStart' : 'startHere');
   for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
   removeBtn.hidden = !start;
   readout.hidden = false;
@@ -1724,8 +1769,11 @@ function pickPlace(p: Place) {
     return;
   }
   searchInput.value = p.label;
-  setOrigin(p.lat, p.lon);
   map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
+  // With a start set, the place may be a new start, a destination or a second start:
+  // show the trip there, with buttons for the other two.
+  if (state.origin && lastResult) tapAt(p.lat, p.lon, undefined, p.label, true);
+  else setOrigin(p.lat, p.lon);
 }
 
 searchBtn.addEventListener('click', () => {
