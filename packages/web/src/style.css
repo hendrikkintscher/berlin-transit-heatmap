@@ -375,3 +375,16 @@ dialog form button {
   font-size: 14px;
   color: var(--muted);
 }
+
+/* Keep the top bar on one line on phones: the hours are in the info sheet. */
+.seg button {
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .seg button small {
+    display: none;
+  }
+  .top {
+    gap: 6px;
+  }
+}
