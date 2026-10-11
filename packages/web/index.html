@@ -150,6 +150,18 @@
       </button>
     </div>
 
+    <div id="cmp" class="chip meet" hidden>
+      <span id="cmp-text"></span>
+      <button
+        id="cmp-close"
+        type="button"
+        aria-label="Vergleich beenden"
+        data-t-label="compareClose"
+      >
+        ✕
+      </button>
+    </div>
+
     <div id="hint" class="chip" data-t="hint">Tippe auf die Karte oder suche einen Startpunkt</div>
 
     <footer class="bottom">
@@ -176,6 +188,8 @@
       <div class="legend" aria-label="Legende Reisezeit in Minuten" data-t-label="legend">
         <div id="legend-bar"></div>
         <div id="legend-ticks" class="legend-ticks"></div>
+        <div id="diff-bar" hidden></div>
+        <div id="diff-ticks" class="legend-ticks" hidden></div>
       </div>
     </footer>
 
@@ -200,8 +214,40 @@
           Wochenende
         </button>
       </div>
-      <h3 data-t="whenHour">Abfahrt zwischen … und … Uhr</h3>
+      <div class="seg seg-wide" role="radiogroup" aria-label="Richtung" data-t-label="whenDir">
+        <button role="radio" data-dir="depart" aria-checked="true" data-t="dirDepart">
+          Abfahrt ab
+        </button>
+        <button role="radio" data-dir="arrive" aria-checked="false" data-t="dirArrive">
+          Ankunft bis
+        </button>
+      </div>
+      <h3 id="when-hour">Stunde der Abfahrt</h3>
       <div id="hour-grid" class="hour-grid"></div>
+      <h3 data-t="measureTitle">Reisezeit</h3>
+      <div
+        class="seg seg-wide"
+        role="radiogroup"
+        aria-label="Reisezeit"
+        data-t-label="measureTitle"
+      >
+        <button role="radio" data-measure="typical" aria-checked="true" data-t="measureTypical">
+          Typisch
+        </button>
+        <button role="radio" data-measure="best" aria-checked="false" data-t="measureBest">
+          Bestfall
+        </button>
+      </div>
+      <p class="menu-note" id="measure-note"></p>
+      <h3 data-t="compareTitle">Vergleichen mit</h3>
+      <div class="compare-row">
+        <select id="cmp-day" aria-label="Vergleichstag" data-t-label="compareDay">
+          <option value="" data-t="compareOff">Aus</option>
+          <option value="weekday" data-t="weekday">Werktag</option>
+          <option value="weekend" data-t="weekend">Wochenende</option>
+        </select>
+        <select id="cmp-hour" aria-label="Vergleichsstunde" data-t-label="compareHour"></select>
+      </div>
       <p class="menu-note" data-t="whenNote"></p>
     </dialog>
 

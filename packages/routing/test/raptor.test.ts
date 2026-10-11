@@ -16,7 +16,7 @@ import {
   rng,
   STOP_POS,
 } from './fixture';
-import { referenceTravelTimes } from './reference';
+import { referenceTravelTimes, referenceTypical } from './reference';
 
 const minutes = (s: number) => s / 60;
 
@@ -147,6 +147,52 @@ describe('travelTimes matches a brute-force reference', () => {
         for (let s = 0; s < raw.stops.length; s++) {
           if (want[s] === Infinity) expect(got.stopSeconds[s], `stop ${s}`).toBe(Infinity);
           else expect(Math.abs(got.stopSeconds[s] - want[s]), `stop ${s}`).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+  }
+});
+
+describe('typical travel time', () => {
+  const day = loadTimetable(miniTimetable('day'));
+  const r = travelTimes(day, STOP_POS[A], { typical: true });
+
+  it('is at least the best case and leaves best-case times unchanged', () => {
+    const plain = travelTimes(day, STOP_POS[A]);
+    for (let s = 0; s < plain.stopSeconds.length; s++) {
+      expect(r.stopSeconds[s]).toBe(plain.stopSeconds[s]);
+      if (plain.stopSeconds[s] < Infinity)
+        expect(r.typicalSeconds![s]).toBeGreaterThanOrEqual(plain.stopSeconds[s]);
+    }
+  });
+
+  it('adds half the headway for a single line', () => {
+    // U1 every 10 min from A: on average 5 min wait plus 2 min to B.
+    expect(minutes(r.typicalSeconds![B])).toBeCloseTo(7, 1);
+    expect(r.typicalSeconds![A]).toBe(0);
+  });
+
+  it('is absent without the option', () => {
+    expect(travelTimes(day, STOP_POS[A]).typicalSeconds).toBeUndefined();
+  });
+
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    it(`matches a brute-force reference, seed ${seed}`, () => {
+      const raw = randomTimetable(seed);
+      const tt = loadTimetable(raw);
+      const rand = rng(seed * 104729);
+      for (let o = 0; o < 3; o++) {
+        const origin = raw.stops[Math.floor(rand() * raw.stops.length)];
+        const got = travelTimes(tt, origin, {
+          maxRounds: 50,
+          typical: true,
+          typicalHorizonSeconds: 1800,
+        });
+        const want = referenceTypical(raw, origin, 1800);
+        for (let s = 0; s < raw.stops.length; s++) {
+          if (want[s] === Infinity) expect(got.typicalSeconds![s], `stop ${s}`).toBe(Infinity);
+          else
+            expect(Math.abs(got.typicalSeconds![s] - want[s]), `stop ${s}`).toBeLessThanOrEqual(1);
         }
       }
     });

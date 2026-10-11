@@ -16,12 +16,32 @@ export function windowName({ day, hour }: When): string {
   return `${day}-${String(hour).padStart(2, '0')}`;
 }
 
+/** "weekend-02" -> { day: 'weekend', hour: 2 }; null if it isn't one. */
+export function parseWhen(v: string | null): When | null {
+  const m = /^(weekday|weekend)-(\d{1,2})$/.exec(v ?? '');
+  return m && Number(m[2]) < 24 ? { day: m[1] as DayType, hour: Number(m[2]) } : null;
+}
+
 /** Reads ?t=weekend-02, or the older ?w=night (weekday 02:00). */
 export function whenFromParams(p: URLSearchParams): When {
-  const m = /^(weekday|weekend)-(\d{1,2})$/.exec(p.get('t') ?? '');
-  if (m && Number(m[2]) < 24) return { day: m[1] as DayType, hour: Number(m[2]) };
+  const w = parseWhen(p.get('t'));
+  if (w) return w;
   if (p.get('w') === 'night') return { day: 'weekday', hour: 2 };
   return DEFAULT_WHEN;
+}
+
+export type Direction = 'depart' | 'arrive';
+
+/**
+ * The timetable file a map is computed from. Departing uses the chosen hour's file.
+ * Arriving in an hour needs trips that started earlier, so it uses the hour before
+ * (whose file also holds the trips running into the next hour). Midnight at the
+ * weekend follows a Friday evening, for which the weekday file stands in.
+ */
+export function computeWindow(when: When, direction: Direction): string {
+  if (direction === 'depart') return windowName(when);
+  if (when.hour > 0) return windowName({ ...when, hour: when.hour - 1 });
+  return windowName({ day: 'weekday', hour: 23 });
 }
 
 /** [light, strong] desert thresholds in seconds, as Hendrik chose: 10/15 min by day, 20/30 at night. */

@@ -61,6 +61,13 @@ export interface TravelTimeOptions {
   maxRounds?: number;
   /** Also record the last leg of each stop's fastest journey (result.legs). Default false. */
   trackLegs?: boolean;
+  /**
+   * Also compute the typical travel time (result.typicalSeconds): the average over
+   * leaving at a uniformly random moment of the window, waiting included. Default false.
+   */
+  typical?: boolean;
+  /** With `typical`, how far past the window departures are scanned, in seconds. Default 2700. */
+  typicalHorizonSeconds?: number;
 }
 
 /**
@@ -89,6 +96,8 @@ export interface TravelTimeResult {
   departures?: number;
   /** Present when computed with `trackLegs`. (Addition to Contract 2.) */
   legs?: TravelLegs;
+  /** Present when computed with `typical`: average travel time over the window, waiting included. */
+  typicalSeconds?: Float32Array;
 }
 
 export interface HeatGridOptions {

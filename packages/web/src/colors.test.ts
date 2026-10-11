@@ -5,6 +5,12 @@ import {
   bandLabel,
   bandOf,
   colorLut,
+  DIFF_COLORS,
+  DIFF_EDGES_MIN,
+  DIFF_MAX_S,
+  DIFF_MIN_S,
+  diffBandOf,
+  diffLut,
   MAX_BAND,
   oklab,
 } from './colors';
@@ -70,5 +76,22 @@ describe('feathered lookup table', () => {
       const b = rgbAt(soft, s + 1);
       for (let i = 0; i < 3; i++) expect(Math.abs(a[i] - b[i])).toBeLessThanOrEqual(6);
     }
+  });
+});
+
+describe('difference colours', () => {
+  it('puts small differences in the neutral band and grows both ways', () => {
+    expect(DIFF_COLORS).toHaveLength(DIFF_EDGES_MIN.length);
+    expect(diffBandOf(0)).toBe(4);
+    expect(diffBandOf(-90)).toBe(4);
+    expect(diffBandOf(150)).toBe(5);
+    expect(diffBandOf(-25 * 60)).toBe(0);
+    expect(diffBandOf(45 * 60)).toBe(DIFF_COLORS.length - 1);
+  });
+
+  it('builds a lookup over the clamped range', () => {
+    const lut = diffLut();
+    expect(lut.length).toBe((DIFF_MAX_S - DIFF_MIN_S + 1) * 4);
+    expect(lut[(0 - DIFF_MIN_S) * 4 + 3]).toBe(255);
   });
 });
