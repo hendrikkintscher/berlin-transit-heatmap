@@ -157,7 +157,14 @@ describe('walking network', () => {
     expect(north).toBeLessThan(900);
     expect(south).toBeGreaterThan(north);
     expect(south).toBeLessThan(900); // 950 m to the bridge and 200 m over it
-    expect(gridValueAt(grid, LAT_S, LON0 + STEP)).toBe(Infinity);
+    // 2 km round the bridge: past the 15-minute walk, so only the fallback walk gets there.
+    const capped = heatGrid(tt, r, { cellSizeM: 50, maxFallbackWalkSeconds: 900, ...o });
+    expect(gridValueAt(capped, LAT_S, LON0 + STEP)).toBe(Infinity);
+    const far = gridValueAt(grid, LAT_S, LON0 + STEP);
+    expect(far).toBeGreaterThan(1500);
+    expect(far).toBeLessThan(1800);
+    // Where a short walk exists, a longer one never replaces it.
+    expect(gridValueAt(capped, LAT_S, LON0 + 10 * STEP)).toBe(south);
     // Straight lines cross the river.
     const flat = heatGrid(tt, travelTimes(tt, origin), { cellSizeM: 50 });
     expect(gridValueAt(flat, LAT_S, LON0 + STEP)).toBeLessThan(300);

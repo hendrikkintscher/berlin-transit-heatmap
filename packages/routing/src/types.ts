@@ -60,6 +60,11 @@ export interface TravelTimeOptions {
   /** Maximum walk from the origin to the first stop, in seconds. Default 900. */
   maxInitialWalkSeconds?: number;
   /**
+   * Longer walk allowed when no stop is within maxInitialWalkSeconds (outskirts, woods),
+   * in seconds. Default twice maxInitialWalkSeconds. (Addition to Contract 2.)
+   */
+  maxFallbackWalkSeconds?: number;
+  /**
    * Walk on this footpath network (Contract 3) instead of in a straight line. Stops
    * and origins off the network still use the straight line. (Addition to Contract 2.)
    */
@@ -118,6 +123,12 @@ export interface HeatGridOptions {
   cellSizeM?: number;
   /** Maximum walk from the last stop to a cell centre, in seconds. Default 900. */
   maxFinalWalkSeconds?: number;
+  /**
+   * Longer walk allowed for cells nothing reaches within maxFinalWalkSeconds, so the
+   * outskirts and areas between lines are not left blank, in seconds. Default twice
+   * maxFinalWalkSeconds. (Addition to Contract 2.)
+   */
+  maxFallbackWalkSeconds?: number;
   /** Walk on this footpath network, as in TravelTimeOptions. (Addition to Contract 2.) */
   walk?: WalkNetwork;
   /** Walking speed, as in TravelTimeOptions. (Addition to Contract 2.) */

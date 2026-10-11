@@ -42,10 +42,12 @@ export function travelTimes(
 ): TravelTimeResult {
   const t0 = now();
   const maxWalk = opts.maxInitialWalkSeconds ?? DEFAULT_MAX_INITIAL_WALK_S;
+  const fallbackWalk = Math.max(maxWalk, opts.maxFallbackWalkSeconds ?? 2 * maxWalk);
   const maxRounds = Math.max(0, Math.floor(opts.maxRounds ?? DEFAULT_MAX_ROUNDS));
   const S = tt.stopCount;
 
-  // Access stops: everything within walking range of the origin.
+  // Access stops: everything within walking range of the origin. Where nothing is in
+  // range (outskirts, fields, woods), allow the longer fallback walk instead.
   const accessStops: number[] = [];
   const accessWalk: number[] = [];
   const ox = (origin.lon - tt.proj.lon0) * tt.proj.mPerLon;
@@ -53,41 +55,45 @@ export function travelTimes(
   const net = opts.walk;
   const speeds = walkSpeeds(opts.walkSpeedMps);
   const originSnap = net ? snapOrigin(net, origin) : null;
-  if (net && originSnap && originSnap.edge[0] >= 0) {
-    // Walk the footpath network; stops off the network fall back to a straight line.
-    const pace = 1 / speeds.network;
-    const maxM = maxWalk * speeds.network;
-    const sources = new WalkSources(pace);
-    sources.add(net, originSnap, 0, 0, 0, -1);
-    const labels = walkFrom(
-      net,
-      sources.nodes,
-      sources.times,
-      sources.walked,
-      sources.tags,
-      maxM,
-      pace,
-    );
-    const snaps = snapStops(net, tt);
-    forStopsWithin(tt, ox, oy, maxM, (s, d) => {
-      const t =
-        snaps.edge[s] >= 0
-          ? Math.min(
-              timeAt(net, labels, snaps, s, maxM, pace),
-              sameEdgeMetres(net, originSnap, 0, snaps, s) * pace,
-            )
-          : d / speeds.straight;
-      if (t <= maxWalk) {
+  const findAccess = (maxWalk: number) => {
+    if (net && originSnap && originSnap.edge[0] >= 0) {
+      // Walk the footpath network; stops off the network fall back to a straight line.
+      const pace = 1 / speeds.network;
+      const maxM = maxWalk * speeds.network;
+      const sources = new WalkSources(pace);
+      sources.add(net, originSnap, 0, 0, 0, -1);
+      const labels = walkFrom(
+        net,
+        sources.nodes,
+        sources.times,
+        sources.walked,
+        sources.tags,
+        maxM,
+        pace,
+      );
+      const snaps = snapStops(net, tt);
+      forStopsWithin(tt, ox, oy, maxM, (s, d) => {
+        const t =
+          snaps.edge[s] >= 0
+            ? Math.min(
+                timeAt(net, labels, snaps, s, maxM, pace),
+                sameEdgeMetres(net, originSnap, 0, snaps, s) * pace,
+              )
+            : d / speeds.straight;
+        if (t <= maxWalk) {
+          accessStops.push(s);
+          accessWalk.push(Math.round(t));
+        }
+      });
+    } else {
+      forStopsWithin(tt, ox, oy, maxWalk * speeds.straight, (s, d) => {
         accessStops.push(s);
-        accessWalk.push(Math.round(t));
-      }
-    });
-  } else {
-    forStopsWithin(tt, ox, oy, maxWalk * speeds.straight, (s, d) => {
-      accessStops.push(s);
-      accessWalk.push(Math.round(d / speeds.straight));
-    });
-  }
+        accessWalk.push(Math.round(d / speeds.straight));
+      });
+    }
+  };
+  findAccess(maxWalk);
+  if (accessStops.length === 0) findAccess(fallbackWalk);
 
   const best = new Float32Array(S).fill(Infinity);
   for (let a = 0; a < accessStops.length; a++) {

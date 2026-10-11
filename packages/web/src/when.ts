@@ -22,12 +22,30 @@ export function parseWhen(v: string | null): When | null {
   return m && Number(m[2]) < 24 ? { day: m[1] as DayType, hour: Number(m[2]) } : null;
 }
 
-/** Reads ?t=weekend-02, or the older ?w=night (weekday 02:00). */
-export function whenFromParams(p: URLSearchParams): When {
+/** The day type and hour in Berlin at `date`; Saturday and Sunday count as the weekend. */
+export function whenAt(date: Date): When {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin',
+      weekday: 'short',
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    const weekday = parts.find((p) => p.type === 'weekday')?.value;
+    const hour = Number(parts.find((p) => p.type === 'hour')?.value);
+    if (!weekday || !(hour >= 0 && hour < 24)) return DEFAULT_WHEN;
+    return { day: weekday === 'Sat' || weekday === 'Sun' ? 'weekend' : 'weekday', hour };
+  } catch {
+    return DEFAULT_WHEN;
+  }
+}
+
+/** Reads ?t=weekend-02, or the older ?w=night (weekday 02:00); otherwise `fallback`. */
+export function whenFromParams(p: URLSearchParams, fallback: When = DEFAULT_WHEN): When {
   const w = parseWhen(p.get('t'));
   if (w) return w;
   if (p.get('w') === 'night') return { day: 'weekday', hour: 2 };
-  return DEFAULT_WHEN;
+  return fallback;
 }
 
 export type Direction = 'depart' | 'arrive';
