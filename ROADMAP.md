@@ -1,15 +1,16 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–8 are done. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–7 are done; group 8 has one open item added later. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
 State on 2026-10-11, live through PR #42. Build in this order, one step per PR:
 
-1. **Next:** Bike + transit and bike only (group 9)
-2. Smaller, faster first load (group 10)
-3. Android app, starting with a TWA (group 11)
-4. Ersatzverkehr and other temporary changes (group 12)
+1. **Next:** Draw walks along the real footpaths (group 8)
+2. Bike + transit and bike only (group 9)
+3. Smaller, faster first load (group 10)
+4. Android app, starting with a TWA (group 11)
+5. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -309,6 +310,12 @@ Notes:
 - Data: a Berlin/Brandenburg OSM extract (Geofabrik), filtered to walkable ways, refreshed with the monthly GTFS job.
 - Size: roughly 45k platforms times nearby cells; with quantised times and delta encoding this should stay a few MB gzipped, downloaded once and cached. To be measured in a prototype first.
 - Until then, a detour factor of about 1.3 on straight-line distances would be a one-line stopgap if the green next to barriers bothers anyone.
+
+### Draw walks along the real footpaths
+
+When a trip is shown on tap, its walking parts (to the first stop, between stops when changing, from the last stop) are drawn along the streets and paths the walking time was measured on, instead of as straight dotted lines. So the drawn walk goes over the bridge or around the station block that the minutes already account for.
+
+Notes: the footpath search in the worker already finds these paths; it only has to remember each node's predecessor so the path for the tapped trip can be traced back and sent with the trip. That is work for one trip per tap, not per map, so taps stay instant. While `walk.bin` is still loading (the first moment after opening), walks stay straight as today. Small effort; added from Hendrik's request on 2026-10-11 and placed before bike, which will draw its rides the same way.
 
 ## 9. More ways to travel
 
