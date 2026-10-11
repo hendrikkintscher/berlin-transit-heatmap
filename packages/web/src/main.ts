@@ -270,6 +270,12 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     state.info[m.info.window] = m.info;
     if (m.info.window === computedWindow()) loadbar.hidden = true;
     renderFeedInfo();
+  } else if (m.type === 'walk') {
+    // Footpaths arrived: redo what was computed with straight-line walks.
+    for (const w of Object.keys(layerData)) delete layerData[w];
+    layersRequested.clear();
+    showLayers();
+    compute();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
     lastResult = m;

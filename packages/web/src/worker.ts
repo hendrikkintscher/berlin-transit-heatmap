@@ -1,8 +1,11 @@
 /// <reference lib="webworker" />
 import {
+  gridLayout,
   heatGrid,
   journeyTo,
   loadTimetable,
+  loadWalkNetwork,
+  snapCells,
   reverseTimetable,
   routeUsage,
   travelTimes,
@@ -13,6 +16,7 @@ import {
   type Timetable,
   type TravelTimeResult,
   type UsedSegment,
+  type WalkNetwork,
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
 import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut } from './colors';
@@ -77,6 +81,31 @@ async function fetchTimetable(window: Window): Promise<Timetable> {
   return JSON.parse(new TextDecoder().decode(buf)) as Timetable;
 }
 
+/**
+ * The footpath network, fetched in the background once the first timetable is in, so
+ * the first map is never held up by it. Until it is ready, walks are straight lines;
+ * the UI recomputes the map when it arrives.
+ */
+let walk: WalkNetwork | undefined;
+let walkStarted = false;
+
+async function loadWalk(): Promise<void> {
+  if (walkStarted) return;
+  walkStarted = true;
+  try {
+    const res = await fetch(new URL('walk.bin', dataBase));
+    if (!res.ok) return;
+    const net = loadWalkNetwork(await res.arrayBuffer());
+    // Snapping the map grid to the network takes a moment; do it now rather than on a tap.
+    const layout = gridLayout({ cellSizeM: CELL_M });
+    snapCells(net, layout.bbox, layout.cols, layout.rows);
+    walk = net;
+    post({ type: 'walk' });
+  } catch {
+    // Straight-line walking stays in place.
+  }
+}
+
 /** Prepared timetables kept in memory; older hours are dropped and fetched again if needed. */
 const KEEP_LOADED = 3;
 
@@ -105,6 +134,7 @@ function ensure(window: Window): Promise<PreparedTimetable> {
     const raw = rawTimetable(window);
     p = raw.then((json) => {
       const tt = loadTimetable(json);
+      void loadWalk();
       post({
         type: 'loaded',
         info: {
@@ -156,7 +186,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'layers') {
       const tt = await ensure(msg.window);
       const perHour = departuresPerHour(tt);
-      const desert = paintDesert(accessGrid(tt, perHour), msg.thresholds);
+      const desert = paintDesert(accessGrid(tt, perHour, walk), msg.thresholds);
       ctx.postMessage(
         {
           type: 'layers',
@@ -251,11 +281,11 @@ interface Run {
 }
 
 function run(tt: PreparedTimetable, origin: Origin, typical: boolean, usage = true): Run {
-  const result = travelTimes(tt, origin, { trackLegs: usage, typical });
-  const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage });
+  const result = travelTimes(tt, origin, { trackLegs: usage, typical, walk });
+  const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, walk });
   const shown =
     typical && result.typicalSeconds
-      ? heatGrid(tt, { ...result, stopSeconds: result.typicalSeconds }, { cellSizeM: CELL_M })
+      ? heatGrid(tt, { ...result, stopSeconds: result.typicalSeconds }, { cellSizeM: CELL_M, walk })
       : best;
   const used = usage ? routeUsage(tt, result, best, { minShare: MIN_ROUTE_SHARE }) : [];
   return { result, best, shown, used };

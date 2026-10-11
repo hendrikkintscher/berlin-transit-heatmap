@@ -1,3 +1,5 @@
+import type { WalkNetwork } from './walk';
+
 /**
  * Contract 1: timetable file format, as produced by `packages/timetable-build`.
  * All times are seconds since midnight of the reference service day; the night
@@ -57,6 +59,11 @@ export interface Origin {
 export interface TravelTimeOptions {
   /** Maximum walk from the origin to the first stop, in seconds. Default 900. */
   maxInitialWalkSeconds?: number;
+  /**
+   * Walk on this footpath network (Contract 3) instead of in a straight line. Stops
+   * and origins off the network still use the straight line. (Addition to Contract 2.)
+   */
+  walk?: WalkNetwork;
   /** Maximum number of transit legs. Default 6. */
   maxRounds?: number;
   /** Also record the last leg of each stop's fastest journey (result.legs). Default false. */
@@ -105,6 +112,8 @@ export interface HeatGridOptions {
   cellSizeM?: number;
   /** Maximum walk from the last stop to a cell centre, in seconds. Default 900. */
   maxFinalWalkSeconds?: number;
+  /** Walk on this footpath network, as in TravelTimeOptions. (Addition to Contract 2.) */
+  walk?: WalkNetwork;
   /** [minLon, minLat, maxLon, maxLat]. Default DEFAULT_BBOX (Berlin). (Addition to Contract 2.) */
   bbox?: [number, number, number, number];
   /** Also record which stop each cell's time comes from (grid.stop). Default false. (Addition to Contract 2.) */

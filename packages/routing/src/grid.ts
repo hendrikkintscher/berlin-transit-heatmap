@@ -1,5 +1,14 @@
 import { M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 import type { PreparedTimetable } from './prepare';
+import {
+  sameEdgeSeconds,
+  snapCells,
+  snapOrigin,
+  sharedLabels,
+  snapStops,
+  walkFrom,
+  WalkSources,
+} from './walk';
 import type {
   GeoJSONFeature,
   GeoJSONFeatureCollection,
@@ -78,12 +87,89 @@ export function heatGrid(
   };
 
   const stopSeconds = result.stopSeconds;
+  const net = opts.walk;
+  const stopSnap = net ? snapStops(net, tt) : null;
+  const originSnap = net && result.origin ? snapOrigin(net, result.origin) : null;
+  // Sources off the walking network (or all, without one) walk in a straight line.
   for (let s = 0; s < tt.stopCount; s++) {
     const t = stopSeconds[s];
-    if (t === Infinity || t !== t) continue;
+    if (t === Infinity || t !== t || (stopSnap && stopSnap.edge[s] >= 0)) continue;
     scatter(tt.stopLat[s], tt.stopLon[s], t, s);
   }
-  if (result.origin) scatter(result.origin.lat, result.origin.lon, 0, -1);
+  if (result.origin && !(originSnap && originSnap.edge[0] >= 0))
+    scatter(result.origin.lat, result.origin.lon, 0, -1);
+
+  if (net && stopSnap) {
+    const sources = new WalkSources();
+    // Stops sitting on each edge, so cells on the same edge can walk straight to them.
+    const edgeStop = new Map<number, number[]>();
+    for (let s = 0; s < tt.stopCount; s++) {
+      const t = stopSeconds[s];
+      if (t === Infinity || t !== t || stopSnap.edge[s] < 0) continue;
+      sources.add(net, stopSnap, s, t, 0, s);
+      const list = edgeStop.get(stopSnap.edge[s]);
+      if (list) list.push(s);
+      else edgeStop.set(stopSnap.edge[s], [s]);
+    }
+    const originEdge = originSnap ? originSnap.edge[0] : -1;
+    if (originSnap && originEdge >= 0) sources.add(net, originSnap, 0, 0, 0, -1);
+    const labels = walkFrom(
+      net,
+      sources.nodes,
+      sources.times,
+      sources.walked,
+      sources.tags,
+      maxWalk,
+      sharedLabels(net),
+    );
+    const cells = snapCells(net, [minLon, gridMinLat, maxLon, maxLat], cols, rows);
+    const { edgeA, edgeB, edgeSeconds } = net;
+    const { time, walk, source } = labels;
+    const cellEdge = cells.edge;
+    const cellAlong = cells.along;
+    const cellOff = cells.seconds;
+    for (let k = 0; k < cols * rows; k++) {
+      const e = cellEdge[k];
+      if (e < 0) continue;
+      const len = edgeSeconds[e];
+      const off = cellOff[k];
+      const da = cellAlong[k] * len + off;
+      const db = len + 2 * off - da;
+      const a = edgeA[e];
+      const b = edgeB[e];
+      let v = Infinity;
+      let from = -1;
+      if (walk[a] + da <= maxWalk) {
+        v = time[a] + da;
+        from = source[a];
+      }
+      if (walk[b] + db <= maxWalk && time[b] + db < v) {
+        v = time[b] + db;
+        from = source[b];
+      }
+      // Sources on the cell's own edge walk straight along it.
+      const here = edgeStop.size > 0 ? edgeStop.get(e) : undefined;
+      if (here)
+        for (const s of here) {
+          const w = sameEdgeSeconds(net, stopSnap, s, cells, k);
+          if (w <= maxWalk && stopSeconds[s] + w < v) {
+            v = stopSeconds[s] + w;
+            from = s;
+          }
+        }
+      if (e === originEdge) {
+        const w = sameEdgeSeconds(net, originSnap!, 0, cells, k);
+        if (w <= maxWalk && w < v) {
+          v = w;
+          from = -1;
+        }
+      }
+      if (v < seconds[k]) {
+        seconds[k] = v;
+        if (nearest) nearest[k] = from;
+      }
+    }
+  }
 
   const grid: HeatGrid = {
     cellSizeM,
@@ -94,6 +180,21 @@ export function heatGrid(
   };
   if (nearest) grid.stop = nearest;
   return grid;
+}
+
+/** The bbox (snapped outwards to whole cells), columns and rows heatGrid uses for these options. */
+export function gridLayout(opts: Pick<HeatGridOptions, 'cellSizeM' | 'bbox'> = {}): {
+  bbox: [number, number, number, number];
+  cols: number;
+  rows: number;
+} {
+  const cellSizeM = opts.cellSizeM ?? DEFAULT_CELL_M;
+  const [minLon, minLat, maxLon0, maxLat] = opts.bbox ?? DEFAULT_BBOX;
+  const dLat = cellSizeM / M_PER_DEG_LAT;
+  const dLon = cellSizeM / metresPerDegLon((minLat + maxLat) / 2);
+  const cols = Math.max(1, Math.ceil((maxLon0 - minLon) / dLon - 1e-9));
+  const rows = Math.max(1, Math.ceil((maxLat - minLat) / dLat - 1e-9));
+  return { bbox: [minLon, maxLat - rows * dLat, minLon + cols * dLon, maxLat], cols, rows };
 }
 
 /** Travel time in seconds of the grid cell containing (lat, lon); Infinity if unreachable or outside the grid. */
