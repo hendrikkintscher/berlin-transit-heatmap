@@ -10,6 +10,7 @@ import {
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
 import { colorLut } from './colors';
+import { blurSeconds, warpField } from './soften';
 import type { FromWorker, RouteProps, ToWorker, Window } from './protocol';
 
 /** Raster cell size. 50 m keeps walking detail around stops; ~60 ms per origin in Node. */
@@ -20,7 +21,10 @@ const MIN_ROUTE_SHARE = 0.01;
 const MIN_LABEL_SHARE = 0.03;
 /** The image has UPSAMPLE x UPSAMPLE pixels per grid cell (25 m pixels). */
 const UPSAMPLE = 2;
-const LUT = colorLut();
+const UPSAMPLE_SHIFT = 1;
+/** Softening, in grid cells (50 m) and seconds. Purely visual; the readout uses the raw grid. */
+const SOFT = { blurCells: 2, warpCells: 2.5, warpWavelengthCells: 9, featherSeconds: 45 };
+const LUT = colorLut(SOFT.featherSeconds);
 const LUT_MAX = LUT.length / 4 - 1;
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -119,14 +123,16 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
 const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
 
 /**
- * Colours the grid into RGBA pixels at UPSAMPLE x its resolution. Travel times
- * are interpolated bilinearly between cell centres before banding, so band
- * edges come out smooth instead of in 50 m steps. The grid's rows are evenly
- * spaced in latitude but the map is Web Mercator, so each image row samples the
- * grid at its own latitude (otherwise the middle would be off by ~100 m).
+ * Colours the grid into RGBA pixels at UPSAMPLE x its resolution. For looks the
+ * travel times are blurred a little, sampled at a gently wobbled position (so the
+ * walking circles around stops become organic shapes) and interpolated
+ * bilinearly between cells; band edges are feathered in the colour table. The
+ * grid's rows are evenly spaced in latitude but the map is Web Mercator, so each
+ * image row samples the grid at its own latitude.
  */
 function paint(grid: HeatGrid) {
-  const { cols, rows, seconds } = grid;
+  const { cols, rows } = grid;
+  const seconds = blurSeconds(grid.seconds, cols, rows, SOFT.blurCells);
   const [, south, , north] = grid.bbox;
   const width = cols * UPSAMPLE;
   const height = rows * UPSAMPLE;
@@ -134,29 +140,30 @@ function paint(grid: HeatGrid) {
   const yN = mercY(north);
   const yS = mercY(south);
   const dLat = (north - south) / rows;
-  // Column sample positions are the same on every row.
-  const c0 = new Int32Array(width);
-  const cf = new Float32Array(width);
-  for (let x = 0; x < width; x++) {
-    const fx = Math.min(cols - 1, Math.max(0, (x + 0.5) / UPSAMPLE - 0.5));
-    c0[x] = Math.min(cols - 2, Math.floor(fx));
-    cf[x] = fx - c0[x];
-  }
+  const warp = warpOf(cols, rows);
   for (let j = 0; j < height; j++) {
     const lat = (Math.atan(Math.sinh(yN - ((j + 0.5) * (yN - yS)) / height)) * 180) / Math.PI;
-    const fy = Math.min(rows - 1, Math.max(0, (north - lat) / dLat - 0.5));
-    const r0 = Math.min(rows - 2, Math.floor(fy));
-    const ry = fy - r0;
-    const top = r0 * cols;
-    const bot = top + cols;
+    const fy0 = (north - lat) / dLat - 0.5;
+    const wRow = Math.min(rows - 1, Math.max(0, Math.round(fy0))) * cols;
     let o = j * width * 4;
     for (let x = 0; x < width; x++, o += 4) {
-      const c = c0[x];
-      const rx = cf[x];
-      const a = seconds[top + c];
-      const b = seconds[top + c + 1];
-      const d = seconds[bot + c];
-      const e = seconds[bot + c + 1];
+      const fx0 = (x + 0.5) / UPSAMPLE - 0.5;
+      const w = wRow + (x >> UPSAMPLE_SHIFT);
+      let fx = fx0 + warp.dx[w];
+      let fy = fy0 + warp.dy[w];
+      fx = fx < 0 ? 0 : fx > cols - 1 ? cols - 1 : fx;
+      fy = fy < 0 ? 0 : fy > rows - 1 ? rows - 1 : fy;
+      let c = fx | 0;
+      let r0 = fy | 0;
+      if (c > cols - 2) c = cols - 2;
+      if (r0 > rows - 2) r0 = rows - 2;
+      const rx = fx - c;
+      const ry = fy - r0;
+      const top = r0 * cols + c;
+      const a = seconds[top];
+      const b = seconds[top + 1];
+      const d = seconds[top + cols];
+      const e = seconds[top + cols + 1];
       let v: number;
       if (a < Infinity && b < Infinity && d < Infinity && e < Infinity) {
         v = (a + (b - a) * rx) * (1 - ry) + (d + (e - d) * rx) * ry;
@@ -165,7 +172,7 @@ function paint(grid: HeatGrid) {
         v = ry < 0.5 ? (rx < 0.5 ? a : b) : rx < 0.5 ? d : e;
         if (!(v < Infinity)) continue;
       }
-      const k = Math.min(LUT_MAX, Math.round(v)) * 4;
+      const k = (v >= LUT_MAX ? LUT_MAX : (v + 0.5) | 0) * 4;
       rgba[o] = LUT[k];
       rgba[o + 1] = LUT[k + 1];
       rgba[o + 2] = LUT[k + 2];
@@ -173,6 +180,16 @@ function paint(grid: HeatGrid) {
     }
   }
   return { width, height, rgba };
+}
+
+let warpCache: { key: string; field: ReturnType<typeof warpField> } | null = null;
+/** The wobble pattern depends only on the grid size, so it is built once. */
+function warpOf(cols: number, rows: number) {
+  const key = `${cols}x${rows}`;
+  if (warpCache?.key !== key) {
+    warpCache = { key, field: warpField(cols, rows, SOFT.warpCells, SOFT.warpWavelengthCells) };
+  }
+  return warpCache.field;
 }
 
 type Segments = ReturnType<typeof routeUsage>;

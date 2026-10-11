@@ -86,13 +86,45 @@ export function bandLabel(band: number): string {
   return band >= MAX_BAND ? `${lo}+` : `${lo}–${BAND_EDGES_MIN[band + 1]}`;
 }
 
-/** RGBA lookup indexed by whole seconds (clamped to the last entry); alpha 0 = unreachable. */
-export function colorLut(maxSeconds = BAND_EDGES_MIN[MAX_BAND] * 60): Uint8Array {
+/**
+ * RGBA lookup indexed by whole seconds (clamped to the last entry); alpha 0 = unreachable.
+ * With `featherSeconds`, colours blend smoothly across each band edge over that many
+ * seconds either side, so edges look soft instead of cut.
+ */
+export function colorLut(
+  featherSeconds = 0,
+  maxSeconds = BAND_EDGES_MIN[MAX_BAND] * 60,
+): Uint8Array {
   const lut = new Uint8Array((maxSeconds + 1) * 4);
   const rgb = BAND_COLORS.map(hexToRgb);
   for (let s = 0; s <= maxSeconds; s++) {
-    const [r, g, b] = rgb[bandOf(s)];
-    lut.set([r, g, b, 255], s * 4);
+    const b = bandOf(s);
+    let col = rgb[b];
+    if (featherSeconds > 0) {
+      // Distance to the nearest edge decides how much of the neighbour band shows.
+      const lo = BAND_EDGES_MIN[b] * 60;
+      const hi = b < MAX_BAND ? BAND_EDGES_MIN[b + 1] * 60 : Infinity;
+      const w = Math.min(featherSeconds, (hi - lo) / 2);
+      let other = -1;
+      let t = 0;
+      if (s - lo < w && b > 0) {
+        other = b - 1;
+        t = 0.5 - (s - lo) / (2 * w);
+      } else if (hi - s < w) {
+        other = b + 1;
+        t = 0.5 - (hi - s) / (2 * w);
+      }
+      if (other >= 0 && t > 0) {
+        const o = rgb[other];
+        // t runs from 0 inside the band to 0.5 at the edge, where both sides meet halfway.
+        col = [0, 1, 2].map((i) => Math.round(col[i] + (o[i] - col[i]) * t)) as [
+          number,
+          number,
+          number,
+        ];
+      }
+    }
+    lut.set([col[0], col[1], col[2], 255], s * 4);
   }
   return lut;
 }
