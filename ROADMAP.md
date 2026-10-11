@@ -1,6 +1,8 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done apart from the suggested meeting points added to group 3; groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), and group 11 is the Android app; they run from quick wins to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done apart from the suggested meeting points added to group 3; groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), group 11 is the Android app and group 12 temporary changes; they run from quick wins to bigger features. Within a group, items that others depend on come first.
+
+**Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
 ## 1. Interface and usability
 
@@ -297,3 +299,17 @@ Ways to ship it:
 - **F-Droid:** free and open-source store; needs the app built from source with no proprietary dependencies, which suits this project.
 
 Suggested path: start with a TWA, test it with a direct APK on Hendrik's phone, then publish to Google Play; move to Capacitor only when a native feature is needed. This can be done at any point, since it doesn't depend on groups 5 to 10.
+
+## 12. Temporary changes
+
+### Ersatzverkehr and other temporary changes
+
+Find a good, low-effort way to show temporary changes such as Ersatzverkehr (rail replacement buses), closures and construction timetables, without slowing anything down.
+
+Today the build picks one reference weekday and one Saturday from the monthly VBB feed, so whatever construction happens on those days is baked into the whole month, and changes on other days are missing. Options, from least to most work:
+
+- **Pick a clean reference day:** compare several weekdays in the feed and choose one whose service matches the usual pattern, so a one-off closure does not colour the map for a month. Build-only, no app change.
+- **A weekly refresh and a notice:** refresh the feed weekly, and list lines whose service this week differs a lot from the usual pattern ("U2: Ersatzverkehr Pankow–Alexanderplatz") in a small banner. Build-time diff, a few lines of UI.
+- **"Diese Woche" as a second timetable:** offer the current week's actual service as an extra time option next to the typical one. Reuses the hourly files and the compare view; downloads only when chosen.
+
+Notes: VBB's static GTFS already contains planned Ersatzverkehr as normal trips; there is no open real-time feed, so live disruptions are out of scope. All options keep the work in the build, in line with the ground rule above.
