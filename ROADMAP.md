@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done; groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), and group 11 is the Android app; they run from quick wins to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done apart from the suggested meeting points added to group 3; groups 5–10 come from reviews of the live app (group 7 from Hendrik's review of group 6), and group 11 is the Android app; they run from quick wins to bigger features. Within a group, items that others depend on come first.
 
 ## 1. Interface and usability
 
@@ -61,6 +61,12 @@ Features that answer "how good is this location for me (or us)?".
 Pick two start points and show where both people can get to within the same time, as in Mapnificent and the ÖPNV-Isochronenkarte Deutschland. Shade each cell by the slower of the two trips (max of both travel times), so the map answers "where can we both be in N minutes?". Same Day/Night windows as the single-point map.
 
 Notes: run the router twice in the worker and combine the two grids; needs a second-marker UI and a URL parameter for the second point.
+
+### Suggested meeting points
+
+With two start points, suggest a few good places to meet (about three) and mark them on the map. Tapping one shows the connections for both people: each person's trip, drawn and listed in the trip card.
+
+Notes: candidates are the cells with the smallest slower-of-both time, with the sum of both times as a tie-breaker so neither person carries the whole trip. Pick the best, leave out everything within about 1.5 km of it, and repeat, so the suggestions are spread out. Prefer spots at a station or a named place and label them with the station or Ortsteil name. Trip on tap already draws and lists both trips when a second start is set, so tapping a suggestion reuses it. Small to medium effort; added from Hendrik's request on 2026-10-11 and built right after group 8.
 
 ### Favourite places and a location score
 
