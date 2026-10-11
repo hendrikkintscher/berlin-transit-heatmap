@@ -190,6 +190,12 @@ Today each place shows the shortest trip starting anywhere in the hour, which as
 
 Notes: range RAPTOR already scans every departure in the hour, so the average comes from the same pass. The score for favourites and the meeting point would follow the chosen measure.
 
+### "Nächste": the next connection from now
+
+Add a third choice under Reisezeit next to Typisch and Bestfall: **Nächste** shows the next possible connection, so each place gets the time it takes if you leave right now, waiting for the next departure included. That suits a quick "how long from here, now?" look, while Typisch stays the planning default.
+
+Notes: one RAPTOR pass from the current minute instead of the range over the hour, so it is as fast as Bestfall or faster. It uses the hour file the map already opens at (the map now opens at the current hour); each hourly file holds the trips running into the next hour, so later departures are covered. In the time sheet it makes most sense for the current hour; for another hour it would mean leaving at the start of that hour. Kept in the link (`m=next`); trip on tap shows the actual next departure. Small effort; added from Hendrik's request on 2026-10-11.
+
 ### "Ankommen bis": travel times to a place
 
 **Done** (PR #24): the time sheet has "Losfahren" and "Ankommen"; arriving colours how long it takes from everywhere to the start point, arriving within the chosen hour (`dir=arr`). Works for typical and best case and with the meeting point.
