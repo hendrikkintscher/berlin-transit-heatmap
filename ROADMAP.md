@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. The groups run from small interface fixes to bigger features. Within a group, items that others depend on come first.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 are done; groups 5–9 come from a review of the live app and run from quick wins to bigger features. Within a group, items that others depend on come first.
 
 ## 1. Interface and usability
 
@@ -83,3 +83,109 @@ Notes: the routing already gives times to every point, so per-place times are lo
 Night service in Berlin is very different in the early hours of Saturday and Sunday (U-Bahn runs all night) compared to weekday nights. Instead of the two fixed windows (Day 10–12, Night 2–4 on a weekday), pick any hour of the day plus a Weekday/Weekend switch; choosing 10:00 shows the fastest trips starting between 10:00 and 11:00. A smaller first step would be a weekend variant of the Night window only.
 
 Notes on cost: today each window is one timetable file (day about 0.9 MB gzipped, night less), downloaded only when used. Hourly files would be smaller each (a 1-hour window plus the trips needed to finish journeys), so what a phone downloads per choice stays about the same or drops; switching hours means a new download (cached afterwards). The build would produce 24 x 2 files (Saturday and Sunday nights may need their own days), roughly 15–25 MB gzipped in the release, which GitHub Pages handles. Routing per tap stays about as fast, since a shorter window has fewer departures to scan. The stop-frequency and desert layers would follow the chosen hour automatically.
+
+## 5. Everyday use on the phone
+
+Small additions that make the map quicker to use day to day. All are small (an afternoon each), so they come before the bigger accuracy work. Order: what people use most first.
+
+### "Mein Standort" button
+
+A locate button next to search that sets the start point at the phone's position. If the position is outside the covered area, the app says so instead of moving the start.
+
+Notes: MapLibre's GeolocateControl or a small custom button; asks for location permission only when tapped.
+
+### Share button
+
+A button that shares the current view (start, second start, departure time, layers) through the phone's share sheet, with a copy-link fallback. Most useful with the meeting point: "here is where we can both get to".
+
+Notes: the URL already holds all of this; `navigator.share` with a clipboard fallback.
+
+### Heatmap transparency slider
+
+A slider in the menu for the heatmap's opacity (fixed at 70 % today), so street names and landmarks show through when you need to find your way. A press-and-hold on the map to peek at the base map is an alternative.
+
+### Isochrone outlines
+
+Optional thin contour lines at 15, 30 and 45 minutes on top of the heatmap, so "what's within half an hour" reads at a glance and stays readable when the heatmap is faint.
+
+Notes: traced from the existing grid in the worker (marching squares) and drawn as a line layer; a menu switch.
+
+### Data freshness note
+
+A short line under the legend or in the About text: "Fahrplan vom 1. Oktober, Baustellen nicht berücksichtigt". Sets expectations about planned closures, which are common on S-Bahn and U-Bahn lines.
+
+Notes: mostly wording; the build info already has the reference days. The build could also confirm the reference days are not holidays (it already skips them).
+
+### Install hint and first-run help
+
+A one-time hint to add the app to the home screen (Android and iOS), and a first-run hint for the two gestures: tap to set the start, tap again for minutes.
+
+### Small polish
+
+- Fade the status line out a few seconds after a start point is set, so it doesn't sit under the tap card near the legend.
+- A left-aligned app title ("Berlin in Minuten") in the top bar, so screenshots explain themselves.
+- A faint outline of the computed area, showing where the heatmap ends.
+
+## 6. Trips you can trust
+
+Features that explain and sharpen the travel times. Each is a day or two of work and reuses the router as it is; together they turn the heatmap from a colour picture into something you act on.
+
+### Show the trip on tap
+
+Tapping a place shows how you get there, not just the minutes: "8 Min. Fußweg · U8 bis Hermannplatz · M41 · 4 Min. Fußweg, 1 Umstieg", with the route drawn on the map. Optionally a link to open the trip in the BVG or Google app.
+
+Notes: the router already tracks legs for the Lines layer (trackLegs/trackStops), so this is reconstructing one journey for the tapped cell.
+
+### Typical time instead of best case
+
+Today each place shows the shortest trip starting anywhere in the hour, which assumes you leave at exactly the right minute. A "typical" time, the average over leaving at a random minute with waiting included, is closer to real door-to-door time, especially at night and in the outskirts. "Typisch" would become the default, with "Bestfall" as an option, and the About text says which is shown.
+
+Notes: range RAPTOR already scans every departure in the hour, so the average comes from the same pass. The score for favourites and the meeting point would follow the chosen measure.
+
+### "Ankommen bis": travel times to a place
+
+Reverse the direction: how long from everywhere to a chosen place (work, a venue), arriving within the chosen hour. Useful for flat hunting, where the question is the commute to the office.
+
+Notes: a reverse RAPTOR pass over the same timetable; grid, colours and layers stay the same. A switch next to the departure time ("Abfahrt ab" / "Ankunft bis").
+
+### Compare two times
+
+Colour each place by how much longer the trip takes at one time than another, for example weekday 10 Uhr against weekend 2 Uhr. Shows where the night or weekend network leaves gaps; pairs well with the transit-desert layer.
+
+Notes: both grids already come from the same router; needs a second time choice in the picker and a diverging colour scale.
+
+## 7. Realistic walking on real footpaths
+
+Walking is measured today as a straight line at 1.2 m/s, to the first stop and from the last. Across the Spree, rail corridors, canals, cemeteries and the edges of Tempelhofer Feld the real walk is much longer, so the map is too green next to barriers. Hendrik chose the proper solution over a flat detour factor.
+
+### Walking times on the OSM footpath network
+
+Precompute walking times on the OpenStreetMap footpath network in timetable-build: from each stop to the grid cells around it (up to the 15-minute walking limit), and between nearby stops for transfers. Ship them as a compact file next to the timetables; the router reads walking times from it instead of straight-line distance.
+
+Why it comes after groups 5 and 6: it is the largest item so far (several days, a new data pipeline), while groups 5 and 6 are quick and help every visit. Its value is high, though, so it comes before the new modes in group 8, which build on it (bike times on real streets).
+
+Notes:
+
+- Data: a Berlin/Brandenburg OSM extract (Geofabrik), filtered to walkable ways, refreshed with the monthly GTFS job.
+- Size: roughly 45k platforms times nearby cells; with quantised times and delta encoding this should stay a few MB gzipped, downloaded once and cached. To be measured in a prototype first.
+- Until then, a detour factor of about 1.3 on straight-line distances would be a one-line stopgap if the green next to barriers bothers anyone.
+
+## 8. More ways to travel
+
+### Step-free mode
+
+A switch that uses only stops and trips marked wheelchair-accessible in the VBB data, showing where travel with a pram, wheelchair or suitcase is much slower.
+
+Notes: VBB GTFS has wheelchair_boarding for many stops and trips, but coverage may be patchy; check it before building. Medium effort.
+
+### Bike + transit and bike only
+
+A mode that cycles (about 15 km/h) to and from stations instead of walking, and a bike-only map for comparison. Taking the bike on the train and parking it can be a fixed time penalty.
+
+Notes: the routing change is small; most effort is in the UI and defaults. Uses the street network from group 7 when available, a straight line with a detour factor otherwise. Large overall.
+
+## 9. Performance
+
+### Smaller, faster first load
+
+First load is about 1.2 MB (JS about 300 KB gzipped plus one hourly timetable of 0.55–0.7 MB). If it becomes a problem: load the map style and timetable in parallel, move rarely used code (favourites import) into a lazy chunk, and store timetables in a binary format instead of JSON. Low priority now that the hourly files are smaller than the old Day file.
