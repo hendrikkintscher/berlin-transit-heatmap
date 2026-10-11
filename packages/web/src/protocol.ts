@@ -38,6 +38,8 @@ export type ToWorker =
       compare?: Window;
       /** Walking speed in km/h (menu setting). */
       walkKmh: number;
+      /** Step-free: only accessible trips and platforms with a lift or ramp. */
+      stepFree?: boolean;
     }
   | { type: 'trip'; id: number; lat: number; lon: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number };

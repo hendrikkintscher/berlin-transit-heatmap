@@ -92,6 +92,7 @@ interface RawStop {
   name: string;
   lat: number;
   lon: number;
+  locationType: string;
   isStation: boolean;
   parentId: string;
   inside: boolean;
@@ -100,6 +101,8 @@ interface RawStop {
 interface TripRows {
   routeId: string;
   serviceId: string;
+  /** GTFS wheelchair_accessible: '1' yes, '2' no, '0' or '' unknown. */
+  access: string;
   seq: number[];
   stop: number[];
   time: number[];
@@ -107,6 +110,8 @@ interface TripRows {
 
 interface CandidateTrip {
   routeId: string;
+  /** Wheelchair-accessible; trips of one route are only grouped with the same value. */
+  stepFree?: boolean;
   stops: number[]; // raw stop indices
   times: number[];
 }
@@ -148,6 +153,7 @@ export async function buildTimetables(
       name: get('stop_name'),
       lat,
       lon,
+      locationType,
       isStation: locationType === '1',
       parentId: get('parent_station'),
       inside: inBBox(bbox, lat, lon),
@@ -215,6 +221,7 @@ export async function buildTimetables(
     trips.set(get('trip_id'), {
       routeId: get('route_id'),
       serviceId,
+      access: get('wheelchair_accessible'),
       seq: [],
       stop: [],
       time: [],
@@ -237,6 +244,10 @@ export async function buildTimetables(
   });
   log(`stop_times.txt: ${stopTimeRows} rows`);
 
+  // Step-free trips: marked accessible ('1'). A feed that says nothing counts as all step-free.
+  const accessKnown = [...trips.values()].some((t) => t.access === '1' || t.access === '2');
+  const tripStepFree = (t: TripRows) => !accessKnown || t.access === '1';
+
   const ordered: TripRows[] = [];
   for (const trip of trips.values()) {
     if (trip.stop.length < 2) continue;
@@ -246,7 +257,10 @@ export async function buildTimetables(
   trips.clear();
 
   // --- per-window routes -------------------------------------------------
-  const windowRoutes = new Map<string, { routeId: string; stops: number[]; trips: number[][] }[]>();
+  const windowRoutes = new Map<
+    string,
+    { routeId: string; stops: number[]; trips: number[][]; stepFree?: boolean }[]
+  >();
   for (const w of windows) {
     const activeByOffset = activeByDay[w.day];
     const candidates: CandidateTrip[] = [];
@@ -263,7 +277,12 @@ export async function buildTimetables(
         const key = `${trip.stop.join(',')}|${times.join(',')}`;
         if (seen.has(key)) return; // duplicate trip
         seen.add(key);
-        candidates.push({ routeId: trip.routeId, stops: trip.stop, times });
+        candidates.push({
+          routeId: trip.routeId,
+          stops: trip.stop,
+          times,
+          stepFree: tripStepFree(trip),
+        });
       });
     }
     windowRoutes.set(w.name, groupIntoRoutes(candidates));
@@ -292,11 +311,16 @@ export async function buildTimetables(
     return rawStops[a]!.id < rawStops[b]!.id ? -1 : 1;
   });
   const newIndex = new Map(order.map((s, i) => [s, i]));
+  const notStepFree = source.has('pathways.txt')
+    ? await stairsOnlyPlatforms(source, rawStops, stopIndex, parentOf)
+    : new Set<number>();
+  log(`platforms reached only by stairs or escalators: ${notStepFree.size}`);
   const stops: Stop[] = order.map((s) => {
     const raw = rawStops[s]!;
     const stop: Stop = { id: raw.id, name: raw.name, lat: round5(raw.lat), lon: round5(raw.lon) };
     const p = parentOf(s);
     if (p !== undefined) stop.parent = newIndex.get(p)!;
+    if (notStepFree.has(s)) stop.stepFree = false;
     return stop;
   });
 
@@ -322,6 +346,7 @@ export async function buildTimetables(
       mode: routes.get(r.routeId)!.mode,
       stops: r.stops.map((s) => newIndex.get(s)!),
       trips: r.trips,
+      ...(r.stepFree === false ? { stepFree: false as const } : {}),
     }));
     timetables[w.name] = {
       version: 1,
@@ -396,15 +421,15 @@ export function fillTimes(times: number[]): boolean {
  */
 export function groupIntoRoutes(
   candidates: CandidateTrip[],
-): { routeId: string; stops: number[]; trips: number[][] }[] {
+): { routeId: string; stops: number[]; trips: number[][]; stepFree?: boolean }[] {
   const groups = new Map<string, CandidateTrip[]>();
   for (const c of candidates) {
-    const key = `${c.routeId}|${c.stops.join(',')}`;
+    const key = `${c.routeId}|${c.stops.join(',')}|${c.stepFree === false ? 0 : 1}`;
     const group = groups.get(key);
     if (group) group.push(c);
     else groups.set(key, [c]);
   }
-  const result: { routeId: string; stops: number[]; trips: number[][] }[] = [];
+  const result: { routeId: string; stops: number[]; trips: number[][]; stepFree?: boolean }[] = [];
   const keys = [...groups.keys()].sort();
   for (const key of keys) {
     const group = groups.get(key)!;
@@ -423,7 +448,68 @@ export function groupIntoRoutes(
       else subRoutes.push([trip.times]);
     }
     for (const sub of subRoutes)
-      result.push({ routeId: group[0]!.routeId, stops: group[0]!.stops, trips: sub });
+      result.push({
+        routeId: group[0]!.routeId,
+        stops: group[0]!.stops,
+        trips: sub,
+        ...(group[0]!.stepFree === false ? { stepFree: false } : {}),
+      });
+  }
+  return result;
+}
+
+/**
+ * Platforms (raw stop indices) that pathways.txt connects to their station's entrances
+ * only through stairs or escalators. Platforms without pathways, and stations without
+ * entrances in the feed (street stops), count as step-free.
+ */
+export async function stairsOnlyPlatforms(
+  source: GtfsSource,
+  rawStops: RawStop[],
+  stopIndex: Map<string, number>,
+  parentOf: (s: number) => number | undefined,
+): Promise<Set<number>> {
+  const level = new Map<number, number[]>(); // step-free edges (no stairs 2, no escalator 4)
+  const linked = new Set<number>();
+  const edge = (a: number, b: number) => {
+    const list = level.get(a);
+    if (list) list.push(b);
+    else level.set(a, [b]);
+  };
+  await readCsv(await source.open('pathways.txt'), (get) => {
+    const a = stopIndex.get(get('from_stop_id'));
+    const b = stopIndex.get(get('to_stop_id'));
+    if (a === undefined || b === undefined) return;
+    linked.add(a);
+    linked.add(b);
+    const mode = get('pathway_mode');
+    if (mode === '2' || mode === '4') return;
+    edge(a, b);
+    if (get('is_bidirectional') === '1') edge(b, a);
+  });
+  const reached = new Set<number>();
+  const stationsWithEntrances = new Set<number>();
+  const queue: number[] = [];
+  for (const s of linked) {
+    if (rawStops[s]!.locationType !== '2') continue;
+    reached.add(s);
+    queue.push(s);
+    const p = parentOf(s);
+    if (p !== undefined) stationsWithEntrances.add(p);
+  }
+  while (queue.length) {
+    for (const t of level.get(queue.pop()!) ?? []) {
+      if (reached.has(t)) continue;
+      reached.add(t);
+      queue.push(t);
+    }
+  }
+  const result = new Set<number>();
+  for (const s of linked) {
+    const raw = rawStops[s]!;
+    if (raw.locationType !== '0' && raw.locationType !== '') continue;
+    const p = parentOf(s);
+    if (p !== undefined && stationsWithEntrances.has(p) && !reached.has(s)) result.add(s);
   }
   return result;
 }

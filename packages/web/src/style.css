@@ -1061,3 +1061,7 @@ dialog.when .seg-wide + .seg-wide {
   display: block;
   margin-bottom: 2px;
 }
+
+.step-free-row {
+  margin-top: 10px;
+}

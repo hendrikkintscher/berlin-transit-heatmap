@@ -121,6 +121,7 @@ const menuDialog = $<HTMLDialogElement>('menu');
 const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
 const walkButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-walk]')];
 const isoToggle = $<HTMLInputElement>('iso-toggle');
+const stepFreeToggle = $<HTMLInputElement>('stepfree-toggle');
 const opacityInput = $<HTMLInputElement>('opacity');
 const locateBtn = $<HTMLButtonElement>('locate-btn');
 const tip = $('tip');
@@ -155,6 +156,8 @@ const state: {
   opacity: number;
   /** Walking speed in km/h; remembered on this device, carried in shared links. */
   walkKmh: number;
+  /** Step-free journeys only; remembered on this device, carried in shared links. */
+  stepFree: boolean;
   /** Re-renders the status line, so it follows a language switch. */
   status: () => string;
 } = {
@@ -175,6 +178,7 @@ const state: {
   iso: false,
   opacity: readNumber('heat-opacity', DEFAULT_OPACITY),
   walkKmh: walkSpeed(readNumber('walk-kmh', DEFAULT_WALK_KMH)),
+  stepFree: readNumber('step-free', 0) > 0,
   status: () => '',
 };
 type Result = Extract<FromWorker, { type: 'result' }>;
@@ -356,6 +360,7 @@ function compute() {
     measure: state.measure,
     ...(state.measure === 'next' ? { leaveOffset: leaveOffset() } : {}),
     walkKmh: state.walkKmh,
+    ...(state.stepFree ? { stepFree: true } : {}),
     ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
     ...(state.second ? { second: state.second } : {}),
@@ -378,6 +383,7 @@ function readUrl() {
   if (p.get('m') === 'best' || p.get('m') === 'next') state.measure = p.get('m') as Measure;
   state.compare = parseWhen(p.get('cmp'));
   if (p.has('walk')) state.walkKmh = walkSpeed(Number(p.get('walk')));
+  if (p.has('sf')) state.stepFree = p.get('sf') === '1';
 }
 function parsePoint(v: string | null) {
   const [lat, lon] = (v ?? '').split(',').map(Number);
@@ -393,6 +399,7 @@ function writeUrl() {
   if (state.measure !== 'typical') p.set('m', state.measure);
   if (state.compare) p.set('cmp', windowName(state.compare));
   if (state.walkKmh !== DEFAULT_WALK_KMH) p.set('walk', String(state.walkKmh));
+  if (state.stepFree) p.set('sf', '1');
   if (!state.routes) p.set('routes', '0');
   const layers = [state.freq && 'freq', state.desert && 'desert', state.iso && 'iso']
     .filter(Boolean)
@@ -1356,9 +1363,11 @@ function renderWhen() {
         ? 'weekendArr'
         : 'weekendAt';
   const offset = !arrive && state.measure === 'next' ? leaveOffset() : 0;
-  whenBtn.querySelector('span')!.textContent = t(pill, {
-    hour: offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-  });
+  // A wheelchair sign in the pill shows the step-free mode is on.
+  whenBtn.querySelector('span')!.textContent =
+    t(pill, {
+      hour: offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
+    }) + (state.stepFree ? ' ♿' : '');
   $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
   for (const b of dirButtons)
     b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));
@@ -1514,6 +1523,16 @@ for (const b of walkButtons)
     redoWalks();
   });
 renderWalk();
+
+stepFreeToggle.checked = state.stepFree;
+stepFreeToggle.addEventListener('change', () => {
+  state.stepFree = stepFreeToggle.checked;
+  remember('step-free', state.stepFree ? '1' : '0');
+  renderWhen();
+  hideReadout();
+  writeUrl();
+  compute();
+});
 
 // "Nächste" follows the clock: coming back to the app recomputes from the new "now".
 document.addEventListener('visibilitychange', () => {

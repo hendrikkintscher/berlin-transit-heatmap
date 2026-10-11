@@ -34,6 +34,11 @@ export interface Stop {
   lon: number;
   /** Index of the parent station in `stops`, if any. Station entries themselves have no routes. */
   parent?: number;
+  /**
+   * false: the platform can only be reached by stairs or escalators (from the feed's
+   * pathways). Absent: step-free, or no information (street stops).
+   */
+  stepFree?: false;
 }
 
 export interface Route {
@@ -43,6 +48,8 @@ export interface Route {
   stops: number[];
   /** trips[t][i] = departure time (seconds) at stops[i]; arrival == departure. Sorted by first departure. */
   trips: number[][];
+  /** false: the trips are not marked wheelchair-accessible. Absent: they are (or the feed does not say). */
+  stepFree?: false;
 }
 
 export interface Transfer {

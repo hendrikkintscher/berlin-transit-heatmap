@@ -1,0 +1,5 @@
+route_id,agency_id,route_short_name,route_long_name,route_type
+R1,1,U9,,400
+R2,1,100,,700
+R3,1,N9,,3
+R4,1,,Fähre Wannsee,1000
