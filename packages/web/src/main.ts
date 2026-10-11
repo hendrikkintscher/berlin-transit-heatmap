@@ -1,13 +1,27 @@
-import maplibregl, { type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
+import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
-import { BAND_COLORS, MAX_BAND } from './colors';
+import { BAND_COLORS, BAND_EDGES_MIN, bandLabel } from './colors';
 import type { FromWorker, TimetableInfo, ToWorker, Window } from './protocol';
 
 const BERLIN: [number, number] = [13.405, 52.515];
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 const HEAT_SOURCE = 'heat';
-const HEAT_LAYER = 'heat-fill';
+const HEAT_LAYER = 'heat-raster';
+const ROUTES_SOURCE = 'routes';
+const LABELS_SOURCE = 'route-labels';
+const ROUTE_LAYERS = ['routes-casing', 'routes-line', 'routes-label'];
+const HEAT_OPACITY = 0.7;
+
+// Line colours roughly follow the usual Berlin map conventions.
+const MODE_COLORS: Record<string, string> = {
+  sbahn: '#00843d',
+  ubahn: '#0a5ea8',
+  tram: '#c8102e',
+  bus: '#7b2d8e',
+  regional: '#8a1c1c',
+  ferry: '#0090c8',
+};
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const loadbar = $('loadbar');
@@ -18,6 +32,7 @@ const statusEl = $('status');
 const feedInfo = $('feed-info');
 const infoDialog = $<HTMLDialogElement>('info');
 const segButtons = [...document.querySelectorAll<HTMLButtonElement>('.seg button')];
+const routesBtn = $<HTMLButtonElement>('routes-btn');
 
 const state: {
   window: Window;
@@ -25,15 +40,32 @@ const state: {
   pending: { lat: number; lon: number } | null;
   requestId: number;
   info: Partial<Record<Window, TimetableInfo>>;
-} = { window: 'day', origin: null, pending: null, requestId: 0, info: {} };
-let lastResult: GeoJSON.FeatureCollection | null = null;
+  routes: boolean;
+} = { window: 'day', origin: null, pending: null, requestId: 0, info: {}, routes: true };
+type Result = Extract<FromWorker, { type: 'result' }>;
+let lastResult: Result | null = null;
+
+// The heatmap is painted into this canvas and shown through a MapLibre canvas source.
+const heatCanvas = document.createElement('canvas');
+heatCanvas.width = heatCanvas.height = 1;
 
 // ---------- legend ----------
+// Every band gets the same width, so the finer 20–50 min bands get the most room.
 $('legend-bar').append(
-  ...BAND_COLORS.map((c) => {
+  ...BAND_COLORS.map((c, b) => {
     const s = document.createElement('span');
     s.style.background = c;
+    s.title = `${bandLabel(b)} min`;
     return s;
+  }),
+);
+$('legend-ticks').append(
+  ...[0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
+    const t = document.createElement('span');
+    const i = BAND_EDGES_MIN.indexOf(m);
+    t.style.left = `${(100 * i) / BAND_COLORS.length}%`;
+    t.textContent = m === 120 ? '120+ min' : String(m);
+    return t;
   }),
 );
 
@@ -57,8 +89,8 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     renderFeedInfo();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
-    lastResult = m.geojson;
-    (map.getSource(HEAT_SOURCE) as GeoJSONSource | undefined)?.setData(m.geojson);
+    lastResult = m;
+    showResult(m);
     loadbar.hidden = true;
     statusEl.textContent = `Computed in ${(m.totalMs / 1000).toFixed(1)} s · tap the map for minutes`;
     prefetchOtherWindow();
@@ -100,6 +132,7 @@ function compute() {
 // ---------- URL state (?from=lat,lon&w=night) ----------
 function readUrl() {
   const p = new URLSearchParams(location.search);
+  if (p.get('routes') === '0') state.routes = false;
   const [lat, lon] = (p.get('from') ?? '').split(',').map(Number);
   if (Number.isFinite(lat) && Number.isFinite(lon) && lat && lon) state.origin = { lat, lon };
   if (p.get('w') === 'night') state.window = 'night';
@@ -108,6 +141,7 @@ function writeUrl() {
   const p = new URLSearchParams();
   if (state.origin) p.set('from', `${state.origin.lat.toFixed(5)},${state.origin.lon.toFixed(5)}`);
   if (state.window === 'night') p.set('w', 'night');
+  if (!state.routes) p.set('routes', '0');
   const q = p.toString();
   history.replaceState(null, '', q ? `?${q}` : location.pathname);
 }
@@ -149,30 +183,136 @@ function setOrigin(lat: number, lon: number) {
   compute();
 }
 
+let mapReady = false;
 map.on('load', () => {
+  mapReady = true;
   // Start with the attribution collapsed to its (i) button so it does not cover the legend.
   document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
   const firstSymbol = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-  map.addSource(HEAT_SOURCE, {
-    type: 'geojson',
-    data: lastResult ?? { type: 'FeatureCollection', features: [] },
-  });
-  const colorExpr: unknown[] = ['step', ['get', 'band'], BAND_COLORS[0]];
-  for (let b = 1; b <= MAX_BAND; b++) colorExpr.push(b, BAND_COLORS[b]);
+  const font = textFont();
+  const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
+  map.addSource(ROUTES_SOURCE, { type: 'geojson', data: empty });
+  map.addSource(LABELS_SOURCE, { type: 'geojson', data: empty });
+  // Width follows the share of the map reached over a hop: 1 % thin, 50 %+ thick.
+  const width = (extra: number): maplibregl.ExpressionSpecification => {
+    const byShare = (k: number): maplibregl.ExpressionSpecification => [
+      '+',
+      extra,
+      ['*', k, ['interpolate', ['linear'], ['sqrt', ['get', 'share']], 0.1, 1, 0.7, 7]],
+    ];
+    return ['interpolate', ['linear'], ['zoom'], 9, byShare(0.6), 14, byShare(1.4)];
+  };
+  const visibility = state.routes ? 'visible' : 'none';
   map.addLayer(
     {
-      id: HEAT_LAYER,
-      type: 'fill',
-      source: HEAT_SOURCE,
+      id: 'routes-casing',
+      type: 'line',
+      source: ROUTES_SOURCE,
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility },
+      paint: { 'line-color': '#ffffff', 'line-width': width(2.5), 'line-opacity': 0.9 },
+    },
+    firstSymbol,
+  );
+  map.addLayer(
+    {
+      id: 'routes-line',
+      type: 'line',
+      source: ROUTES_SOURCE,
+      layout: { 'line-cap': 'round', 'line-join': 'round', visibility },
       paint: {
-        'fill-color': colorExpr as maplibregl.ExpressionSpecification,
-        'fill-opacity': 0.65,
-        'fill-antialias': false,
+        'line-color': [
+          'match',
+          ['get', 'mode'],
+          ...Object.entries(MODE_COLORS).flat(),
+          '#444444',
+        ] as unknown as maplibregl.ExpressionSpecification,
+        'line-width': width(0),
       },
     },
     firstSymbol,
   );
+  map.addLayer({
+    id: 'routes-label',
+    type: 'symbol',
+    source: LABELS_SOURCE,
+    layout: {
+      visibility,
+      'symbol-placement': 'line',
+      'symbol-spacing': 220,
+      'text-field': ['get', 'names'],
+      'text-font': font,
+      'text-size': 11,
+      'text-max-angle': 40,
+    },
+    paint: { 'text-color': '#1d1d2b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
+  });
+  if (lastResult) showResult(lastResult);
 });
+
+/** A font the basemap's glyph server has, taken from its own labels. */
+function textFont(): string[] {
+  for (const l of map.getStyle().layers) {
+    if (l.type !== 'symbol') continue;
+    const f = map.getLayoutProperty(l.id, 'text-font') as unknown;
+    if (Array.isArray(f) && f.every((x) => typeof x === 'string')) return f as string[];
+  }
+  return ['Noto Sans Regular'];
+}
+
+function showResult(r: Result) {
+  if (!mapReady) return;
+  const { width, height, rgba } = r.image;
+  heatCanvas.width = width;
+  heatCanvas.height = height;
+  heatCanvas.getContext('2d')!.putImageData(new ImageData(rgba, width, height), 0, 0);
+  const [w, s, e, n] = r.bbox;
+  const coordinates: [[number, number], [number, number], [number, number], [number, number]] = [
+    [w, n],
+    [e, n],
+    [e, s],
+    [w, s],
+  ];
+  const src = map.getSource(HEAT_SOURCE) as CanvasSource | undefined;
+  if (!src) {
+    const firstLine = ROUTE_LAYERS[0];
+    map.addSource(HEAT_SOURCE, {
+      type: 'canvas',
+      canvas: heatCanvas,
+      coordinates,
+      animate: false,
+    });
+    map.addLayer(
+      {
+        id: HEAT_LAYER,
+        type: 'raster',
+        source: HEAT_SOURCE,
+        paint: {
+          'raster-opacity': HEAT_OPACITY,
+          'raster-fade-duration': 0,
+          'raster-resampling': 'linear',
+        },
+      },
+      firstLine,
+    );
+  } else {
+    src.setCoordinates(coordinates);
+    // A non-animated canvas source re-reads its canvas only while "playing".
+    src.play();
+    src.pause();
+  }
+  (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
+  (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
+  map.triggerRepaint();
+}
+
+function gridSeconds(r: Result, lat: number, lon: number): number {
+  const [w, s, e, n] = r.bbox;
+  const { cols, rows, seconds } = r.grid;
+  const c = Math.floor(((lon - w) / (e - w)) * cols);
+  const row = Math.floor(((n - lat) / (n - s)) * rows);
+  if (c < 0 || c >= cols || row < 0 || row >= rows) return Infinity;
+  return seconds[row * cols + c];
+}
 
 map.on('click', (e: MapMouseEvent) => {
   const { lat, lng } = e.lngLat;
@@ -180,16 +320,35 @@ map.on('click', (e: MapMouseEvent) => {
     setOrigin(lat, lng);
     return;
   }
-  const f = map.queryRenderedFeatures(e.point, { layers: [HEAT_LAYER] })[0];
-  const secs = f?.properties?.seconds as number | undefined;
+  const secs = lastResult ? gridSeconds(lastResult, lat, lng) : Infinity;
   const label = state.window === 'day' ? 'by day' : 'at night';
-  readoutText.innerHTML =
-    secs === undefined
+  let html =
+    secs === Infinity
       ? 'Not reachable within the time window'
       : `<b>${Math.round(secs / 60)} min</b> ${label}`;
+  if (state.routes) {
+    const { x, y } = e.point;
+    const hit = map.queryRenderedFeatures(
+      [
+        [x - 8, y - 8],
+        [x + 8, y + 8],
+      ],
+      { layers: ['routes-line'] },
+    );
+    const top = hit.sort((a, b) => b.properties.share - a.properties.share)[0];
+    if (top) {
+      const pct = Math.round(100 * (top.properties.share as number));
+      html = `<b>${escapeHtml(String(top.properties.names))}</b> · fastest way to ${pct}% of the map`;
+    }
+  }
+  readoutText.innerHTML = html;
   state.pending = { lat, lon: lng };
   readout.hidden = false;
 });
+
+function escapeHtml(t: string): string {
+  return t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
 
 $('readout-start').addEventListener('click', () => {
   if (state.pending) setOrigin(state.pending.lat, state.pending.lon);
@@ -209,6 +368,17 @@ for (const b of segButtons)
   b.addEventListener('click', () => setWindow(b.dataset.window as Window));
 setWindow(state.window);
 showOrigin();
+
+function setRoutes(on: boolean) {
+  state.routes = on;
+  routesBtn.setAttribute('aria-pressed', String(on));
+  if (mapReady) {
+    for (const id of ROUTE_LAYERS) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+  }
+  writeUrl();
+}
+routesBtn.addEventListener('click', () => setRoutes(!state.routes));
+routesBtn.setAttribute('aria-pressed', String(state.routes));
 
 $('info-btn').addEventListener('click', () => infoDialog.showModal());
 infoDialog.addEventListener('click', (e) => {

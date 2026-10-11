@@ -40,13 +40,15 @@ export function heatGrid(
   const maxLon = minLon + cols * dLon;
   const gridMinLat = maxLat - rows * dLat;
   const seconds = new Float32Array(cols * rows).fill(Infinity);
+  const nearest = opts.trackStops ? new Int32Array(cols * rows).fill(-1) : null;
 
   const radiusM = maxWalk * WALK_SPEED_MPS;
   const radCols = Math.ceil(radiusM / cellSizeM) + 1;
   const r2 = radiusM * radiusM;
+  const invSpeed = 1 / WALK_SPEED_MPS;
 
   // Scatter one source (a stop or the origin) onto nearby cells.
-  const scatter = (lat: number, lon: number, startSeconds: number): void => {
+  const scatter = (lat: number, lon: number, startSeconds: number, stop: number): void => {
     // Fractional cell coordinates of the source (cell centres sit at k + 0.5).
     const fc = (lon - minLon) / dLon;
     const fr = (maxLat - lat) / dLat;
@@ -58,14 +60,19 @@ export function heatGrid(
       const dy = (r + 0.5 - fr) * cellSizeM;
       const dy2 = dy * dy;
       if (dy2 > r2) continue;
+      // Columns whose centre lies within the walking radius on this row.
+      const half = Math.sqrt(r2 - dy2) / cellSizeM;
+      const cs = Math.max(c0, Math.ceil(fc - 0.5 - half));
+      const ce = Math.min(c1, Math.floor(fc - 0.5 + half));
       const rowBase = r * cols;
-      for (let c = c0; c <= c1; c++) {
+      for (let c = cs; c <= ce; c++) {
         const dx = (c + 0.5 - fc) * cellSizeM;
-        const d2 = dx * dx + dy2;
-        if (d2 > r2) continue;
-        const v = startSeconds + Math.sqrt(d2) / WALK_SPEED_MPS;
+        const v = startSeconds + Math.sqrt(dx * dx + dy2) * invSpeed;
         const k = rowBase + c;
-        if (v < seconds[k]) seconds[k] = v;
+        if (v < seconds[k]) {
+          seconds[k] = v;
+          if (nearest) nearest[k] = stop;
+        }
       }
     }
   };
@@ -74,11 +81,19 @@ export function heatGrid(
   for (let s = 0; s < tt.stopCount; s++) {
     const t = stopSeconds[s];
     if (t === Infinity || t !== t) continue;
-    scatter(tt.stopLat[s], tt.stopLon[s], t);
+    scatter(tt.stopLat[s], tt.stopLon[s], t, s);
   }
-  if (result.origin) scatter(result.origin.lat, result.origin.lon, 0);
+  if (result.origin) scatter(result.origin.lat, result.origin.lon, 0, -1);
 
-  return { cellSizeM, bbox: [minLon, gridMinLat, maxLon, maxLat], cols, rows, seconds };
+  const grid: HeatGrid = {
+    cellSizeM,
+    bbox: [minLon, gridMinLat, maxLon, maxLat],
+    cols,
+    rows,
+    seconds,
+  };
+  if (nearest) grid.stop = nearest;
+  return grid;
 }
 
 /** Travel time in seconds of the grid cell containing (lat, lon); Infinity if unreachable or outside the grid. */

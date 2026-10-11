@@ -59,6 +59,24 @@ export interface TravelTimeOptions {
   maxInitialWalkSeconds?: number;
   /** Maximum number of transit legs. Default 6. */
   maxRounds?: number;
+  /** Also record the last leg of each stop's fastest journey (result.legs). Default false. */
+  trackLegs?: boolean;
+}
+
+/**
+ * The last leg of each stop's fastest journey, indexed by stop. Following legs
+ * back from a stop gives a journey tree rooted at the origin; a parent's best
+ * time is always strictly smaller, so the chain ends. (Addition to Contract 2.)
+ */
+export interface TravelLegs {
+  /**
+   * >= 0: rode prepared (sub-)route `kind` from route position `from` to `to`;
+   * -1 (LEG_WALK): footpath from stop `from`; -2 (LEG_ORIGIN): walked from the
+   * origin; -3 (LEG_NONE): unreachable.
+   */
+  kind: Int32Array;
+  from: Int32Array;
+  to: Int32Array;
 }
 
 export interface TravelTimeResult {
@@ -69,6 +87,8 @@ export interface TravelTimeResult {
   origin?: Origin;
   /** Number of distinct origin departure times scanned by range-RAPTOR. (Addition to Contract 2.) */
   departures?: number;
+  /** Present when computed with `trackLegs`. (Addition to Contract 2.) */
+  legs?: TravelLegs;
 }
 
 export interface HeatGridOptions {
@@ -78,6 +98,8 @@ export interface HeatGridOptions {
   maxFinalWalkSeconds?: number;
   /** [minLon, minLat, maxLon, maxLat]. Default DEFAULT_BBOX (Berlin). (Addition to Contract 2.) */
   bbox?: [number, number, number, number];
+  /** Also record which stop each cell's time comes from (grid.stop). Default false. (Addition to Contract 2.) */
+  trackStops?: boolean;
 }
 
 export interface HeatGrid {
@@ -93,6 +115,8 @@ export interface HeatGrid {
   rows: number;
   /** Row-major (index = row * cols + col); Infinity = unreachable. */
   seconds: Float32Array;
+  /** With `trackStops`: the stop each cell is reached from, -1 for walking straight from the origin or unreachable. */
+  stop?: Int32Array;
 }
 
 /** Minimal GeoJSON types so the package needs no type dependencies. Structurally compatible with @types/geojson. */

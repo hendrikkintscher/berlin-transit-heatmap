@@ -3,6 +3,11 @@ import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
 import type { Origin, TravelTimeOptions, TravelTimeResult } from './types';
 
 const DEFAULT_MAX_INITIAL_WALK_S = 900;
+
+/** TravelLegs.kind values; any value >= 0 is a (sub-)route index. */
+export const LEG_NONE = -3;
+export const LEG_ORIGIN = -2;
+export const LEG_WALK = -1;
 const DEFAULT_MAX_ROUNDS = 6;
 
 const now: () => number =
@@ -48,6 +53,23 @@ export function travelTimes(
 
   const departures = departureTimes(tt, accessStops, accessWalk);
 
+  // Last leg of each stop's best journey (see TravelLegs). starLeg* describe how
+  // tauStar was last improved within the current departure; they are copied to
+  // leg* when that departure improves the stop's best travel time.
+  const track = opts.trackLegs === true;
+  const legKind = new Int32Array(track ? S : 0).fill(LEG_NONE);
+  const legFrom = new Int32Array(track ? S : 0);
+  const legTo = new Int32Array(track ? S : 0);
+  const starKind = new Int32Array(track ? S : 0).fill(LEG_NONE);
+  const starFrom = new Int32Array(track ? S : 0);
+  const starTo = new Int32Array(track ? S : 0);
+  if (track) {
+    for (let a = 0; a < accessStops.length; a++) {
+      const s = accessStops[a];
+      if (best[s] === accessWalk[a]) legKind[s] = LEG_ORIGIN;
+    }
+  }
+
   if (departures.length > 0 && maxRounds > 0) {
     const { routeStopOffset, routeStops, routeTripCount, routeTimeOffset, times } = tt;
     const { stopRouteOffset, stopRouteRoute, stopRouteIndex } = tt;
@@ -91,6 +113,7 @@ export function travelTimes(
         if (arr < tauStar[s]) {
           tau[s] = arr;
           tauStar[s] = arr;
+          if (track) starKind[s] = LEG_ORIGIN;
           marked[markedCount++] = s;
           if (!isTouched[s]) {
             isTouched[s] = 1;
@@ -133,6 +156,7 @@ export function travelTimes(
           const base = routeTimeOffset[r];
           let trip = -1;
           let tripBase = 0;
+          let boardIdx = 0;
           for (let i = from; i < n; i++) {
             const s = routeStops[so + i];
             if (trip >= 0) {
@@ -150,6 +174,11 @@ export function travelTimes(
                 if (arr < tauStar[s]) {
                   tau[curBase + s] = arr;
                   tauStar[s] = arr;
+                  if (track) {
+                    starKind[s] = r;
+                    starFrom[s] = boardIdx;
+                    starTo[s] = i;
+                  }
                   if (!isNextMarked[s]) {
                     isNextMarked[s] = 1;
                     nextMarked[nextCount++] = s;
@@ -177,6 +206,7 @@ export function travelTimes(
             if (lo < (trip >= 0 ? trip : tripCount)) {
               trip = lo;
               tripBase = base + trip * n;
+              boardIdx = i;
             }
           }
         }
@@ -192,6 +222,10 @@ export function travelTimes(
             if (arr < tauStar[u]) {
               tau[curBase + u] = arr;
               tauStar[u] = arr;
+              if (track) {
+                starKind[u] = LEG_WALK;
+                starFrom[u] = s;
+              }
               if (!isNextMarked[u]) {
                 isNextMarked[u] = 1;
                 nextMarked[nextCount++] = u;
@@ -217,7 +251,14 @@ export function travelTimes(
         const s = touched[m];
         isTouched[s] = 0;
         const t = tauStar[s] - dep;
-        if (t < best[s]) best[s] = t;
+        if (t < best[s]) {
+          best[s] = t;
+          if (track) {
+            legKind[s] = starKind[s];
+            legFrom[s] = starFrom[s];
+            legTo[s] = starTo[s];
+          }
+        }
       }
       touchedCount = 0;
     }
@@ -228,6 +269,7 @@ export function travelTimes(
     computedInMs: now() - t0,
     origin: { lat: origin.lat, lon: origin.lon },
     departures: departures.length,
+    ...(track ? { legs: { kind: legKind, from: legFrom, to: legTo } } : {}),
   };
 }
 

@@ -45,6 +45,13 @@ All additive; nothing in the contract changed.
 - `gridValueAt(grid, lat, lon)` for the tap readout, `distanceM`, `WALK_SPEED_MPS`, and the
   Contract 1 `Timetable` types.
 - GeoJSON types are declared locally and are structurally compatible with `@types/geojson`.
+- `travelTimes` option `trackLegs` fills `TravelTimeResult.legs`: the last leg of each stop's
+  fastest journey (a ridden route stretch, a footpath, or the walk from the origin). Following
+  legs back gives a journey tree; a parent is always strictly faster than its child.
+- `heatGrid` option `trackStops` fills `HeatGrid.stop`: the stop each cell's time comes from.
+- `routeUsage(tt, result, grid, { minShare })` uses both to weight every stop-to-stop hop by the
+  number of grid cells whose fastest journey rides it. The web app draws these as the "Lines"
+  overlay. Costs about 50 ms extra per origin in Node.
 
 ## Tests and benchmark
 
