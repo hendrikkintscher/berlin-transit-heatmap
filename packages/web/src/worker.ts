@@ -11,7 +11,8 @@ import {
 import type { FeatureCollection, LineString } from 'geojson';
 import { colorLut } from './colors';
 import { blurSeconds, warpField } from './soften';
-import type { FromWorker, RouteProps, ToWorker, Window } from './protocol';
+import { accessGrid, departuresPerHour, DESERT_THRESHOLDS, stations } from './layers';
+import type { FromWorker, RasterLayer, RouteProps, ToWorker, Window } from './protocol';
 
 /** Raster cell size. 50 m keeps walking detail around stops; ~60 ms per origin in Node. */
 const CELL_M = 50;
@@ -89,6 +90,19 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'load') {
       // A quiet (background) load that fails is retried when the window is actually needed.
       await (msg.quiet ? ensure(msg.window).catch(() => undefined) : ensure(msg.window));
+    } else if (msg.type === 'layers') {
+      const tt = await ensure(msg.window);
+      const perHour = departuresPerHour(tt);
+      const desert = paintDesert(accessGrid(tt, perHour), DESERT_THRESHOLDS[msg.window]);
+      ctx.postMessage(
+        {
+          type: 'layers',
+          window: msg.window,
+          stations: stations(tt, perHour),
+          desert,
+        } satisfies FromWorker,
+        [desert.image.rgba.buffer, desert.grid.seconds.buffer],
+      );
     } else if (msg.type === 'compute') {
       const t0 = performance.now();
       const tt = await ensure(msg.window);
@@ -180,6 +194,53 @@ function paint(grid: HeatGrid) {
     }
   }
   return { width, height, rgba };
+}
+
+/** Desert shading: one dark tint, stronger past the second threshold, edges feathered. */
+const DESERT_RGB = [36, 22, 64];
+const DESERT_ALPHA = [0, 0.36, 0.64];
+const DESERT_FEATHER_S = 60;
+/** Unreachable cells (no stop within the walking limit) blend as this many seconds. */
+const DESERT_FAR_S = 3600;
+
+function paintDesert(grid: HeatGrid, [light, strong]: readonly [number, number]): RasterLayer {
+  const { cols, rows } = grid;
+  const finite = grid.seconds.map((v) => (v < Infinity ? v : DESERT_FAR_S));
+  const seconds = blurSeconds(finite, cols, rows, 1);
+  const [, south, , north] = grid.bbox;
+  const width = cols * UPSAMPLE;
+  const height = rows * UPSAMPLE;
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  const yN = mercY(north);
+  const yS = mercY(south);
+  const dLat = (north - south) / rows;
+  const ramp = (v: number, edge: number) =>
+    Math.min(1, Math.max(0, (v - edge + DESERT_FEATHER_S) / (2 * DESERT_FEATHER_S)));
+  for (let j = 0; j < height; j++) {
+    const lat = (Math.atan(Math.sinh(yN - ((j + 0.5) * (yN - yS)) / height)) * 180) / Math.PI;
+    const fy = Math.min(rows - 1, Math.max(0, (north - lat) / dLat - 0.5));
+    const r0 = Math.min(rows - 2, fy | 0);
+    const ry = fy - r0;
+    let o = j * width * 4;
+    for (let x = 0; x < width; x++, o += 4) {
+      const fx = Math.min(cols - 1, Math.max(0, (x + 0.5) / UPSAMPLE - 0.5));
+      const c = Math.min(cols - 2, fx | 0);
+      const rx = fx - c;
+      const top = r0 * cols + c;
+      const v =
+        (seconds[top] + (seconds[top + 1] - seconds[top]) * rx) * (1 - ry) +
+        (seconds[top + cols] + (seconds[top + cols + 1] - seconds[top + cols]) * rx) * ry;
+      const a =
+        DESERT_ALPHA[1] * ramp(v, light) + (DESERT_ALPHA[2] - DESERT_ALPHA[1]) * ramp(v, strong);
+      if (a <= 0) continue;
+      rgba[o] = DESERT_RGB[0];
+      rgba[o + 1] = DESERT_RGB[1];
+      rgba[o + 2] = DESERT_RGB[2];
+      rgba[o + 3] = a * 255;
+    }
+  }
+  const raw = grid.seconds as Float32Array<ArrayBuffer>;
+  return { image: { width, height, rgba }, bbox: grid.bbox, grid: { cols, rows, seconds: raw } };
 }
 
 let warpCache: { key: string; field: ReturnType<typeof warpField> } | null = null;

@@ -36,11 +36,15 @@ Extra layers you turn on and off in the burger menu.
 
 ### Stop-frequency layer
 
+**Done** (PR #16): a menu switch draws a dot per station, coloured and sized by departures per hour (all platforms, lines and directions), for the Day or Night window. Tapping a dot shows the name, departures per hour and lines. Computed in the browser from the timetable already loaded, so the build pipeline is unchanged.
+
 A layer showing how often each stop is served, e.g. departures per hour in the Day and Night windows, drawn as sized or coloured stop markers.
 
 Notes: can be precomputed in timetable-build from stop_times per window and shipped as a small extra file.
 
 ### Transit-desert layer
+
+**Done** (PR #16): a menu switch shades places by access time, the walk to a stop plus the average wait there (half the gap between departures), counted per platform. Light shading over 10 min by day (20 at night), dark over 15 (30 at night) or with no stop within a 15-minute walk. Tapping shows the access time.
 
 A layer highlighting places that public transport serves poorly, e.g. areas far from any stop or only near stops with low frequency.
 

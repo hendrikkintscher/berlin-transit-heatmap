@@ -26,4 +26,7 @@ pnpm --dir packages/web build     # -> packages/web/dist
 - Interface text lives in `src/i18n.ts`, German by default with English. Static text in
   `index.html` names its string with `data-t`, `data-t-html`, `data-t-label` or
   `data-t-placeholder`. The menu (burger button) holds Lines, the language switch and About.
+- Map layers (`src/layers.ts`, in the menu, `?layers=freq,desert`): stop frequency (departures per
+  hour per station) and transit deserts (walk to a platform + half its gap between departures, on a
+  100 m grid; thresholds in `DESERT_THRESHOLDS`). The worker computes both per window on first use.
 - Address search (`src/search.ts`) only suggests places inside the heatmap area (`DEFAULT_BBOX`).

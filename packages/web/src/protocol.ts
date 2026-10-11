@@ -1,12 +1,13 @@
 // Messages between the UI thread (main.ts) and the routing worker (worker.ts).
-import type { FeatureCollection, LineString } from 'geojson';
+import type { FeatureCollection, LineString, Point } from 'geojson';
 
 export type Window = 'day' | 'night';
 
 export type ToWorker =
   | { type: 'init'; dataBase: string }
   | { type: 'load'; window: Window; quiet?: boolean }
-  | { type: 'compute'; id: number; window: Window; lat: number; lon: number };
+  | { type: 'compute'; id: number; window: Window; lat: number; lon: number }
+  | { type: 'layers'; window: Window };
 
 export interface TimetableInfo {
   window: Window;
@@ -21,6 +22,21 @@ export interface RouteProps {
   mode: string;
   /** Line names, heaviest first, joined with "/". */
   names: string;
+}
+
+export interface StationProps {
+  name: string;
+  /** Departures per hour in the window, all platforms and directions together. */
+  perHour: number;
+  /** Up to eight line names, S/U/Metro first, joined with ", ". */
+  lines: string;
+}
+
+/** A grid drawn as an image over [west, south, east, north], with its raw values for taps. */
+export interface RasterLayer {
+  image: { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> };
+  bbox: [number, number, number, number];
+  grid: { cols: number; rows: number; seconds: Float32Array<ArrayBuffer> };
 }
 
 export type FromWorker =
@@ -42,5 +58,12 @@ export type FromWorker =
       labels: FeatureCollection<LineString, { names: string }>;
       computedInMs: number;
       totalMs: number;
+    }
+  | {
+      type: 'layers';
+      window: Window;
+      stations: FeatureCollection<Point, StationProps>;
+      /** Access time (walk to a stop + half the average gap between departures), shaded. */
+      desert: RasterLayer;
     }
   | { type: 'error'; message: string };

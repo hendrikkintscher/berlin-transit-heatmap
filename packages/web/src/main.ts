@@ -13,7 +13,15 @@ import {
   t,
   type Lang,
 } from './i18n';
-import type { FromWorker, TimetableInfo, ToWorker, Window } from './protocol';
+import { DESERT_THRESHOLDS } from './layers';
+import type {
+  FromWorker,
+  RasterLayer,
+  StationProps,
+  TimetableInfo,
+  ToWorker,
+  Window,
+} from './protocol';
 
 const BERLIN: [number, number] = [13.405, 52.515];
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
@@ -22,6 +30,13 @@ const HEAT_LAYER = 'heat-raster';
 const ROUTES_SOURCE = 'routes';
 const LABELS_SOURCE = 'route-labels';
 const ROUTE_LAYERS = ['routes-casing', 'routes-line', 'routes-label'];
+const STATIONS_SOURCE = 'stations';
+const STATIONS_LAYER = 'stations-dot';
+const DESERT_SOURCE = 'desert';
+const DESERT_LAYER = 'desert-raster';
+/** Departures-per-hour steps for the stop-frequency dots, and their colours. */
+const FREQ_STEPS = [4, 12, 30, 60];
+const FREQ_COLORS = ['#c6dbef', '#6baed6', '#2171b5', '#08519c', '#08306b'];
 const HEAT_OPACITY = 0.7;
 
 // Line colours roughly follow the usual Berlin map conventions.
@@ -44,6 +59,9 @@ const feedInfo = $('feed-info');
 const infoDialog = $<HTMLDialogElement>('info');
 const segButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-window]')];
 const routesToggle = $<HTMLInputElement>('routes-toggle');
+const freqToggle = $<HTMLInputElement>('freq-toggle');
+const desertToggle = $<HTMLInputElement>('desert-toggle');
+const layerLegend = $('layer-legend');
 const menuDialog = $<HTMLDialogElement>('menu');
 const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
 
@@ -54,6 +72,9 @@ const state: {
   requestId: number;
   info: Partial<Record<Window, TimetableInfo>>;
   routes: boolean;
+  /** Stop-frequency dots and transit-desert shading. */
+  freq: boolean;
+  desert: boolean;
   /** Re-renders the status line, so it follows a language switch. */
   status: () => string;
 } = {
@@ -63,14 +84,22 @@ const state: {
   requestId: 0,
   info: {},
   routes: true,
+  freq: false,
+  desert: false,
   status: () => '',
 };
 type Result = Extract<FromWorker, { type: 'result' }>;
 let lastResult: Result | null = null;
+type Layers = Extract<FromWorker, { type: 'layers' }>;
+/** Layer data per window, fetched from the worker the first time a layer is shown. */
+const layerData: Partial<Record<Window, Layers>> = {};
+const layersRequested = new Set<Window>();
 
 // The heatmap is painted into this canvas and shown through a MapLibre canvas source.
 const heatCanvas = document.createElement('canvas');
 heatCanvas.width = heatCanvas.height = 1;
+const desertCanvas = document.createElement('canvas');
+desertCanvas.width = desertCanvas.height = 1;
 
 // ---------- legend ----------
 // Every band gets the same width, so the finer 20–50 min bands get the most room.
@@ -124,6 +153,9 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     const s = m.totalMs / 1000;
     setStatus(() => t('computed', { s: formatDecimal(s, 1) }));
     prefetchOtherWindow();
+  } else if (m.type === 'layers') {
+    layerData[m.window] = m;
+    if (m.window === state.window) showLayers();
   } else if (m.type === 'error') {
     loadbar.hidden = true;
     setStatus(() => t('failed', { message: m.message }));
@@ -161,6 +193,9 @@ function compute() {
 function readUrl() {
   const p = new URLSearchParams(location.search);
   if (p.get('routes') === '0') state.routes = false;
+  const layers = (p.get('layers') ?? '').split(',');
+  state.freq = layers.includes('freq');
+  state.desert = layers.includes('desert');
   const [lat, lon] = (p.get('from') ?? '').split(',').map(Number);
   if (Number.isFinite(lat) && Number.isFinite(lon) && lat && lon) state.origin = { lat, lon };
   if (p.get('w') === 'night') state.window = 'night';
@@ -170,6 +205,8 @@ function writeUrl() {
   if (state.origin) p.set('from', `${state.origin.lat.toFixed(5)},${state.origin.lon.toFixed(5)}`);
   if (state.window === 'night') p.set('w', 'night');
   if (!state.routes) p.set('routes', '0');
+  const layers = [state.freq && 'freq', state.desert && 'desert'].filter(Boolean).join(',');
+  if (layers) p.set('layers', layers);
   // Keep an explicit ?lang= so a shared English link stays English.
   if (urlLang && urlLang === lang()) p.set('lang', urlLang);
   const q = p.toString();
@@ -278,8 +315,115 @@ map.on('load', () => {
     },
     paint: { 'text-color': '#1d1d2b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
   });
+  map.addSource(DESERT_SOURCE, {
+    type: 'canvas',
+    canvas: desertCanvas,
+    coordinates: [
+      [13.08, 52.68],
+      [13.77, 52.68],
+      [13.77, 52.33],
+      [13.08, 52.33],
+    ],
+    animate: false,
+  });
+  map.addLayer(
+    {
+      id: DESERT_LAYER,
+      type: 'raster',
+      source: DESERT_SOURCE,
+      layout: { visibility: 'none' },
+      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear' },
+    },
+    ROUTE_LAYERS[0],
+  );
+  map.addSource(STATIONS_SOURCE, { type: 'geojson', data: empty });
+  map.addLayer(
+    {
+      id: STATIONS_LAYER,
+      type: 'circle',
+      source: STATIONS_SOURCE,
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'perHour'],
+          FREQ_COLORS[0],
+          ...FREQ_STEPS.flatMap((s, i) => [s, FREQ_COLORS[i + 1]]),
+        ] as unknown as maplibregl.ExpressionSpecification,
+        // Busier stations are bigger; everything grows as you zoom in.
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          ['interpolate', ['linear'], ['get', 'perHour'], 0, 1.2, 60, 2.5, 200, 4],
+          14,
+          ['interpolate', ['linear'], ['get', 'perHour'], 0, 4, 60, 8, 200, 12],
+        ] as unknown as maplibregl.ExpressionSpecification,
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 9, 0.4, 14, 1.5],
+      },
+    },
+    'routes-label',
+  );
   if (lastResult) showResult(lastResult);
+  showLayers();
 });
+
+/** Shows or hides the stop-frequency and desert layers, asking the worker for data once. */
+function showLayers() {
+  layerLegend.hidden = !(state.freq || state.desert);
+  renderLayerLegend();
+  if (!mapReady) return;
+  const data = layerData[state.window];
+  if ((state.freq || state.desert) && !data && !layersRequested.has(state.window)) {
+    layersRequested.add(state.window);
+    send({ type: 'layers', window: state.window });
+  }
+  map.setLayoutProperty(STATIONS_LAYER, 'visibility', state.freq && data ? 'visible' : 'none');
+  map.setLayoutProperty(DESERT_LAYER, 'visibility', state.desert && data ? 'visible' : 'none');
+  if (!data) return;
+  (map.getSource(STATIONS_SOURCE) as GeoJSONSource).setData(data.stations);
+  const { width, height, rgba } = data.desert.image;
+  desertCanvas.width = width;
+  desertCanvas.height = height;
+  desertCanvas.getContext('2d')!.putImageData(new ImageData(rgba, width, height), 0, 0);
+  const src = map.getSource(DESERT_SOURCE) as CanvasSource;
+  src.setCoordinates(cornerCoordinates(data.desert.bbox));
+  src.play();
+  src.pause();
+  map.triggerRepaint();
+}
+
+function cornerCoordinates([w, s, e, n]: [number, number, number, number]) {
+  return [
+    [w, n],
+    [e, n],
+    [e, s],
+    [w, s],
+  ] as [[number, number], [number, number], [number, number], [number, number]];
+}
+
+function renderLayerLegend() {
+  const rows: string[] = [];
+  if (state.freq) {
+    const labels = ['<4', '4', '12', '30', '60+'];
+    rows.push(
+      `<div class="ll-row"><span class="ll-title">${t('freqLegend')}</span>${FREQ_COLORS.map(
+        (c, i) => `<span class="ll-dot" style="background:${c}"></span><span>${labels[i]}</span>`,
+      ).join('')}</div>`,
+    );
+  }
+  if (state.desert) {
+    const [a, b] = DESERT_THRESHOLDS[state.window].map((x) => x / 60);
+    rows.push(
+      `<div class="ll-row"><span class="ll-title">${t('desertLegend')}</span>` +
+        `<span class="ll-box ll-light"></span><span>&gt;${a}</span>` +
+        `<span class="ll-box ll-strong"></span><span>&gt;${b} ${t('min')}</span></div>`,
+    );
+  }
+  layerLegend.innerHTML = rows.join('');
+}
 
 /** A font the basemap's glyph server has, taken from its own labels. */
 function textFont(): string[] {
@@ -306,7 +450,6 @@ function showResult(r: Result) {
   ];
   const src = map.getSource(HEAT_SOURCE) as CanvasSource | undefined;
   if (!src) {
-    const firstLine = ROUTE_LAYERS[0];
     map.addSource(HEAT_SOURCE, {
       type: 'canvas',
       canvas: heatCanvas,
@@ -324,7 +467,7 @@ function showResult(r: Result) {
           'raster-resampling': 'linear',
         },
       },
-      firstLine,
+      DESERT_LAYER,
     );
   } else {
     src.setCoordinates(coordinates);
@@ -337,7 +480,7 @@ function showResult(r: Result) {
   map.triggerRepaint();
 }
 
-function gridSeconds(r: Result, lat: number, lon: number): number {
+function gridSeconds(r: RasterLayer, lat: number, lon: number): number {
   const [w, s, e, n] = r.bbox;
   const { cols, rows, seconds } = r.grid;
   const c = Math.floor(((lon - w) / (e - w)) * cols);
@@ -354,28 +497,50 @@ map.on('click', (e: MapMouseEvent) => {
     return;
   }
   const { lat, lng } = e.lngLat;
-  if (!state.origin) {
-    setOrigin(lat, lng);
-    return;
-  }
-  const secs = lastResult ? gridSeconds(lastResult, lat, lng) : Infinity;
-  const when = t(state.window === 'day' ? 'byDay' : 'atNight');
-  let html =
-    secs === Infinity ? t('unreachable') : t('minutes', { n: Math.round(secs / 60), when });
-  if (state.routes) {
-    const { x, y } = e.point;
-    const hit = map.queryRenderedFeatures(
+  const { x, y } = e.point;
+  const near = (layers: string[]) =>
+    map.queryRenderedFeatures(
       [
         [x - 8, y - 8],
         [x + 8, y + 8],
       ],
-      { layers: ['routes-line'] },
+      { layers },
     );
-    const top = hit.sort((a, b) => b.properties.share - a.properties.share)[0];
-    if (top) {
-      const pct = Math.round(100 * (top.properties.share as number));
-      html = t('lineShare', { names: escapeHtml(String(top.properties.names)), pct });
+  const data = layerData[state.window];
+  const station = state.freq && data ? near([STATIONS_LAYER])[0] : undefined;
+  let html: string;
+  if (station) {
+    const p = station.properties as StationProps;
+    html =
+      t('stationFreq', { name: escapeHtml(p.name), n: p.perHour }) +
+      (p.lines ? `<small>${escapeHtml(p.lines)}</small>` : '');
+  } else if (!state.origin && !(state.desert && data)) {
+    setOrigin(lat, lng);
+    return;
+  } else {
+    const secs = lastResult && state.origin ? gridSeconds(lastResult, lat, lng) : NaN;
+    const when = t(state.window === 'day' ? 'byDay' : 'atNight');
+    const parts: string[] = [];
+    if (secs === Infinity) parts.push(t('unreachable'));
+    else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60), when }));
+    if (state.routes && state.origin) {
+      const top = near(['routes-line']).sort((a, b) => b.properties.share - a.properties.share)[0];
+      if (top) {
+        const pct = Math.round(100 * (top.properties.share as number));
+        parts.splice(
+          0,
+          1,
+          t('lineShare', { names: escapeHtml(String(top.properties.names)), pct }),
+        );
+      }
     }
+    if (state.desert && data) {
+      const access = gridSeconds(data.desert, lat, lng);
+      parts.push(
+        access === Infinity ? t('accessNone') : t('access', { n: Math.round(access / 60) }),
+      );
+    }
+    html = parts.join('<br>');
   }
   readoutText.innerHTML = html;
   state.pending = { lat, lon: lng };
@@ -397,6 +562,7 @@ function setWindow(w: Window) {
   readout.hidden = true;
   renderFeedInfo();
   writeUrl();
+  showLayers();
   if (state.origin) compute();
   else send({ type: 'load', window: w });
 }
@@ -415,6 +581,17 @@ function setRoutes(on: boolean) {
 }
 routesToggle.addEventListener('change', () => setRoutes(routesToggle.checked));
 routesToggle.checked = state.routes;
+
+function setLayer(name: 'freq' | 'desert', on: boolean) {
+  state[name] = on;
+  readout.hidden = true;
+  showLayers();
+  writeUrl();
+}
+freqToggle.addEventListener('change', () => setLayer('freq', freqToggle.checked));
+desertToggle.addEventListener('change', () => setLayer('desert', desertToggle.checked));
+freqToggle.checked = state.freq;
+desertToggle.checked = state.desert;
 
 // ---------- menu and language ----------
 $('menu-btn').addEventListener('click', () => {
@@ -438,6 +615,7 @@ function applyLang(l: Lang, remember: boolean) {
   setLang(l, remember);
   for (const b of langButtons) b.setAttribute('aria-checked', String(b.dataset.lang === l));
   renderFeedInfo();
+  renderLayerLegend();
   statusEl.textContent = state.status();
   readout.hidden = true;
   searchCache.clear();
