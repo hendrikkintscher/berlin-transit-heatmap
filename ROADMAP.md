@@ -142,11 +142,15 @@ A one-time hint to add the app to the home screen (Android and iOS), and a first
 
 ### Thin 5-minute outlines
 
+**Done** (PR #23): the outlines switch now draws a thin line every 5 minutes up to an hour, with 15, 30 and 45 bolder and labelled.
+
 Hendrik's follow-up to the outlines: thin lines every 5 minutes, with the 15, 30 and 45-minute lines staying bolder and labelled, so the map reads like a contour map.
 
 Notes: the worker already traces outlines per level (contours.ts), so this adds levels 5, 10, 20, 25 and so on up to 60 with a thin, lighter line. Possibly only from zoom 11, so the city view doesn't get crowded; the outline payload grows a few times but stays small.
 
 ### Blending the heatmap with the streets
+
+**Done** (PR #23): the colours now sit under the basemap's roads, so streets show as white lines on top (faint in the city view, full strength from street level). Default opacity rose from 70 to 80 %; the slider stays.
 
 A way of drawing the heatmap so both the colours and the streets and labels read well, instead of trading one for the other with the opacity slider.
 

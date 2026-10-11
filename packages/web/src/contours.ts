@@ -1,8 +1,8 @@
-// Isochrone outlines: lines where the travel time crosses 15, 30 and 45 minutes, traced
+// Isochrone outlines: lines where the travel time crosses each 5-minute step up to an hour, traced
 // from the grid with marching squares and joined into polylines.
 import type { FeatureCollection, LineString } from 'geojson';
 
-export const CONTOUR_MINUTES = [15, 30, 45] as const;
+export const CONTOUR_MINUTES = Array.from({ length: 12 }, (_, i) => 5 * (i + 1));
 /** Pieces shorter than this many points are walk bubbles around single stops; dropped. */
 const MIN_POINTS = 40;
 
