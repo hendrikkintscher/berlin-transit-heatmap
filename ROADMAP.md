@@ -1,15 +1,14 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–8 are done. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–9 are done. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
-State on 2026-10-11, live through PR #45. Build in this order, one step per PR:
+State on 2026-10-11, live through PR #47. Build in this order, one step per PR:
 
-1. **Next:** Bike + transit and bike only (group 9)
-2. Smaller, faster first load (group 10)
-3. Android app, starting with a TWA (group 11)
-4. Ersatzverkehr and other temporary changes (group 12)
+1. **Next:** Smaller, faster first load (group 10)
+2. Android app, starting with a TWA (group 11)
+3. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -329,6 +328,8 @@ A switch that uses only stops and trips marked wheelchair-accessible in the VBB 
 Notes: VBB GTFS has wheelchair_boarding for many stops and trips, but coverage may be patchy; check it before building. Medium effort.
 
 ### Bike + transit and bike only
+
+**Done** (PR #47): a new "Unterwegs" choice in the menu: Zu Fuß (as before), Rad + Bahn (cycle at 15 km/h to the station and from the last stop, 2 min per station to take the bike along, no buses, cycling all the way where that is quicker) or Nur Rad (up to 60 min on streets and paths). Kept in links as `go=bike` / `go=bikeonly`; cycled legs of a tapped trip are drawn along the streets as a thin solid line.
 
 A mode that cycles (about 15 km/h) to and from stations instead of walking, and a bike-only map for comparison. Taking the bike on the train and parking it can be a fixed time penalty.
 
