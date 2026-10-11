@@ -350,6 +350,23 @@
         <input id="opacity" type="range" min="15" max="95" step="5" value="80" />
       </label>
 
+      <h3 data-t="travelTitle">Unterwegs</h3>
+      <div class="seg seg-wide" role="radiogroup" aria-label="Unterwegs" data-t-label="travelTitle">
+        <button role="radio" data-travel="walk" aria-checked="true" data-t="travelWalk">
+          Zu Fuß
+        </button>
+        <button role="radio" data-travel="bike" aria-checked="false" data-t="travelBike">
+          Rad + Bahn
+        </button>
+        <button role="radio" data-travel="bikeonly" aria-checked="false" data-t="travelBikeOnly">
+          Nur Rad
+        </button>
+      </div>
+      <p class="menu-note" data-t="travelHelp">
+        Rad + Bahn: mit 15 km/h zur Station und vom Ausstieg zum Ziel, 2 Min. pro Station fürs
+        Mitnehmen, ohne Busse. Nur Rad: bis 60 Min. auf Straßen und Wegen.
+      </p>
+
       <h3 data-t="walkTitle">Gehtempo</h3>
       <div class="seg seg-wide" role="radiogroup" aria-label="Gehtempo" data-t-label="walkTitle">
         <button role="radio" data-walk="3" aria-checked="false">3 km/h</button>

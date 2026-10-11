@@ -106,6 +106,13 @@ const de = {
   install: 'Als App installieren',
   installNow: 'Installieren',
   iso: 'Umrisse alle 5 Min.',
+  travelTitle: 'Unterwegs',
+  travelWalk: 'Zu Fuß',
+  travelBike: 'Rad + Bahn',
+  travelBikeOnly: 'Nur Rad',
+  travelHelp:
+    'Rad + Bahn: mit 15 km/h zur Station und vom Ausstieg zum Ziel, 2 Min. pro Station fürs Mitnehmen, ohne Busse. Nur Rad: bis 60 Min. auf Straßen und Wegen.',
+  travelBikeOnlyPill: 'Nur Rad 🚲',
   stepFree: 'Stufenlos',
   stepFreeHint:
     'Für Rollstuhl, Kinderwagen und Koffer: nur Bahnsteige mit Aufzug oder Rampe und Fahrzeuge, die als barrierefrei markiert sind',
@@ -153,6 +160,7 @@ const de = {
   cmpMinutes: '<b>{a} → {b} Min.</b> ({d})',
   legendDiff: 'Legende: Minuten länger oder kürzer zur Vergleichszeit',
   tripWalk: '{n} Min. Fußweg',
+  tripBike: '{n} Min. Rad',
   tripStops: '{n} Stat.',
   tripNone: 'Keine Verbindung gefunden',
   noTransfer: 'ohne Umstieg',
@@ -268,6 +276,13 @@ const en: Record<Key, string> = {
   install: 'Install as an app',
   installNow: 'Install',
   iso: 'Outlines every 5 min',
+  travelTitle: 'Getting around',
+  travelWalk: 'On foot',
+  travelBike: 'Bike + train',
+  travelBikeOnly: 'Bike only',
+  travelHelp:
+    'Bike + train: 15 km/h to the station and from the last stop, 2 min per station to take the bike along, no buses. Bike only: up to 60 min on streets and paths.',
+  travelBikeOnlyPill: 'Bike only 🚲',
   stepFree: 'Step-free',
   stepFreeHint:
     'For wheelchairs, prams and suitcases: only platforms with a lift or ramp, and vehicles marked accessible',
@@ -314,6 +329,7 @@ const en: Record<Key, string> = {
   cmpMinutes: '<b>{a} → {b} min</b> ({d})',
   legendDiff: 'Legend: minutes longer or shorter at the comparison time',
   tripWalk: 'walk {n} min',
+  tripBike: 'cycle {n} min',
   tripStops: '{n} stops',
   tripNone: 'No connection found',
   noTransfer: 'no change',

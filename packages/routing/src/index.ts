@@ -27,6 +27,7 @@ export type { RouteUsageOptions, UsedSegment } from './usage';
 export { routeUsage } from './usage';
 export type { Journey, JourneyLeg } from './journey';
 export { journeyTo } from './journey';
+export { BIKE_ONLY_MAX_SECONDS, BIKE_SPEED_MPS, BIKE_STATION_SECONDS, bikeTimetable } from './bike';
 export type { Snaps, WalkLabels, WalkNetwork } from './walk';
 export {
   loadWalkNetwork,

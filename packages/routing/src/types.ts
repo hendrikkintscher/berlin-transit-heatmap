@@ -79,6 +79,11 @@ export interface TravelTimeOptions {
    * (Addition to Contract 2.)
    */
   walkSpeedMps?: number;
+  /**
+   * Added to the time of every stop reached from the origin, e.g. for taking a bike
+   * into the station. Not added to stops reached by riding. (Addition to Contract 2.)
+   */
+  accessPenaltySeconds?: number;
   /** Maximum number of transit legs. Default 6. */
   maxRounds?: number;
   /** Also record the last leg of each stop's fastest journey (result.legs). Default false. */
@@ -143,6 +148,16 @@ export interface HeatGridOptions {
   walk?: WalkNetwork;
   /** Walking speed, as in TravelTimeOptions. (Addition to Contract 2.) */
   walkSpeedMps?: number;
+  /**
+   * Added to the way from every stop to a cell, e.g. for taking a bike out of the
+   * station. The way straight from the origin has none. (Addition to Contract 2.)
+   */
+  egressPenaltySeconds?: number;
+  /**
+   * How far the way straight from the origin may go, in seconds, when that is
+   * further than from a stop (e.g. cycling all the way). (Addition to Contract 2.)
+   */
+  maxOriginSeconds?: number;
   /** [minLon, minLat, maxLon, maxLat]. Default DEFAULT_BBOX (Berlin). (Addition to Contract 2.) */
   bbox?: [number, number, number, number];
   /** Also record which stop each cell's time comes from (grid.stop). Default false. (Addition to Contract 2.) */

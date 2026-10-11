@@ -90,6 +90,7 @@ export function heatGrid(
   };
 
   const stopSeconds = result.stopSeconds;
+  const egress = opts.egressPenaltySeconds ?? 0;
   const net = opts.walk;
   const stopSnap = net ? snapStops(net, tt) : null;
   const originSnap = net && result.origin ? snapOrigin(net, result.origin) : null;
@@ -97,7 +98,7 @@ export function heatGrid(
   for (let s = 0; s < tt.stopCount; s++) {
     const t = stopSeconds[s];
     if (t === Infinity || t !== t || (stopSnap && stopSnap.edge[s] >= 0)) continue;
-    scatter(tt.stopLat[s], tt.stopLon[s], t, s);
+    scatter(tt.stopLat[s], tt.stopLon[s], t + egress, s);
   }
   if (result.origin && !(originSnap && originSnap.edge[0] >= 0))
     scatter(result.origin.lat, result.origin.lon, 0, -1);
@@ -112,13 +113,15 @@ export function heatGrid(
     for (let s = 0; s < tt.stopCount; s++) {
       const t = stopSeconds[s];
       if (t === Infinity || t !== t || stopSnap.edge[s] < 0) continue;
-      sources.add(net, stopSnap, s, t, 0, s);
+      sources.add(net, stopSnap, s, t + egress, 0, s);
       const list = edgeStop.get(stopSnap.edge[s]);
       if (list) list.push(s);
       else edgeStop.set(stopSnap.edge[s], [s]);
     }
     const originEdge = originSnap ? originSnap.edge[0] : -1;
-    if (originSnap && originEdge >= 0) sources.add(net, originSnap, 0, 0, 0, -1);
+    // The origin may go further than the stops: it starts with that much "less walked".
+    const originExtraM = Math.max(0, (opts.maxOriginSeconds ?? 0) * speeds.network - fallbackM);
+    if (originSnap && originEdge >= 0) sources.add(net, originSnap, 0, 0, -originExtraM, -1);
     const labels = walkFrom(
       net,
       sources.nodes,
@@ -178,7 +181,7 @@ export function heatGrid(
       if (here)
         for (const s of here) {
           w = sameEdgeMetres(net, stopSnap, s, cells, k);
-          t = stopSeconds[s] + w * pace;
+          t = stopSeconds[s] + egress + w * pace;
           if (w <= maxM) {
             if (t < v) {
               v = t;
