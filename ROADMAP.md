@@ -90,11 +90,15 @@ Small additions that make the map quicker to use day to day. All are small (an a
 
 ### "Mein Standort" button
 
+**Done** (PR #21): a locate button in the top bar sets the start at the phone's position; outside the map it says so.
+
 A locate button next to search that sets the start point at the phone's position. If the position is outside the covered area, the app says so instead of moving the start.
 
 Notes: MapLibre's GeolocateControl or a small custom button; asks for location permission only when tapped.
 
 ### Share button
+
+**Done** (PR #21): the first button in the menu shares the current link through the phone's share sheet, or copies it.
 
 A button that shares the current view (start, second start, departure time, layers) through the phone's share sheet, with a copy-link fallback. Most useful with the meeting point: "here is where we can both get to".
 
@@ -102,9 +106,13 @@ Notes: the URL already holds all of this; `navigator.share` with a clipboard fal
 
 ### Heatmap transparency slider
 
+**Done** (PR #21): a slider in the menu (15–95 %, remembered on the device).
+
 A slider in the menu for the heatmap's opacity (fixed at 70 % today), so street names and landmarks show through when you need to find your way. A press-and-hold on the map to peek at the base map is an alternative.
 
 ### Isochrone outlines
+
+**Done** (PR #21): a menu switch draws outlines at 15, 30 and 45 minutes (bolder for shorter times, labelled), traced from a smoothed grid; small walk bubbles are left out. Kept in the link (`layers=iso`).
 
 Optional thin contour lines at 15, 30 and 45 minutes on top of the heatmap, so "what's within half an hour" reads at a glance and stays readable when the heatmap is faint.
 
@@ -112,15 +120,21 @@ Notes: traced from the existing grid in the worker (marching squares) and drawn 
 
 ### Data freshness note
 
+**Done** (PR #21): the menu names the timetable day and says that engineering works and disruptions are not included; the About text explains the reference days.
+
 A short line under the legend or in the About text: "Fahrplan vom 1. Oktober, Baustellen nicht berücksichtigt". Sets expectations about planned closures, which are common on S-Bahn and U-Bahn lines.
 
 Notes: mostly wording; the build info already has the reference days. The build could also confirm the reference days are not holidays (it already skips them).
 
 ### Install hint and first-run help
 
+**Done** (PR #21): after the first map, a hint explains tapping and dragging; on a later visit, Android shows an install button (also in the menu) and iPhones a short how-to. Each hint shows once.
+
 A one-time hint to add the app to the home screen (Android and iOS), and a first-run hint for the two gestures: tap to set the start, tap again for minutes.
 
 ### Small polish
+
+**Done** (PR #21): the status line fades after 5 seconds, wide screens show the app title, and a dashed frame marks the computed area.
 
 - Fade the status line out a few seconds after a start point is set, so it doesn't sit under the tap card near the legend.
 - A left-aligned app title ("Berlin in Minuten") in the top bar, so screenshots explain themselves.

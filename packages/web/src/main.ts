@@ -2,7 +2,7 @@ import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent }
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import { BAND_COLORS, BAND_EDGES_MIN, bandLabel } from './colors';
-import { reversePlace, searchPlaces, type Place } from './search';
+import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import {
   loadFavourites,
   newId,
@@ -53,7 +53,10 @@ const DESERT_LAYER = 'desert-raster';
 /** Departures-per-hour steps for the stop-frequency dots, and their colours. */
 const FREQ_STEPS = [4, 12, 30, 60];
 const FREQ_COLORS = ['#c6dbef', '#6baed6', '#2171b5', '#08519c', '#08306b'];
-const HEAT_OPACITY = 0.7;
+const OUTLINES_SOURCE = 'outlines';
+const OUTLINE_LAYERS = ['outlines-line', 'outlines-label'];
+const AREA_SOURCE = 'area';
+const DEFAULT_OPACITY = 70;
 
 // Line colours roughly follow the usual Berlin map conventions.
 const MODE_COLORS: Record<string, string> = {
@@ -87,6 +90,13 @@ const favList = $<HTMLUListElement>('fav-list');
 const secondBtn = $<HTMLButtonElement>('readout-second');
 const menuDialog = $<HTMLDialogElement>('menu');
 const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
+const isoToggle = $<HTMLInputElement>('iso-toggle');
+const opacityInput = $<HTMLInputElement>('opacity');
+const locateBtn = $<HTMLButtonElement>('locate-btn');
+const tip = $('tip');
+const tipText = $('tip-text');
+const tipAction = $<HTMLButtonElement>('tip-action');
+const installBtn = $<HTMLButtonElement>('install-btn');
 
 const state: {
   /** Weekday or weekend, and the departure hour; `window` names its timetable file. */
@@ -102,6 +112,10 @@ const state: {
   /** Stop-frequency dots and transit-desert shading. */
   freq: boolean;
   desert: boolean;
+  /** Isochrone outlines at 15/30/45 min. */
+  iso: boolean;
+  /** Heatmap opacity in percent; remembered on this device. */
+  opacity: number;
   /** Re-renders the status line, so it follows a language switch. */
   status: () => string;
 } = {
@@ -115,6 +129,8 @@ const state: {
   routes: true,
   freq: false,
   desert: false,
+  iso: false,
+  opacity: readNumber('heat-opacity', DEFAULT_OPACITY),
   status: () => '',
 };
 type Result = Extract<FromWorker, { type: 'result' }>;
@@ -151,9 +167,32 @@ $('legend-ticks').append(
   }),
 );
 
-function setStatus(render: () => string) {
+/** Small per-device settings and "hint seen" flags; storage may be blocked. */
+function readNumber(key: string, fallback: number): number {
+  try {
+    const v = Number(localStorage.getItem(key));
+    return localStorage.getItem(key) !== null && Number.isFinite(v) ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function remember(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage blocked: the setting lasts for this visit only.
+  }
+}
+const seen = (key: string) => readNumber(`seen-${key}`, 0) > 0;
+
+let statusTimer = 0;
+/** Sets the status line; `fade` hides it again after a few seconds. */
+function setStatus(render: () => string, fade = false) {
   state.status = render;
   statusEl.textContent = render();
+  statusEl.classList.remove('faded');
+  clearTimeout(statusTimer);
+  if (fade) statusTimer = window.setTimeout(() => statusEl.classList.add('faded'), 5000);
 }
 
 // ---------- worker ----------
@@ -180,7 +219,8 @@ worker.onmessage = (ev: MessageEvent<FromWorker>) => {
     showResult(m);
     loadbar.hidden = true;
     const s = m.totalMs / 1000;
-    setStatus(() => t('computed', { s: formatDecimal(s, 1) }));
+    setStatus(() => t('computed', { s: formatDecimal(s, 1) }), true);
+    showTips();
   } else if (m.type === 'layers') {
     layerData[m.window] = m;
     if (m.window === state.window) showLayers();
@@ -195,6 +235,17 @@ function renderFeedInfo() {
   feedInfo.textContent = i
     ? t('feedInfo', { date: i.serviceDate, version: i.feedVersion, stops: formatNumber(i.stops) })
     : t('feedLoading');
+  $('data-note').textContent = i ? t('dataNote', { date: formatDate(i.serviceDate) }) : '';
+}
+/** "13.10.2026" / "13 Oct 2026" from an ISO date. */
+function formatDate(iso: string) {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(lang() === 'de' ? 'de-DE' : 'en-GB', {
+    day: 'numeric',
+    month: lang() === 'de' ? 'numeric' : 'short',
+    year: 'numeric',
+  });
 }
 
 function compute() {
@@ -219,6 +270,7 @@ function readUrl() {
   const layers = (p.get('layers') ?? '').split(',');
   state.freq = layers.includes('freq');
   state.desert = layers.includes('desert');
+  state.iso = layers.includes('iso');
   state.origin = parsePoint(p.get('from'));
   state.second = state.origin ? parsePoint(p.get('with')) : null;
   state.when = whenFromParams(p);
@@ -235,7 +287,9 @@ function writeUrl() {
   if (state.second) p.set('with', pointParam(state.second));
   if (state.window !== windowName(DEFAULT_WHEN)) p.set('t', state.window);
   if (!state.routes) p.set('routes', '0');
-  const layers = [state.freq && 'freq', state.desert && 'desert'].filter(Boolean).join(',');
+  const layers = [state.freq && 'freq', state.desert && 'desert', state.iso && 'iso']
+    .filter(Boolean)
+    .join(',');
   if (layers) p.set('layers', layers);
   // Keep an explicit ?lang= so a shared English link stays English.
   if (urlLang && urlLang === lang()) p.set('lang', urlLang);
@@ -386,6 +440,79 @@ map.on('load', () => {
     },
     ROUTE_LAYERS[0],
   );
+  map.addSource(OUTLINES_SOURCE, { type: 'geojson', data: empty });
+  const isoVisibility = state.iso ? 'visible' : 'none';
+  map.addLayer(
+    {
+      id: 'outlines-line',
+      type: 'line',
+      source: OUTLINES_SOURCE,
+      layout: { 'line-join': 'round', visibility: isoVisibility },
+      paint: {
+        'line-color': '#1d1530',
+        'line-opacity': ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 0.6],
+        // 15 min boldest, 45 min thinnest and dashed, so the rings tell apart.
+        'line-width': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          ['match', ['get', 'min'], 15, 2, 30, 1.5, 1.1],
+          14,
+          ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 1.8],
+        ],
+      },
+    },
+    ROUTE_LAYERS[0],
+  );
+  map.addLayer({
+    id: 'outlines-label',
+    type: 'symbol',
+    source: OUTLINES_SOURCE,
+    layout: {
+      visibility: isoVisibility,
+      'symbol-placement': 'line',
+      'symbol-spacing': 300,
+      'text-field': ['concat', ['to-string', ['get', 'min']], ' min'],
+      'text-font': font,
+      'text-size': 11,
+      'text-keep-upright': true,
+    },
+    paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
+  });
+  // A faint frame where the computed area ends.
+  const [aw, as, ae, an] = SEARCH_BBOX;
+  map.addSource(AREA_SOURCE, {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [aw, an],
+          [ae, an],
+          [ae, as],
+          [aw, as],
+          [aw, an],
+        ],
+      },
+    },
+  });
+  map.addLayer(
+    {
+      id: 'area-outline',
+      type: 'line',
+      source: AREA_SOURCE,
+      paint: {
+        'line-color': '#5e1f8c',
+        'line-opacity': 0.4,
+        'line-width': 1.5,
+        'line-dasharray': [3, 2],
+      },
+    },
+    firstSymbol,
+  );
   map.addSource(STATIONS_SOURCE, { type: 'geojson', data: empty });
   map.addLayer(
     {
@@ -513,7 +640,7 @@ function showResult(r: Result) {
         type: 'raster',
         source: HEAT_SOURCE,
         paint: {
-          'raster-opacity': HEAT_OPACITY,
+          'raster-opacity': state.opacity / 100,
           'raster-fade-duration': 0,
           'raster-resampling': 'linear',
         },
@@ -528,6 +655,7 @@ function showResult(r: Result) {
   }
   (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
   (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
+  (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
   map.triggerRepaint();
 }
 
@@ -600,6 +728,7 @@ map.on('click', (e: MapMouseEvent) => {
   state.pending = { lat, lon: lng };
   secondBtn.hidden = !state.origin;
   readout.hidden = false;
+  if (tipKey === 'tap') hideTip();
 });
 
 function escapeHtml(t: string): string {
@@ -701,6 +830,134 @@ desertToggle.addEventListener('change', () => setLayer('desert', desertToggle.ch
 freqToggle.checked = state.freq;
 desertToggle.checked = state.desert;
 
+function setIso(on: boolean) {
+  state.iso = on;
+  if (mapReady) {
+    for (const id of OUTLINE_LAYERS)
+      map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+  }
+  writeUrl();
+}
+isoToggle.addEventListener('change', () => setIso(isoToggle.checked));
+isoToggle.checked = state.iso;
+
+opacityInput.value = String(state.opacity);
+opacityInput.addEventListener('input', () => {
+  state.opacity = Number(opacityInput.value);
+  remember('heat-opacity', opacityInput.value);
+  if (map.getLayer(HEAT_LAYER))
+    map.setPaintProperty(HEAT_LAYER, 'raster-opacity', state.opacity / 100);
+});
+
+// ---------- my location ----------
+locateBtn.addEventListener('click', () => {
+  if (!('geolocation' in navigator)) {
+    setStatus(() => t('locateFailed'));
+    return;
+  }
+  closeSearch();
+  locateBtn.classList.add('busy');
+  setStatus(() => t('locating'));
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      locateBtn.classList.remove('busy');
+      const [w, s, e, n] = SEARCH_BBOX;
+      const { latitude: lat, longitude: lon } = coords;
+      if (lon < w || lon > e || lat < s || lat > n) {
+        setStatus(() => t('locateOutside'));
+        return;
+      }
+      setOrigin(lat, lon);
+      map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
+    },
+    (err) => {
+      locateBtn.classList.remove('busy');
+      setStatus(() => t(err.code === err.PERMISSION_DENIED ? 'locateDenied' : 'locateFailed'));
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+  );
+});
+
+// ---------- share ----------
+$('share-btn').addEventListener('click', async () => {
+  const url = location.href;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: t('title'), text: t('shareText'), url });
+      menuDialog.close();
+    } catch {
+      // Cancelled by the user.
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    menuDialog.close();
+    setStatus(() => t('linkCopied'), true);
+  } catch {
+    prompt(t('share'), url);
+  }
+});
+
+// ---------- hints: first use, then installing the app ----------
+type InstallEvent = Event & { prompt: () => Promise<void> };
+let installEvent: InstallEvent | null = null;
+const standalone = () =>
+  matchMedia('(display-mode: standalone)').matches ||
+  (navigator as Navigator & { standalone?: boolean }).standalone === true;
+const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+let tipKey = '';
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installEvent = e as InstallEvent;
+  installBtn.hidden = false;
+});
+window.addEventListener('appinstalled', () => {
+  installEvent = null;
+  installBtn.hidden = true;
+  if (tipKey === 'install') hideTip();
+});
+async function install() {
+  if (!installEvent) return;
+  await installEvent.prompt().catch(() => {});
+  installEvent = null;
+  installBtn.hidden = true;
+  hideTip();
+}
+installBtn.addEventListener('click', () => {
+  menuDialog.close();
+  void install();
+});
+
+/** One hint at a time: how to read the map on first use, on a later visit how to install. */
+function showTips() {
+  if (!tip.hidden) return;
+  if (!seen('tap')) showTip('tap');
+  else if (!seen('install') && !standalone() && (installEvent || isIos)) showTip('install');
+}
+function showTip(key: 'tap' | 'install') {
+  tipKey = key;
+  renderTip();
+  tip.hidden = false;
+  // A hint counts as seen once shown, so it never comes back on the next visit.
+  remember(`seen-${key}`, '1');
+}
+function renderTip() {
+  if (!tipKey) return;
+  tipText.textContent = t(
+    tipKey === 'tap' ? 'tipTap' : installEvent ? 'tipInstall' : 'tipInstallIos',
+  );
+  tipAction.hidden = !(tipKey === 'install' && installEvent);
+  tipAction.textContent = t('installNow');
+}
+function hideTip() {
+  tip.hidden = true;
+  tipKey = '';
+}
+$('tip-close').addEventListener('click', hideTip);
+tipAction.addEventListener('click', () => void install());
+
 // ---------- menu and language ----------
 $('menu-btn').addEventListener('click', () => {
   closeSearch();
@@ -726,6 +983,7 @@ function applyLang(l: Lang, remember: boolean) {
   renderLayerLegend();
   renderFavourites();
   renderWhen();
+  renderTip();
   statusEl.textContent = state.status();
   readout.hidden = true;
   searchCache.clear();

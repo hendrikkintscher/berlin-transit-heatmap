@@ -1,5 +1,6 @@
 // Messages between the UI thread (main.ts) and the routing worker (worker.ts).
 import type { FeatureCollection, LineString, Point } from 'geojson';
+import type { ContourProps } from './contours';
 
 /** A timetable window, e.g. "weekday-10" (see when.ts). */
 export type Window = string;
@@ -67,6 +68,8 @@ export type FromWorker =
       routes: FeatureCollection<LineString, RouteProps>;
       /** The busier hops chained into longer lines per name set, for labels. */
       labels: FeatureCollection<LineString, { names: string }>;
+      /** Isochrone outlines at 15, 30 and 45 minutes. */
+      outlines: FeatureCollection<LineString, ContourProps>;
       computedInMs: number;
       totalMs: number;
     }
