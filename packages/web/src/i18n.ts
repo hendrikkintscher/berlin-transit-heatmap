@@ -116,6 +116,7 @@ const de = {
   aboutData:
     'Die Karte nutzt den regulären Fahrplan eines Werktags (Dienstag bis Donnerstag) und eines Samstags. Baustellen, Ersatzverkehr und Störungen an anderen Tagen sind nicht berücksichtigt.',
   tipClose: 'Hinweis schließen',
+  readoutClose: 'Auswahl schließen',
   tipTap: 'Tippe auf einen Ort für die Minuten. Den Startpunkt kannst du ziehen.',
   tipInstall: 'Als App auf dem Startbildschirm, auch offline.',
   tipInstallIos: 'Als App: Teilen-Symbol, dann „Zum Home-Bildschirm“.',
@@ -274,6 +275,7 @@ const en: Record<Key, string> = {
   aboutData:
     'The map uses the regular timetable of a weekday (Tuesday to Thursday) and a Saturday. Engineering works, replacement services and disruptions on other days are not included.',
   tipClose: 'Close hint',
+  readoutClose: 'Close selection',
   tipTap: 'Tap a place to see the minutes. You can drag the start point.',
   tipInstall: 'Install it on your home screen, works offline too.',
   tipInstallIos: 'As an app: tap Share, then “Add to Home Screen”.',

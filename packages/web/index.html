@@ -144,6 +144,7 @@
       >
       <button
         id="meet-close"
+        class="x"
         type="button"
         aria-label="Zweiten Startpunkt entfernen"
         data-t-label="meetClose"
@@ -156,6 +157,7 @@
       <span id="cmp-text"></span>
       <button
         id="cmp-close"
+        class="x"
         type="button"
         aria-label="Vergleich beenden"
         data-t-label="compareClose"
@@ -170,10 +172,19 @@
       <div id="tip" class="chip tip" role="note" hidden>
         <span id="tip-text"></span>
         <button id="tip-action" type="button" hidden></button>
-        <button id="tip-close" type="button" aria-label="Hinweis schließen" data-t-label="tipClose">
+        <button
+          id="tip-close"
+          class="x"
+          type="button"
+          aria-label="Hinweis schließen"
+          data-t-label="tipClose"
+        >
           ✕
         </button>
       </div>
+      <button id="fav-score" class="chip fav-score" type="button" hidden></button>
+      <div id="status" class="status" aria-live="polite"></div>
+      <div id="layer-legend" class="layer-legend" hidden></div>
       <div id="readout" class="chip" hidden>
         <span id="readout-text"></span>
         <span class="readout-btns">
@@ -186,10 +197,16 @@
             Entfernen
           </button>
         </span>
+        <button
+          id="readout-close"
+          class="x"
+          type="button"
+          aria-label="Auswahl schließen"
+          data-t-label="readoutClose"
+        >
+          ✕
+        </button>
       </div>
-      <button id="fav-score" class="chip fav-score" type="button" hidden></button>
-      <div id="status" class="status" aria-live="polite"></div>
-      <div id="layer-legend" class="layer-legend" hidden></div>
       <div class="legend" aria-label="Legende Reisezeit in Minuten" data-t-label="legend">
         <div id="legend-bar"></div>
         <div id="legend-ticks" class="legend-ticks"></div>

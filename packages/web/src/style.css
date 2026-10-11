@@ -107,8 +107,16 @@ body {
   color: #e4d6f2;
 }
 .round {
+  /* True circles on every browser: no shrinking, no default padding or button look. */
+  flex: none;
+  display: grid;
+  place-items: center;
   width: 46px;
   height: 46px;
+  aspect-ratio: 1;
+  padding: 0;
+  -webkit-appearance: none;
+  appearance: none;
   border-radius: 50%;
   border: 0;
   background: var(--panel);
@@ -143,7 +151,7 @@ body {
   z-index: 4;
   left: calc(var(--sl) + 10px);
   right: calc(var(--sr) + 10px);
-  bottom: calc(var(--sb) + 40px);
+  bottom: calc(var(--sb) + 6px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -153,10 +161,55 @@ body {
 .bottom > * {
   pointer-events: auto;
 }
+/* The tap info sits right on top of the legend, so the two read as one bottom panel. */
 #readout {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+}
+#readout:not([hidden]) {
+  border-radius: 14px 14px 0 0;
+  margin-bottom: -8px;
+  padding-bottom: 10px;
+}
+#readout:not([hidden]) + .legend {
+  border-radius: 0 0 12px 12px;
+  border-top: 1px solid rgba(29, 21, 48, 0.1);
+  box-shadow: none;
+}
+/* The ✕ to close or deselect: a clear round button with a big touch target. */
+.chip .x {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ebe4f2;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.chip .x::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+#readout-close {
+  position: absolute;
+  top: -18px;
+  right: -4px;
+  background: #fff;
+  box-shadow: var(--shadow);
 }
 #readout b {
   font-size: 17px;
@@ -280,9 +333,10 @@ dialog form button {
   border: 5px solid var(--accent);
   box-shadow: var(--shadow);
 }
+/* The (i) attribution floats just above the bottom panel (--bottom-h is set in main.ts). */
 .maplibregl-ctrl-bottom-right,
 .maplibregl-ctrl-bottom-left {
-  margin-bottom: var(--sb);
+  margin-bottom: calc(var(--sb) + var(--bottom-h, 40px));
 }
 
 .search {
@@ -824,15 +878,6 @@ dialog.when {
   font-weight: 600;
   border-radius: 999px;
   padding: 6px 12px;
-  cursor: pointer;
-}
-#tip-close {
-  flex: none;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
   cursor: pointer;
 }
 
