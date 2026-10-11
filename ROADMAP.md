@@ -1,17 +1,16 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–4 and 6–8 are done; group 5 has one open item added later. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–8 are done. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
-State on 2026-10-11, live through PR #37. Build in this order, one step per PR:
+State on 2026-10-11, live through PR #40. Build in this order, one step per PR:
 
-1. **Next:** Visual polish: round buttons, legend and info box at the bottom, clearer ✕ (group 5)
-2. Step-free mode (group 9)
-3. Bike + transit and bike only (group 9)
-4. Smaller, faster first load (group 10)
-5. Android app, starting with a TWA (group 11)
-6. Ersatzverkehr and other temporary changes (group 12)
+1. **Next:** Step-free mode (group 9)
+2. Bike + transit and bike only (group 9)
+3. Smaller, faster first load (group 10)
+4. Android app, starting with a TWA (group 11)
+5. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -194,6 +193,8 @@ A way of drawing the heatmap so both the colours and the streets and labels read
 Notes: options to try and compare on the phone: draw the heatmap under the basemap's roads and labels (inserting the layer below the road layers, so streets sit on top of the colour); a "multiply"-style look by lightening the basemap and raising the heatmap's contrast; or a muted basemap style. MapLibre has no layer blend modes, so layer order and the basemap's own colours are the main levers. Pick one default and keep the opacity slider.
 
 ### Visual polish: round buttons, legend and info box at the bottom, clearer ✕
+
+**Done** (PR #40): the top buttons are true circles; the legend sits just above the bottom safe area with the tap info box joined on top as one panel; every ✕ (tap card, meeting point, compare, hints) is a 36 px round button with a 46 px touch target, and the tap card gained one to deselect.
 
 Small fixes from Hendrik's look at the phone layout:
 
