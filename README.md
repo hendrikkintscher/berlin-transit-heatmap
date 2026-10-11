@@ -1,6 +1,6 @@
 # Berlin transit heatmap
 
-How long does it take to get from one point in Berlin to everywhere else by public transport? Pick a start point and the map colours the city in 5-minute travel-time bands.
+How long does it take to get from one point in Berlin to everywhere else by public transport? Pick a start point and the map colours the city by travel time, with the finest bands between 20 and 50 minutes, and shows which lines the fastest trips rely on.
 
 There are two modes:
 

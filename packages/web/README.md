@@ -12,4 +12,11 @@ pnpm --dir packages/web build     # -> packages/web/dist
   from the `timetable-latest` release). For local testing, drop the release files into
   `packages/web/public/data/`.
 - Routing runs in a Web Worker (`src/worker.ts`) using `@berlin-transit-heatmap/routing`.
-- `?from=lat,lon&w=night` in the URL restores a start point and window.
+- The worker computes a 50 m grid, then paints it into an RGBA image at 25 m pixels (travel
+  times interpolated between cells before colouring, rows resampled to Web Mercator). The page
+  shows it through a MapLibre canvas source, and reads tap minutes from the grid.
+- Colour bands (`src/colors.ts`): 5 min up to 20, 2.5 min from 20 to 50, then 50–55, 55–60,
+  60–75, 75–90, 90–120, 120+. Hues run green, yellow, red, purple, navy.
+- The "Lines" overlay shows the transit hops the fastest trips rely on (`routeUsage`), line width
+  by the share of the reachable map behind each hop, coloured by mode.
+- `?from=lat,lon&w=night&routes=0` in the URL restores a start point, window and the Lines toggle.

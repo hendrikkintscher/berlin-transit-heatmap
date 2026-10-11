@@ -28,6 +28,7 @@
           Night <small>2–4</small>
         </button>
       </div>
+      <button id="routes-btn" class="pill" type="button" aria-pressed="true">Lines</button>
       <button id="info-btn" class="round" aria-label="About this map">i</button>
     </header>
 
@@ -41,10 +42,7 @@
       <div id="status" class="status" aria-live="polite"></div>
       <div class="legend" aria-label="Travel time legend, minutes">
         <div id="legend-bar"></div>
-        <div class="legend-ticks">
-          <span>0</span><span>15</span><span>30</span><span>45</span><span>60</span><span>75</span
-          ><span>90+ min</span>
-        </div>
+        <div id="legend-ticks" class="legend-ticks"></div>
       </div>
     </footer>
 
@@ -52,7 +50,13 @@
       <h2>Berlin Transit Heatmap</h2>
       <p>
         Tap anywhere to set a start point. Colours show the shortest public-transport trip to each
-        spot, in 5-minute bands, including walking to and from stops.
+        spot, including walking to and from stops: 5-minute bands up to 20 minutes, 2½-minute bands
+        from 20 to 50 minutes, and wider bands beyond.
+      </p>
+      <p>
+        <b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from
+        your start point rely on. The thicker the line, the more of the map is reached over it. Tap
+        a line to see its name.
       </p>
       <p>
         <b>Day</b> uses departures between 10:00 and 12:00 on a weekday. <b>Night</b> uses
