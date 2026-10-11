@@ -13,7 +13,9 @@ pnpm --dir packages/web build     # -> packages/web/dist
   `packages/web/public/data/`.
 - Routing runs in a Web Worker (`src/worker.ts`) using `@berlin-transit-heatmap/routing`.
 - The worker computes a 50 m grid, then paints it into an RGBA image at 25 m pixels (travel
-  times interpolated between cells before colouring, rows resampled to Web Mercator). The page
+  times interpolated between cells before colouring, rows resampled to Web Mercator). For looks
+  the image is softened (`src/soften.ts`): a light blur, a gentle noise wobble that breaks up the
+  walking circles around stops, and feathered band edges. Tap minutes use the raw grid. The page
   shows it through a MapLibre canvas source, and reads tap minutes from the grid.
 - Colour bands (`src/colors.ts`): 5 min up to 20, 2.5 min from 20 to 50, then 50–55, 55–60,
   60–75, 75–90, 90–120, 120+. Hues run green, yellow, red, purple, navy.

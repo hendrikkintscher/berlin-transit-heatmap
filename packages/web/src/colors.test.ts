@@ -47,3 +47,28 @@ describe('colour bands', () => {
     );
   });
 });
+
+describe('feathered lookup table', () => {
+  const hard = colorLut();
+  const soft = colorLut(45);
+  const rgbAt = (lut: Uint8Array, s: number) => [lut[s * 4], lut[s * 4 + 1], lut[s * 4 + 2]];
+
+  it('matches the hard table in the middle of a band', () => {
+    expect(rgbAt(soft, 7.5 * 60)).toEqual(rgbAt(hard, 7.5 * 60));
+  });
+
+  it('meets halfway at a band edge and changes gradually', () => {
+    const edge = 30 * 60;
+    const below = rgbAt(hard, edge - 1);
+    const above = rgbAt(hard, edge);
+    const mid = rgbAt(soft, edge);
+    for (let i = 0; i < 3; i++) {
+      expect(Math.abs(mid[i] - (below[i] + above[i]) / 2)).toBeLessThanOrEqual(3);
+    }
+    for (let s = edge - 60; s < edge + 60; s++) {
+      const a = rgbAt(soft, s);
+      const b = rgbAt(soft, s + 1);
+      for (let i = 0; i < 3; i++) expect(Math.abs(a[i] - b[i])).toBeLessThanOrEqual(6);
+    }
+  });
+});
