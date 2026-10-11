@@ -29,10 +29,51 @@
         </button>
       </div>
       <button id="routes-btn" class="pill" type="button" aria-pressed="true">Lines</button>
+      <button id="search-btn" class="round" type="button" aria-label="Search for an address">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <circle
+            cx="10.5"
+            cy="10.5"
+            r="6.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.4"
+          />
+          <path
+            d="M15.5 15.5 21 21"
+            stroke="currentColor"
+            stroke-width="2.6"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
       <button id="info-btn" class="round" aria-label="About this map">i</button>
     </header>
 
-    <div id="hint" class="chip">Tap the map to choose a starting point</div>
+    <div id="search" class="search" role="search" hidden>
+      <div class="search-box">
+        <input
+          id="search-input"
+          type="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+          placeholder="Street, place or station"
+          aria-label="Address"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="search-results"
+          aria-expanded="false"
+        />
+        <button id="search-close" type="button" aria-label="Close search">✕</button>
+      </div>
+      <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+      <div id="search-msg" class="search-msg" hidden></div>
+    </div>
+
+    <div id="hint" class="chip">Tap the map or search to choose a start</div>
 
     <footer class="bottom">
       <div id="readout" class="chip" hidden>
@@ -49,9 +90,9 @@
     <dialog id="info">
       <h2>Berlin Transit Heatmap</h2>
       <p>
-        Tap anywhere to set a start point. Colours show the shortest public-transport trip to each
-        spot, including walking to and from stops: 5-minute bands up to 20 minutes, 2½-minute bands
-        from 20 to 50 minutes, and wider bands beyond.
+        Tap anywhere or search for an address to set a start point. Colours show the shortest
+        public-transport trip to each spot, including walking to and from stops: 5-minute bands up
+        to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond.
       </p>
       <p>
         <b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from
@@ -76,7 +117,8 @@
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener"
           >OpenStreetMap</a
         >
-        contributors.
+        contributors. Address search:
+        <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> by Komoot.
       </p>
       <form method="dialog"><button>Close</button></form>
     </dialog>
