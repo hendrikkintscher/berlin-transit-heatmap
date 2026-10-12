@@ -4,12 +4,14 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #158. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 
-1. **Next:** Exact minutes and "Jetzt" in the time sheet (group 4)
-2. Redesign of the time sheet and the trip card, including C2 (group 12): mock-ups first, Hendrik picks before building
+1. **Next:** Redesign of the time sheet and the trip card, including C2 (group 12): mock-ups first, built only after Hendrik picks
+2. Offline map and faster start in the service worker (B3, group 15)
+3. "Bis N Min." view as an optional switch (D1, group 15)
+4. Faster first load and no stale work (B4 + B5, group 15)
 
-From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+While the redesign waits for Hendrik's pick, the builder goes on with steps 2–4, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -203,7 +205,7 @@ Notes on cost: today each window is one timetable file (day about 0.9 MB gzipped
 
 ### Exact minutes and "Jetzt" in the time sheet
 
-Hendrik, 2026-10-12: "Add the possibility to set minutes (it will then be always "nächste" of course) and "now"". In the time sheet a departure (or arrival) can be set to the exact minute, not just the full hour. A time with minutes always means Nächste, the next connection from that minute, never Typisch. A "Jetzt" option sets the current time in one tap, in Nächste mode. Keep the link (shared state) and the flicker-free first view working, and follow PR #158, where Nächste moves on with the current hour when the app is reopened.
+**Done** (PR #160): the Zeit panel has a Jetzt button and an Uhrzeit field for an exact minute; the chip reads "ab 23:50 Uhr" or "an 23:55 Uhr". Typisch, Bestfall or a meeting point go back to the full hour, and links keep the minutes (t=20261013-0835). Live, a set minute recomputes in 0.5–0.6 s. Known edge: switching to Ankommen during the 23:00 hour still jumps to tomorrow 0 Uhr. Hendrik, 2026-10-12: "Add the possibility to set minutes (it will then be always "nächste" of course) and "now"". In the time sheet a departure (or arrival) can be set to the exact minute, not just the full hour. A time with minutes always means Nächste, the next connection from that minute, never Typisch. A "Jetzt" option sets the current time in one tap, in Nächste mode. Keep the link (shared state) and the flicker-free first view working, and follow PR #158, where Nächste moves on with the current hour when the app is reopened.
 
 ## 5. Everyday use on the phone
 
@@ -732,6 +734,8 @@ Built together with C1 from plan/suggestions-3.md, picked by Hendrik on 2026-10-
 
 Hendrik, 2026-10-12: "Make a sensible redesign of the whole times and trips card". One step that reworks the time sheet and the trip card (the card shown after a tap) together, so neither is rebuilt twice. It includes C2 (group 15: every button at least 44 px tall, meeting trips after the first folded behind "N weitere Fahrten") and keeps the exact minutes and "Jetzt" from PR #160.
 
+Further inputs from plan/suggestions-3.md, handed to this redesign instead of being asked separately: C3 (one bottom slot with priorities for hint, install tip, "Heute anders", trip card, legend and locate; the iOS install tip once, then only in Mehr), C4 (past hours greyed for Heute, Reisezeit above the fold or a scroll fade, the night tint 0–4 explained), D3 (quick chips Jetzt / +15 / +30 / +60), C11 (Treffpunkt, Vergleich and Wohnlage info chips collapse to an icon pill after a few seconds) and from C10 the 44 px / 13 px minimum sizes and the wording list (Als Startpunkt or Neuer Startpunkt, Losfahren/Ankommen or Abfahrt/Ankunft, Sa+So or Wochenende, "3. Startpunkt").
+
 Mock-ups come first: the builder shows Hendrik screenshots of the redesign at 360×740 and, where a choice matters, 2–4 options via the coordinator. It is built only after his pick. Snappiness stays the rule: tap to trip must stay as fast as now.
 
 ## 13. Wider area and other regions
@@ -840,3 +844,22 @@ Part of the redesign of the time sheet and trip card (group 12), built together 
 
 - Every button on the tap card is at least 44 px tall, including the secondary row and the close button.
 - In meeting mode, trips after the first fold behind "2 weitere Fahrten" ("N weitere Fahrten"), and a tap unfolds them.
+
+### Offline map and faster start in the service worker (B3)
+
+Picked by Hendrik on 2026-10-12 ("Yes, all three").
+
+- Cache the basemap: the OpenFreeMap style, sprites and fonts cache-first; tiles stale-while-revalidate with a cap of a few hundred entries. OpenFreeMap sends CORS headers, so responses are cacheable; the terms of the free services (A5 in plan/suggestions-2.md) apply to tile caching too.
+- Remove old app bundles under /assets/ that the current page no longer references, so they don't pile up with every deploy. Add a test for it.
+- Serve the start page stale-while-revalidate, or with a network timeout of about 2.5 s that falls back to the cached page, instead of waiting on the network with no timeout.
+
+### "Bis N Min." view (D1)
+
+Picked by Hendrik on 2026-10-12 ("Yes"). An optional switch in Ebenen, not the default: chips 15 / 30 / 45 / 60 (or a slider) shade everything reachable within N minutes from the start in one colour, and the rest stays plain map. One pass over the existing grid with no extra routing, kept in the link.
+
+### Faster first load and no stale work (B4 + B5)
+
+Picked by Hendrik on 2026-10-12 ("Yes, both"). One PR with timings before and after.
+
+- **B4:** connect early to the tile server and preload the map style; preload the main and worker code; preload the current hour's timetable from the start page; pass step-free, bike and the current time to the early load so the timetable isn't prepared twice.
+- **B5:** the worker drops requests that are already outdated, before and after loading, for maps and for trips; returning to the app recomputes only when the Berlin minute changed or the app was hidden for more than 60 s.
