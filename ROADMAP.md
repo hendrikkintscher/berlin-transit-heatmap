@@ -4,17 +4,16 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #57. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #59. Build in this order, one step per PR:
 
-1. **Next:** Split main.ts before the UI overhaul (group 10)
-2. Start on "Nächste", earliest arrival on tap, Typisch for meeting points (group 6)
-3. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
-4. "Bis wann komme ich heim?": the last connection home (group 6)
-5. Wider area: Potsdam and the commuter belt (group 13)
-6. Calmer street level: footpaths next to streets (group 7)
-7. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-8. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-9. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Start on "Nächste", earliest arrival on tap, Typisch for meeting points (group 6)
+2. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
+3. "Bis wann komme ich heim?": the last connection home (group 6)
+4. Wider area: Potsdam and the commuter belt (group 13)
+5. Calmer street level: footpaths next to streets (group 7)
+6. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+7. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+8. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -400,6 +399,8 @@ The snappiness rule is checked by hand in each PR today. A CI job fails a PR tha
 ### Split main.ts before the UI overhaul (B2)
 
 `packages/web/src/main.ts` is over 2,000 lines without tests. Move URL state, the time sheet, the menu, the trip card and tap handling into their own modules, with tests for the URL round trip (`from`, `with`, `to`, `t`, `m`, `dir`, `cmp`, `walk`, `sf`, `go`, `layers`). Same behaviour, no speed cost; it makes the UI overhaul safer and is where the Android app's deep links will land. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+**Done** (PR #59): URL state lives in `url.ts` with round-trip tests for every link key; the time sheet, menu, tap handling, trip card and map layers are their own modules. main.ts is down to 962 lines.
 
 ## 11. What's running now
 
