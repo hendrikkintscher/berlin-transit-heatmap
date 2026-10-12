@@ -202,6 +202,22 @@ body.no-legend .legend {
   background: transparent;
   color: var(--muted);
 }
+/* Hinweg / Rückweg: next to the ✕, so the direction reads with the trip; only the first
+   line makes room for it. */
+#readout-dir {
+  float: right;
+  margin: -8px 0 2px 8px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #f0ecf4;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
 #readout b {
   font-size: 17px;
 }

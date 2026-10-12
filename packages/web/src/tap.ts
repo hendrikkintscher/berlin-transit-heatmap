@@ -55,6 +55,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   const readoutText = $('readout-text');
   const secondBtn = $<HTMLButtonElement>('readout-second');
   const detailsBtn = $<HTMLButtonElement>('readout-details');
+  const dirBtn = $<HTMLButtonElement>('readout-dir');
   const removeBtn = $<HTMLButtonElement>('readout-remove');
   const homeBtn = $<HTMLButtonElement>('readout-home');
 
@@ -179,6 +180,20 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     secondBtn.setAttribute('aria-label', second);
     secondBtn.title = second;
     if (!title && map.getZoom() >= 15) void showAddress(pending);
+    // One start and a trip to the place: Hinweg (from the start) or Rückweg (back to it).
+    dirBtn.hidden = !(
+      state.origin &&
+      !state.others.length &&
+      !state.special &&
+      !state.compare &&
+      html.includes('id="trip"')
+    );
+    if (!dirBtn.hidden) {
+      readoutText.prepend(dirBtn);
+      dirBtn.textContent = `${t(state.direction === 'arrive' ? 'dirBack' : 'dirThere')} ⇄`;
+      dirBtn.setAttribute('aria-label', t('dirSwap'));
+      dirBtn.title = t('dirSwap');
+    }
     deps.onCard();
   }
 
@@ -228,6 +243,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   /** The card at the bottom: minutes for a spot, or a start point with a remove button. */
   function showCard(html: string, start: boolean, searched = false) {
     readoutText.innerHTML = html;
+    dirBtn.hidden = true;
     // A search result offers "Neuer Start" next to "2. Start"; the trip shown is the "Ziel".
     $('readout-start').textContent = t(searched ? 'newStart' : 'startHere');
     for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
@@ -420,6 +436,14 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   removeBtn.addEventListener('click', () => deps.removeStart(removeWhich));
   homeBtn.addEventListener('click', () => deps.showHome(removeWhich));
   $('readout-close').addEventListener('click', hideReadout);
+  // The same switch as Losfahren / Ankommen in the time panel: the map and the trip turn round.
+  dirBtn.addEventListener('click', () =>
+    document
+      .querySelector<HTMLButtonElement>(
+        `#pop-when [data-dir="${state.direction === 'arrive' ? 'depart' : 'arrive'}"]`,
+      )
+      ?.click(),
+  );
   // Details opens the stops and stays open for the next cards, until closed again.
   detailsBtn.addEventListener('click', () => {
     const open = readout.classList.toggle('details');
