@@ -8,7 +8,8 @@ State on 2026-10-12, live through PR #88. Build in this order, one step per PR:
 
 1. **Next:** Live disruptions (group 11), being built as a live check of the tapped trip until Hendrik picks a form
 2. Fairer meeting point suggestions: slowest trip and average count equally (group 3)
-3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+3. Timetable publish uploads only changed files (group 10)
+4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
 
 After the UI overhaul, the list is done for now. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -464,6 +465,15 @@ The snappiness rule is checked by hand in each PR today. A CI job fails a PR tha
 `packages/web/src/main.ts` is over 2,000 lines without tests. Move URL state, the time sheet, the menu, the trip card and tap handling into their own modules, with tests for the URL round trip (`from`, `with`, `to`, `t`, `m`, `dir`, `cmp`, `walk`, `sf`, `go`, `layers`). Same behaviour, no speed cost; it makes the UI overhaul safer and is where the Android app's deep links will land. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 **Done** (PR #59): URL state lives in `url.ts` with round-trip tests for every link key; the time sheet, menu, tap handling, trip card and map layers are their own modules. main.ts is down to 962 lines.
+
+### Timetable publish uploads only changed files
+
+On 2026-10-12, a timetable build failed partway through publishing: GitHub's hourly API limit for the repo ran out, and because each file is deleted and re-uploaded (`--clobber`), one timetable file was left missing from the release. Each publish re-uploads all of the roughly 250 files, which nearly uses up the hourly budget, so two runs in one hour overflow it.
+
+- Publish a checksums manifest with the release, and upload only the files whose hash changed. A same-day rerun then costs a handful of API calls.
+- A failed run must never leave a file deleted. Upload the new file before the old one is replaced, or check the release against the manifest at the end.
+
+Small effort, workflow only, no change to the app. Suggested by the builder on 2026-10-12 after the failed run.
 
 ## 11. What's running now
 
