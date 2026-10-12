@@ -7,8 +7,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #76. Build in this order, one step per PR:
 
 1. **Next:** What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-2. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-3. Android app, starting with a TWA (group 14), always the last step
+2. Outlines view: dashed lines, more labels, clearer gradient, no legend (group 7)
+3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+4. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -362,6 +363,17 @@ Hendrik's feedback on PR #71 (2026-10-12): starting with only the outlines is ri
 - **10-minute steps:** outlines at 10, 20, 30 … minutes instead of every 5, each still labelled with its minutes.
 
 With "Farben (Heatmap)" on, the colours and their outlines stay as they are. The legend in the outlines-only view shows the same single-hue 10-minute steps. Small effort; no routing change.
+
+### Outlines view: dashed lines, more labels, clearer gradient, no legend
+
+Hendrik's second round of feedback on the outlines-only view (PR #76, 2026-10-12):
+
+- **Dashed lines:** the 10-minute lines are drawn dashed instead of solid.
+- **More labels:** the minute label repeats more often along each line, so every stretch of the map shows which line it is without panning.
+- **Clearer gradient:** the single-hue steps differ more from each other (a wider range from dark near the start to light far out), so the time order reads at a glance.
+- **No legend:** with the colour fill off, the colour legend is hidden, since the labels carry the minutes. It comes back with "Farben (Heatmap)" on.
+
+Small effort; no routing change.
 
 ## 8. Realistic walking on real footpaths
 
