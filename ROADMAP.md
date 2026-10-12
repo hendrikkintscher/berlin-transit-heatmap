@@ -4,11 +4,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #139. Build in this order, one step per PR:
-
-1. **Next:** Fix: street names in every search box, from a built-in street list (group 1)
-
-From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #142. Nothing is queued: Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -66,6 +62,8 @@ Hendrik, 2026-10-12: the address search should feel snappier. Today every keystr
 Small to medium effort. Added from Hendrik's request on 2026-10-12.
 
 ### Fix: street names in every search box
+
+**Done** (PR #142): a built-in list of about 20,000 street names (0.22 MB, loaded only when search opens and then cached) gives street suggestions within about 40 ms in every search box, including streets the online search missed (Karl-Marx-Straße 12043); the house-number step works. Stations stay instant and the first map is no slower.
 
 Hendrik, 2026-10-12: street names don't show up in the search suggestions. Suggestions, streets and the house-number/postcode step from PR #122 included, must work in every search box (main search, Startpunkt, meeting-point starts, favourites, comparison and any other).
 
