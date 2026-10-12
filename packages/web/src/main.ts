@@ -306,6 +306,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (m.id !== state.requestId) return;
     lastResult = m;
     showResult(m);
+    if (spot) tapAt(spot.lat, spot.lon, undefined, spot.title, spot.searched);
     loadbar.hidden = true;
     const s = m.totalMs / 1000;
     setStatus(() => t('computed', { s: formatDecimal(s, 1) }), true);
@@ -344,6 +345,7 @@ function redoWalks() {
   for (const w of Object.keys(layerData)) delete layerData[w];
   layersRequested.clear();
   showLayers();
+  if (state.origin) keepSpot();
   compute();
 }
 
@@ -372,6 +374,13 @@ function compute() {
   });
 }
 
+/**
+ * The tapped place (destination): it stays through settings changes, recomputed for each,
+ * until the ✕ or a new tap. Kept in the link as ?to=.
+ */
+type Spot = { lat: number; lon: number; title: string; searched: boolean };
+let spot: Spot | null = null;
+
 // ---------- URL state (?from=lat,lon&w=night&routes=0&lang=en) ----------
 function readUrl() {
   const p = new URLSearchParams(location.search);
@@ -382,6 +391,8 @@ function readUrl() {
   state.iso = layers.includes('iso');
   state.origin = parsePoint(p.get('from'));
   state.second = state.origin ? parsePoint(p.get('with')) : null;
+  const to = state.origin ? parsePoint(p.get('to')) : null;
+  spot = to && { ...to, title: '', searched: false };
   state.when = whenFromParams(p, NOW_WHEN);
   state.window = windowName(state.when);
   if (p.get('dir') === 'arr') state.direction = 'arrive';
@@ -400,6 +411,7 @@ function writeUrl() {
   const p = new URLSearchParams();
   if (state.origin) p.set('from', pointParam(state.origin));
   if (state.second) p.set('with', pointParam(state.second));
+  if (spot) p.set('to', pointParam(spot));
   if (state.window !== windowName(NOW_WHEN)) p.set('t', state.window);
   if (state.direction === 'arrive') p.set('dir', 'arr');
   if (state.measure !== 'typical') p.set('m', state.measure);
@@ -466,6 +478,13 @@ for (const [m, el, which] of [
   });
 }
 
+const spotEl = document.createElement('div');
+spotEl.className = 'spot-marker';
+const spotMarker = new maplibregl.Marker({ element: spotEl });
+// A place from the link (?to=) shows at once; its card follows with the first map.
+const linked = spot as Spot | null;
+if (linked) spotMarker.setLngLat([linked.lon, linked.lat]).addTo(map);
+
 function showOrigin() {
   if (!state.origin) {
     marker.remove();
@@ -484,7 +503,7 @@ function showOrigin() {
 function setOrigin(lat: number, lon: number) {
   state.origin = { lat, lon };
   showOrigin();
-  hideReadout();
+  keepSpot();
   writeUrl();
   compute();
 }
@@ -496,7 +515,8 @@ function removeStart(which: 1 | 2) {
     state.second = null;
   } else state.second = null;
   showOrigin();
-  hideReadout();
+  if (state.origin) keepSpot();
+  else hideReadout();
   writeUrl();
   if (state.origin) compute();
   else clearResult();
@@ -522,7 +542,7 @@ function clearResult() {
 function setSecond(p: { lat: number; lon: number } | null) {
   state.second = p;
   showOrigin();
-  hideReadout();
+  keepSpot();
   writeUrl();
   compute();
 }
@@ -1123,11 +1143,13 @@ function tapAt(
   const station = state.freq && data ? near([STATIONS_LAYER])[0] : undefined;
   let html: string;
   if (station) {
+    setSpot(null);
     const p = station.properties as StationProps;
     html =
       t('stationFreq', { name: escapeHtml(p.name), n: p.perHour }) +
       (p.lines ? `<small>${escapeHtml(p.lines)}</small>` : '');
   } else if (!state.origin && !(state.desert && data)) {
+    setSpot(null);
     setOrigin(lat, lng);
     return;
   } else {
@@ -1177,6 +1199,7 @@ function tapAt(
       );
     }
     html = parts.join('<br>') + tripSlot;
+    setSpot({ lat, lon: lng, title, searched });
   }
   if (title) html = `<b class="spot-name">${escapeHtml(title)}</b>${html}`;
   showReadoutCard(html, false, searched);
@@ -1240,6 +1263,33 @@ function hideReadout() {
   readout.hidden = true;
   state.tripId++;
   setTrip(null);
+  setSpot(null);
+}
+
+function setSpot(p: Spot | null) {
+  readout.classList.remove('stale');
+  const same = p === spot || (p && spot && p.lat === spot.lat && p.lon === spot.lon);
+  spot = p;
+  if (p) spotMarker.setLngLat([p.lon, p.lat]).addTo(map);
+  else spotMarker.remove();
+  if (!same) writeUrl();
+}
+
+/**
+ * A setting changed and a new map is on its way: the tapped place stays, dimmed until the
+ * new map recomputes its card and trip. Any other card (a start, a station) closes.
+ */
+function keepSpot() {
+  if (!spot) return hideReadout();
+  state.tripId++;
+  setTrip(null);
+  readout.classList.add('stale');
+}
+/** Redraws the place's card now, for a change that needs no new map (language, layers). */
+function redrawSpot() {
+  if (!spot || (!state.origin && !state.desert)) return hideReadout();
+  // Without a map yet, the coming one redraws it.
+  if (lastResult || !state.origin) tapAt(spot.lat, spot.lon, undefined, spot.title, spot.searched);
 }
 
 type Trip = Extract<FromWorker, { type: 'trip' }>;
@@ -1323,11 +1373,16 @@ function escapeHtml(t: string): string {
   return t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
+// The place becomes a start, so it no longer stays as the destination.
 $('readout-start').addEventListener('click', () => {
-  if (state.pending) setOrigin(state.pending.lat, state.pending.lon);
+  const at = state.pending;
+  hideReadout();
+  if (at) setOrigin(at.lat, at.lon);
 });
 secondBtn.addEventListener('click', () => {
-  if (state.pending) setSecond(state.pending);
+  const at = state.pending;
+  hideReadout();
+  if (at) setSecond(at);
 });
 $('readout-fav').addEventListener('click', async () => {
   const at = state.pending;
@@ -1444,7 +1499,8 @@ function setWhen(
   state.when = w;
   state.window = windowName(w);
   renderWhen();
-  hideReadout();
+  if (state.origin) keepSpot();
+  else hideReadout();
   renderFeedInfo();
   writeUrl();
   showLayers();
@@ -1482,7 +1538,6 @@ cmpHour.addEventListener('change', () => setWhen(state.when, { compare: readComp
 $('cmp-close').addEventListener('click', () => setWhen(state.when, { compare: null }));
 whenBtn.addEventListener('click', () => {
   closeSearch();
-  hideReadout();
   whenDialog.showModal();
 });
 $('when-close').addEventListener('click', () => whenDialog.close());
@@ -1502,8 +1557,8 @@ routesToggle.checked = state.routes;
 
 function setLayer(name: 'freq' | 'desert', on: boolean) {
   state[name] = on;
-  hideReadout();
   showLayers();
+  redrawSpot();
   writeUrl();
 }
 freqToggle.addEventListener('change', () => setLayer('freq', freqToggle.checked));
@@ -1557,7 +1612,7 @@ for (const b of travelButtons)
     remember('travel', String(TRAVELS.indexOf(travel)));
     renderTravel();
     renderWhen();
-    hideReadout();
+    keepSpot();
     writeUrl();
     compute();
   });
@@ -1568,7 +1623,7 @@ stepFreeToggle.addEventListener('change', () => {
   state.stepFree = stepFreeToggle.checked;
   remember('step-free', state.stepFree ? '1' : '0');
   renderWhen();
-  hideReadout();
+  keepSpot();
   writeUrl();
   compute();
 });
@@ -1695,7 +1750,6 @@ tipAction.addEventListener('click', () => void install());
 // ---------- menu and language ----------
 $('menu-btn').addEventListener('click', () => {
   closeSearch();
-  hideReadout();
   menuDialog.showModal();
 });
 $('menu-close').addEventListener('click', () => menuDialog.close());
@@ -1719,7 +1773,7 @@ function applyLang(l: Lang, remember: boolean) {
   renderWhen();
   renderTip();
   statusEl.textContent = state.status();
-  hideReadout();
+  redrawSpot();
   searchCache.clear();
 }
 for (const b of langButtons)
@@ -1742,7 +1796,6 @@ const searchCache = new Map<string, Place[]>();
 
 function openSearch() {
   searchPanel.hidden = false;
-  hideReadout();
   hint.hidden = true;
   searchInput.focus();
   searchInput.select();
