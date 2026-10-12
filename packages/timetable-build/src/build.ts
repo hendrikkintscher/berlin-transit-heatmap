@@ -10,7 +10,7 @@ import { findChanges, WATCHED_MODES, type Change, type WatchedTrip } from './cha
 import { parseTime, readCsv } from './csv.ts';
 import { hopCourses, type Pattern, type Shape } from './lines.ts';
 import type { Hop } from '../../routing/src/linesbin.ts';
-import { BERLIN_BBOX, type BBox, forEachNearbyPair, inBBox } from './geo.ts';
+import { STOP_BBOX, type BBox, forEachNearbyPair, inBBox } from './geo.ts';
 import type { GtfsSource } from './source.ts';
 import { NETWORK_WALK_SPEED_MPS, WalkDistances, type WalkGraph } from './walk.ts';
 import type { DayType, Mode, Route, Stop, StopsFile, Timetable, Transfer } from './types.ts';
@@ -170,7 +170,7 @@ export async function buildTimetables(
   source: GtfsSource,
   options: BuildOptions = {},
 ): Promise<BuildResult> {
-  const bbox = options.bbox ?? BERLIN_BBOX;
+  const bbox = options.bbox ?? STOP_BBOX;
   const log = options.log ?? (() => {});
 
   // --- stops -------------------------------------------------------------

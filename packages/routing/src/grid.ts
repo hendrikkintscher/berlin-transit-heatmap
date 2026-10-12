@@ -18,12 +18,10 @@ import type {
   HeatGridOptions,
   TravelTimeResult,
 } from './types';
+import { REGION } from './regions';
 
-/**
- * Berlin, Potsdam and the commuter belt (Werder, Oranienburg, Bernau, Strausberg, Erkner,
- * Königs Wusterhausen): [minLon, minLat, maxLon, maxLat].
- */
-export const DEFAULT_BBOX: [number, number, number, number] = [12.9, 52.27, 13.92, 52.8];
+/** The region's grid area (regions.ts): [minLon, minLat, maxLon, maxLat]. */
+export const DEFAULT_BBOX: [number, number, number, number] = REGION.bbox;
 
 const DEFAULT_CELL_M = 250;
 const DEFAULT_MAX_FINAL_WALK_S = 900;

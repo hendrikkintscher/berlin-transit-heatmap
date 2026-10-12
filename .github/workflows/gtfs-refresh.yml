@@ -22,7 +22,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GTFS_URL: https://www.vbb.de/vbbgtfs
   LATEST_TAG: gtfs-latest
 
 jobs:
@@ -39,6 +38,9 @@ jobs:
       - name: Download feed
         run: |
           mkdir -p work
+          # The region's feed (packages/routing/src/regions.ts).
+          GTFS_URL=$(node scripts/region.mjs gtfsUrl)
+          echo "GTFS_URL=$GTFS_URL" >> "$GITHUB_ENV"
           curl -fsSL --retry 4 --retry-delay 10 -o work/GTFS.zip "$GTFS_URL"
           unzip -tq work/GTFS.zip
           echo "SHA256=$(sha256sum work/GTFS.zip | cut -d' ' -f1)" >> "$GITHUB_ENV"

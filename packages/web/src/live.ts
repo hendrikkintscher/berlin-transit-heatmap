@@ -5,8 +5,10 @@
 // before it. Without an answer the card simply shows no live line.
 
 import { t } from './i18n';
+import { region } from './region';
 
-const API = 'https://v6.vbb.transport.rest';
+/** The region's journey API; without one the card shows no live line. */
+const API = region.liveApi;
 const TIMEOUT_MS = 6000;
 
 export interface Board {
@@ -76,6 +78,7 @@ export async function liveStatus(
   day: string,
   dataBase: string,
 ): Promise<LiveStatus | null> {
+  if (!API) return null;
   const id = await stationId(dataBase, board.stop);
   if (!id) return null;
   const when = berlinTime(day, board.at);

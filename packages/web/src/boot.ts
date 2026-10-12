@@ -5,12 +5,13 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import type { FromWorker, ToWorker } from './protocol';
+import { dataBase } from './region';
 import { computeWindow, whenAt, whenFromParams } from './when';
 
 export const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 export const send = (m: ToWorker) => worker.postMessage(m);
 
-send({ type: 'init', dataBase: new URL('data/', document.baseURI).href });
+send({ type: 'init', dataBase: dataBase() });
 const params = new URLSearchParams(location.search);
 send({
   type: 'load',

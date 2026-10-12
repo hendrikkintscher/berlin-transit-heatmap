@@ -1,6 +1,8 @@
 // Favourite places: a list kept in the browser, each with a weight, and a score for the
 // current start point (the weighted average trip time to them). Imports read Google
 // Takeout exports (Saved Places GeoJSON, saved-list CSV) and this app's own JSON export.
+// Each region keeps its own list.
+import { regionKey } from './region';
 
 export type Weight = 1 | 2 | 3;
 export const WEIGHTS: readonly Weight[] = [3, 2, 1];
@@ -25,11 +27,10 @@ export interface ImportedPlace {
 
 /** Trips that are unreachable in the window count as this long in the score. */
 export const UNREACHABLE_MIN = 120;
-const STORE_KEY = 'favourites';
 
 export function loadFavourites(): Favourite[] {
   try {
-    const list = JSON.parse(localStorage.getItem(STORE_KEY) ?? '[]') as unknown;
+    const list = JSON.parse(localStorage.getItem(regionKey('favourites')) ?? '[]') as unknown;
     return Array.isArray(list) ? list.filter(isFavourite) : [];
   } catch {
     return [];
@@ -38,7 +39,7 @@ export function loadFavourites(): Favourite[] {
 
 export function saveFavourites(list: Favourite[]) {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(list));
+    localStorage.setItem(regionKey('favourites'), JSON.stringify(list));
   } catch {
     // Storage blocked: the list lasts for this visit only.
   }
