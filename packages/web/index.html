@@ -24,27 +24,6 @@
     <header class="top">
       <div class="app-title" data-t="title">Berlin in Minuten</div>
       <button
-        id="when-btn"
-        class="pill when-pill"
-        type="button"
-        aria-haspopup="dialog"
-        aria-controls="when"
-        aria-label="Abfahrtszeit wählen"
-        data-t-label="whenOpen"
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2" />
-          <path
-            d="M12 7v5l3 2"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.2"
-            stroke-linecap="round"
-          />
-        </svg>
-        <span>Werktag 10 Uhr</span>
-      </button>
-      <button
         id="locate-btn"
         class="round"
         type="button"
@@ -105,6 +84,283 @@
         </svg>
       </button>
     </header>
+
+    <nav id="chips" class="chips" aria-label="Einstellungen" data-t-label="chipsLabel">
+      <button
+        id="when-btn"
+        class="chip-btn when-chip"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="pop-when"
+        aria-expanded="false"
+        data-pop="when"
+        aria-label="Abfahrtszeit wählen"
+        data-t-label="whenOpen"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.2" />
+          <path
+            d="M12 7v5l3 2"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+          />
+        </svg>
+        <span>Werktag 10 Uhr</span>
+      </button>
+      <button
+        id="travel-chip"
+        class="chip-btn"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="pop-travel"
+        aria-expanded="false"
+        data-pop="travel"
+      >
+        <span data-t="travelWalk">Zu Fuß</span>
+      </button>
+      <button
+        id="measure-chip"
+        class="chip-btn"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="pop-measure"
+        aria-expanded="false"
+        data-pop="measure"
+      >
+        <span data-t="measureNext">Nächste</span>
+      </button>
+      <button
+        id="layers-chip"
+        class="chip-btn"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="pop-layers"
+        aria-expanded="false"
+        data-pop="layers"
+      >
+        <span data-t="layersChip">Ebenen</span>
+      </button>
+      <button id="stepfree-chip" class="chip-btn" type="button" aria-pressed="false" data-pop="">
+        <span data-t="stepFree">Stufenlos</span>
+      </button>
+      <button
+        id="compare-chip"
+        class="chip-btn"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="pop-compare"
+        aria-expanded="false"
+        data-pop="compare"
+      >
+        <span data-t="compareChipLabel">Vergleich</span>
+      </button>
+    </nav>
+
+    <div id="pops">
+      <section
+        id="pop-when"
+        class="pop"
+        role="dialog"
+        aria-label="Zeit"
+        data-t-label="whenTitle"
+        hidden
+      >
+        <div
+          id="day-grid"
+          class="day-grid"
+          role="radiogroup"
+          aria-label="Tag"
+          data-t-label="whenDay"
+        ></div>
+        <h3 data-t="whenTypical">Typischer Tag, zum Planen</h3>
+        <div
+          class="seg seg-wide"
+          role="radiogroup"
+          aria-label="Typischer Tag"
+          data-t-label="whenTypical"
+        >
+          <button role="radio" data-day="weekday" aria-checked="false" data-t="weekday">
+            Werktag
+          </button>
+          <button role="radio" data-day="weekend" aria-checked="false" data-t="weekend">
+            Wochenende
+          </button>
+        </div>
+        <div class="seg seg-wide" role="radiogroup" aria-label="Richtung" data-t-label="whenDir">
+          <button role="radio" data-dir="depart" aria-checked="true" data-t="dirDepart">
+            Abfahrt ab
+          </button>
+          <button role="radio" data-dir="arrive" aria-checked="false" data-t="dirArrive">
+            Ankunft bis
+          </button>
+        </div>
+        <h3 id="when-hour">Stunde der Abfahrt</h3>
+        <div id="hour-grid" class="hour-grid"></div>
+        <p class="menu-note" data-t="whenNote"></p>
+      </section>
+      <section
+        id="pop-travel"
+        class="pop"
+        role="dialog"
+        aria-label="Unterwegs"
+        data-t-label="travelTitle"
+        hidden
+      >
+        <h3 data-t="travelTitle">Unterwegs</h3>
+        <div
+          class="seg seg-wide"
+          role="radiogroup"
+          aria-label="Unterwegs"
+          data-t-label="travelTitle"
+        >
+          <button role="radio" data-travel="walk" aria-checked="true" data-t="travelWalk">
+            Zu Fuß
+          </button>
+          <button role="radio" data-travel="bike" aria-checked="false" data-t="travelBike">
+            Rad + Bahn
+          </button>
+          <button role="radio" data-travel="bikeonly" aria-checked="false" data-t="travelBikeOnly">
+            Nur Rad
+          </button>
+        </div>
+        <p class="menu-note" data-t="travelHelp">
+          Rad + Bahn: mit 15 km/h zur Station und vom Ausstieg zum Ziel, 2 Min. pro Station fürs
+          Mitnehmen, ohne Busse. Nur Rad: bis 60 Min. auf Straßen und Wegen.
+        </p>
+
+        <h3 data-t="walkTitle">Gehtempo</h3>
+        <div class="seg seg-wide" role="radiogroup" aria-label="Gehtempo" data-t-label="walkTitle">
+          <button role="radio" data-walk="3" aria-checked="false">3 km/h</button>
+          <button role="radio" data-walk="4" aria-checked="true">4 km/h</button>
+          <button role="radio" data-walk="5" aria-checked="false">5 km/h</button>
+          <button role="radio" data-walk="6" aria-checked="false">6 km/h</button>
+        </div>
+        <p class="menu-note" data-t="walkHelp">
+          Für den Weg zur ersten Haltestelle und vom Ausstieg zum Ziel. Umsteigen rechnet mit 4
+          km/h.
+        </p>
+        <div class="step-free-row">
+          <label class="toggle">
+            <span class="toggle-text">
+              <b data-t="stepFree">Stufenlos</b>
+              <small data-t="stepFreeHint"
+                >Für Rollstuhl, Kinderwagen und Koffer: nur Bahnsteige mit Aufzug oder Rampe und
+                Fahrzeuge, die als barrierefrei markiert sind</small
+              >
+            </span>
+            <input id="stepfree-toggle" type="checkbox" role="switch" />
+          </label>
+        </div>
+      </section>
+      <section
+        id="pop-measure"
+        class="pop"
+        role="dialog"
+        aria-label="Reisezeit"
+        data-t-label="measureTitle"
+        hidden
+      >
+        <h3 data-t="measureTitle">Reisezeit</h3>
+        <div
+          class="seg seg-wide"
+          role="radiogroup"
+          aria-label="Reisezeit"
+          data-t-label="measureTitle"
+        >
+          <button role="radio" data-measure="typical" aria-checked="false" data-t="measureTypical">
+            Typisch
+          </button>
+          <button role="radio" data-measure="best" aria-checked="false" data-t="measureBest">
+            Bestfall
+          </button>
+          <button role="radio" data-measure="next" aria-checked="true" data-t="measureNext">
+            Nächste
+          </button>
+        </div>
+        <p class="menu-note" id="measure-note"></p>
+      </section>
+      <section
+        id="pop-layers"
+        class="pop"
+        role="dialog"
+        aria-label="Ebenen"
+        data-t-label="layersChip"
+        hidden
+      >
+        <label class="toggle">
+          <span class="toggle-text">
+            <b data-t="heat">Farben (Heatmap)</b>
+            <small data-t="heatHint"
+              >Die Reisezeit als Farbfläche; ohne sie zeigen die Umrisse die Minuten</small
+            >
+          </span>
+          <input id="heat-toggle" type="checkbox" role="switch" />
+        </label>
+        <label class="slider slider-sub">
+          <span class="toggle-text">
+            <b data-t="opacity">Deckkraft der Farben</b>
+            <small data-t="opacityHint">Weniger, um Straßennamen besser zu sehen</small>
+          </span>
+          <input id="opacity" type="range" min="15" max="95" step="5" value="80" />
+        </label>
+        <label class="toggle">
+          <span class="toggle-text">
+            <b data-t="lines">Linien</b>
+            <small data-t="linesHint"
+              >Die Verbindungen, über die du von deinem Start am schnellsten fährst</small
+            >
+          </span>
+          <input id="routes-toggle" type="checkbox" role="switch" checked />
+        </label>
+        <label class="toggle">
+          <span class="toggle-text">
+            <b data-t="iso">Umrisse alle 5 Min.</b>
+            <small data-t="isoHint"
+              >Linien alle 5 Minuten, kräftiger bei 15, 30 und 45 Minuten</small
+            >
+          </span>
+          <input id="iso-toggle" type="checkbox" role="switch" checked />
+        </label>
+        <label class="toggle">
+          <span class="toggle-text">
+            <b data-t="freq">Takt der Haltestellen</b>
+            <small data-t="freqHint"
+              >Abfahrten pro Stunde, alle Linien und Richtungen zusammen</small
+            >
+          </span>
+          <input id="freq-toggle" type="checkbox" role="switch" />
+        </label>
+        <label class="toggle">
+          <span class="toggle-text">
+            <b data-t="desert">ÖPNV-Wüsten</b>
+            <small data-t="desertHint"
+              >Wo Fußweg zur Haltestelle plus Wartezeit über 10 Min. liegt (0 bis 5 Uhr: 20
+              Min.)</small
+            >
+          </span>
+          <input id="desert-toggle" type="checkbox" role="switch" />
+        </label>
+      </section>
+      <section
+        id="pop-compare"
+        class="pop"
+        role="dialog"
+        aria-label="Vergleich"
+        data-t-label="compareTitle"
+        hidden
+      >
+        <h3 data-t="compareTitle">Vergleichen mit</h3>
+        <div class="compare-row">
+          <select id="cmp-day" aria-label="Vergleichstag" data-t-label="compareDay">
+            <option value="" data-t="compareOff">Aus</option>
+          </select>
+          <select id="cmp-hour" aria-label="Vergleichsstunde" data-t-label="compareHour"></select>
+        </div>
+        <p class="menu-note" data-t="compareNote"></p>
+      </section>
+    </div>
 
     <div id="search" class="search" role="search" hidden>
       <div class="search-box">
@@ -221,6 +477,20 @@
       <button id="fav-score" class="chip fav-score" type="button" hidden></button>
       <div id="status" class="status" aria-live="polite"></div>
       <div id="layer-legend" class="layer-legend" hidden></div>
+      <button id="second-btn" class="second-btn" type="button" hidden>
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2" />
+          <circle cx="16.5" cy="9" r="2.6" fill="none" stroke="currentColor" stroke-width="2" />
+          <path
+            d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5M14.5 14.2c3 0 5.6 1.4 6.3 4.8"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+        <span>2. Start</span>
+      </button>
       <div id="readout" class="chip" hidden>
         <span id="readout-text"></span>
         <span class="readout-btns">
@@ -244,87 +514,16 @@
           ✕
         </button>
       </div>
-      <div class="legend" aria-label="Legende Reisezeit in Minuten" data-t-label="legend">
-        <div id="legend-bar"></div>
-        <div id="legend-ticks" class="legend-ticks"></div>
-        <div id="diff-bar" hidden></div>
-        <div id="diff-ticks" class="legend-ticks" hidden></div>
-        <div id="home-bar" hidden></div>
-        <div id="home-ticks" class="legend-ticks" hidden></div>
-      </div>
     </footer>
 
-    <dialog id="when" class="menu when" aria-labelledby="when-title">
-      <div class="menu-head">
-        <h2 id="when-title" data-t="whenTitle">Abfahrt</h2>
-        <button
-          id="when-close"
-          class="menu-x"
-          type="button"
-          aria-label="Schließen"
-          data-t-label="close"
-        >
-          ✕
-        </button>
-      </div>
-      <div
-        id="day-grid"
-        class="day-grid"
-        role="radiogroup"
-        aria-label="Tag"
-        data-t-label="whenDay"
-      ></div>
-      <h3 data-t="whenTypical">Typischer Tag, zum Planen</h3>
-      <div
-        class="seg seg-wide"
-        role="radiogroup"
-        aria-label="Typischer Tag"
-        data-t-label="whenTypical"
-      >
-        <button role="radio" data-day="weekday" aria-checked="false" data-t="weekday">
-          Werktag
-        </button>
-        <button role="radio" data-day="weekend" aria-checked="false" data-t="weekend">
-          Wochenende
-        </button>
-      </div>
-      <div class="seg seg-wide" role="radiogroup" aria-label="Richtung" data-t-label="whenDir">
-        <button role="radio" data-dir="depart" aria-checked="true" data-t="dirDepart">
-          Abfahrt ab
-        </button>
-        <button role="radio" data-dir="arrive" aria-checked="false" data-t="dirArrive">
-          Ankunft bis
-        </button>
-      </div>
-      <h3 id="when-hour">Stunde der Abfahrt</h3>
-      <div id="hour-grid" class="hour-grid"></div>
-      <h3 data-t="measureTitle">Reisezeit</h3>
-      <div
-        class="seg seg-wide"
-        role="radiogroup"
-        aria-label="Reisezeit"
-        data-t-label="measureTitle"
-      >
-        <button role="radio" data-measure="typical" aria-checked="false" data-t="measureTypical">
-          Typisch
-        </button>
-        <button role="radio" data-measure="best" aria-checked="false" data-t="measureBest">
-          Bestfall
-        </button>
-        <button role="radio" data-measure="next" aria-checked="true" data-t="measureNext">
-          Nächste
-        </button>
-      </div>
-      <p class="menu-note" id="measure-note"></p>
-      <h3 data-t="compareTitle">Vergleichen mit</h3>
-      <div class="compare-row">
-        <select id="cmp-day" aria-label="Vergleichstag" data-t-label="compareDay">
-          <option value="" data-t="compareOff">Aus</option>
-        </select>
-        <select id="cmp-hour" aria-label="Vergleichsstunde" data-t-label="compareHour"></select>
-      </div>
-      <p class="menu-note" data-t="whenNote"></p>
-    </dialog>
+    <div class="legend" aria-label="Legende Reisezeit in Minuten" data-t-label="legend">
+      <div id="legend-bar"></div>
+      <div id="legend-ticks" class="legend-ticks"></div>
+      <div id="diff-bar" hidden></div>
+      <div id="diff-ticks" class="legend-ticks" hidden></div>
+      <div id="home-bar" hidden></div>
+      <div id="home-ticks" class="legend-ticks" hidden></div>
+    </div>
 
     <dialog id="menu" class="menu" aria-labelledby="menu-title">
       <div class="menu-head">
@@ -356,97 +555,6 @@
       <button id="install-btn" class="menu-share alt" type="button" data-t="install" hidden>
         Als App installieren
       </button>
-
-      <h3 data-t="menuMap">Karte</h3>
-      <label class="toggle">
-        <span class="toggle-text">
-          <b data-t="heat">Farben (Heatmap)</b>
-          <small data-t="heatHint"
-            >Die Reisezeit als Farbfläche; ohne sie zeigen die Umrisse die Minuten</small
-          >
-        </span>
-        <input id="heat-toggle" type="checkbox" role="switch" />
-      </label>
-      <label class="slider slider-sub">
-        <span class="toggle-text">
-          <b data-t="opacity">Deckkraft der Farben</b>
-          <small data-t="opacityHint">Weniger, um Straßennamen besser zu sehen</small>
-        </span>
-        <input id="opacity" type="range" min="15" max="95" step="5" value="80" />
-      </label>
-      <label class="toggle">
-        <span class="toggle-text">
-          <b data-t="lines">Linien</b>
-          <small data-t="linesHint"
-            >Die Verbindungen, über die du von deinem Start am schnellsten fährst</small
-          >
-        </span>
-        <input id="routes-toggle" type="checkbox" role="switch" checked />
-      </label>
-      <label class="toggle">
-        <span class="toggle-text">
-          <b data-t="iso">Umrisse alle 5 Min.</b>
-          <small data-t="isoHint">Linien alle 5 Minuten, kräftiger bei 15, 30 und 45 Minuten</small>
-        </span>
-        <input id="iso-toggle" type="checkbox" role="switch" checked />
-      </label>
-      <label class="toggle">
-        <span class="toggle-text">
-          <b data-t="freq">Takt der Haltestellen</b>
-          <small data-t="freqHint">Abfahrten pro Stunde, alle Linien und Richtungen zusammen</small>
-        </span>
-        <input id="freq-toggle" type="checkbox" role="switch" />
-      </label>
-      <label class="toggle">
-        <span class="toggle-text">
-          <b data-t="desert">ÖPNV-Wüsten</b>
-          <small data-t="desertHint"
-            >Wo Fußweg zur Haltestelle plus Wartezeit über 10 Min. liegt (0 bis 5 Uhr: 20
-            Min.)</small
-          >
-        </span>
-        <input id="desert-toggle" type="checkbox" role="switch" />
-      </label>
-
-      <h3 data-t="travelTitle">Unterwegs</h3>
-      <div class="seg seg-wide" role="radiogroup" aria-label="Unterwegs" data-t-label="travelTitle">
-        <button role="radio" data-travel="walk" aria-checked="true" data-t="travelWalk">
-          Zu Fuß
-        </button>
-        <button role="radio" data-travel="bike" aria-checked="false" data-t="travelBike">
-          Rad + Bahn
-        </button>
-        <button role="radio" data-travel="bikeonly" aria-checked="false" data-t="travelBikeOnly">
-          Nur Rad
-        </button>
-      </div>
-      <p class="menu-note" data-t="travelHelp">
-        Rad + Bahn: mit 15 km/h zur Station und vom Ausstieg zum Ziel, 2 Min. pro Station fürs
-        Mitnehmen, ohne Busse. Nur Rad: bis 60 Min. auf Straßen und Wegen.
-      </p>
-
-      <h3 data-t="walkTitle">Gehtempo</h3>
-      <div class="seg seg-wide" role="radiogroup" aria-label="Gehtempo" data-t-label="walkTitle">
-        <button role="radio" data-walk="3" aria-checked="false">3 km/h</button>
-        <button role="radio" data-walk="4" aria-checked="true">4 km/h</button>
-        <button role="radio" data-walk="5" aria-checked="false">5 km/h</button>
-        <button role="radio" data-walk="6" aria-checked="false">6 km/h</button>
-      </div>
-      <p class="menu-note" data-t="walkHelp">
-        Für den Weg zur ersten Haltestelle und vom Ausstieg zum Ziel. Umsteigen rechnet mit 4 km/h.
-      </p>
-      <div class="step-free-row">
-        <label class="toggle">
-          <span class="toggle-text">
-            <b data-t="stepFree">Stufenlos</b>
-            <small data-t="stepFreeHint"
-              >Für Rollstuhl, Kinderwagen und Koffer: nur Bahnsteige mit Aufzug oder Rampe und
-              Fahrzeuge, die als barrierefrei markiert sind</small
-            >
-          </span>
-          <input id="stepfree-toggle" type="checkbox" role="switch" />
-        </label>
-      </div>
 
       <h3 id="fav-title" data-t="favTitle">Lieblingsorte</h3>
       <ul id="fav-list" class="fav-list"></ul>

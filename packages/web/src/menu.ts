@@ -1,5 +1,6 @@
-// The menu: how you get around (Unterwegs, Stufenlos, Gehtempo), the map layers, opacity,
-// sharing, installing, the language and the info sheet.
+// The menu (favourites, sharing, installing, the language and the info sheet) and the
+// settings in the Unterwegs and Ebenen panels: how you get around, Stufenlos, Gehtempo, the
+// map layers and the opacity.
 
 import { setLang, t, type Lang } from './i18n';
 import { $, remember, type State } from './state';
@@ -51,7 +52,7 @@ export function initMenu(deps: MenuDeps) {
     infoDialog.showModal();
   });
   // A tap on the backdrop (outside the panel) closes any sheet.
-  for (const d of [menuDialog, infoDialog, $<HTMLDialogElement>('when')]) {
+  for (const d of [menuDialog, infoDialog]) {
     d.addEventListener('click', (e) => {
       if (e.target === d) d.close();
     });

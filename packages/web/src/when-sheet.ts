@@ -1,5 +1,6 @@
-// The time sheet: today, one of the next days or a typical weekday or weekend, the hour, leaving or arriving, typical, best case or
-// next departure, and a second time to compare with. The pill at the top shows the choice.
+// The time panels under the chip row: Zeit (today, one of the next days or a typical
+// weekday or weekend, the hour, leaving or arriving), Reisezeit (typical, best case or next
+// departure) and Vergleich (a second time to compare with). The Zeit chip shows the choice.
 
 import { clockLabel, dayLabel, hourLabel, pillText } from './format';
 import { t } from './i18n';
@@ -11,15 +12,18 @@ export interface WhenSheetDeps {
   state: State;
   /** The time changed: recompute the map. */
   changed: () => void;
-  /** Opening the sheet closes the search panel. */
-  closeSearch: () => void;
+  /** Picking an hour closes the Zeit panel. */
+  closePanel: () => void;
+  /** The chips show the new choice. */
+  rendered: () => void;
 }
 
-export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
+export function initWhenSheet({ state, changed, closePanel, rendered }: WhenSheetDeps) {
   const whenBtn = $<HTMLButtonElement>('when-btn');
-  const whenDialog = $<HTMLDialogElement>('when');
   const dayGrid = $('day-grid');
-  const typicalButtons = [...document.querySelectorAll<HTMLButtonElement>('#when .seg [data-day]')];
+  const typicalButtons = [
+    ...document.querySelectorAll<HTMLButtonElement>('#pop-when .seg [data-day]'),
+  ];
   const hourGrid = $('hour-grid');
   const dirButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-dir]')];
   const measureButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-measure]')];
@@ -56,15 +60,15 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
     const w = state.when;
     const arrive = state.direction === 'arrive';
     const offset = !arrive && state.measure === 'next' ? leaveOffset(w) : 0;
-    // Signs in the pill show step-free and bike modes are on.
+    // Bike and step-free have their own chips; cycling alone has no timetable time.
     whenBtn.querySelector('span')!.textContent =
-      (state.travel === 'bikeonly'
+      state.travel === 'bikeonly'
         ? t('travelBikeOnlyPill')
         : pillText(
             w,
             arrive,
             offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-          ) + (state.travel === 'bike' ? ' 🚲' : '')) + (state.stepFree ? ' ♿' : '');
+          );
     renderDays();
     $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
     for (const b of dirButtons)
@@ -101,6 +105,7 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
       b.setAttribute('aria-checked', String((b as HTMLElement).dataset.day === w.day));
     for (const b of hourGrid.children)
       b.setAttribute('aria-pressed', String(Number((b as HTMLElement).dataset.hour) === w.hour));
+    rendered();
   }
 
   function setWhen(
@@ -122,7 +127,7 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
       b.textContent = String(h);
       b.addEventListener('click', () => {
         setWhen({ ...state.when, hour: h });
-        whenDialog.close();
+        closePanel();
       });
       return b;
     }),
@@ -151,11 +156,5 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
   });
   cmpHour.addEventListener('change', () => setWhen(state.when, { compare: readCompare() }));
   $('cmp-close').addEventListener('click', () => setWhen(state.when, { compare: null }));
-  whenBtn.addEventListener('click', () => {
-    closeSearch();
-    whenDialog.showModal();
-  });
-  $('when-close').addEventListener('click', () => whenDialog.close());
-
-  return { renderWhen, setWhen, dialog: whenDialog };
+  return { renderWhen, setWhen };
 }

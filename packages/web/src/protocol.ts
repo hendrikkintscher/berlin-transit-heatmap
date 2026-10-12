@@ -45,7 +45,14 @@ export type ToWorker =
       stepFree?: boolean;
       /** Cycling to and from stations, or all the way (default walking). */
       travel?: Travel;
+      /**
+       * The Heatmap switch is off: skip the colour image (the result comes back `unpainted`)
+       * so the outlines arrive sooner; a 'paint' draws it once the switch goes on.
+       */
+      noImage?: true;
     }
+  /** The colour image of the map computed as `id` (the last one), skipped with `noImage`. */
+  | { type: 'paint'; id: number }
   /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
   | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
@@ -160,6 +167,13 @@ export type FromWorker =
       outlines: FeatureCollection<LineString, ContourProps>;
       computedInMs: number;
       totalMs: number;
+      /** Asked with `noImage`: `image` is empty until a 'paint' brings it. */
+      unpainted?: true;
+    }
+  | {
+      type: 'image';
+      id: number;
+      image: { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> };
     }
   | {
       type: 'layers';

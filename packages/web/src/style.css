@@ -70,7 +70,7 @@ body {
   left: calc(var(--sl) + 10px);
   right: calc(var(--sr) + 10px);
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 8px;
   pointer-events: none;
 }
@@ -138,7 +138,7 @@ body {
 #hint {
   position: fixed;
   z-index: 3;
-  top: calc(var(--st) + 82px);
+  top: calc(var(--st) + 122px);
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -172,22 +172,11 @@ body {
   max-width: 480px;
 }
 #readout:not([hidden]) {
-  border-radius: 14px 14px 0 0;
-  margin-bottom: -8px;
-  padding-bottom: 10px;
+  border-radius: 14px;
 }
-/* Outlines alone carry their minutes: no colour legend, the tap info stands on its own. */
+/* Outlines alone carry their minutes: no colour legend. */
 body.no-legend .legend {
   display: none;
-}
-body.no-legend #readout:not([hidden]) {
-  border-radius: 14px;
-  margin-bottom: 0;
-}
-#readout:not([hidden]) + .legend {
-  border-radius: 0 0 12px 12px;
-  border-top: 1px solid rgba(29, 21, 48, 0.1);
-  box-shadow: none;
 }
 /* The ✕ to close or deselect: a clear round button with a big touch target. */
 .chip .x {
@@ -252,45 +241,60 @@ body.no-legend #readout:not([hidden]) {
 .status:empty {
   display: none;
 }
+/* The colour legend: a slim bar on the right edge, 0 at the top, haloed labels, no box. */
 .legend {
-  width: 100%;
-  max-width: 480px;
-  background: var(--panel);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  padding: 8px 10px 6px;
+  position: fixed;
+  z-index: 2;
+  right: calc(var(--sr) + 6px);
+  top: calc(var(--st) + 150px);
+  height: min(44vh, 380px);
+  display: grid;
+  grid-template-columns: auto 9px;
+  column-gap: 5px;
+  pointer-events: none;
 }
-#legend-bar {
+#legend-bar,
+#diff-bar,
+#home-bar {
+  grid-row: 1;
+  grid-column: 2;
   display: flex;
-  height: 12px;
-  border-radius: 4px;
+  flex-direction: column;
+  width: 9px;
+  border-radius: 5px;
   overflow: hidden;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
 }
-#legend-bar span {
+#legend-bar span,
+#diff-bar span,
+#home-bar span {
   flex: 1;
-  opacity: 0.85;
-}
-/* Mark the finely banded 20–50 min range. */
-#legend-bar span:nth-child(n + 5):nth-child(-n + 16) {
-  box-shadow: inset 0 -2px rgba(0, 0, 0, 0.18);
 }
 .legend-ticks {
+  grid-row: 1;
+  grid-column: 1;
   position: relative;
-  height: 14px;
+  min-width: 26px;
   font-size: 11px;
-  color: var(--muted);
-  margin-top: 3px;
+  font-weight: 700;
+  color: var(--ink);
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 2px #fff;
 }
 .legend-ticks span {
   position: absolute;
-  transform: translateX(-50%);
+  right: 0;
+  transform: translateY(-50%);
+  white-space: nowrap;
 }
 .legend-ticks span:first-child {
   transform: none;
 }
 .legend-ticks span:last-child {
-  left: auto !important;
-  right: 0;
+  top: auto !important;
+  bottom: 0;
   transform: none;
 }
 
@@ -651,7 +655,7 @@ dialog.menu[open] {
 .meet {
   position: fixed;
   z-index: 3;
-  top: calc(var(--st) + 64px);
+  top: calc(var(--st) + 114px);
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -820,27 +824,94 @@ body.special #cmp {
   vertical-align: 1px;
 }
 
-/* Departure time: a pill in the top bar opens a sheet with weekday/weekend and the hour. */
-.when-pill {
+/* The chip row under the top bar: what is set, one tap from its panel (chips.ts). */
+.chips {
+  position: fixed;
+  z-index: 4;
+  top: calc(var(--st) + 64px);
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 8px;
+  padding: 2px calc(var(--sr) + 10px) 6px calc(var(--sl) + 10px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  pointer-events: none;
+}
+.chips::-webkit-scrollbar {
+  display: none;
+}
+.chip-btn {
+  flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 46px;
-  padding: 0 16px 0 13px;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
   border: 0;
   border-radius: 999px;
   background: var(--panel);
   box-shadow: var(--shadow);
   color: var(--ink);
   font: inherit;
+  font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
+  pointer-events: auto;
 }
-dialog.when {
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
+.chip-btn[data-pop]:not([data-pop=''])::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 2px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0.7;
+}
+.chip-btn[aria-expanded='true']::after {
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
+.chip-btn.on {
+  background: var(--accent);
+  color: #fff;
+}
+/* A chip's panel: right under the row, the map stays visible around it. */
+.pop {
+  position: fixed;
+  z-index: 5;
+  top: calc(var(--st) + 112px);
+  left: calc(var(--sl) + 10px);
+  width: min(420px, calc(100vw - 20px));
+  max-height: calc(100dvh - var(--st) - var(--sb) - 130px);
+  overflow-y: auto;
+  padding: 4px 16px 14px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 40px rgba(20, 10, 40, 0.3);
+  font-size: 15px;
+  line-height: 1.45;
+  animation: drop 0.12s ease-out;
+}
+.pop h3 {
+  margin: 14px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pop .seg {
+  box-shadow: none;
+  background: #f0ecf4;
+}
+.pop .seg-wide + .seg-wide {
+  margin-top: 8px;
+}
+#pop-when .day-grid {
+  margin-top: 14px;
 }
 /* Today and the next six days: a row of four, then three. */
 .day-grid {
@@ -914,12 +985,6 @@ dialog.when {
   .top .round {
     width: 44px;
     height: 44px;
-  }
-  .when-pill {
-    height: 44px;
-    padding: 0 12px 0 10px;
-    gap: 5px;
-    font-size: 14px;
   }
 }
 #locate-btn.busy svg {
@@ -1019,35 +1084,11 @@ dialog.when {
 .compare-row select:disabled {
   opacity: 0.5;
 }
-dialog.when .seg-wide + .seg-wide {
-  margin-top: 8px;
-}
 /* Both chips at once: the compare chip goes below the meeting-point chip. */
 #meet:not([hidden]) ~ #cmp {
-  top: calc(var(--st) + 108px);
+  top: calc(var(--st) + 158px);
 }
 
-/* Diverging legend while comparing. */
-#diff-bar {
-  display: flex;
-  height: 12px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-#diff-bar span {
-  flex: 1;
-  opacity: 0.85;
-}
-#home-bar {
-  display: flex;
-  height: 12px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-#home-bar span {
-  flex: 1;
-  opacity: 0.85;
-}
 #diff-bar[hidden],
 #diff-ticks[hidden],
 #home-bar[hidden],
@@ -1057,7 +1098,7 @@ dialog.when .seg-wide + .seg-wide {
   display: none;
 }
 #diff-ticks span:first-child {
-  transform: translateX(-50%);
+  transform: translateY(-50%);
 }
 
 /* The connection to a tapped spot, under the minutes. */
@@ -1271,4 +1312,25 @@ dialog.when .seg-wide + .seg-wide {
 }
 .changes-list .line-badge {
   vertical-align: 1px;
+}
+
+/* One more start (meeting point) while no card is shown, bottom right. */
+.second-btn {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0 16px 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bottom:has(#readout:not([hidden])) .second-btn {
+  display: none;
 }
