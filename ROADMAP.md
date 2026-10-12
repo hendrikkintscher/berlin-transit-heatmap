@@ -4,15 +4,14 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #62. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #64. Build in this order, one step per PR:
 
-1. **Next:** Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
-2. "Bis wann komme ich heim?": the last connection home (group 6)
-3. Wider area: Potsdam and the commuter belt (group 13)
-4. Calmer street level: footpaths next to streets (group 7)
-5. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-6. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-7. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** "Bis wann komme ich heim?": the last connection home (group 6)
+2. Wider area: Potsdam and the commuter belt (group 13)
+3. Calmer street level: footpaths next to streets (group 7)
+4. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+5. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+6. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -114,11 +113,15 @@ Notes: the routing already gives times to every point, so per-place times are lo
 
 ### Meeting point for three or more people (C1)
 
+**Done** (PR #64): up to five starts, each with its own colour; the map shows extra minutes over the best slowest-of-all time, suggestions rank by the slowest and then the sum, and a tap lists everyone's minutes and trip. Links repeat `with=`; the banner's ✕ ends the meeting point.
+
 Friends often meet in groups of three to five. Generalise the meeting point to up to five starts: the map shows extra minutes over the best slower-of-all time, the suggested meeting points work the same way, and a tap lists everyone's trip. Kept in the link with `with=` repeated.
 
 Notes: one routing pass per start, so five starts take about 2.5 times the two-start time; start with three and measure against the snappiness rule. Medium effort; built in one step with C2. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 ### "Where can I live?" map from my favourites (C2)
+
+**Done** (PR #64): the Wohnlage-Karte in the menu, under the favourites, combines one Typisch "arrive" pass per favourite into the weighted average per cell (unreachable counts as 120 min), with progress shown. It always uses Typisch and is not kept in links. A tap shows the average and the minutes to each place.
 
 Today the favourites score is shown for the chosen start only. Flat hunters want the opposite: shade the whole map by the score, so the green areas are where all your important places are close. One "Ankommen" pass per favourite, combined with the weights into the weighted-average score per cell (unreachable counting as 120, as now).
 
