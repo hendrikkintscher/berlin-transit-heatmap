@@ -61,9 +61,14 @@ export type ToWorker =
        * so the outlines arrive sooner; a 'paint' draws it once the switch goes on.
        */
       noImage?: true;
+      /** "Bis N Min.": the image shades what is reachable within this many minutes instead. */
+      limit?: number;
     }
-  /** The colour image of the map computed as `id` (the last one), skipped with `noImage`. */
-  | { type: 'paint'; id: number }
+  /**
+   * The colour image of the map computed as `id` (the last one), skipped with `noImage`, or
+   * with `limit` its "Bis N Min." shading.
+   */
+  | { type: 'paint'; id: number; limit?: number }
   /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
   | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
@@ -163,8 +168,16 @@ export type FromWorker =
       type: 'result';
       id: number;
       window: Window;
-      /** Travel-time raster, drawn as an image: RGBA pixels, rows evenly spaced in Web Mercator. */
-      image: { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> };
+      /**
+       * Travel-time raster, drawn as an image: RGBA pixels, rows evenly spaced in Web Mercator.
+       * Over its own `bbox` when it covers only part of the grid ("Bis N Min.").
+       */
+      image: {
+        width: number;
+        height: number;
+        rgba: Uint8ClampedArray<ArrayBuffer>;
+        bbox?: [number, number, number, number];
+      };
       /** [west, south, east, north] of the image and the grid. */
       bbox: [number, number, number, number];
       /** Grid travel times for the tap readout (row 0 = north, rows evenly spaced in latitude). */
@@ -198,11 +211,20 @@ export type FromWorker =
       totalMs: number;
       /** Asked with `noImage`: `image` is empty until a 'paint' brings it. */
       unpainted?: true;
+      /** The image is the "Bis N Min." shading for this many minutes, not the colours. */
+      limit?: number;
     }
   | {
       type: 'image';
       id: number;
-      image: { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> };
+      image: {
+        width: number;
+        height: number;
+        rgba: Uint8ClampedArray<ArrayBuffer>;
+        bbox?: [number, number, number, number];
+      };
+      /** Painted as "Bis N Min." for this many minutes. */
+      limit?: number;
     }
   | { type: 'stations'; list: SearchStation[] }
   /** The map `id`'s lines again, now along the real tracks and roads (lines.bin arrived). */

@@ -18,6 +18,7 @@ const BASE: LinkState = {
   desert: false,
   iso: true,
   heat: false,
+  limit: 0,
 };
 
 describe('links', () => {
@@ -46,13 +47,20 @@ describe('links', () => {
       desert: true,
       iso: false,
       heat: true,
+      limit: 45,
     };
     const q = linkQuery(full, NOW, 'en');
     expect(q).toBe(
       'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&to=52.43915%2C13.47215&t=weekend-02' +
-        '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=heat%2Cfreq%2Cdesert%2Cnoiso&lang=en',
+        '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=heat%2Cfreq%2Cdesert%2Cnoiso&bis=45&lang=en',
     );
     expect(readLink(`?${q}`, BASE)).toEqual(full);
+  });
+
+  it('takes only the offered minutes for "Bis N Min."', () => {
+    expect(readLink('?bis=30', BASE).limit).toBe(30);
+    expect(readLink('?bis=20', BASE).limit).toBe(0);
+    expect(readLink('?bis=x', BASE).limit).toBe(0);
   });
 
   it('keeps the device settings a link does not name', () => {

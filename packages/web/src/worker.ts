@@ -32,7 +32,16 @@ import {
   type WalkNetwork,
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
-import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut, homeLut, HOME_OUTLINE_MINUTES } from './colors';
+import {
+  colorLut,
+  DIFF_MAX_S,
+  DIFF_MIN_S,
+  diffLut,
+  homeLut,
+  HOME_OUTLINE_MINUTES,
+  limitLut,
+  LIMIT_FEATHER_S,
+} from './colors';
 import { blurSeconds, warpField } from './soften';
 import { outlines as traceOutlines } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
@@ -69,6 +78,19 @@ const SOFT = { blurCells: 2, warpCells: 2.5, warpWavelengthCells: 9, featherSeco
 const LUT = colorLut(SOFT.featherSeconds);
 const DIFF_LUT = diffLut();
 const HOME_LUT = homeLut();
+const LIMIT_LUTS = new Map<number, Uint8Array>();
+/** The colour image of the last map: its travel times, or "Bis N Min." in one colour. */
+function paintShown(shown: NonNullable<typeof lastShown>, limit?: number) {
+  if (!limit) return paint(shown.grid, shown.values);
+  let lut = LIMIT_LUTS.get(limit);
+  if (!lut) LIMIT_LUTS.set(limit, (lut = limitLut(limit)));
+  // A meeting point counts everyone's own minutes (the slowest), not the extra ones. Only
+  // the area within reach is painted, so fewer minutes paint faster.
+  const { grid } = shown;
+  const win = windowUpTo(grid.seconds, grid.cols, grid.rows, limit * 60 + LIMIT_FEATHER_S);
+  if (!win) return { width: 1, height: 1, rgba: new Uint8ClampedArray(4) };
+  return paint(grid, grid.seconds, lut, 0, win);
+}
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 const post = (m: FromWorker) => ctx.postMessage(m);
@@ -361,7 +383,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       let outlines: ReturnType<typeof traceOutlines>;
       let compare: Float32Array<ArrayBuffer> | undefined;
       let extraBase: number | undefined;
-      unpainted = null;
+      lastShown = null;
+      let unpainted = false;
       if (msg.compare) {
         const tt2 = await prepared(msg.compare, msg.direction, variant);
         const other = starts.map((o) => run(tt2, o, typical, travel, false, leaveAt(tt2)).shown);
@@ -373,11 +396,12 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         // Meeting point: colour the extra minutes over the best spot, so it is always green.
         extraBase = meeting ? minFinite(grid.seconds) : 0;
         const shownSeconds = extraBase ? grid.seconds.map((v) => v - extraBase!) : grid.seconds;
-        if (msg.noImage) {
+        lastShown = { id: msg.id, grid, values: shownSeconds };
+        if (msg.noImage && !msg.limit) {
           // Heatmap off: the outlines come first; the colours wait for a 'paint'.
           image = { width: 1, height: 1, rgba: new Uint8ClampedArray(4) };
-          unpainted = { id: msg.id, grid, values: shownSeconds };
-        } else image = paint(grid, shownSeconds);
+          unpainted = true;
+        } else image = paintShown(lastShown, msg.limit);
         // Outlines follow a more strongly blurred field, so walk bubbles round off.
         outlines = traceOutlines(shownSeconds, grid.cols, grid.rows, grid.bbox, OUTLINE_BLUR_CELLS);
       }
@@ -411,6 +435,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           computedInMs: runs.reduce((a, r) => a + r.result.computedInMs, 0),
           totalMs: performance.now() - t0,
           ...(unpainted ? { unpainted: true as const } : {}),
+          ...(msg.limit && !msg.compare ? { limit: msg.limit } : {}),
         } satisfies FromWorker,
         [
           image.rgba.buffer,
@@ -422,12 +447,17 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       // The lines' courses come after the first map, never before it.
       void loadLines(tt);
     } else if (msg.type === 'paint') {
-      if (unpainted?.id !== msg.id) return;
-      const image = paint(unpainted.grid, unpainted.values);
-      unpainted = null;
-      ctx.postMessage({ type: 'image', id: msg.id, image } satisfies FromWorker, [
-        image.rgba.buffer,
-      ]);
+      if (lastShown?.id !== msg.id) return;
+      const image = paintShown(lastShown, msg.limit);
+      ctx.postMessage(
+        {
+          type: 'image',
+          id: msg.id,
+          image,
+          ...(msg.limit ? { limit: msg.limit } : {}),
+        } satisfies FromWorker,
+        [image.rgba.buffer],
+      );
     } else if (msg.type === 'living') {
       await living(msg);
     } else if (msg.type === 'home') {
@@ -477,8 +507,8 @@ const eveningSeconds = (window: Window) => {
 };
 
 /** The last home map: what a tap needs to rebuild its last fast connection. */
-/** The last map, computed without its colour image (Heatmap off). */
-let unpainted: { id: number; grid: HeatGrid; values: Float32Array } | null = null;
+/** The last map's grid and the times its colours show, for painting it again ('paint'). */
+let lastShown: { id: number; grid: HeatGrid; values: Float32Array } | null = null;
 
 let lastHome: {
   id: number;
@@ -1001,22 +1031,40 @@ const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) /
  * grid's rows are evenly spaced in latitude but the map is Web Mercator, so each
  * image row samples the grid at its own latitude.
  */
-function paint(grid: HeatGrid, values?: Float32Array, lut = LUT, offset = 0) {
-  const { cols, rows } = grid;
+function paint(
+  grid: HeatGrid,
+  values?: Float32Array,
+  lut = LUT,
+  offset = 0,
+  win?: PaintWindow,
+): { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer>; bbox?: Bbox } {
+  const { cols: fullCols } = grid;
+  const { c0, r0, cols, rows } = win ?? { c0: 0, r0: 0, cols: grid.cols, rows: grid.rows };
   const lutMax = lut.length / 4 - 1;
-  const seconds = blurSeconds(values ?? grid.seconds, cols, rows, SOFT.blurCells);
-  const [, south, , north] = grid.bbox;
+  const all = values ?? grid.seconds;
+  // Only the window's cells (the whole grid without one) are softened and painted.
+  const seconds = blurSeconds(
+    win ? cropCells(all, fullCols, win) : all,
+    cols,
+    rows,
+    SOFT.blurCells,
+  );
+  const [west, gridSouth, east, gridNorth] = grid.bbox;
+  const dLat = (gridNorth - gridSouth) / grid.rows;
+  const dLon = (east - west) / fullCols;
+  const north = gridNorth - r0 * dLat;
+  const south = north - rows * dLat;
   const width = cols * UPSAMPLE;
   const height = rows * UPSAMPLE;
   const rgba = new Uint8ClampedArray(width * height * 4);
   const yN = mercY(north);
   const yS = mercY(south);
-  const dLat = (north - south) / rows;
-  const warp = warpOf(cols, rows);
+  // The wobble is the whole grid's, so a window has the same shapes as the full map.
+  const warp = warpOf(fullCols, grid.rows);
   for (let j = 0; j < height; j++) {
     const lat = (Math.atan(Math.sinh(yN - ((j + 0.5) * (yN - yS)) / height)) * 180) / Math.PI;
     const fy0 = (north - lat) / dLat - 0.5;
-    const wRow = Math.min(rows - 1, Math.max(0, Math.round(fy0))) * cols;
+    const wRow = (r0 + Math.min(rows - 1, Math.max(0, Math.round(fy0)))) * fullCols + c0;
     let o = j * width * 4;
     for (let x = 0; x < width; x++, o += 4) {
       const fx0 = (x + 0.5) / UPSAMPLE - 0.5;
@@ -1026,12 +1074,12 @@ function paint(grid: HeatGrid, values?: Float32Array, lut = LUT, offset = 0) {
       fx = fx < 0 ? 0 : fx > cols - 1 ? cols - 1 : fx;
       fy = fy < 0 ? 0 : fy > rows - 1 ? rows - 1 : fy;
       let c = fx | 0;
-      let r0 = fy | 0;
+      let r = fy | 0;
       if (c > cols - 2) c = cols - 2;
-      if (r0 > rows - 2) r0 = rows - 2;
+      if (r > rows - 2) r = rows - 2;
       const rx = fx - c;
-      const ry = fy - r0;
-      const top = r0 * cols + c;
+      const ry = fy - r;
+      const top = r * cols + c;
       const a = seconds[top];
       const b = seconds[top + 1];
       const d = seconds[top + cols];
@@ -1049,10 +1097,67 @@ function paint(grid: HeatGrid, values?: Float32Array, lut = LUT, offset = 0) {
       rgba[o] = lut[k];
       rgba[o + 1] = lut[k + 1];
       rgba[o + 2] = lut[k + 2];
-      rgba[o + 3] = 255;
+      rgba[o + 3] = lut[k + 3];
     }
   }
-  return { width, height, rgba };
+  if (!win) return { width, height, rgba };
+  const left = west + c0 * dLon;
+  return { width, height, rgba, bbox: [left, south, left + cols * dLon, north] };
+}
+
+type Bbox = [number, number, number, number];
+/** A rectangle of grid cells: its first column and row and its size. */
+interface PaintWindow {
+  c0: number;
+  r0: number;
+  cols: number;
+  rows: number;
+}
+
+/** Margin around the shaded cells for the blur and the wobble, in cells. */
+const WINDOW_PAD = 2 * SOFT.blurCells + Math.ceil(SOFT.warpCells) + 2;
+
+/**
+ * The smallest window of cells holding every value up to `max` (with a margin for the
+ * softening), in one pass over the grid; null when none is that low.
+ */
+function windowUpTo(values: Float32Array, cols: number, rows: number, max: number) {
+  let c0 = cols;
+  let c1 = -1;
+  let r0 = rows;
+  let r1 = -1;
+  for (let r = 0, k = 0; r < rows; r++) {
+    let first = -1;
+    let last = -1;
+    for (let c = 0; c < cols; c++, k++) {
+      if (values[k] <= max) {
+        if (first < 0) first = c;
+        last = c;
+      }
+    }
+    if (first < 0) continue;
+    if (r < r0) r0 = r;
+    r1 = r;
+    if (first < c0) c0 = first;
+    if (last > c1) c1 = last;
+  }
+  if (r1 < 0) return null;
+  c0 = Math.max(0, c0 - WINDOW_PAD);
+  r0 = Math.max(0, r0 - WINDOW_PAD);
+  c1 = Math.min(cols - 1, c1 + WINDOW_PAD);
+  r1 = Math.min(rows - 1, r1 + WINDOW_PAD);
+  // Bilinear sampling needs two cells each way.
+  if (c1 - c0 < 1 || r1 - r0 < 1) return null;
+  return { c0, r0, cols: c1 - c0 + 1, rows: r1 - r0 + 1 };
+}
+
+function cropCells(values: Float32Array, cols: number, win: PaintWindow): Float32Array {
+  const out = new Float32Array(win.cols * win.rows);
+  for (let r = 0; r < win.rows; r++) {
+    const from = (win.r0 + r) * cols + win.c0;
+    out.set(values.subarray(from, from + win.cols), r * win.cols);
+  }
+  return out;
 }
 
 /**

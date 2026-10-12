@@ -4,6 +4,7 @@ import {
   HOME_TICKS,
   homeBandOf,
   homeLut,
+  limitLut,
   BAND_COLORS,
   BAND_EDGES_MIN,
   bandLabel,
@@ -117,5 +118,19 @@ describe('single-hue outlines', () => {
     expect(OUTLINE_STEP_COLORS).toHaveLength(OUTLINE_STEP_MINUTES.length);
     const light = OUTLINE_STEP_COLORS.map((c) => oklab(c)[0]);
     for (let i = 1; i < light.length; i++) expect(light[i]).toBeGreaterThan(light[i - 1]);
+  });
+});
+
+describe('"Bis N Min." shading', () => {
+  it('is one colour up to N minutes, fading out across the edge, and clear beyond', () => {
+    const lut = limitLut(30);
+    const alpha = (s: number) => lut[Math.min(s, lut.length / 4 - 1) * 4 + 3];
+    expect(alpha(0)).toBeGreaterThan(0);
+    expect(alpha(29 * 60)).toBe(alpha(0));
+    expect(alpha(30 * 60)).toBeLessThan(alpha(0));
+    expect(alpha(30 * 60)).toBeGreaterThan(0);
+    expect(alpha(31 * 60)).toBe(0);
+    expect(alpha(120 * 60)).toBe(0);
+    expect([lut[0], lut[1], lut[2]]).toEqual([lut[4], lut[5], lut[6]]);
   });
 });
