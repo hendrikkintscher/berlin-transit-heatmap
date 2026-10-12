@@ -9,7 +9,9 @@ State on 2026-10-12, live through PR #103. Build in this order, one step per PR:
 1. **Next:** Chip bar rearranged: menu as "Mehr" chip, search and locate below, "Bahn" chip, Barrierefrei, Reisezeit in Zeit (group 12)
 2. Shown connection without a black border (group 7)
 
-Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
+
+**Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -598,6 +600,10 @@ The covered rectangle is 13.05–13.80 E, 52.33–52.70 N (timetable-build/src/g
 Notes: a larger area means bigger timetables and walking network and more cells per tap, so measure first against the snappiness rule (and the CI speed budget from B1); a possible middle way is the wider area at a coarser grid outside Berlin. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 ## 14. Android app
+
+### Beta readiness
+
+Hendrik, 2026-10-12: make the app ready for beta testing. **Blocked:** this is not started until Hendrik has explicitly agreed to the full approach. Suggestions for what to do are being drafted in a separate thread first; once he has agreed, the agreed plan replaces this paragraph and the steps are queued in Up next.
 
 **Postponed** (Hendrik, 2026-10-12): not started yet and not planned any time soon.
 
