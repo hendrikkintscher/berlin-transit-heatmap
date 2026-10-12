@@ -4,7 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #126. Nothing is queued: Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #126. Build in this order, one step per PR:
+
+1. **Next:** Calmer default map, option B with solid, wider, blurred time lines (group 12)
+
+Picked by Hendrik on 2026-10-12. After it, Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the name, the domain and the timetable feed account are settled.
 
@@ -658,6 +662,16 @@ Hendrik, 2026-10-12, two minor fixes before anything else:
 - **Slim loading bar instead of popups:** the "Berechnen …" and "Berechnet in …" info popups go away. Instead a very slim loading bar is overlaid at the bottom of the screen and disappears once everything has loaded.
 
 Notes: layout only, URL parameters unchanged; check at 360×740 in German and English, and keep the flicker-free first view from PR #111. Small effort.
+
+### Calmer default map (option B)
+
+Hendrik, 2026-10-12: option B from the clean-map mockups (plan files under web/clean-map/, b-soft.png), "but normal lines instead of dashed lines", and the time lines a bit wider and blurred. All paint and filter changes in packages/web/src/map-layers.ts:
+
+- **Quieter base map:** the base map's railway and highway shield layers are hidden; minor roads appear from zoom 12; road opacity 0.3 at zoom 10, 0.55 at 12, 1 at 14.
+- **Soft Ring:** the Ring is a soft wide band (opacity 0.1, width 4 to 10); landmarks appear from zoom 12.
+- **Solid, soft time lines:** in the outlines-only view the lines are solid, not dashed. The 30/60/90-minute lines get width 4 to 6, blur 2.5 to 3.5, opacity 0.75; the 10/20-minute steps width 2.5 to 4, blur 2 to 3, opacity 0.45. Label spacing 260.
+
+Notes: paint only, URL parameters unchanged; check at 360×740 in German and English and keep the flicker-free first view. Small effort.
 
 ## 13. Wider area and other regions
 
