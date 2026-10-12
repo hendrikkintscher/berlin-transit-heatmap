@@ -24,31 +24,31 @@
 
     <nav id="chips" class="chips unrendered" aria-label="Einstellungen" data-t-label="chipsLabel">
       <div class="app-title" data-t="title">Berlin in Minuten</div>
-      <button
-        id="search-btn"
-        class="chip-btn search-chip"
-        type="button"
-        aria-label="Adresse suchen"
-        data-t-label="searchOpen"
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-          <circle
-            cx="10.5"
-            cy="10.5"
-            r="6.5"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.4"
-          />
-          <path
-            d="M15.5 15.5 21 21"
-            stroke="currentColor"
-            stroke-width="2.6"
-            stroke-linecap="round"
-          />
-        </svg>
-      </button>
       <div class="chip-scroll">
+        <button
+          id="search-btn"
+          class="chip-btn search-chip"
+          type="button"
+          aria-label="Adresse suchen"
+          data-t-label="searchOpen"
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <circle
+              cx="10.5"
+              cy="10.5"
+              r="6.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.4"
+            />
+            <path
+              d="M15.5 15.5 21 21"
+              stroke="currentColor"
+              stroke-width="2.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
         <button
           id="when-btn"
           class="chip-btn when-chip"
@@ -94,24 +94,16 @@
         >
           <span data-t="layersChip">Ebenen</span>
         </button>
+        <button
+          id="menu-btn"
+          class="chip-btn menu-chip"
+          type="button"
+          aria-haspopup="dialog"
+          aria-controls="menu"
+        >
+          <span data-t="menuChip">Mehr</span>
+        </button>
       </div>
-      <button
-        id="menu-btn"
-        class="chip-btn menu-chip"
-        type="button"
-        aria-haspopup="dialog"
-        aria-controls="menu"
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path
-            d="M4 7h16M4 12h16M4 17h16"
-            stroke="currentColor"
-            stroke-width="2.4"
-            stroke-linecap="round"
-          />
-        </svg>
-        <span data-t="menuChip">Mehr</span>
-      </button>
     </nav>
 
     <div id="pops">
@@ -378,29 +370,6 @@
     </div>
 
     <footer class="bottom">
-      <div id="changes" class="chip changes" hidden>
-        <button
-          id="changes-chip"
-          class="changes-chip"
-          type="button"
-          aria-expanded="false"
-          aria-controls="changes-panel"
-        ></button>
-        <div id="changes-panel" class="changes-panel" hidden>
-          <b id="changes-title"></b>
-          <ul id="changes-list" class="changes-list"></ul>
-          <p id="changes-note" class="menu-note"></p>
-        </div>
-        <button
-          id="changes-close"
-          class="x"
-          type="button"
-          aria-label="Hinweis schließen"
-          data-t-label="changesClose"
-        >
-          ✕
-        </button>
-      </div>
       <div id="tip" class="chip tip" role="note" hidden>
         <span id="tip-text"></span>
         <button id="tip-action" type="button" hidden></button>
@@ -449,6 +418,30 @@
             />
           </svg>
           <span>2. Startpunkt</span>
+        </button>
+      </div>
+      <!-- Right above the trip card it belongs to. -->
+      <div id="changes" class="chip changes" hidden>
+        <button
+          id="changes-chip"
+          class="changes-chip"
+          type="button"
+          aria-expanded="false"
+          aria-controls="changes-panel"
+        ></button>
+        <div id="changes-panel" class="changes-panel" hidden>
+          <b id="changes-title"></b>
+          <ul id="changes-list" class="changes-list"></ul>
+          <p id="changes-note" class="menu-note"></p>
+        </div>
+        <button
+          id="changes-close"
+          class="x"
+          type="button"
+          aria-label="Hinweis schließen"
+          data-t-label="changesClose"
+        >
+          ✕
         </button>
       </div>
       <div id="readout" class="chip" hidden>
