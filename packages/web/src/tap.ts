@@ -12,7 +12,8 @@ import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
 import { leaveText, tripHtml, type Trip } from './trip-card';
 import { MAX_STARTS, type Point } from './url';
-import { clockNow } from './when';
+import { liveStatus, liveText, type Board } from './live';
+import { clockNow, isDate } from './when';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
 export interface Spot extends Point {
@@ -55,6 +56,10 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   /** The place the shown trip goes to, and whether a later one was already asked for. */
   let tripAt: { lat: number; lon: number; askedLater: boolean } | null = null;
   let removeWhich = 0;
+  /** The shown trip's first vehicle, for its live status (today only), and the last check. */
+  let board: Board | null = null;
+  const DATA_BASE = new URL('data/', document.baseURI).href;
+  let liveAt = 0;
 
   const spotEl = document.createElement('div');
   spotEl.className = 'spot-marker';
@@ -283,6 +288,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (readout.hidden || !tripAt) return;
     const now = clockNow(state.when);
     if (now === null) return;
+    if (Date.now() - liveAt > 60_000) checkLive();
     for (const el of readout.querySelectorAll<HTMLElement>('.trip-leave[data-leave]')) {
       const leave = Number(el.dataset.leave);
       el.textContent = leaveText(leave, now);
@@ -318,6 +324,25 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       document.getElementById('tap-mins')?.remove();
     if (tripAt) tripAt.askedLater = false;
     setTrip(m);
+    board = (m.journeys.length === 1 && m.journeys[0]?.board) || null;
+    checkLive();
+  }
+
+  /** Asks for the first vehicle's live status and shows it under the countdown. */
+  function checkLive() {
+    const day = state.when.day;
+    const b = board;
+    if (!b || !isDate(day) || clockNow(state.when) === null) return;
+    liveAt = Date.now();
+    const id = tripId;
+    void liveStatus(b, day, DATA_BASE).then((s) => {
+      const el = document.querySelector<HTMLElement>('#trip .trip-live');
+      if (!s || !el || id !== tripId || b !== board) return;
+      const { text, bad } = liveText(b.line, s);
+      el.textContent = text;
+      el.classList.toggle('bad', bad);
+      el.hidden = false;
+    });
   }
 
   /** Where-to-live map: the minutes from the tapped place to each favourite. */

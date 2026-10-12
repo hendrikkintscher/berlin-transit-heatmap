@@ -60,7 +60,7 @@ export function tripHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string {
           ? `<span class="trip-main">${mark}${t('tripMain', {
               n: Math.max(1, Math.round((j.arrive - j.leave) / 60)),
               time: eveningClock(j.arrive),
-            })}</span><small class="trip-leave" data-leave="${j.leave}">${leaveText(j.leave, c.now)}</small>`
+            })}</span><small class="trip-leave" data-leave="${j.leave}">${leaveText(j.leave, c.now)}</small>${j.board ? '<small class="trip-live" hidden></small>' : ''}`
           : j.minutes !== undefined
             ? `<span class="trip-now">${mark}${t(c.direction === 'depart' ? 'tripNext' : 'tripLast', { n: j.minutes })}</span>`
             : '';

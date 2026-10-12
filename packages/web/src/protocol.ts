@@ -183,6 +183,8 @@ export type FromWorker =
         /** Departing: when to leave the start and when it arrives, seconds of the service day. */
         leave?: number;
         arrive?: number;
+        /** Departing: the first vehicle (stop index, line, planned departure in seconds of the day). */
+        board?: { stop: number; line: string; at: number };
       } | null)[];
       /** The journeys drawn on the map: rides coloured by mode, walks dashed. */
       lines: FeatureCollection<LineString, { mode: string; walk: boolean }>;

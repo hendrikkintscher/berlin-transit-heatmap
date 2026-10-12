@@ -169,7 +169,10 @@ describe('writeOutputs', () => {
       stops: day.stops.map((s) => ({ ...s, id: '' })),
       transfers: [...day.transfers].sort((a, b) => a.from - b.from || a.to - b.to),
     });
+    expect(read('stop-ids.json')).toMatchObject({ version: 1, feedVersion: 'test-feed' });
+    expect(read('stop-ids.json').ids).toHaveLength(day.stops.length);
     expect(Object.keys(info.files).sort()).toEqual([
+      'stop-ids.json',
       'stops.json',
       'timetable-day.bin',
       'timetable-day.json',

@@ -94,7 +94,7 @@ jobs:
           fi
           gh release upload "$TIMETABLE_TAG" \
             work/out/timetable-*.json work/out/timetable-*.bin \
-            work/out/stops.json work/out/build-info.json \
+            work/out/stops.json work/out/stop-ids.json work/out/build-info.json \
             $(ls work/out/changes.json 2>/dev/null) --clobber
           if [ -f work/out/walk.bin ]; then
             gh release upload "$TIMETABLE_TAG" work/out/walk.bin --clobber
