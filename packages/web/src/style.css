@@ -833,6 +833,27 @@ dialog.when {
   right: auto;
   transform: translateX(-50%);
 }
+/* Today and the next six days: a row of four, then three. */
+.day-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.day-grid button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0ecf4;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.day-grid button[aria-checked='true'] {
+  background: var(--accent);
+  color: #fff;
+}
 .hour-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);

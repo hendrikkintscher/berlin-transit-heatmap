@@ -2,8 +2,11 @@ name: Refresh VBB GTFS
 
 on:
   schedule:
-    # 04:17 UTC on the 2nd of every month (VBB usually publishes early in the month).
-    - cron: '17 4 2 * *'
+    # Every night at 00:17 UTC (01:17 or 02:17 in Berlin, already the new day). VBB
+    # updates the feed when construction timetables change; an unchanged feed is not
+    # published again, but "Build timetable" still runs after this to move the real
+    # dates on by a day.
+    - cron: '17 0 * * *'
   workflow_dispatch:
     inputs:
       force:

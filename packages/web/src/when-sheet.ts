@@ -1,11 +1,11 @@
-// The time sheet: weekday or weekend, the hour, leaving or arriving, typical, best case or
+// The time sheet: today, one of the next days or a typical weekday or weekend, the hour, leaving or arriving, typical, best case or
 // next departure, and a second time to compare with. The pill at the top shows the choice.
 
-import { clockLabel, hourLabel } from './format';
+import { clockLabel, dayLabel, hourLabel, pillText } from './format';
 import { t } from './i18n';
 import type { Measure } from './protocol';
 import { $, type State } from './state';
-import { leaveOffset, windowName, type DayType, type Direction, type When } from './when';
+import { leaveOffset, upcomingDays, windowName, type Day, type Direction, type When } from './when';
 
 export interface WhenSheetDeps {
   state: State;
@@ -18,7 +18,8 @@ export interface WhenSheetDeps {
 export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
   const whenBtn = $<HTMLButtonElement>('when-btn');
   const whenDialog = $<HTMLDialogElement>('when');
-  const dayButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-day]')];
+  const dayGrid = $('day-grid');
+  const typicalButtons = [...document.querySelectorAll<HTMLButtonElement>('#when .seg [data-day]')];
   const hourGrid = $('hour-grid');
   const dirButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-dir]')];
   const measureButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-measure]')];
@@ -26,14 +27,30 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
   const cmpHour = $<HTMLSelectElement>('cmp-hour');
   const cmpChip = $('cmp');
 
-  const pillKey = (w: When, arrive: boolean) =>
-    w.day === 'weekday'
-      ? arrive
-        ? 'weekdayArr'
-        : 'weekdayAt'
-      : arrive
-        ? 'weekendArr'
-        : 'weekendAt';
+  /** Today and the next days (they move on at midnight), then the typical days to compare. */
+  function renderDays() {
+    const days = upcomingDays();
+    const labels = days.map((d) => dayLabel(d));
+    if (dayGrid.dataset.days !== days.join() || dayGrid.dataset.lang !== labels.join()) {
+      dayGrid.dataset.days = days.join();
+      dayGrid.dataset.lang = labels.join();
+      dayGrid.replaceChildren(
+        ...days.map((d, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('role', 'radio');
+          b.dataset.day = d;
+          b.textContent = labels[i]!;
+          return b;
+        }),
+      );
+      cmpDay.replaceChildren(
+        cmpDay.options[0]!,
+        ...days.map((d, i) => new Option(labels[i], d)),
+        ...(['weekday', 'weekend'] as const).map((d) => new Option(dayLabel(d), d)),
+      );
+    }
+  }
 
   function renderWhen() {
     const w = state.when;
@@ -43,9 +60,12 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
     whenBtn.querySelector('span')!.textContent =
       (state.travel === 'bikeonly'
         ? t('travelBikeOnlyPill')
-        : t(pillKey(w, arrive), {
-            hour: offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-          }) + (state.travel === 'bike' ? ' 🚲' : '')) + (state.stepFree ? ' ♿' : '');
+        : pillText(
+            w,
+            arrive,
+            offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
+          ) + (state.travel === 'bike' ? ' 🚲' : '')) + (state.stepFree ? ' ♿' : '');
+    renderDays();
     $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
     for (const b of dirButtons)
       b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));
@@ -75,9 +95,10 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
     if (c)
       $('cmp-text').textContent = t('compareChip', {
         a: whenBtn.querySelector('span')!.textContent ?? '',
-        b: t(pillKey(c, arrive), { hour: hourLabel(c.hour) }),
+        b: pillText(c, arrive, hourLabel(c.hour)),
       });
-    for (const b of dayButtons) b.setAttribute('aria-checked', String(b.dataset.day === w.day));
+    for (const b of [...dayGrid.children, ...typicalButtons])
+      b.setAttribute('aria-checked', String((b as HTMLElement).dataset.day === w.day));
     for (const b of hourGrid.children)
       b.setAttribute('aria-pressed', String(Number((b as HTMLElement).dataset.hour) === w.hour));
   }
@@ -106,8 +127,11 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
       return b;
     }),
   );
-  for (const b of dayButtons)
-    b.addEventListener('click', () => setWhen({ ...state.when, day: b.dataset.day as DayType }));
+  const pickDay = (day: Day | undefined) => day && setWhen({ ...state.when, day });
+  dayGrid.addEventListener('click', (e) =>
+    pickDay((e.target as HTMLElement).closest<HTMLElement>('[data-day]')?.dataset.day),
+  );
+  for (const b of typicalButtons) b.addEventListener('click', () => pickDay(b.dataset.day));
   for (const b of dirButtons)
     b.addEventListener('click', () =>
       setWhen(state.when, { direction: b.dataset.dir as Direction }),
@@ -118,7 +142,7 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
       setWhen(state.when, { measure: b.dataset.measure as Measure });
     });
   const readCompare = (): When | null =>
-    cmpDay.value ? { day: cmpDay.value as DayType, hour: Number(cmpHour.value) } : null;
+    cmpDay.value ? { day: cmpDay.value, hour: Number(cmpHour.value) } : null;
   cmpDay.addEventListener('change', () => {
     // Turning it on for the same day suggests the other end of it: night by day, 10 Uhr by night.
     const c = readCompare();

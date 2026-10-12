@@ -244,8 +244,21 @@
           ✕
         </button>
       </div>
-      <div class="seg seg-wide" role="radiogroup" aria-label="Tag" data-t-label="whenDay">
-        <button role="radio" data-day="weekday" aria-checked="true" data-t="weekday">
+      <div
+        id="day-grid"
+        class="day-grid"
+        role="radiogroup"
+        aria-label="Tag"
+        data-t-label="whenDay"
+      ></div>
+      <h3 data-t="whenTypical">Typischer Tag, zum Planen</h3>
+      <div
+        class="seg seg-wide"
+        role="radiogroup"
+        aria-label="Typischer Tag"
+        data-t-label="whenTypical"
+      >
+        <button role="radio" data-day="weekday" aria-checked="false" data-t="weekday">
           Werktag
         </button>
         <button role="radio" data-day="weekend" aria-checked="false" data-t="weekend">
@@ -284,8 +297,6 @@
       <div class="compare-row">
         <select id="cmp-day" aria-label="Vergleichstag" data-t-label="compareDay">
           <option value="" data-t="compareOff">Aus</option>
-          <option value="weekday" data-t="weekday">Werktag</option>
-          <option value="weekend" data-t="weekend">Wochenende</option>
         </select>
         <select id="cmp-hour" aria-label="Vergleichsstunde" data-t-label="compareHour"></select>
       </div>
