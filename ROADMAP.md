@@ -7,8 +7,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #142. Build in this order, one step per PR:
 
 1. **Next:** Remove the Google Maps links (group 6)
+2. Bug bundle: ten small defects (A1, group 15)
 
-From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts.
+From Hendrik on 2026-10-12, to be built now. More items from the third suggestions list (plan/suggestions-3.md) are added as Hendrik picks them. After these, Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -770,3 +771,24 @@ Ways to ship it:
 - **F-Droid:** free and open-source store; needs the app built from source with no proprietary dependencies, which suits this project.
 
 Suggested path: start with a TWA, test it with a direct APK on Hendrik's phone, then publish to Google Play; move to Capacitor only when a native feature is needed. Placed last by Hendrik (2026-10-12), so the app ships with the reworked interface and the current-service timetables.
+
+## 15. Third suggestions list
+
+Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is described in detail. They are added here as Hendrik picks them.
+
+### Bug bundle (A1)
+
+Picked by Hendrik on 2026-10-12 ("Yes, all 10"). Ten small defects, built as one step:
+
+1. **Vergleichen picks 2 Uhr:** turning on a comparison keeps the same hour instead of jumping to 2 Uhr.
+2. **Past hours give "jetzt los":** for Heute, past hours are greyed out and no countdown shows for a window in the past.
+3. **Ankommen from now lands in the past:** round up to the next full hour.
+4. **Chip bar stays scrolled** after closing Ebenen or Mehr: scroll back on close.
+5. **Legend overlaps the (i) button** in landscape and on iPhone with the install tip: anchor the (i) left of the legend.
+6. **Status toasts never clear their text:** clear it after the fade.
+7. **Links with a start outside the area** give an empty map: drop the point and show the "outside the area" note.
+8. **Nur Rad hides the time in the chip:** keep the time and append the bike.
+9. **Wohnlage-Karte invisible with colours off:** colours on while a special map is active, restored on close, labels "Ø 40".
+10. **Heimweg legend has no end labels:** label "ganze Nacht" and "vor 23 Uhr" and tint the all-night area.
+
+Notes: check at 360×740 in German and English and keep the flicker-free first view. Medium effort in total, each fix small.
