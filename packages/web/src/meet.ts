@@ -15,8 +15,10 @@ export interface MeetSuggestion extends MeetCandidate {
 export const MEET_SPREAD_M = 1500;
 
 /**
- * The best `count` candidates: smallest slowest-of-all time (in whole minutes), the sum
- * as the tie-breaker so nobody carries the whole trip. After each pick, everything within
+ * The best `count` candidates by slowest trip + average trip (in whole minutes): one more
+ * minute for the slowest is worth it when the group saves at least (people + 1) minutes,
+ * so nobody carries the whole trip and three or more people are not held to the one
+ * slowest minute. Ties go to the shorter slowest trip. After each pick, everything within
  * `spreadM` of it drops out. `seconds(i)` gives candidate i's times, one per start.
  */
 export function suggestMeetingPoints(
@@ -25,14 +27,16 @@ export function suggestMeetingPoints(
   count = 3,
   spreadM = MEET_SPREAD_M,
 ): MeetSuggestion[] {
-  const scored: (MeetSuggestion & { max: number; sum: number })[] = [];
+  const scored: (MeetSuggestion & { max: number; score: number })[] = [];
   candidates.forEach((c, i) => {
     const s = seconds(i);
     if (!s.every((v) => v < Infinity)) return;
     const mins = s.map((v) => Math.round(v / 60));
-    scored.push({ ...c, mins, max: Math.max(...mins), sum: mins.reduce((a, b) => a + b, 0) });
+    const max = Math.max(...mins);
+    const avg = mins.reduce((a, b) => a + b, 0) / mins.length;
+    scored.push({ ...c, mins, max, score: max + avg });
   });
-  scored.sort((x, y) => x.max - y.max || x.sum - y.sum);
+  scored.sort((x, y) => x.score - y.score || x.max - y.max);
   const picked: MeetSuggestion[] = [];
   for (const s of scored) {
     if (picked.length >= count) break;
