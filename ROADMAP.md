@@ -8,21 +8,23 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 
 1. **Next:** Offline map and faster start in the service worker (B3, group 15)
 2. Redesign of the time sheet and the trip card, including C2 (group 12): designs picked
-3. Start point or destination switch (group 6)
-4. "Bis N Min." view as an optional switch (D1, group 15)
-5. Faster first load and no stale work (B4 + B5, group 15)
-6. Lighter work per tap (B6, group 15)
-7. Smaller Wohnlage-Karte memory (B7, group 15)
-8. Typical timetable when offline (B8, group 15)
-9. Notice, search and favourites polish (C5–C8, group 15)
-10. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-11. Default view readability: two variants to compare (C9, group 15)
-12. Named starts in meeting mode (D2, group 15)
-13. Code health, no change in behaviour (E1, group 15)
+3. Real arrival times at stops (group 6)
+4. Shorter platform changes (group 6)
+5. Start point or destination switch (group 6)
+6. "Bis N Min." view as an optional switch (D1, group 15)
+7. Faster first load and no stale work (B4 + B5, group 15)
+8. Lighter work per tap (B6, group 15)
+9. Smaller Wohnlage-Karte memory (B7, group 15)
+10. Typical timetable when offline (B8, group 15)
+11. Notice, search and favourites polish (C5–C8, group 15)
+12. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+13. Default view readability: two variants to compare (C9, group 15)
+14. Named starts in meeting mode (D2, group 15)
+15. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
-**Proposed, waiting for Hendrik's pick** (from the connection test against BVG/VBB, plan in research/connection-test/comparison.md): S-Bahn arrival times, shorter platform changes, and less walking on equal arrival (group 6). Not built until Hendrik picks them.
+**Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -399,15 +401,15 @@ Hendrik, 2026-10-12: "I want a switch that switches between the first set locati
 
 ### Real arrival times at stops
 
-From the connection test on 2026-10-12 (research/connection-test/comparison.md, finding 3). The timetable stores one time per stop, the departure, so getting off uses the departure time. About 85 % of S-Bahn stop times have a 24–60 s dwell (regional 60–120 s), so each S-Bahn ride ends about a minute late and tight changes break (for example, the M5 at Landsberger Allee is missed). Store arrival times in the timetable file too (a small size increase and a format change). Keep the routing speed.
+Picked by Hendrik on 2026-10-12 ("Both fixes"), built before the platform changes. From the connection test (research/connection-test/comparison.md, finding 3). The timetable stores one time per stop, the departure, so getting off uses the departure time. About 85 % of S-Bahn stop times have a 24–60 s dwell (regional 60–120 s), so each S-Bahn ride ends about a minute late and tight changes break (for example, the M5 at Landsberger Allee is missed). Store arrival times in the timetable file too (a small size increase and a format change). Keep the routing speed.
 
 ### Shorter platform changes
 
-From the connection test, finding 4. Platforms of one station get 120 s when the footpaths don't connect them, which is common for S-Bahn platforms, while BVG plans some changes in 1 minute (S8 → S25 at Bornholmer Str.). Use realistic platform transfer times and honour the timetable feed's transfer rules that are tied to routes (6,760 rows) and timed transfers (2,489 rows).
+Picked by Hendrik on 2026-10-12 ("Both fixes"). From the connection test, finding 4. Platforms of one station get 120 s when the footpaths don't connect them, which is common for S-Bahn platforms, while BVG plans some changes in 1 minute (S8 → S25 at Bornholmer Str.). Use realistic platform transfer times and honour the timetable feed's transfer rules that are tied to routes (6,760 rows) and timed transfers (2,489 rows).
 
 ### Less walking on equal arrival (low priority)
 
-From the connection test, finding 5. When two trips arrive at the same time, prefer the one with less walking or leaving later; today the earliest departure wins, for example an earlier tram from a farther stop. Cosmetic, and a reverse pass would cost time on every tap, so it is only built if it keeps taps as fast as now.
+Parked by Hendrik on 2026-10-12. From the connection test, finding 5. When two trips arrive at the same time, prefer the one with less walking or leaving later; today the earliest departure wins, for example an earlier tram from a farther stop. Cosmetic, and a reverse pass would cost time on every tap, so it is only built if it keeps taps as fast as now.
 
 ## 7. Reading the map
 
