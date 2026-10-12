@@ -8,7 +8,7 @@ const at = (name: string, kmEast: number) => ({
 });
 
 describe('suggestMeetingPoints', () => {
-  it('picks the smallest slower-of-both time, then the smallest sum', () => {
+  it('ranks by slowest + average trip', () => {
     const c = [at('A', 0), at('B', 5), at('C', 10)];
     const t: number[][] = [
       [600, 1200], // max 20
@@ -29,6 +29,24 @@ describe('suggestMeetingPoints', () => {
     const s = suggestMeetingPoints(c, (i) => t[i]);
     expect(s.map((x) => x.name)).toEqual(['A', 'B']);
     expect(s[0]).toMatchObject({ mins: [10, 10] });
+  });
+
+  it('does not send one person far so the other walks', () => {
+    const c = [at('Spandau', 0), at('Savignyplatz', 5)];
+    const t = [
+      [4 * 60, 46 * 60], // 46 + 25 = 71
+      [29 * 60, 29 * 60], // 29 + 29 = 58
+    ];
+    expect(suggestMeetingPoints(c, (i) => t[i])[0].name).toBe('Savignyplatz');
+  });
+
+  it('gives the slowest a minute when the group saves a lot', () => {
+    const c = [at('Hermannstr', 0), at('Friedrichstr', 5)];
+    const t = [
+      [39 * 60, 39 * 60, 31 * 60], // 39 + 36.3
+      [40 * 60, 38 * 60, 12 * 60], // 40 + 30
+    ];
+    expect(suggestMeetingPoints(c, (i) => t[i])[0].name).toBe('Friedrichstr');
   });
 
   it('weighs everyone with three or more starts', () => {
