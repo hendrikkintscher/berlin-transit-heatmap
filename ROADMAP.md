@@ -10,18 +10,17 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-12, live through PR #189. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #193. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build, after PR #185 and not before 23:18 UTC.
-2. **Next:** Faster first load and no stale work (B4 + B5, group 15)
-3. Lighter work per tap (B6, group 15)
-4. Smaller Wohnlage-Karte memory (B7, group 15)
-5. Typical timetable when offline (B8, group 15)
-6. Notice, search and favourites polish (C5–C8, group 15)
-7. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-8. Default view readability: two variants to compare (C9, group 15)
-9. Named starts in meeting mode (D2, group 15)
-10. Code health, no change in behaviour (E1, group 15)
+2. **Next:** Lighter work per tap (B6, group 15)
+3. Smaller Wohnlage-Karte memory (B7, group 15)
+4. Typical timetable when offline (B8, group 15)
+5. Notice, search and favourites polish (C5–C8, group 15)
+6. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+7. Default view readability: two variants to compare (C9, group 15)
+8. Named starts in meeting mode (D2, group 15)
+9. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -272,13 +271,7 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 
 - **Tap card: larger buttons, shorter meeting card (C2)**: Done (PR #174, as part of the redesign): all buttons at least 44 px, meeting trips folded behind "N weitere Fahrten".
 - **"Bis N Min." view (D1)**: Done (PR #189): a switch in Ebenen with chips 15/30/45/60 Min., off by default, kept in the link as `bis=N`; everything within N minutes shaded in one green with no new routing (5–50 ms); meeting points use the slowest trip, comparison maps ignore it; taps 0.25–0.6 s live.
-
-### Faster first load and no stale work (B4 + B5)
-
-Picked by Hendrik on 2026-10-12 ("Yes, both"). One PR with timings before and after.
-
-- **B4:** connect early to the tile server and preload the map style; preload the main and worker code; preload the current hour's timetable from the start page; pass step-free, bike and the current time to the early load so the timetable isn't prepared twice.
-- **B5:** the worker drops requests that are already outdated, before and after loading, for maps and for trips; returning to the app recomputes only when the Berlin minute changed or the app was hidden for more than 60 s.
+- **Faster first load and no stale work (B4 + B5)**: Done (PR #193): the start page starts the routing worker with the link and stored settings and preloads main.js, the map style and the tile connection; the worker drops superseded map and trip requests, and returning to the app recomputes only on a new minute or after 60 s hidden. Live, cold at 6 Mbit/150 ms: first map 1.73 s (was ~1.99 s), worker start 0.25 s (was 0.57 s).
 
 ### Lighter work per tap (B6)
 
