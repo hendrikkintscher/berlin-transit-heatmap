@@ -843,7 +843,7 @@ body.special #cmp {
 .chips.unrendered .chip-btn span {
   visibility: hidden;
 }
-/* Search and Mehr stay put at the ends; the setting chips between them scroll. */
+/* The whole row scrolls sideways: search first, Mehr last. */
 .chip-scroll {
   flex: 1;
   min-width: 0;
@@ -877,7 +877,8 @@ body.special #cmp {
   cursor: pointer;
   pointer-events: auto;
 }
-.chip-btn[data-pop]:not([data-pop=''])::after {
+.chip-btn[data-pop]:not([data-pop=''])::after,
+.chip-btn.menu-chip::after {
   content: '';
   width: 6px;
   height: 6px;
@@ -891,14 +892,11 @@ body.special #cmp {
   margin-top: 3px;
   transform: rotate(-135deg);
 }
-/* Search (first) and Mehr (the menu, last): always in view. */
+/* Search: a round icon chip, first in the row. */
 .chip-btn.search-chip {
   width: 40px;
   padding: 0;
   justify-content: center;
-}
-.chip-btn.menu-chip {
-  padding: 0 14px 0 11px;
 }
 .chip-btn.on {
   background: var(--accent);
@@ -1367,4 +1365,8 @@ body.special #cmp {
 }
 .bottom:has(#readout:not([hidden])) .second-btn {
   display: none;
+}
+/* Room for the trip card's close button, which sticks out above it. */
+#changes:not([hidden]) + #readout {
+  margin-top: 12px;
 }
