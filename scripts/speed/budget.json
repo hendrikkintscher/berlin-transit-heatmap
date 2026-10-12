@@ -1,0 +1,16 @@
+{
+  "bundleTolerance": {
+    "percent": 1,
+    "bytes": 1024
+  },
+  "timingTolerance": {
+    "percent": 15,
+    "ms": 30
+  },
+  "bundle": {
+    "index.css": 13355,
+    "index.js": 1675,
+    "main.js": 306818,
+    "worker.js": 17767
+  }
+}

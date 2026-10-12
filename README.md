@@ -23,6 +23,15 @@ pnpm check            # lint, format check, typecheck, tests
 pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 ```
 
+### Speed budget
+
+Snappiness is the app's main feature, so CI checks it on every pull request (job `speed`):
+each gzipped JS and CSS file must stay within `scripts/speed/budget.json`, and the
+map computation, timetable loading and timetable file size, measured on the real data,
+must not be worse than on main. A deliberate size increase raises the budget in the same
+pull request (`node scripts/speed/check.mjs --write` after `pnpm --dir packages/web build`).
+Locally: `node scripts/speed/check.mjs --data <dir with timetable-weekday-10.bin and walk.bin> [--base <checkout of main>]`.
+
 ## Timetable data
 
 The timetable is the public [VBB GTFS feed](https://www.vbb.de/vbb-services/api-open-data/datensaetze/), which covers all public transport in Berlin and Brandenburg (U-Bahn, S-Bahn, tram, bus, regional trains and ferries). It is published by Verkehrsverbund Berlin-Brandenburg under CC BY 4.0.
