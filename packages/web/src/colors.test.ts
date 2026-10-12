@@ -17,10 +17,8 @@ import {
   diffLut,
   MAX_BAND,
   oklab,
-  OUTLINE_BEYOND_COLOR,
   OUTLINE_STEP_COLORS,
   OUTLINE_STEP_MINUTES,
-  outlineBandColor,
 } from './colors';
 
 describe('colour bands', () => {
@@ -119,14 +117,5 @@ describe('single-hue outlines', () => {
     expect(OUTLINE_STEP_COLORS).toHaveLength(OUTLINE_STEP_MINUTES.length);
     const light = OUTLINE_STEP_COLORS.map((c) => oklab(c)[0]);
     for (let i = 1; i < light.length; i++) expect(light[i]).toBeGreaterThan(light[i - 1]);
-  });
-
-  it('colours each legend band by the outline it lies inside', () => {
-    expect(outlineBandColor(bandOf(4 * 60))).toBe(OUTLINE_STEP_COLORS[0]);
-    expect(outlineBandColor(bandOf(9 * 60))).toBe(OUTLINE_STEP_COLORS[0]);
-    expect(outlineBandColor(bandOf(23 * 60))).toBe(OUTLINE_STEP_COLORS[2]);
-    expect(outlineBandColor(bandOf(58 * 60))).toBe(OUTLINE_STEP_COLORS[5]);
-    expect(outlineBandColor(bandOf(80 * 60))).toBe(OUTLINE_BEYOND_COLOR);
-    expect(outlineBandColor(MAX_BAND)).toBe(OUTLINE_BEYOND_COLOR);
   });
 });

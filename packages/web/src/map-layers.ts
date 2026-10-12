@@ -475,9 +475,9 @@ export function outlineLabel(kind: 'time' | 'extra' | 'home'): maplibregl.Expres
 
 /**
  * Outline look for the kind of map and whether the colour fill is on. With the fill, thin
- * dark lines labelled at 15, 30 and 45 min. Without it, a faint line every 10 minutes in one
- * hue, darkest near the start, each labelled; the home map's few outlines take its legend
- * colours instead.
+ * dark lines labelled at 15, 30 and 45 min. Without it, a thin dashed line every 10 minutes
+ * in one hue, darkest near the start, its minutes repeated along it; the home map's few
+ * outlines take its legend colours instead.
  */
 export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: boolean): void {
   if (!map.getLayer('outlines-line')) return;
@@ -498,7 +498,7 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
   map.setPaintProperty(
     'outlines-line',
     'line-opacity',
-    heat ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4] : steps ? 0.75 : 1,
+    heat ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4] : steps ? 0.9 : 1,
   );
   map.setPaintProperty(
     'outlines-line',
@@ -525,7 +525,9 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
             ['+', 2.6, ['*', 1.4, major]],
           ],
   );
-  map.setPaintProperty('outlines-casing', 'line-opacity', heat ? 0 : steps ? 0.5 : 0.9);
+  // Dashed lines go without the white edge, which would show through their gaps.
+  map.setPaintProperty('outlines-casing', 'line-opacity', heat || steps ? 0 : 0.9);
+  map.setPaintProperty('outlines-line', 'line-dasharray', steps ? [4, 2.5] : [1, 0]);
   map.setPaintProperty(
     'outlines-casing',
     'line-width',
@@ -544,6 +546,8 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
         : null,
   );
   map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind));
+  // Without the fill the labels are the key, so they repeat about every 3 cm on a phone.
+  map.setLayoutProperty('outlines-label', 'symbol-spacing', steps ? 160 : 300);
 }
 
 /** The 10-minute outlines in one hue, darkest near the start. */

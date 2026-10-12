@@ -12,7 +12,6 @@ import {
   HOME_COLORS,
   HOME_TICKS,
   bandLabel,
-  outlineBandColor,
 } from './colors';
 import {
   formatDate,
@@ -111,14 +110,6 @@ const legendBands = BAND_COLORS.map((c, b) => {
   return s;
 });
 $('legend-bar').append(...legendBands);
-/** Without the colour fill the legend shows the outlines' one hue in 10-minute steps. */
-function paintLegendBands(outlinesOnly: boolean) {
-  $('legend-bar').classList.toggle('steps', outlinesOnly);
-  legendBands.forEach((s, b) => {
-    s.style.background = outlinesOnly ? outlineBandColor(b) : BAND_COLORS[b];
-  });
-}
-paintLegendBands(!state.heat);
 const legendTicks = [0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
   const tick = document.createElement('span');
   const i = BAND_EDGES_MIN.indexOf(m);
@@ -578,7 +569,9 @@ function showResult(r: Result) {
 function showHeat() {
   const r = state.result;
   const heat = state.heat || !!r?.compare;
-  paintLegendBands(!heat);
+  // Outlines alone carry their minutes, so the colour legend steps aside (not the home
+  // map's clock colours).
+  document.body.classList.toggle('no-legend', !heat && !r?.home);
   if (!state.mapReady) return;
   if (map.getLayer(HEAT_LAYER))
     map.setLayoutProperty(HEAT_LAYER, 'visibility', r && heat ? 'visible' : 'none');
