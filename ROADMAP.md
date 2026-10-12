@@ -6,8 +6,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 State on 2026-10-12, live through PR #114. Build in this order, one step per PR:
 
-1. **Next:** "Lieblingsort" toggle instead of "Merken" (group 3)
-2. Addresses in the search suggestions, street first, then house number or postcode (group 1)
+1. **Next:** Edge-to-edge top bar and a slim loading bar instead of the "Berechnen" popups (group 12)
+2. "Lieblingsort" toggle instead of "Merken" (group 3)
+3. Addresses in the search suggestions, street first, then house number or postcode (group 1)
 
 All from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
@@ -644,6 +645,15 @@ Hendrik, 2026-10-12, two minor fixes after PR #111:
 - **One scrolling bar:** every item of the top bar, the search included, is part of the one horizontally scrolling bar; nothing stays fixed beside it.
 - **"Mehr" like the others:** the "Mehr" chip loses its ≡ symbol and looks like the other chips, with the drop-down indicator next to its label.
 - **"Heute anders" above the trip card:** the "Heute anders" note appears directly above the connection info box at the bottom, not elsewhere on the screen.
+
+Notes: layout only, URL parameters unchanged; check at 360×740 in German and English, and keep the flicker-free first view from PR #111. Small effort.
+
+### Edge-to-edge top bar and slim loading bar
+
+Hendrik, 2026-10-12, two minor fixes before anything else:
+
+- **Top bar edge to edge:** the top bar reaches the left and right edges of the screen.
+- **Slim loading bar instead of popups:** the "Berechnen …" and "Berechnet in …" info popups go away. Instead a very slim loading bar is overlaid at the bottom of the screen and disappears once everything has loaded.
 
 Notes: layout only, URL parameters unchanged; check at 360×740 in German and English, and keep the flicker-free first view from PR #111. Small effort.
 
