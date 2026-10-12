@@ -1,17 +1,16 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–9 are done apart from two fixes added later (groups 6 and 7). Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from two fixes added later (groups 6 and 7). Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
-State on 2026-10-11, live through PR #47. Build in this order, one step per PR:
+State on 2026-10-11, live through PR #50. Build in this order, one step per PR:
 
-1. **Next:** Smaller, faster first load (group 10)
-2. The tapped place stays when settings change (group 6)
-3. Calmer street level: footpaths next to streets (group 7)
-4. UI overhaul (group 13), once Hendrik has picked one of the three design options
-5. Android app, starting with a TWA (group 11)
-6. Ersatzverkehr and other temporary changes (group 12)
+1. **Next:** The tapped place stays when settings change (group 6)
+2. Calmer street level: footpaths next to streets (group 7)
+3. UI overhaul (group 13), once Hendrik has picked one of the three design options
+4. Android app, starting with a TWA (group 11)
+5. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -353,6 +352,8 @@ Notes: the routing change is small; most effort is in the UI and defaults. Uses 
 ## 10. Performance
 
 ### Smaller, faster first load
+
+**Done** (PR #50): timetables now ship as a binary file (268 KB instead of 717 KB gzipped per hour, decoded faster than JSON; the app falls back to JSON), and a tiny entry script starts the routing worker and the hour's timetable download before the rest of the app (mostly MapLibre) loads next to it. First map on a throttled phone: 4.7 s → 2.8 s.
 
 First load is about 1.2 MB (JS about 300 KB gzipped plus one hourly timetable of 0.55–0.7 MB). If it becomes a problem: load the map style and timetable in parallel, move rarely used code (favourites import) into a lazy chunk, and store timetables in a binary format instead of JSON. Low priority now that the hourly files are smaller than the old Day file.
 
