@@ -4,7 +4,9 @@ import {
   BIKE_SPEED_MPS,
   BIKE_STATION_SECONDS,
   bikeTimetable,
+  decodeLines,
   decodeTimetable,
+  hopCourse,
   gridLayout,
   distanceM,
   heatGrid,
@@ -21,6 +23,7 @@ import {
   travelTimes,
   type HeatGrid,
   type Journey,
+  type LineShapes,
   type Origin,
   type PreparedTimetable,
   type Timetable,
@@ -139,6 +142,48 @@ async function loadWalk(): Promise<void> {
     // Straight-line walking stays in place.
     console.warn('Walking network not used:', err);
   }
+}
+
+/**
+ * The hops' courses along tracks and roads (lines.bin), fetched once the first map is
+ * out; until then, and for hops it does not cover, lines run straight from stop to stop.
+ */
+let lineShapes: LineShapes | null = null;
+let linesStarted = false;
+/** The last map's lines, redrawn along their courses when lines.bin arrives. */
+let lastRoutes: { id: number; tt: PreparedTimetable; used: Segments } | null = null;
+
+async function loadLines(tt: PreparedTimetable): Promise<void> {
+  if (linesStarted) return;
+  linesStarted = true;
+  try {
+    const res = await fetch(new URL('lines.bin', dataBase));
+    if (!res.ok) return;
+    lineShapes = decodeLines(await res.arrayBuffer(), tt.stopCount, (s) => [
+      tt.stopLon[s]!,
+      tt.stopLat[s]!,
+    ]);
+    const last = lastRoutes;
+    if (last)
+      post({
+        type: 'routes',
+        id: last.id,
+        routes: usageGeoJSON(last.tt, last.used),
+        labels: labelLines(last.tt, last.used),
+      });
+  } catch (err) {
+    console.warn('Line courses not used:', err);
+  }
+}
+
+/** [lon, lat] points from stop to stop along the hops' courses. */
+function course(tt: PreparedTimetable, stops: number[]): [number, number][] {
+  const pos = (s: number): [number, number] => [tt.stopLon[s]!, tt.stopLat[s]!];
+  if (stops.length < 2) return stops.map(pos);
+  const out: [number, number][] = [pos(stops[0]!)];
+  for (let i = 1; i < stops.length; i++)
+    out.push(...hopCourse(lineShapes, stops[i - 1]!, stops[i]!, pos).slice(1));
+  return out;
 }
 
 /** Prepared timetables kept in memory; older hours are dropped and fetched again if needed. */
@@ -281,6 +326,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const grid = slowestOf(runs.map((r) => r.shown));
       const used = runs.flatMap((r) => r.used);
       const routes = usageGeoJSON(tt, used);
+      lastRoutes = { id: msg.id, tt, used };
       const labels = labelLines(tt, used);
       lastTrip = {
         tt,
@@ -355,6 +401,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           ...(compare ? [compare.buffer] : []),
         ],
       );
+      // The lines' courses come after the first map, never before it.
+      void loadLines(tt);
     } else if (msg.type === 'paint') {
       if (unpainted?.id !== msg.id) return;
       const image = paint(unpainted.grid, unpainted.values);
@@ -886,7 +934,7 @@ function tripMessage(
         continue;
       }
       walkLine(at, pos(l.from), i === firstRide && cycling);
-      line(l.stops.map(pos), l.mode, false);
+      line(course(tt, l.stops), l.mode, false);
       stopPoint(l.from);
       stopPoint(l.to);
       at = pos(l.to);
@@ -1079,13 +1127,7 @@ function usageGeoJSON(
     // Lightest first so heavy lines draw on top.
     features: [...segments].reverse().map((s) => ({
       type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [tt.stopLon[s.a], tt.stopLat[s.a]],
-          [tt.stopLon[s.b], tt.stopLat[s.b]],
-        ],
-      },
+      geometry: { type: 'LineString', coordinates: course(tt, [s.a, s.b]) },
       properties: { share: s.share, mode: s.mode, names: lineName(s) },
     })),
   };
@@ -1142,7 +1184,7 @@ function labelLines(
           type: 'Feature',
           geometry: {
             type: 'LineString',
-            coordinates: path.map((s) => [tt.stopLon[s], tt.stopLat[s]]),
+            coordinates: course(tt, path),
           },
           properties: { names },
         });

@@ -188,6 +188,13 @@ export type FromWorker =
       image: { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> };
     }
   | { type: 'stations'; list: SearchStation[] }
+  /** The map `id`'s lines again, now along the real tracks and roads (lines.bin arrived). */
+  | {
+      type: 'routes';
+      id: number;
+      routes: FeatureCollection<LineString, RouteProps>;
+      labels: FeatureCollection<LineString, { names: string }>;
+    }
   | {
       type: 'layers';
       window: Window;
