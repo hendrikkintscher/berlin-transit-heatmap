@@ -4,23 +4,22 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #169. Build in this order, one step per PR:
 
-1. **Next:** Offline map and faster start in the service worker (B3, group 15)
-2. Redesign of the time sheet and the trip card, including C2 (group 12): designs picked
-3. Real arrival times at stops (group 6)
-4. Shorter platform changes (group 6)
-5. Start point or destination switch (group 6)
-6. "Bis N Min." view as an optional switch (D1, group 15)
-7. Faster first load and no stale work (B4 + B5, group 15)
-8. Lighter work per tap (B6, group 15)
-9. Smaller Wohnlage-Karte memory (B7, group 15)
-10. Typical timetable when offline (B8, group 15)
-11. Notice, search and favourites polish (C5–C8, group 15)
-12. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-13. Default view readability: two variants to compare (C9, group 15)
-14. Named starts in meeting mode (D2, group 15)
-15. Code health, no change in behaviour (E1, group 15)
+1. **Next:** Redesign of the time sheet and the trip card, including C2 (group 12): designs picked
+2. Real arrival times at stops (group 6)
+3. Shorter platform changes (group 6)
+4. Start point or destination switch (group 6)
+5. "Bis N Min." view as an optional switch (D1, group 15)
+6. Faster first load and no stale work (B4 + B5, group 15)
+7. Lighter work per tap (B6, group 15)
+8. Smaller Wohnlage-Karte memory (B7, group 15)
+9. Typical timetable when offline (B8, group 15)
+10. Notice, search and favourites polish (C5–C8, group 15)
+11. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+12. Default view readability: two variants to compare (C9, group 15)
+13. Named starts in meeting mode (D2, group 15)
+14. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -883,7 +882,7 @@ Part of the redesign of the time sheet and trip card (group 12), built together 
 
 ### Offline map and faster start in the service worker (B3)
 
-Picked by Hendrik on 2026-10-12 ("Yes, all three").
+**Done** (PR #169): the basemap is cached (style, sprites and fonts cache-first, up to 400 tiles stale-while-revalidate), old app bundles are removed, and the start page falls back to the cache after 2.5 s. Live, the first map took 1.3 s, 0.26 s with the service worker, and 0.26 s offline with the basemap. Picked by Hendrik on 2026-10-12 ("Yes, all three").
 
 - Cache the basemap: the OpenFreeMap style, sprites and fonts cache-first; tiles stale-while-revalidate with a cap of a few hundred entries. OpenFreeMap sends CORS headers, so responses are cacheable; the terms of the free services (A5 in plan/suggestions-2.md) apply to tile caching too.
 - Remove old app bundles under /assets/ that the current page no longer references, so they don't pile up with every deploy. Add a test for it.
