@@ -3,6 +3,8 @@ name: Deploy web app to Pages
 on:
   push:
     branches: [main]
+    # Roadmap, README and other notes change nothing on the site.
+    paths-ignore: ['**.md']
   # Pull requests touching the app only build and test; they never deploy.
   pull_request:
     paths: ['packages/web/**', '.github/workflows/deploy-pages.yml']
@@ -53,6 +55,8 @@ jobs:
       - name: Add latest timetable
         env:
           GH_TOKEN: ${{ github.token }}
+          # Only what the app loads (the release also keeps stops.json and checksums.json).
+          DOWNLOAD_ONLY: '^(timetable-.*\.bin|walk\.bin|lines\.bin|streets\.json|changes\.json|stop-ids\.json|build-info\.json)$'
         run: |
           # Each region's data in its own folder (data/<id>/, see packages/web/src/region.ts).
           dir="packages/web/dist/data/$(node scripts/region.mjs id)"

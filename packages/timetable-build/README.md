@@ -12,14 +12,14 @@ pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 
 ## Outputs
 
-| File                                                     | Contents                                                                                                                                                                                     |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `timetable-day.json`                                     | `Timetable` for 10:00–12:00 on the reference day                                                                                                                                             |
-| `timetable-night.json`                                   | `Timetable` for 02:00–04:00 the following night (93600–100800 s)                                                                                                                             |
-| `timetable-weekday-HH.json`, `timetable-weekend-HH.json` | `Timetable` for one departure hour HH (00–23) on the weekday or weekend reference day; hours 00–04 are the night after the previous day (24:00–29:00 service time). Skip with `--no-hourly`. |
-| `stops.json`                                             | `{ version, serviceDate, feedVersion, stops }`, same `stops` as above                                                                                                                        |
-| `build-info.json`                                        | stats, file sizes (raw and gzipped), and the GTFS manifest in CI                                                                                                                             |
-| `walk.bin`                                               | with `--osm`: the walking network (Contract 3, see the routing README)                                                                                                                       |
+| File                                                   | Contents                                                                                                                                                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `timetable-weekday-HH.bin`, `timetable-weekend-HH.bin` | `Timetable` (binary, Contract 4) for one departure hour HH (00–23) on the weekday or weekend reference day; hours 00–04 are the night after the previous day (24:00–29:00 service time). |
+| `timetable-YYYYMMDD-HH.bin`                            | the same for each real date of the coming week (`--days`)                                                                                                                                |
+| `timetable-day.bin`, `timetable-night.bin`             | only with `--no-hourly`: 10:00–12:00 on the reference day and 02:00–04:00 the following night (tests, quick local runs)                                                                  |
+| `stops.json`                                           | `{ version, serviceDate, feedVersion, stops }`, same `stops` as above                                                                                                                    |
+| `build-info.json`                                      | stats, file sizes (raw and gzipped), and the GTFS manifest in CI                                                                                                                         |
+| `walk.bin`                                             | with `--osm`: the walking network (Contract 3, see the routing README)                                                                                                                   |
 
 ## How the files are built
 

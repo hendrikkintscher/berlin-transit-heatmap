@@ -76,24 +76,15 @@ const loading = new Map<Window, Promise<PreparedTimetable>>();
 let dataBase = '';
 
 async function fetchTimetable(window: Window, file: string = window): Promise<Timetable> {
-  // The binary file is about a third of the JSON one; the JSON stays as a fallback
-  // until every deploy carries the binary files.
-  let url = new URL(`timetable-${file}.bin`, dataBase);
-  let res = await fetch(url);
+  const url = new URL(`timetable-${file}.bin`, dataBase);
+  const res = await fetch(url);
   // (Some servers answer a missing file with the app's own page.)
   const binary = res.ok && res.body !== null && !res.headers.get('content-type')?.includes('html');
   // A date has only the binary file; without one (the evening before today, or a day the
   // build has not reached yet) its typical day stands in, and says so by its serviceDate.
   const typical = typicalWindow(file);
   if (!binary && typical) return fetchTimetable(window, typical);
-  if (!binary) {
-    url = new URL(`timetable-${file}.json`, dataBase);
-    res = await fetch(url);
-    if (!res.ok || !res.headers.get('content-type')?.includes('json')) {
-      throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
-    }
-  }
-  if (!res.body) throw new Error(`Timetable not available (${url.pathname})`);
+  if (!binary) throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
   // Content-Length is the compressed size when the server gzips, so progress is approximate.
   const total = Number(res.headers.get('content-length')) || 0;
   const reader = res.body.getReader();
@@ -112,8 +103,7 @@ async function fetchTimetable(window: Window, file: string = window): Promise<Ti
     buf.set(c, off);
     off += c.length;
   }
-  if (binary) return decodeTimetable(buf) as Timetable;
-  return JSON.parse(new TextDecoder().decode(buf)) as Timetable;
+  return decodeTimetable(buf) as Timetable;
 }
 
 /**
