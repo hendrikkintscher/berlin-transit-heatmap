@@ -7,9 +7,10 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #71. Build in this order, one step per PR:
 
 1. **Next:** Calmer street level: footpaths next to streets (group 7)
-2. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-4. Android app, starting with a TWA (group 14), always the last step
+2. Fainter default outlines: one colour, 10-minute steps (group 7)
+3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+5. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -349,6 +350,16 @@ Notes: this is the basemap style (Positron vector tiles), not the walking data; 
 The map opens without the coloured travel-time fill: the plain base map with the start, and the 5-minute outlines on, each labelled with its minutes, so the travel times still read at a glance while streets and places stay fully visible. A new "Heatmap" switch in the layers (next to Lines, outlines, stop frequency and transit deserts) turns the colours on, with the opacity slider beneath it; the choice is kept in the link (`layers=heat`). Tapping a place still shows its minutes and trip, and the legend stays as the key for the outlines.
 
 Notes: the routing is unchanged (outlines and taps need it), and drawing no colour raster is, if anything, faster on first load. Special maps (meeting point, Wohnlage-Karte, Bis wann heim?) follow the same switch. Small effort; added from Hendrik's request on 2026-10-12 ("turn heatmap off as a default"). Read as: colours off, outlines on, one tap to bring the colours back.
+
+### Fainter default outlines: one colour, 10-minute steps
+
+Hendrik's feedback on PR #71 (2026-10-12): starting with only the outlines is right, but they should be calmer. In the outlines-only view:
+
+- **Fainter:** thinner, partly transparent lines, so the base map stays in front.
+- **One colour:** a gradient of a single hue instead of the legend's many colours, darkest near the start and lighter further out.
+- **10-minute steps:** outlines at 10, 20, 30 … minutes instead of every 5, each still labelled with its minutes.
+
+With "Farben (Heatmap)" on, the colours and their outlines stay as they are. The legend in the outlines-only view shows the same single-hue 10-minute steps. Small effort; no routing change.
 
 ## 8. Realistic walking on real footpaths
 
