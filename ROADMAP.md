@@ -4,10 +4,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #120. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #122. Build in this order, one step per PR:
 
-1. **Next:** Addresses in the search suggestions, street first, then house number or postcode (group 1)
-2. Other regions, Oldenburg first, each region at its own address (group 13). Held until the editor has checked with the coordinator that the beta-testing domain and naming questions don't change the `/berlin/` addresses.
+1. **Next:** Other regions, Oldenburg first, each region at its own address (group 13). Held until the editor has checked with the coordinator that the beta-testing domain and naming questions don't change the `/berlin/` addresses.
 
 All from Hendrik on 2026-10-12. After them, Hendrik picks the next step before anything starts.
 
@@ -65,6 +64,8 @@ Hendrik, 2026-10-12: the address search should feel snappier. Today every keystr
 Small to medium effort. Added from Hendrik's request on 2026-10-12.
 
 ### Addresses in the search suggestions
+
+**Done** (PR #122): street rows appear in the suggestions, one per postcode with the district; picking a street offers its house numbers in that postcode plus the whole street, and "Hauptstraße 10317" narrows to that postcode. Station matches still show instantly.
 
 Hendrik, 2026-10-12: addresses should be part of the suggestions, not only stations, favourites and recent searches. A step-by-step way is fine: first the street name; once the street is chosen or typed, either the house number or the postcode.
 
