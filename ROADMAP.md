@@ -9,6 +9,7 @@ State on 2026-10-12, live through PR #145. Build in this order, one step per PR:
 1. **Next:** Bug bundle: ten small defects (A1, group 15)
 2. Permanent search bar at the top (group 12)
 3. Walking network: visible loading, no blocked taps (B1, group 15)
+4. Lean deploy: only the files the app uses (B2, group 15)
 
 From Hendrik on 2026-10-12, to be built now. More items from the third suggestions list (plan/suggestions-3.md) are added as Hendrik picks them. After these, Hendrik picks the next step before anything starts.
 
@@ -807,3 +808,12 @@ Picked by Hendrik on 2026-10-12 ("Yes, now"). Measured on a shared link over a 3
 - Split the cell snapping into chunks so taps queued meanwhile are answered.
 
 Not included: splitting walk.bin by area.
+
+### Lean deploy: only the files the app uses (B2)
+
+Picked by Hendrik on 2026-10-12 ("Yes"). Measured: each deploy uploads 459 MB, of which 280 MB are JSON timetables the app no longer reads; stops.json is not referenced; 77 of the last 159 commits changed only the roadmap or README but still redeployed.
+
+- The timetable build stops writing the hourly JSON timetables and the old day/night windows.
+- The app drops its JSON fallback, which never triggers.
+- The Pages deploy copies only an allow-list of release files: timetable-\*.bin, walk.bin, lines.bin, changes.json, stop-ids.json and build-info.json.
+- Commits that only change the roadmap or README no longer redeploy (a paths filter on the push trigger). The redeploy after the nightly timetable build stays.
