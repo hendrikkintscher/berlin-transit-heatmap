@@ -4,7 +4,12 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #135. Nothing is queued: Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #135. Build in this order, one step per PR:
+
+1. **Next:** Time-line widths closer together (group 12)
+2. Fix: street names in the suggestions of every search box (group 1)
+
+Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -60,6 +65,12 @@ Hendrik, 2026-10-12: the address search should feel snappier. Today every keystr
 - Measure the time from keystroke to first suggestion on a phone, before and after.
 
 Small to medium effort. Added from Hendrik's request on 2026-10-12.
+
+### Fix: street names in every search box
+
+Hendrik, 2026-10-12: street names don't show up in the search suggestions. Suggestions, streets and the house-number/postcode step from PR #122 included, must work in every search box (main search, Startpunkt, meeting-point starts, favourites, comparison and any other).
+
+Notes: a bug report; reproduce on the live site, find the cause, fix it once for all boxes. Station matches must stay instant. Small effort.
 
 ### Addresses in the search suggestions
 
@@ -670,6 +681,12 @@ Hendrik, 2026-10-12: option B from the clean-map mockups (plan files under web/c
 - **Solid, soft time lines:** in the outlines-only view the lines are solid, not dashed. The 30/60/90-minute lines get width 4 to 6, blur 2.5 to 3.5, opacity 0.75; the 10/20-minute steps width 2.5 to 4, blur 2 to 3, opacity 0.45. Label spacing 260.
 
 Notes: paint only, URL parameters unchanged; check at 360×740 in German and English and keep the flicker-free first view. Small effort.
+
+### Time-line widths closer together
+
+Hendrik, 2026-10-12, after PR #135: the 30-minute lines can be a bit thinner and the 10-minute step lines a bit thicker; the difference doesn't need to be that big.
+
+Notes: paint only, URL parameters unchanged; check at 360×740 in German and English. Small effort.
 
 ### Stronger transit lines, softer minute lines
 
