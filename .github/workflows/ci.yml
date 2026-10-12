@@ -44,9 +44,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir packages/web build
       - name: Download real timetable and footpaths
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release download timetable-latest --repo "$GITHUB_REPOSITORY" -p timetable-weekday-10.bin -p walk.bin -D work/speed
+        run: scripts/publish/download.sh timetable-latest work/speed timetable-weekday-10.bin walk.bin
       - name: Check out main to compare against
         if: github.event_name == 'pull_request'
         run: |

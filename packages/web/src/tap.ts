@@ -39,6 +39,10 @@ export interface TapDeps {
   favouriteLabels: () => string[];
   /** "Bis wann komme ich heim?" to start i. */
   showHome: (i: number) => void;
+  /** Today's change on a ride's line, for the card ("Heute anders"). */
+  changeNote: (ride: { name: string; mode: string }) => string | null;
+  /** The shown connection's rides (null: none); the changes notice keeps to them. */
+  focusChanges: (rides: { name: string; mode: string }[] | null) => void;
 }
 
 export function initTap(deps: TapDeps, initial: Point | null) {
@@ -60,6 +64,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   let board: Board | null = null;
   const DATA_BASE = new URL('data/', document.baseURI).href;
   let liveAt = 0;
+  /** The rides of the connection on the card, for its "Heute anders" notes. */
+  let shownRides: { name: string; mode: string }[] = [];
 
   const spotEl = document.createElement('div');
   spotEl.className = 'spot-marker';
@@ -236,6 +242,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     tripId++;
     setTrip(null);
     setSpot(null);
+    shownRides = [];
+    deps.focusChanges(null);
   }
 
   function setSpot(p: Spot | null) {
@@ -318,7 +326,12 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       direction: home ? 'arrive' : state.direction,
       travel: state.travel,
       now: clockNow(state.when),
+      changeNote: deps.changeNote,
     });
+    shownRides = m.journeys.flatMap((j) =>
+      (j?.legs ?? []).flatMap((l) => (l.type === 'ride' ? [{ name: l.name, mode: l.mode }] : [])),
+    );
+    deps.focusChanges(shownRides);
     // With one start, the connection's own minutes and arrival become the card's main line.
     if (m.journeys.length === 1 && m.journeys[0]?.leave !== undefined)
       document.getElementById('tap-mins')?.remove();
@@ -326,6 +339,18 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     setTrip(m);
     board = (m.journeys.length === 1 && m.journeys[0]?.board) || null;
     checkLive();
+  }
+
+  /** The notes for the shown connection, when the changes arrived after its card. */
+  function addChangeNotes() {
+    const el = document.getElementById('trip');
+    if (!el || !shownRides.length || el.querySelector('.trip-change')) return;
+    for (const n of new Set(shownRides.map((r) => deps.changeNote(r)).filter(Boolean))) {
+      const s = document.createElement('small');
+      s.className = 'trip-change';
+      s.textContent = n;
+      el.append(s);
+    }
   }
 
   /** Asks for the first vehicle's live status and shows it under the countdown. */
@@ -386,6 +411,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     onResult,
     onTrip,
     onLiving,
+    addChangeNotes,
     /** The place kept in the link. */
     spot: (): Point | null => spot,
   };

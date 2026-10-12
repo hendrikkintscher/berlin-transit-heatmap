@@ -35,6 +35,30 @@ describe('trip card', () => {
     expect(html).not.toContain('<i class="p1">');
   });
 
+  it('notes what runs differently today on a line of the connection, once', () => {
+    const html = tripHtml(
+      {
+        journeys: [
+          {
+            transfers: 1,
+            legs: [
+              ride('U2', 'ubahn', 'U Pankow (Berlin)', 'U Alexanderplatz (Berlin)'),
+              ride('U8', 'ubahn', 'U Alexanderplatz (Berlin)', 'U Hermannplatz (Berlin)'),
+            ],
+          },
+        ],
+      },
+      {
+        ...ctx,
+        changeNote: (r) => (r.name === 'U2' ? 'U2: Ersatzverkehr Pankow – Senefelderplatz' : null),
+      },
+    );
+    expect(html.match(/trip-change/g)).toHaveLength(1);
+    expect(html).toContain(
+      '<small class="trip-change">U2: Ersatzverkehr Pankow – Senefelderplatz</small>',
+    );
+  });
+
   it('marks two journeys and says when there is none', () => {
     const html = tripHtml(
       { journeys: [null, { transfers: 0, legs: [{ type: 'walk', minutes: 12, bike: true }] }] },

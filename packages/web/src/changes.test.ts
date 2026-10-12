@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedLines, changeText, type Change } from './changes';
+import { changedLines, changeText, touching, type Change } from './changes';
 
 const change = (c: Partial<Change>): Change => ({
   line: 'M2',
@@ -45,5 +45,22 @@ describe('what is different today', () => {
 
   it('names each line once', () => {
     expect(changedLines([change({}), change({}), change({ line: '37' })])).toEqual(['M2', '37']);
+  });
+
+  it('picks the changes on the lines of a connection, replacement buses included', () => {
+    const list = [
+      change({}),
+      change({ line: 'S41', mode: 'sbahn' }),
+      change({ line: 'M17', replacement: true }),
+      change({ line: 'U2', mode: 'ubahn' }),
+    ];
+    const rides = [
+      { name: 'M2', mode: 'tram' },
+      // A bus named after a line without Ersatzverkehr is just a bus.
+      { name: 'S41', mode: 'bus' },
+      // The Ersatzverkehr bus of the M17.
+      { name: 'M17', mode: 'bus' },
+    ];
+    expect(touching(list, rides).map((c) => c.line)).toEqual(['M2', 'M17']);
   });
 });
