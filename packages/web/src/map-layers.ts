@@ -333,8 +333,8 @@ export function addMapLayers(
     source: TRIP_SOURCE,
     filter: tripLines,
     layout: { 'line-cap': 'round', 'line-join': 'round' },
-    // No dark border: the line colour alone, a little wider (Hendrik, 2026-10-12).
-    paint: { 'line-color': modeColor, 'line-width': 6.5 },
+    // No dark border, the line colour alone (Hendrik, 2026-10-12).
+    paint: { 'line-color': modeColor, 'line-width': 5.5 },
   });
   map.addLayer({
     id: 'trip-walk',
