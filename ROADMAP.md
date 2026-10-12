@@ -4,13 +4,12 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #71. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #73. Build in this order, one step per PR:
 
-1. **Next:** Calmer street level: footpaths next to streets (group 7)
-2. Fainter default outlines: one colour, 10-minute steps (group 7)
-3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-5. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Fainter default outlines: one colour, 10-minute steps (group 7)
+2. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+4. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -338,6 +337,8 @@ Small to medium.
 **Done** (with group 8): the info window shows just the minutes. The measure and time ("typisch, Werktag 10–11 Uhr") are already in the top bar, so Hendrik had them removed from the tap readout.
 
 ### Calmer street level: footpaths next to streets
+
+**Done** (PR #73): the tiles carry no sidewalk tag, so footways and cycleways are drawn thin and faint; park paths, squares and steps stay a little more visible.
 
 At the closest zoom levels the basemap also draws footpaths, many of them sidewalks mapped as separate lines right next to each street, so streets look doubled and the map gets busy. Find a calmer look: hide paths that run alongside a street (OSM sidewalks, `footway=sidewalk`) and keep paths that go where streets don't (through parks, across squares, between blocks), or draw all paths much fainter and thinner than streets. A walk shown for a tapped trip stays fully visible either way.
 
