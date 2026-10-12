@@ -4,7 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #142. Nothing is queued: Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #142. Build in this order, one step per PR:
+
+1. **Next:** Remove the Google Maps links (group 6)
+
+From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -364,6 +368,12 @@ Notes: every settings change calls hideReadout() in main.ts, which drops the tap
 At night the question is not how long, but how late you can still leave. With home (the start, or a favourite) as the target, colour each place by the latest departure that still gets you home, with a marker where the night network takes over. A tap shows that last connection.
 
 Notes: uses the existing arrive-by pass over several hours of timetables (the hourly files for the evening and night), so it is heavier and runs on demand, not on every tap. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+### Remove the Google Maps links
+
+Hendrik, 2026-10-12: remove the Google Maps links from the app. The "Google Maps ↗" link on the trip card (since PR #25) and any other link that opens Google Maps go away. Importing favourites from a Google Takeout file stays, since it only reads the user's own file and opens nothing.
+
+Notes: check at 360×740 in German and English that the trip card still looks right without the link. Small effort.
 
 ## 7. Reading the map
 
