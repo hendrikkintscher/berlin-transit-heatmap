@@ -30,7 +30,7 @@ From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
-**Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+**Blocked until Hendrik agrees:** Beta testing readiness (group 14). The plan is written down there (packages A, B and C, plus the address choice); nothing starts until Hendrik explicitly agrees to a package and an address. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -218,7 +218,28 @@ Notes: measure against the snappiness rule and the CI speed budget. The prep is 
 
 ### Beta readiness
 
-Hendrik, 2026-10-12: make the app ready for beta testing. **Blocked:** this is not started until Hendrik has explicitly agreed to the full approach. Suggestions for what to do are being drafted in a separate thread first; once he has agreed, the agreed plan replaces this paragraph and the steps are queued in Up next.
+Hendrik, 2026-10-12: make the app ready for beta testing. **Blocked:** not started until Hendrik has explicitly agreed to the full approach, meaning a package and an address below. Once he has, the agreed items are queued in Up next. Source: plan/beta-readiness.md (project files), written when the app was live through PR #103; the notes below say what has shipped since.
+
+Beta means friends install the web app from the browser on Android (Chrome) and iPhone (Safari). Effort: S = an afternoon, M = a day or two.
+
+1. **Name under the icon** (S): already done. The installed app is called "Wohin jetzt?" since the rename (PR #134).
+2. **Address** (decision): stay on github.io for the beta, or move to an own domain first. Moving later resets testers' favourites and needs a reinstall, so decide before inviting people.
+3. **Feedback button and version** (S): "Feedback geben" in the menu opens a prefilled mail or form with the app version, timetable date, phone and browser, and the current map link. The version is shown in "Über diese Karte".
+4. **Update hint** (S): when a new version is ready, a small "Neue Version – tippen zum Laden" note, so all testers run the same build.
+5. **Tester guide** (S): one short German page on installing on Android and iPhone, five things to try (set start, tap a place, change time, meeting point, favourites) and how to report. Linked from the invite.
+6. **Smoke test before deploy** (S): a phone-size browser test in CI, so a broken merge never reaches testers. Largely covered by B9 (group 15), which is already queued.
+7. **Basemap offline** (S–M): already done. The service worker caches the basemap since B3 (PR #169).
+8. **Real-phone speed check** (S): time the first map, moving the start and a tap on a cheap Android and an older iPhone (or 4× CPU throttle), and record it as the beta baseline.
+9. **Privacy and licence note** (S): short German and English page on what goes to Photon and OpenFreeMap, that nothing is tracked and favourites stay on the phone, plus OSM/ODbL and VBB credits.
+10. **Crash notes without tracking** (S): keep the last few errors on the phone and attach them to the feedback mail. No analytics service.
+
+Packages:
+
+- **A. Minimal:** 1, 3, 5.
+- **B. Recommended:** 1, 3, 4, 5, 6, 7, 8, 9.
+- **C. Everything:** B plus 10.
+
+Recommendation (not Hendrik's decision yet): package B, and the address stays on github.io for the beta. Suggested order: 3, 4, 6, 9, 8, then 5 last so its screenshots match. Hendrik answers with a package and an address, such as "B1", or single items by number.
 
 **Postponed** (Hendrik, 2026-10-12): not started yet and not planned any time soon.
 
