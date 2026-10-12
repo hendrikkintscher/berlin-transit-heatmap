@@ -8,6 +8,8 @@ import {
 } from './calendar.ts';
 import { findChanges, WATCHED_MODES, type Change, type WatchedTrip } from './changes.ts';
 import { parseTime, readCsv } from './csv.ts';
+import { hopCourses, type Pattern, type Shape } from './lines.ts';
+import type { Hop } from '../../routing/src/linesbin.ts';
 import { BERLIN_BBOX, type BBox, forEachNearbyPair, inBBox } from './geo.ts';
 import type { GtfsSource } from './source.ts';
 import { NETWORK_WALK_SPEED_MPS, WalkDistances, type WalkGraph } from './walk.ts';
@@ -83,6 +85,8 @@ export interface BuildOptions {
   dates?: readonly string[];
   /** Walking network for transfer times; without it transfers use straight lines. */
   walk?: WalkGraph;
+  /** Courses of the hops along the real tracks and roads, from shapes.txt. Default true. */
+  lines?: boolean;
   log?: (message: string) => void;
 }
 
@@ -98,6 +102,8 @@ export interface BuildResult {
   timetables: Record<string, Timetable>;
   /** With real dates: per date the lines that run differently from usual (changes.ts). */
   changes?: Record<string, Change[]>;
+  /** The hops' courses along tracks and roads (lines.ts), when the feed has shapes. */
+  lines?: Hop[];
   stopsFile: StopsFile;
   stats: {
     serviceDate: string;
@@ -128,6 +134,8 @@ interface TripRows {
   serviceId: string;
   /** GTFS wheelchair_accessible: '1' yes, '2' no, '0' or '' unknown. */
   access: string;
+  /** GTFS shape_id ('' without). */
+  shape: string;
   seq: number[];
   stop: number[];
   time: number[];
@@ -274,6 +282,7 @@ export async function buildTimetables(
       routeId: get('route_id'),
       serviceId,
       access: get('wheelchair_accessible'),
+      shape: get('shape_id'),
       seq: [],
       stop: [],
       time: [],
@@ -383,6 +392,62 @@ export async function buildTimetables(
     return stop;
   });
 
+  // --- the hops' courses along tracks and roads ----------------------------
+  let lines: Hop[] | undefined;
+  if (options.lines !== false && source.has('shapes.txt')) {
+    // One pattern per shape and stop sequence, rail first so a shared hop follows the track.
+    const patterns = new Map<string, Pattern & { rank: number }>();
+    const rank: Record<string, number> = { sbahn: 0, ubahn: 0, regional: 1, tram: 2, ferry: 3 };
+    for (const trip of ordered) {
+      if (!trip.shape) continue;
+      const key = `${trip.shape}|${trip.stop.join(',')}`;
+      if (patterns.has(key)) continue;
+      // Trips outside every window have stops the files do not carry.
+      const mapped = trip.stop.map((s) => newIndex.get(s));
+      if (mapped.some((s) => s === undefined)) continue;
+      patterns.set(key, {
+        shape: trip.shape,
+        stops: mapped as number[],
+        rank: rank[routes.get(trip.routeId)!.mode] ?? 4,
+      });
+    }
+    const wanted = new Set([...patterns.values()].map((p) => p.shape));
+    const points = new Map<string, number[]>();
+    await readCsv(await source.open('shapes.txt'), (get) => {
+      const id = get('shape_id');
+      if (!wanted.has(id)) return;
+      let list = points.get(id);
+      if (!list) points.set(id, (list = []));
+      list.push(
+        Number(get('shape_pt_sequence')),
+        Number(get('shape_pt_lon')),
+        Number(get('shape_pt_lat')),
+      );
+    });
+    const shapes = new Map<string, Shape>();
+    for (const [id, list] of points) {
+      const n = list.length / 3;
+      const idx = Array.from({ length: n }, (_, i) => i).sort(
+        (a, b) => list[3 * a]! - list[3 * b]!,
+      );
+      const flat = new Float64Array(2 * n);
+      idx.forEach((i, k) => {
+        flat[2 * k] = list[3 * i + 1]!;
+        flat[2 * k + 1] = list[3 * i + 2]!;
+      });
+      shapes.set(id, flat);
+    }
+    points.clear();
+    lines = hopCourses(
+      [...patterns.values()].sort((a, b) => a.rank - b.rank),
+      shapes,
+      (s) => [stops[s]!.lon, stops[s]!.lat],
+    );
+    log(
+      `lines: ${shapes.size} shapes, ${patterns.size} patterns, ${lines.length} hops with a course`,
+    );
+  }
+
   // --- what runs differently on each date ---------------------------------
   let changes: Record<string, Change[]> | undefined;
   if (watchChanges) {
@@ -462,6 +527,7 @@ export async function buildTimetables(
   return {
     timetables,
     ...(changes ? { changes } : {}),
+    ...(lines ? { lines } : {}),
     stopsFile: { version: 1, serviceDate: isoDate(serviceDay), feedVersion, stops },
     stats: {
       serviceDate: isoDate(serviceDay),

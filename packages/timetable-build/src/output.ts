@@ -5,6 +5,7 @@ import { isDatedWindow, type BuildResult } from './build.ts';
 import type { ChangesFile } from './changes.ts';
 // The binary format (Contract 4) lives with its decoder; that file imports nothing.
 import { encodeTimetable } from '../../routing/src/ttbin.ts';
+import { encodeLines } from '../../routing/src/linesbin.ts';
 
 export interface FileInfo {
   bytes: number;
@@ -46,6 +47,14 @@ export function writeOutputs(result: BuildResult, outDir: string, extra: object 
     feedVersion: result.stats.feedVersion,
     ids: result.stopsFile.stops.map((s) => Number(/^de:\d+:(\d{9})/.exec(s.id)?.[1] ?? 0)),
   });
+  // The hops' courses along tracks and roads (linesbin.ts), loaded by the app after the map.
+  if (result.lines) {
+    const stops = result.stopsFile.stops;
+    save(
+      'lines.bin',
+      encodeLines(result.lines, (s) => [stops[s]!.lon, stops[s]!.lat]),
+    );
+  }
   if (result.changes) {
     const changes: ChangesFile = {
       version: 1,

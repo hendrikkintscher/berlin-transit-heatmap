@@ -260,6 +260,13 @@ listen((ev: MessageEvent<FromWorker>) => {
     showHeat();
   } else if (m.type === 'trip') {
     tap.onTrip(m);
+  } else if (m.type === 'routes') {
+    const r = state.result;
+    if (!r || r.id !== m.id) return;
+    r.routes = m.routes;
+    r.labels = m.labels;
+    (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
+    (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
   } else if (m.type === 'stations') {
     searchStations = m.list.map((s) => ({
       label: s.name,
