@@ -257,6 +257,19 @@ function setStatus(render: () => string, fade = false) {
 }
 
 // ---------- worker ----------
+/**
+ * The footpath network (walk.bin, the biggest download) is fetched only once the first
+ * map is on screen, or once the base map is up when there is no start yet, so it never
+ * slows the first map down. While it streams, the bar and a note say so.
+ */
+let walkAsked = false;
+let walkLoading = false;
+function askWalk() {
+  if (walkAsked) return;
+  walkAsked = true;
+  send({ type: 'loadWalk' });
+}
+
 // Started by boot.ts before this module loaded, so the timetable is already on its way.
 listen((ev: MessageEvent<FromWorker>) => {
   const m = ev.data;
@@ -278,9 +291,22 @@ listen((ev: MessageEvent<FromWorker>) => {
     special.progress(m.done, m.total);
   } else if (m.type === 'livingAt') {
     tap.onLiving(m);
-  } else if (m.type === 'walk') {
+  } else if (m.type === 'walkProgress') {
+    walkLoading = true;
+    // The bar shows the footpaths' download, unless a map is being computed.
+    if (!loadbar.hidden && loadbar.classList.contains('indeterminate')) return;
+    loadbar.hidden = false;
+    loadbar.classList.toggle('indeterminate', !m.total);
+    (loadbar.firstElementChild as HTMLElement).style.width = m.total
+      ? `${Math.min(100, (100 * m.loaded) / m.total)}%`
+      : '';
+    if (!state.status()) setStatus(() => t('walkLoading'));
+  } else if (m.type === 'walk' || m.type === 'walkFailed') {
+    walkLoading = false;
+    if (!loadbar.classList.contains('indeterminate')) loadbar.hidden = true;
+    if (state.status() === t('walkLoading')) setStatus(() => '');
     // Footpaths arrived: redo what was computed with straight-line walks.
-    redoWalks();
+    if (m.type === 'walk') redoWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
     if (m.living || m.home) special.done(m);
@@ -289,8 +315,10 @@ listen((ev: MessageEvent<FromWorker>) => {
     // The switch went on while it was computing.
     if (m.unpainted && state.heat) send({ type: 'paint', id: m.id });
     tap.onResult();
-    loadbar.hidden = true;
-    setStatus(() => '');
+    // The first map is on screen: now the footpaths, while it is being looked at.
+    askWalk();
+    loadbar.hidden = !walkLoading;
+    setStatus(walkLoading ? () => t('walkLoading') : () => '');
     showTips();
     preloadNextHour();
   } else if (m.type === 'image') {
@@ -570,6 +598,10 @@ if (attrib) {
   }).observe(attrib, { attributes: true, attributeFilter: ['class'] });
 }
 
+// No start to compute yet: the footpaths come once the base map is up.
+map.once('idle', () => {
+  if (!state.origin && !state.special) askWalk();
+});
 map.on('load', () => {
   state.mapReady = true;
   attrib?.classList.remove('maplibregl-compact-show');

@@ -7,6 +7,7 @@ import {
   loadWalkNetwork,
   NETWORK_WALK_SPEED_MPS,
   snapCells,
+  snapCellsInSteps,
   snapPoint,
   travelTimes,
   walkFrom,
@@ -277,5 +278,16 @@ describe('walkPath', () => {
 
   it('gives up off the network', () => {
     expect(walkPath(net, { lat: 52.6, lon: 13.4 }, { lat: LAT_N, lon: LON0 })).toBeNull();
+  });
+
+  it('snaps grid cells in steps, with pauses, to the same result', () => {
+    const bbox: [number, number, number, number] = [13.399, 52.497, 13.43, 52.503];
+    const steps = snapCellsInSteps(net, bbox, 30, 10);
+    let pauses = 0;
+    let s = steps.next();
+    for (; !s.done; s = steps.next()) pauses++;
+    expect(pauses).toBeGreaterThan(0);
+    // Cached: the one-go version hands back the same snaps.
+    expect(snapCells(net, bbox, 30, 10)).toBe(s.value);
   });
 });

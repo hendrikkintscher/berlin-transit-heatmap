@@ -39,6 +39,7 @@ export {
   NETWORK_WALK_SPEED_MPS,
   sameEdgeMetres,
   snapCells,
+  snapCellsInSteps,
   snapOrigin,
   snapPoint,
   snapStops,

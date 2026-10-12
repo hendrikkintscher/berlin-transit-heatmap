@@ -471,6 +471,9 @@ export function walkFrom(
 
 const cellSnaps = new WeakMap<WalkNetwork, Map<string, Snaps>>();
 
+/** Edges scattered between pauses when snapping in steps (a few tens of ms each). */
+const SNAP_STEP_EDGES = 40_000;
+
 /**
  * Snaps the centres of a grid (as heatGrid lays it out) to the network. Cached per
  * network and grid layout, since it takes a moment and the layout rarely changes.
@@ -481,6 +484,24 @@ export function snapCells(
   cols: number,
   rows: number,
 ): Snaps {
+  const steps = snapCellsInSteps(net, bbox, cols, rows);
+  for (;;) {
+    const s = steps.next();
+    if (s.done) return s.value;
+  }
+}
+
+/**
+ * snapCells in steps: the generator pauses every few tens of milliseconds, so a worker
+ * can answer other messages in between (await a timeout after each `next()`). The result
+ * is cached as snapCells caches it.
+ */
+export function* snapCellsInSteps(
+  net: WalkNetwork,
+  bbox: [number, number, number, number],
+  cols: number,
+  rows: number,
+): Generator<void, Snaps> {
   const key = `${bbox.join(',')}/${cols}x${rows}`;
   let byLayout = cellSnaps.get(net);
   if (!byLayout) cellSnaps.set(net, (byLayout = new Map()));
@@ -502,6 +523,7 @@ export function snapCells(
   const reach = 1.5 * Math.max(cw, ch);
   const { x, y, edgeA, edgeB } = net;
   for (let e = 0; e < net.edgeCount; e++) {
+    if (e % SNAP_STEP_EDGES === SNAP_STEP_EDGES - 1) yield;
     const ax = x[edgeA[e]];
     const ay = y[edgeA[e]];
     const vx = x[edgeB[e]] - ax;
@@ -571,6 +593,7 @@ export function snapCells(
       }
     }
   }
+  yield;
   for (let r = rows - 1; r >= 0; r--) {
     for (let c = cols - 1; c >= 0; c--) {
       const k = r * cols + c;
