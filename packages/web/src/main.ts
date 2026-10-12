@@ -420,11 +420,15 @@ function preloadNextHour() {
   );
 }
 
+/** The minute (since 1970) the start's map was last computed in. */
+let computedMinute = 0;
+
 function compute() {
   clearTimeout(preloadTimer);
   if (state.special) return special.compute();
   if (!state.origin) return;
   state.requestId++;
+  computedMinute = Math.floor(Date.now() / 60_000);
   loadbar.hidden = false;
   loadbar.classList.add('indeterminate');
   setStatus(() => '');
@@ -808,9 +812,17 @@ new ResizeObserver(() =>
   document.documentElement.style.setProperty('--bottom-h', `${bottomPanel.offsetHeight}px`),
 ).observe(bottomPanel);
 
-// "Nächste" follows the clock: coming back to the app recomputes from the new "now".
+// "Nächste" follows the clock: coming back to the app recomputes from the new "now", when
+// the minute has moved on since the map was computed or the app was away over a minute.
+let hiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || state.measure !== 'next') return;
+  if (document.visibilityState !== 'visible') {
+    hiddenAt = Date.now();
+    return;
+  }
+  if (state.measure !== 'next') return;
+  const now = Date.now();
+  if (now - hiddenAt <= 60_000 && Math.floor(now / 60_000) === computedMinute) return;
   // A date's hour that is over by now (back after the hour or after midnight) moves on.
   const w = catchUp(state.when, state.direction);
   if (w) return whenSheet.setWhen(w);

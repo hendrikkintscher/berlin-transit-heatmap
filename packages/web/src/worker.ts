@@ -30,6 +30,7 @@ import {
   type TravelTimeResult,
   type UsedSegment,
   type WalkNetwork,
+  REGION,
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
 import {
@@ -47,6 +48,7 @@ import { outlines as traceOutlines } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
 import { scoreGrid } from './favourites';
 import { suggestMeetingPoints, type MeetCandidate } from './meet';
+import { earlyLoad } from './early';
 import { typicalWindow } from './when';
 import type {
   Direction,
@@ -309,11 +311,40 @@ async function prepared(
   return p;
 }
 
+/**
+ * The newest map and trip asked for. A request that a newer one has replaced is dropped
+ * (the app shows only the newest): checked once the messages queued behind it are in, and
+ * again after a timetable had to be loaded.
+ */
+let latestCompute = 0;
+let latestTrip = 0;
+/**
+ * Lets the messages queued meanwhile in, so their ids are known: a message to itself is
+ * queued behind them (a timer can run ahead of them).
+ */
+const tick = new MessageChannel();
+const ticks: (() => void)[] = [];
+tick.port1.onmessage = () => ticks.shift()?.();
+const nextTask = () =>
+  new Promise<void>((r) => {
+    ticks.push(r);
+    tick.port2.postMessage(0);
+  });
+
 ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
   const msg = ev.data;
   try {
     if (msg.type === 'init') {
       dataBase = msg.dataBase;
+    } else if (msg.type === 'boot') {
+      // From the start page, before the app's code is in: the first map's timetable, prepared
+      // as that map will need it.
+      dataBase = new URL(`data/${REGION.id}/`, msg.baseURI).href;
+      const first = earlyLoad(msg.search, msg);
+      await prepared(first.window, first.direction, {
+        stepFree: first.stepFree,
+        bike: first.bike,
+      });
     } else if (msg.type === 'load') {
       // A quiet (background) load that fails is retried when the window is actually needed.
       const variant = { stepFree: msg.stepFree, bike: msg.bike };
@@ -346,12 +377,16 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         [desert.image.rgba.buffer, desert.grid.seconds.buffer],
       );
     } else if (msg.type === 'compute') {
+      latestCompute = msg.id;
+      await nextTask();
+      if (msg.id !== latestCompute) return;
       livingId = 0; // a running "where can I live?" map is no longer wanted
       const t0 = performance.now();
       walkSpeedMps = msg.walkKmh / 3.6;
       const travel = msg.travel ?? 'walk';
       const variant = { stepFree: msg.stepFree, bike: travel === 'bike' };
       const tt = await prepared(msg.window, msg.direction, variant);
+      if (msg.id !== latestCompute) return;
       const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.others ?? [])];
       const meeting = starts.length > 1;
       const typical = msg.measure === 'typical';
@@ -387,6 +422,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       let unpainted = false;
       if (msg.compare) {
         const tt2 = await prepared(msg.compare, msg.direction, variant);
+        if (msg.id !== latestCompute) return;
         const other = starts.map((o) => run(tt2, o, typical, travel, false, leaveAt(tt2)).shown);
         const g2 = slowestOf(other);
         compare = g2.seconds as Float32Array<ArrayBuffer>;
@@ -473,6 +509,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       });
       post({ type: 'livingAt', id: msg.id, minutes });
     } else if (msg.type === 'trip') {
+      latestTrip = msg.id;
+      await nextTask();
+      if (msg.id !== latestTrip) return;
       const last = lastTrip;
       // A later moment (the shown connection was missed): a pass of its own from then.
       const later =

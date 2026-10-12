@@ -17,6 +17,18 @@ export type TripLeg =
 
 export type ToWorker =
   | { type: 'init'; dataBase: string }
+  /**
+   * Sent by the start page's inline script before the app's code has loaded: the page's
+   * address and stored settings, so the worker sets itself up and starts the first map's
+   * timetable at once (see earlyLoad in url.ts).
+   */
+  | {
+      type: 'boot';
+      baseURI: string;
+      search: string;
+      stepFree: string | null;
+      travel: string | null;
+    }
   | {
       type: 'load';
       window: Window;
