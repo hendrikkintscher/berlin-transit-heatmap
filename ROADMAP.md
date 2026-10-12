@@ -1,16 +1,20 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from two fixes added later (groups 6 and 7). Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul and group 13 the Android app, which stays the last step. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and group 14 the Android app, which stays the last step. Items from the second suggestions list (plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
-State on 2026-10-12, live through PR #50. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #55. Build in this order, one step per PR:
 
-1. **Next:** The tapped place stays when settings change (group 6)
-2. Calmer street level: footpaths next to streets (group 7)
-3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-5. Android app, starting with a TWA (group 13), always the last step
+1. **Next:** Speed budget checked in CI (group 10)
+2. Split main.ts before the UI overhaul (group 10)
+3. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
+4. "Bis wann komme ich heim?": the last connection home (group 6)
+5. Wider area: Potsdam and the commuter belt (group 13)
+6. Calmer street level: footpaths next to streets (group 7)
+7. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+8. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+9. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -109,6 +113,18 @@ Keep a list of the places you go to often (workplace, friends, favourite bars) a
 - Combine those times into one score for the location. Ranking or weighting the places (the workplace counts more than an occasional bar) makes the score more accurate.
 
 Notes: the routing already gives times to every point, so per-place times are lookups in the existing grid. The list lives in the browser (local storage, or a shareable URL or file), so no server is needed. The score formula (e.g. a weighted average of times, or the share of places within N minutes) is still to be chosen.
+
+### Meeting point for three or more people (C1)
+
+Friends often meet in groups of three to five. Generalise the meeting point to up to five starts: the map shows extra minutes over the best slower-of-all time, the suggested meeting points work the same way, and a tap lists everyone's trip. Kept in the link with `with=` repeated.
+
+Notes: one routing pass per start, so five starts take about 2.5 times the two-start time; start with three and measure against the snappiness rule. Medium effort; built in one step with C2. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+### "Where can I live?" map from my favourites (C2)
+
+Today the favourites score is shown for the chosen start only. Flat hunters want the opposite: shade the whole map by the score, so the green areas are where all your important places are close. One "Ankommen" pass per favourite, combined with the weights into the weighted-average score per cell (unreachable counting as 120, as now).
+
+Notes: with 5–8 favourites this takes several seconds on a phone, so it is computed on demand behind a button ("Wohnlage-Karte") with progress shown, and cached until the favourites or the time change. Medium effort; built in one step with C1. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 ## 4. Time of day and weekends
 
@@ -251,9 +267,17 @@ Notes: both grids already come from the same router; needs a second time choice 
 
 ### The tapped place stays when settings change
 
+**Done** (PR #55): the tapped place stays through a change of hour, measure, direction, travel mode, step-free, walking speed, language, layers or a moved start; a small dot marks it, its card dims while the new map computes and then shows the new minutes and trip. Only ✕ or a new tap removes it. Kept in the link as `to=lat,lon`.
+
 Today a tapped place (the destination whose minutes and trip are shown in the info box) disappears as soon as a setting changes: another hour, Typisch/Bestfall/Nächste, Losfahren/Ankommen, Unterwegs, Stufenlos, Gehtempo, or a moved start. It should stay: the marker remains, and the minutes and the drawn trip recompute for the new setting, so you can compare settings for the same place without tapping it again. Only the ✕ or a new tap removes it. The second start (meeting point) already stays and is kept in the link; the tapped place could be kept in the link too (`to=lat,lon`).
 
 Notes: every settings change calls hideReadout() in main.ts, which drops the tapped place; instead keep the point and re-run the trip request once the new grid is ready. One trip per change, so no cost to speed. Small effort; added from Hendrik's request on 2026-10-11.
+
+### "Bis wann komme ich heim?": the last connection home (C3)
+
+At night the question is not how long, but how late you can still leave. With home (the start, or a favourite) as the target, colour each place by the latest departure that still gets you home, with a marker where the night network takes over. A tap shows that last connection.
+
+Notes: uses the existing arrive-by pass over several hours of timetables (the hourly files for the evening and night), so it is heavier and runs on demand, not on every tap. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 ## 7. Reading the map
 
@@ -357,6 +381,14 @@ Notes: the routing change is small; most effort is in the UI and defaults. Uses 
 
 First load is about 1.2 MB (JS about 300 KB gzipped plus one hourly timetable of 0.55–0.7 MB). If it becomes a problem: load the map style and timetable in parallel, move rarely used code (favourites import) into a lazy chunk, and store timetables in a binary format instead of JSON. Low priority now that the hourly files are smaller than the old Day file.
 
+### Speed budget checked in CI (B1)
+
+The snappiness rule is checked by hand in each PR today. A CI job fails a PR that makes things slower: gzipped JS size per chunk, timetable file size, and a headless timing of routing per origin in Node (packages/routing already has a bench), each against a stored baseline with some tolerance. Protects the USP automatically as features pile up. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+### Split main.ts before the UI overhaul (B2)
+
+`packages/web/src/main.ts` is over 2,000 lines without tests. Move URL state, the time sheet, the menu, the trip card and tap handling into their own modules, with tests for the URL round trip (`from`, `with`, `to`, `t`, `m`, `dir`, `cmp`, `walk`, `sf`, `go`, `layers`). Same behaviour, no speed cost; it makes the UI overhaul safer and is where the Android app's deep links will land. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
+
 ## 11. What's running now
 
 ### Today's actual service, construction and Ersatzverkehr included
@@ -385,7 +417,15 @@ Many features have been added one by one and are now spread across the top bar, 
 
 Notes: layout and CSS on the existing controls, no new data, so no cost to taps or first load; the popovers are plain DOM, opened instantly. Check at 360×740 and on an iPhone-sized screen, in German and English (chip labels must fit). Large effort. Added from Hendrik's request on 2026-10-11, filled in from his pick on 2026-10-12.
 
-## 13. Android app
+## 13. Wider area
+
+### Potsdam and the commuter belt (C6)
+
+The covered rectangle is 13.05–13.80 E, 52.33–52.70 N (timetable-build/src/geo.ts). Potsdam's centre sits right on the western edge, and Bernau, Oranienburg, Königs Wusterhausen and Erkner are outside, though many people commute from there. Widen the area to include them.
+
+Notes: a larger area means bigger timetables and walking network and more cells per tap, so measure first against the snappiness rule (and the CI speed budget from B1); a possible middle way is the wider area at a coarser grid outside Berlin. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+## 14. Android app
 
 ### Native Android app and how to ship it
 
