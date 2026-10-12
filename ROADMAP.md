@@ -2,6 +2,12 @@
 
 Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked Done are live and kept as one line each; their full write-ups are in archive/plan/roadmap-full-2026-10-12.md (project files). Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and other regions, group 14 the Android app, postponed with no date (Hendrik, 2026-10-12), group 16 app store releases and showcase material, not started, and group 17 the review track. Items from the second suggestions list (archive/plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
+## Inbox
+
+Hendrik's instructions land here, written by the coordinator into plan/roadmap.md (project files): one dated line each, in his words. The roadmap editor and the Review negotiator check this section at the start of every turn and before naming each next step, move each line to its place in the roadmap (review-track items go to the Review negotiator), and remove it from here.
+
+_Empty._
+
 ## Up next
 
 State on 2026-10-12, live through PR #189. Build in this order, one step per PR:
@@ -31,7 +37,7 @@ From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next
 
 **Blocked until Hendrik agrees:** Beta testing readiness (group 14). The plan is written down there (packages A, B and C, plus the address choice); nothing starts until Hendrik explicitly agrees to a package and an address. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
-General rule (Hendrik, 2026-10-12): every instruction is first only noted. The roadmap editor (or, for group 17, the Review negotiator) places it on the roadmap and hands it to the builder only when it judges it the next thing to do; builders take work only from their editor or negotiator.
+General rule (Hendrik, 2026-10-12): instructions go into the roadmap only, through the Inbox above. The roadmap agents find them there and rearrange the roadmap to fit them in; the editor (or, for group 17, the Review negotiator) hands an item to its builder only when it judges it the next thing to do. Builders take work only from their editor or negotiator.
 
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
