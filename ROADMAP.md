@@ -4,7 +4,12 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #108. Nothing is queued: Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #108. Build in this order, one step per PR:
+
+1. **Next:** Chip bar round two: "Mehr" chip last, Vergleich in Ebenen, search first in the top bar, locate at the bottom, "Startpunkt" (group 12)
+2. First view without flicker: nothing that is off by default appears and disappears, including the "Heute anders" notice (group 12)
+
+Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -587,6 +592,28 @@ Hendrik, 2026-10-12: the horizontal chip bar from PR #92 is good, but rearrange 
 - **Reisezeit moves into Zeit:** Typisch / Bestfall / Nächste become part of the Zeit chip's panel, so the bar has one chip fewer.
 
 Notes: layout only; the URL parameters stay the same, so shared links keep working. Check at 360×740 in German and English. Small to medium effort.
+
+### Chip bar round two
+
+Hendrik, 2026-10-12, after seeing PR #108 live:
+
+- **Menu chip last, called "Mehr":** the ≡ chip moves to the end of the bar and is labelled "Mehr" (English: "More"). This reverses the PR #108 choice of putting it first.
+- **Vergleich into Ebenen:** the Vergleich chip leaves the bar; comparing two times becomes part of the Ebenen panel.
+- **Search first:** the search button is the first item of the top bar.
+- **Locate at the bottom:** the "my location" button moves to the bottom of the screen.
+- **"Startpunkt" everywhere:** every "Start" label becomes "Startpunkt" (buttons, trip card, hints, the "2. Start" button), with English to match ("Starting point").
+
+Notes: layout and labels only; URL parameters stay the same. Check at 360×740 in German and English that the bar and the bottom row fit. Small effort.
+
+### First view without flicker
+
+Hendrik, 2026-10-12: on first load the "Heute anders" frame still appears, and some elements that are not part of the default view are loaded, shown and then switched off. Optimise so that:
+
+- Nothing that the default view doesn't show is ever painted, even briefly: elements start hidden and are only shown once they are known to be needed.
+- The "Heute anders" notice no longer appears on its own in the first view (since PR #98 the information belongs on the trip card).
+- Elements needed only later load in the background or on first use, as in the load-order rule of the UI overhaul.
+
+Notes: check with a slowed-down network and CPU that the first frames show only base map, start point, outlines and the bar. No cost to the first map; it may get faster. Small effort.
 
 ## 13. Wider area
 
