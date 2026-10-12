@@ -26,6 +26,14 @@ import {
 } from './format';
 import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import {
+  loadRecent,
+  localMatches,
+  matchScore,
+  rememberRecent,
+  withoutLocal,
+  type LocalPlace,
+} from './search-local';
+import {
   loadFavourites,
   newId,
   parseImport,
@@ -252,6 +260,16 @@ listen((ev: MessageEvent<FromWorker>) => {
     showHeat();
   } else if (m.type === 'trip') {
     tap.onTrip(m);
+  } else if (m.type === 'stations') {
+    searchStations = m.list.map((s) => ({
+      label: s.name,
+      detail: s.lines,
+      lat: s.lat,
+      lon: s.lon,
+      kind: 'station' as const,
+      weight: s.perHour,
+    }));
+    if (!searchPanel.hidden) showSuggestions();
   } else if (m.type === 'layers') {
     state.layers[m.window] = m;
     if (m.window === state.window) showLayers();
@@ -730,6 +748,11 @@ let searchAbort: AbortController | null = null;
 let places: Place[] = [];
 let active = -1;
 const searchCache = new Map<string, Place[]>();
+/** Stations of the loaded timetable, asked from the worker when the search first opens. */
+let searchStations: LocalPlace[] | null = null;
+let stationsAsked = false;
+/** Photon's last answer, kept on screen (filtered) while the next one is on its way. */
+let lastRemote: Place[] = [];
 
 function openSearch() {
   chips.close();
@@ -737,6 +760,36 @@ function openSearch() {
   hint.hidden = true;
   searchInput.focus();
   searchInput.select();
+  if (!stationsAsked) {
+    stationsAsked = true;
+    send({ type: 'stations', window: state.window });
+  }
+  showSuggestions();
+}
+
+/** Recent searches, favourite places and stations: everything matched without the network. */
+function localPool(): LocalPlace[] {
+  return [
+    ...loadRecent(),
+    ...favourites.map((f) => ({
+      label: f.label,
+      detail: '',
+      lat: f.lat,
+      lon: f.lon,
+      kind: 'favourite' as const,
+    })),
+    ...(searchStations ?? []),
+  ];
+}
+
+/** Local matches at once, then Photon's results that still fit the query. */
+function showSuggestions(remote = lastRemote) {
+  const q = searchInput.value.trim();
+  const local = localMatches(q, localPool(), q.length >= 3 ? 3 : 5);
+  const fitting = remote.filter((p) => matchScore(`${p.label} ${p.detail}`, q) > 0);
+  const list = [...local, ...withoutLocal(fitting, local)].slice(0, 8);
+  renderPlaces(list);
+  if (list.length) showMsg('');
 }
 function closeSearch() {
   searchPanel.hidden = true;
@@ -749,13 +802,14 @@ function showMsg(text: string) {
   searchMsg.textContent = text;
   searchMsg.hidden = !text;
 }
-function renderPlaces(list: Place[]) {
+function renderPlaces(list: (Place | LocalPlace)[]) {
   places = list;
   active = -1;
   searchResults.replaceChildren(
     ...list.map((p, i) => {
       const li = document.createElement('li');
       li.id = `place-${i}`;
+      if ('kind' in p) li.className = `place-${p.kind}`;
       li.setAttribute('role', 'option');
       const b = document.createElement('b');
       b.textContent = p.label;
@@ -789,8 +843,9 @@ async function runSearch(q: string) {
   const key = q.toLowerCase();
   const cached = searchCache.get(key);
   if (cached) {
-    renderPlaces(cached);
-    showMsg(cached.length ? '' : t('noMatches'));
+    lastRemote = cached;
+    showSuggestions();
+    if (!places.length) showMsg(t('noMatches'));
     return;
   }
   searchAbort?.abort();
@@ -800,25 +855,30 @@ async function runSearch(q: string) {
     const list = await searchPlaces(q, { lat: c.lat, lon: c.lng }, ctrl.signal, lang());
     searchCache.set(key, list);
     if (ctrl.signal.aborted) return;
-    renderPlaces(list);
-    showMsg(list.length ? '' : t('noMatches'));
+    lastRemote = list;
+    showSuggestions();
+    if (!places.length) showMsg(t('noMatches'));
   } catch {
     if (ctrl.signal.aborted) return;
-    renderPlaces([]);
-    showMsg(t(navigator.onLine ? 'searchDown' : 'searchOffline'));
+    // Local matches stay; only say so when there is nothing at all.
+    if (!places.length) showMsg(t(navigator.onLine ? 'searchDown' : 'searchOffline'));
   }
 }
 
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
   const q = searchInput.value.trim();
+  // Local suggestions on every keystroke, before any network.
+  showSuggestions();
   if (q.length < 3) {
     searchAbort?.abort();
-    renderPlaces([]);
+    lastRemote = [];
     showMsg('');
     return;
   }
-  searchTimer = window.setTimeout(() => runSearch(q), 250);
+  // A typed word answered before: show it at once, otherwise ask Photon after a short pause.
+  if (searchCache.has(q.toLowerCase())) runSearch(q);
+  else searchTimer = window.setTimeout(() => runSearch(q), 150);
 });
 searchInput.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowDown') setActive(active + 1);
@@ -839,6 +899,7 @@ searchInput.addEventListener('keydown', (e) => {
 let searchFor: 'start' | 'favourite' | 'another' = 'start';
 function pickPlace(p: Place) {
   closeSearch();
+  rememberRecent(p);
   if (searchFor === 'favourite') {
     searchFor = 'start';
     searchInput.value = '';

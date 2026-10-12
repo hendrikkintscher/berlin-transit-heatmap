@@ -444,6 +444,26 @@ dialog form button {
   font-size: 13px;
   color: var(--muted);
 }
+/* Suggestions found without the network: recent searches, favourites, stations. */
+.search-results .place-recent b::before,
+.search-results .place-favourite b::before,
+.search-results .place-station b::before {
+  display: inline-block;
+  width: 1.3em;
+  color: var(--muted);
+  font-weight: 400;
+}
+.search-results .place-recent b::before {
+  content: '↺';
+}
+.search-results .place-favourite b::before {
+  content: '★';
+  color: #7b2cbf;
+}
+.search-results .place-station b::before {
+  content: '◉';
+  font-size: 0.8em;
+}
 .search-msg {
   border-top: 1px solid #ece8f1;
   padding: 12px 16px;
