@@ -4,11 +4,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #122. Build in this order, one step per PR:
-
-1. **Next:** Region-ready code, prep only (group 13)
-
-Hendrik, 2026-10-12: prep only for now. After it, Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #126. Nothing is queued: Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the name, the domain and the timetable feed account are settled.
 
@@ -688,7 +684,7 @@ Hendrik, 2026-10-12: add other regions, the first one Oldenburg / Weser-Ems. **D
 
 **Split (Hendrik, 2026-10-12: prep only).** The work is built in two parts:
 
-1. **Region-ready code (prep), to be built now:** a region config holding everything that is Berlin-specific today (area box, map start point, names, timetable and walking-path sources, Berlin-only extras such as Ring, Bezirke, landmarks and live status), data loaded from a folder per region, and favourites and recent places stored per region, with existing Berlin favourites kept. Berlin stays the only region and keeps its current address; nothing visible changes and the first map is no slower.
+1. **Region-ready code (prep), Done** (PR #126): Berlin is one entry in `packages/routing/src/regions.ts`, read by the app, the timetable build and the workflows; data is served from `data/berlin/`; favourites and recent places are stored per region and existing lists moved over. Nothing visible changed and the first map is as fast as before. Planned as: a region config holding everything that is Berlin-specific today (area box, map start point, names, timetable and walking-path sources, Berlin-only extras such as Ring, Bezirke, landmarks and live status), data loaded from a folder per region, and favourites and recent places stored per region, with existing Berlin favourites kept. Berlin stays the only region and keeps its current address; nothing visible changes and the first map is no slower.
 2. **Region addresses and Oldenburg, held:** the `/berlin/` and `/oldenburg/` addresses, the forward from the root address, the region switch, and the Oldenburg data and build. Not started until the name, the domain and the timetable feed account are settled.
 
 Notes: measure against the snappiness rule and the CI speed budget. The prep is medium effort; part 2 is large and may itself be split (addresses, then Oldenburg data, then the region switch).
