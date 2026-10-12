@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   coordsFromMapsUrl,
   csvRows,
+  favouriteAt,
   parseImport,
   score,
   scoreGrid,
@@ -100,5 +101,13 @@ describe('imports', () => {
       [3, 1],
     );
     expect([...g]).toEqual([750, 0.75 * 600 + 0.25 * 7200, 7200]);
+  });
+});
+
+describe('favouriteAt', () => {
+  it('finds a place a few metres off, not one a street away', () => {
+    const list = [fav('Home', 2, 52.5, 13.4)];
+    expect(favouriteAt(list, { lat: 52.50015, lon: 13.4 })?.label).toBe('Home');
+    expect(favouriteAt(list, { lat: 52.5005, lon: 13.4 })).toBeUndefined();
   });
 });

@@ -33,11 +33,13 @@ import {
 } from './search-local';
 import {
   loadFavourites,
+  favouriteAt,
   newId,
   parseImport,
   saveFavourites,
   score,
   WEIGHTS,
+  type Favourite,
   type Weight,
 } from './favourites';
 import { formatDecimal, formatNumber, initialLang, lang, readStoredLang, setLang, t } from './i18n';
@@ -992,18 +994,17 @@ for (const ev of ['mousedown', 'touchstart'] as const) {
 let favourites = loadFavourites();
 const favMarkers = new Map<string, maplibregl.Marker>();
 
-function addFavourites(places: { label: string; lat: number; lon: number }[]) {
-  favourites = [
-    ...favourites,
-    ...places.map((p) => ({
-      id: newId(),
-      label: p.label,
-      lat: p.lat,
-      lon: p.lon,
-      weight: 2 as Weight,
-    })),
-  ];
+function addFavourites(places: { label: string; lat: number; lon: number }[]): Favourite[] {
+  const added = places.map((p) => ({
+    id: newId(),
+    label: p.label,
+    lat: p.lat,
+    lon: p.lon,
+    weight: 2 as Weight,
+  }));
+  favourites = [...favourites, ...added];
   favouritesChanged();
+  return added;
 }
 
 function favouriteTimes() {
@@ -1286,14 +1287,26 @@ const tap = initTap(
     setOrigin,
     addStart,
     removeStart,
-    addFavourite: async (at) => {
-      let label = `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`;
-      try {
-        label = (await reversePlace(at, lang())) ?? label;
-      } catch {
-        // Offline or Photon down: keep the coordinates as the name.
+    isFavourite: (at) => !!favouriteAt(favourites, at),
+    toggleFavourite: (at) => {
+      const there = favouriteAt(favourites, at);
+      if (there) {
+        favourites = favourites.filter((f) => f !== there);
+        favouritesChanged();
+        return;
       }
-      addFavourites([{ label, ...at }]);
+      // In the list at once, under its coordinates; the street name follows when Photon answers.
+      const [f] = addFavourites([{ label: `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`, ...at }]);
+      reversePlace(at, lang())
+        .then((label) => {
+          if (label && f && favourites.includes(f)) {
+            f.label = label;
+            favouritesChanged();
+          }
+        })
+        .catch(() => {
+          // Offline or Photon down: keep the coordinates as the name.
+        });
     },
     writeUrl,
     onCard: () => {
