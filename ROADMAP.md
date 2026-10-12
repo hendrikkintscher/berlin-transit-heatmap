@@ -6,8 +6,8 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 
-1. **Next:** Redesign of the time sheet and the trip card, including C2 (group 12): mock-ups first, built only after Hendrik picks
-2. Offline map and faster start in the service worker (B3, group 15)
+1. **Next:** Offline map and faster start in the service worker (B3, group 15)
+2. Redesign of the time sheet and the trip card, including C2 (group 12): designs picked
 3. "Bis N Min." view as an optional switch (D1, group 15)
 4. Faster first load and no stale work (B4 + B5, group 15)
 5. Lighter work per tap (B6, group 15)
@@ -16,8 +16,9 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 8. Notice, search and favourites polish (C5–C8, group 15)
 9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
 10. Default view readability: two variants to compare (C9, group 15)
+11. Named starts in meeting mode (D2, group 15)
 
-While the redesign waits for Hendrik's pick, the builder goes on with steps 2–10, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -742,7 +743,14 @@ Hendrik, 2026-10-12: "Make a sensible redesign of the whole times and trips card
 
 Further inputs from plan/suggestions-3.md, handed to this redesign instead of being asked separately: C3 (one bottom slot with priorities for hint, install tip, "Heute anders", trip card, legend and locate; the iOS install tip once, then only in Mehr), C4 (past hours greyed for Heute, Reisezeit above the fold or a scroll fade, the night tint 0–4 explained), D3 (quick chips Jetzt / +15 / +30 / +60), C11 (Treffpunkt, Vergleich and Wohnlage info chips collapse to an icon pill after a few seconds) and from C10 the 44 px / 13 px minimum sizes and the wording list (Als Startpunkt or Neuer Startpunkt, Losfahren/Ankommen or Abfahrt/Ankunft, Sa+So or Wochenende, "3. Startpunkt").
 
-Mock-ups come first: the builder shows Hendrik screenshots of the redesign at 360×740 and, where a choice matters, 2–4 options via the coordinator. It is built only after his pick. Snappiness stays the rule: tap to trip must stay as fast as now.
+**Designs picked** by Hendrik on 2026-10-12 (mock-ups in /mnt/project-files/mockups/redesign/):
+
+- **Time panel A:** quick buttons Jetzt / +15 / +30 / +60 at the top, then Losfahren/Ankommen with the exact time, then the days (typical days at the end of the scroll row), then Reisezeit, then the hour grid.
+- **Trip card B, compact:** minutes and lines first, a Details button opens the stops, and the buttons become icons. At a meeting point the first trip shows and "2 weitere Fahrten" folds the rest.
+
+Both include C2, C3, C4, D3, C11, the C10 minimums and the Ankommen-at-23:00 fix.
+
+Mock-ups came first: the builder shows Hendrik screenshots of the redesign at 360×740 and, where a choice matters, 2–4 options via the coordinator. It is built only after his pick. Snappiness stays the rule: tap to trip must stay as fast as now.
 
 ## 13. Wider area and other regions
 
@@ -906,3 +914,7 @@ Picked by Hendrik on 2026-10-12 ("Try both"). Two variants are built behind link
 - **(b) Faint colours:** the heatmap is on by default at about 40 % opacity, with the rings as today.
 
 The builder posts both links with the same start point so Hendrik can compare them on his phone. He then picks one on a decision card; the pick becomes the default and the other parameter goes. In the same step, from C10: a larger thumb on the heatmap slider (16 px today), and 55–60 % opacity when colours are switched on by hand.
+
+### Named starts in meeting mode (D2)
+
+Picked by Hendrik on 2026-10-12 ("Yes"). In meeting mode each start can carry an optional name (default "1. Start", "2. Start"). The name and its colour match on the map marker, in the trip card and in the suggested meeting places, and names travel in the link. "Teilen" prefills the message with the three suggested places and each person's minutes. Nothing changes for a single start.
