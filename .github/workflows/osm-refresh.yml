@@ -20,21 +20,32 @@ concurrency:
 
 env:
   OSM_TAG: osm-latest
-  # DEFAULT_BBOX of the router plus a margin of more than a 15-minute walk.
-  BBOX: '12.8,52.2,14.0,52.85'
 
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Read the region
+        run: |
+          # The region's extracts and box: its grid plus more than a 15-minute walk
+          # (packages/routing/src/regions.ts).
+          echo "BBOX=$(node scripts/region.mjs osmBbox)" >> "$GITHUB_ENV"
+          echo "EXTRACTS=$(node scripts/region.mjs osmExtracts)" >> "$GITHUB_ENV"
+
       - name: Install osmium
         run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
 
       - name: Download extracts
         run: |
           mkdir -p work
-          for region in berlin brandenburg; do
+          for region in $EXTRACTS; do
             curl -fsSL --retry 4 --retry-delay 10 -o "work/$region.osm.pbf" \
               "https://download.geofabrik.de/europe/germany/$region-latest.osm.pbf"
           done
@@ -43,7 +54,7 @@ jobs:
       - name: Filter walkable ways
         run: |
           cd work
-          osmium merge berlin.osm.pbf brandenburg.osm.pbf -o merged.osm.pbf
+          osmium merge $(for r in $EXTRACTS; do echo "$r.osm.pbf"; done) -o merged.osm.pbf
           osmium extract -b "$BBOX" --strategy complete_ways merged.osm.pbf -o area.osm.pbf
           osmium tags-filter -t area.osm.pbf \
             w/highway w/railway=platform w/public_transport=platform \
@@ -51,7 +62,7 @@ jobs:
           osmium cat -f opl,add_metadata=false walkways.osm.pbf | gzip -9 > walkways.opl.gz
           osmium fileinfo -e walkways.osm.pbf | grep -E 'Number of (nodes|ways)|Timestamp'
           ls -la walkways.opl.gz
-          osmium fileinfo -g header.option.osmosis_replication_timestamp berlin.osm.pbf > timestamp.txt || true
+          osmium fileinfo -g header.option.osmosis_replication_timestamp "${EXTRACTS%% *}.osm.pbf" > timestamp.txt || true
           cat timestamp.txt
 
       - name: Publish release

@@ -11,6 +11,11 @@ import {
   OUTLINE_STEP_MINUTES,
 } from './colors';
 import { bezirke, landmarks, ringLine } from './orientation';
+import { region } from './region';
+
+/** The orientation overlay only where the region has one (Berlin's Ring, Bezirke, landmarks). */
+const NONE = { type: 'FeatureCollection' as const, features: [] };
+const orient = <T>(data: T) => (region.orientation ? data : NONE);
 import { SEARCH_BBOX } from './search';
 
 export const HEAT_SOURCE = 'heat';
@@ -245,7 +250,7 @@ export function addMapLayers(
     },
     paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
   });
-  map.addSource('ring', { type: 'geojson', data: ringLine });
+  map.addSource('ring', { type: 'geojson', data: orient(ringLine) });
   map.addLayer(
     {
       id: 'ring-line',
@@ -423,7 +428,7 @@ export function addMapLayers(
     paint: { 'text-color': CHANGE_COLOR, 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
   });
   // Bezirke at city zoom; the basemap's Ortsteil names take over from zoom 11.5.
-  map.addSource('bezirke', { type: 'geojson', data: bezirke });
+  map.addSource('bezirke', { type: 'geojson', data: orient(bezirke) });
   map.addLayer({
     id: 'bezirke-label',
     type: 'symbol',
@@ -459,7 +464,7 @@ export function addMapLayers(
     map.setPaintProperty('label_other', 'text-halo-width', 1.8);
   }
   calmPaths(map);
-  map.addSource('landmarks', { type: 'geojson', data: landmarks });
+  map.addSource('landmarks', { type: 'geojson', data: orient(landmarks) });
   map.addLayer({
     id: 'landmarks',
     type: 'symbol',

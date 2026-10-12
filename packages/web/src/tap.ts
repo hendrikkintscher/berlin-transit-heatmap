@@ -13,6 +13,7 @@ import { $, type State } from './state';
 import { leaveText, tripHtml, type Trip } from './trip-card';
 import { MAX_STARTS, type Point } from './url';
 import { liveStatus, liveText, type Board } from './live';
+import { dataBase } from './region';
 import { clockNow, isDate } from './when';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
@@ -65,7 +66,6 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   let removeWhich = 0;
   /** The shown trip's first vehicle, for its live status (today only), and the last check. */
   let board: Board | null = null;
-  const DATA_BASE = new URL('data/', document.baseURI).href;
   let liveAt = 0;
   /** The rides of the connection on the card, for its "Heute anders" notes. */
   let shownRides: { name: string; mode: string }[] = [];
@@ -364,7 +364,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (!b || !isDate(day) || clockNow(state.when) === null) return;
     liveAt = Date.now();
     const id = tripId;
-    void liveStatus(b, day, DATA_BASE).then((s) => {
+    void liveStatus(b, day, dataBase()).then((s) => {
       const el = document.querySelector<HTMLElement>('#trip .trip-live');
       if (!s || !el || id !== tripId || b !== board) return;
       const { text, bad } = liveText(b.line, s);

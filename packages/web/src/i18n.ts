@@ -1,11 +1,13 @@
 // Interface text in German (default) and English. Static text in index.html carries
 // data-t* attributes naming its key; dynamic text is built with t() and the helpers below.
 
+import { region } from './region';
+
 export type Lang = 'de' | 'en';
 export const LANGS: readonly Lang[] = ['de', 'en'];
 
 const de = {
-  title: 'Berlin in Minuten',
+  title: region.title.de,
   description: 'Wie lange brauchst du mit Bus und Bahn von einem Punkt in Berlin überallhin?',
   mapLabel: 'Karte von Berlin',
   lines: 'Linien',
@@ -240,7 +242,7 @@ const de = {
 export type Key = keyof typeof de;
 
 const en: Record<Key, string> = {
-  title: 'Berlin in Minutes',
+  title: region.title.en,
   description: 'How long does public transport take from any point in Berlin to everywhere else?',
   mapLabel: 'Map of Berlin',
   lines: 'Lines',

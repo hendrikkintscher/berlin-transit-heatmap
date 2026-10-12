@@ -1,3 +1,5 @@
+import { REGION, type Box } from '../../routing/src/regions.ts';
+
 export interface BBox {
   minLon: number;
   minLat: number;
@@ -5,8 +7,13 @@ export interface BBox {
   maxLat: number;
 }
 
-/** The router's grid area (DEFAULT_BBOX: Berlin and the commuter belt) plus a margin (Contract 1). */
-export const BERLIN_BBOX: BBox = { minLon: 12.87, minLat: 52.25, maxLon: 13.95, maxLat: 52.82 };
+/** A region box ([minLon, minLat, maxLon, maxLat]) as a BBox. */
+export function toBBox([minLon, minLat, maxLon, maxLat]: Box): BBox {
+  return { minLon, minLat, maxLon, maxLat };
+}
+
+/** The stops kept: the router's grid area plus a margin (Contract 1), from the region. */
+export const STOP_BBOX: BBox = toBBox(REGION.stopBbox);
 
 export function inBBox(bbox: BBox, lat: number, lon: number): boolean {
   return lat >= bbox.minLat && lat <= bbox.maxLat && lon >= bbox.minLon && lon <= bbox.maxLon;

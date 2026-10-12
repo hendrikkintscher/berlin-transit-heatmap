@@ -10,7 +10,8 @@
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { createGunzip } from 'node:zlib';
-import { inBBox, type BBox } from './geo.ts';
+import { REGION } from '../../routing/src/regions.ts';
+import { inBBox, toBBox, type BBox } from './geo.ts';
 
 /** Walking speed for transfers between stops, 4 km/h (the router's default walking speed). */
 export const NETWORK_WALK_SPEED_MPS = 4 / 3.6;
@@ -113,8 +114,8 @@ export async function readOplFile(
   return buildWalkGraph(lines, bbox);
 }
 
-/** The router's grid area (DEFAULT_BBOX) plus a margin of more than a 15-minute walk. */
-export const WALK_BBOX: BBox = { minLon: 12.88, minLat: 52.26, maxLon: 13.94, maxLat: 52.81 };
+/** The router's grid area plus a margin of more than a 15-minute walk, from the region. */
+export const WALK_BBOX: BBox = toBBox(REGION.walkBbox);
 
 /** Builds the walking graph from OPL lines (nodes before ways, as osmium writes them). */
 export async function buildWalkGraph(

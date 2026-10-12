@@ -78,8 +78,8 @@ import {
 } from './when';
 import { initWhenSheet } from './when-sheet';
 import type { FromWorker, ToWorker } from './protocol';
+import { dataBase, region } from './region';
 
-const BERLIN: [number, number] = [13.405, 52.515];
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 
 const loadbar = $('loadbar');
@@ -383,7 +383,7 @@ function writeUrl() {
 const map = new maplibregl.Map({
   container: 'map',
   style: STYLE_URL,
-  center: state.origin ? [state.origin.lon, state.origin.lat] : BERLIN,
+  center: state.origin ? [state.origin.lon, state.origin.lat] : region.center,
   zoom: 10.3,
   minZoom: 8,
   maxZoom: 18,
@@ -395,7 +395,7 @@ map.touchZoomRotate.disableRotation();
 changes = initChanges({
   map,
   state,
-  dataBase: new URL('data/', document.baseURI).href,
+  dataBase: dataBase(),
   loaded: () => tap.addChangeNotes(),
 });
 
@@ -1301,7 +1301,7 @@ favFile.addEventListener('change', async () => {
       const hit = (
         await searchPlaces(
           p.query ?? p.label,
-          { lat: BERLIN[1], lon: BERLIN[0] },
+          { lat: region.center[1], lon: region.center[0] },
           new AbortController().signal,
           lang(),
         ).catch(() => [] as Place[])

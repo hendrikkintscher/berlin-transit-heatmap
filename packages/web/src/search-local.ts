@@ -1,6 +1,7 @@
 // Search suggestions that need no network: stations of the loaded timetable, favourite
 // places and recent searches. They show on the first keystroke; Photon's addresses join
 // below them when they arrive (see main.ts).
+import { regionKey } from './region';
 import type { Place } from './search';
 
 export interface LocalPlace extends Place {
@@ -9,7 +10,6 @@ export interface LocalPlace extends Place {
   weight?: number;
 }
 
-const RECENT_KEY = 'recentPlaces';
 const RECENT_MAX = 8;
 
 /** Lower case, no accents, ß as ss, "straße" as "str", so "Muller" finds "Müllerstr.". */
@@ -100,7 +100,7 @@ export function withoutLocal(remote: Place[], local: Place[]): Place[] {
 
 export function loadRecent(): LocalPlace[] {
   try {
-    const list = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]') as Place[];
+    const list = JSON.parse(localStorage.getItem(regionKey('recentPlaces')) ?? '[]') as Place[];
     return list.map((p) => ({ ...p, kind: 'recent' as const }));
   } catch {
     return [];
@@ -113,7 +113,7 @@ export function rememberRecent(p: Place): void {
     const list = loadRecent().filter((r) => fold(r.label) !== fold(p.label));
     const next = [{ label: p.label, detail: p.detail, lat: p.lat, lon: p.lon }, ...list];
     localStorage.setItem(
-      RECENT_KEY,
+      regionKey('recentPlaces'),
       JSON.stringify(
         next
           .slice(0, RECENT_MAX)
