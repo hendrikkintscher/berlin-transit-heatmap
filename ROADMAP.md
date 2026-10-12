@@ -14,8 +14,9 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 6. Smaller Wohnlage-Karte memory (B7, group 15)
 7. Typical timetable when offline (B8, group 15)
 8. Notice, search and favourites polish (C5–C8, group 15)
+9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
 
-While the redesign waits for Hendrik's pick, the builder goes on with steps 2–8, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+While the redesign waits for Hendrik's pick, the builder goes on with steps 2–9, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -888,3 +889,10 @@ Picked by Hendrik on 2026-10-12 ("Yes, all four"), one PR.
 - **C6:** the search box gets a title and placeholder for its purpose, such as "Lieblingsort hinzufügen" or "2. Startpunkt wählen", at every entry point.
 - **C7:** a ☆ set on a map point is named by street and house number rather than a nearby place, and names can be edited in the favourites list.
 - **C8:** stops rank above other places in the suggestions ("Potsdam Hbf" currently offers an old signal box first), and after picking a result the map fits the 45-minute ring instead of zooming in close.
+
+### Broader CI checks and a sturdier timetable build (B9 + B10)
+
+Picked by Hendrik on 2026-10-12 ("Yes, both"). CI and workflows only; the app itself does not change.
+
+- **B9:** the CI speed check also times softening, outlines and painting per start, and the cell snapping separately. One browser smoke test against a small fixture opens the app, taps, and checks that minutes and outlines appear. The duplicate test and build in the deploy workflow on pull requests goes away.
+- **B10:** the timetable build fails above a hard size ceiling (about 1.5 times the budget) and only warns below it. It also runs on a schedule of its own, so a failed timetable download no longer stops it; dated files roll forward from the last good feed.
