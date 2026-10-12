@@ -178,7 +178,7 @@ export function travelTimes(
       : undefined;
 
   if (departures.length > 0 && maxRounds > 0) {
-    const { routeStopOffset, routeStops, routeTripCount, routeTimeOffset, times } = tt;
+    const { routeStopOffset, routeStops, routeTripCount, routeTimeOffset, times, arrivals } = tt;
     const { stopRouteOffset, stopRouteRoute, stopRouteIndex } = tt;
     const { transferOffset, transferTo, transferSeconds } = tt;
 
@@ -271,7 +271,8 @@ export function travelTimes(
           for (let i = from; i < n; i++) {
             const s = routeStops[so + i];
             if (trip >= 0) {
-              const arr = times[tripBase + i];
+              // Getting off: the vehicle's arrival, before it waits at the stop.
+              const arr = arrivals[tripBase + i];
               if (arr < vehStar[s]) {
                 vehStar[s] = arr;
                 if (rounds) {

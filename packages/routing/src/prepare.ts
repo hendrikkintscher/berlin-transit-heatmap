@@ -43,6 +43,11 @@ export interface PreparedTimetable {
   /** times[routeTimeOffset[r] + trip * stopsInRoute + i] = departure of `trip` at stop i. */
   readonly routeTimeOffset: Int32Array;
   readonly times: Int32Array;
+  /**
+   * Same layout as `times`: when `trip` arrives at stop i, before its dwell there. The
+   * same array as `times` when the timetable has no dwells.
+   */
+  readonly arrivals: Int32Array;
 
   /** For stop s: entries [stopRouteOffset[s], stopRouteOffset[s+1]) of (route, index of s in the route). */
   readonly stopRouteOffset: Int32Array;
@@ -101,7 +106,10 @@ export function loadTimetable(json: Timetable): PreparedTimetable {
     source: number;
     stops: number[];
     trips: number[][];
+    /** Arrival times, parallel to trips (only when the route has dwells). */
+    arrivals: number[][] | null;
   }
+  let anyDwell = false;
   const subRoutes: SubRoute[] = [];
   for (let r = 0; r < json.routes.length; r++) {
     const route = json.routes[r];
@@ -111,15 +119,23 @@ export function loadTimetable(json: Timetable): PreparedTimetable {
       if (!(s >= 0 && s < stopCount))
         throw new Error(`Route ${r} (${route.name}) references unknown stop ${s}`);
     }
-    const trips = route.trips
-      .filter((t) => t.length === n)
-      .map((t) => monotone(t))
-      .sort((a, b) => a[0] - b[0] || a[n - 1] - b[n - 1]);
-    const groups: number[][][] = [];
-    for (const trip of trips) {
+    const dwells = route.dwells;
+    if (dwells) anyDwell = true;
+    // Trip indices, sorted by their (monotone) departures; dwells stay with their trip.
+    const deps: number[][] = new Array(route.trips.length);
+    const order: number[] = [];
+    for (let k = 0; k < route.trips.length; k++) {
+      if (route.trips[k].length !== n) continue;
+      deps[k] = monotone(route.trips[k]);
+      order.push(k);
+    }
+    order.sort((a, b) => deps[a][0] - deps[b][0] || deps[a][n - 1] - deps[b][n - 1]);
+    const groups: number[][] = [];
+    for (const k of order) {
+      const trip = deps[k];
       let placed = false;
       for (const g of groups) {
-        const last = g[g.length - 1];
+        const last = deps[g[g.length - 1]];
         let fifo = true;
         for (let i = 0; i < n; i++) {
           if (trip[i] < last[i]) {
@@ -128,14 +144,20 @@ export function loadTimetable(json: Timetable): PreparedTimetable {
           }
         }
         if (fifo) {
-          g.push(trip);
+          g.push(k);
           placed = true;
           break;
         }
       }
-      if (!placed) groups.push([trip]);
+      if (!placed) groups.push([k]);
     }
-    for (const g of groups) subRoutes.push({ source: r, stops: route.stops, trips: g });
+    for (const g of groups)
+      subRoutes.push({
+        source: r,
+        stops: route.stops,
+        trips: g.map((k) => deps[k]),
+        arrivals: dwells ? g.map((k) => arrivalsOf(deps[k], dwells[k])) : null,
+      });
   }
 
   const routeCount = subRoutes.length;
@@ -158,12 +180,15 @@ export function loadTimetable(json: Timetable): PreparedTimetable {
   routeTimeOffset[routeCount] = totalTimes;
   const routeStops = new Int32Array(totalStops);
   const times = new Int32Array(totalTimes);
+  const arrivals = anyDwell ? new Int32Array(totalTimes) : times;
   for (let r = 0; r < routeCount; r++) {
     const sr = subRoutes[r];
     routeStops.set(sr.stops, routeStopOffset[r]);
     let o = routeTimeOffset[r];
-    for (const trip of sr.trips) {
+    for (let t = 0; t < sr.trips.length; t++) {
+      const trip = sr.trips[t];
       times.set(trip, o);
+      if (anyDwell) arrivals.set(sr.arrivals ? sr.arrivals[t] : trip, o);
       o += trip.length;
     }
   }
@@ -236,6 +261,7 @@ export function loadTimetable(json: Timetable): PreparedTimetable {
     routeTripCount,
     routeTimeOffset,
     times,
+    arrivals,
     stopRouteOffset,
     stopRouteRoute,
     stopRouteIndex,
@@ -256,6 +282,17 @@ function monotone(trip: number[]): number[] {
     out[i] = prev;
   }
   return out;
+}
+
+/**
+ * Arrival times from (monotone) departures and dwells: never after the departure there
+ * nor before the departure at the previous stop.
+ */
+function arrivalsOf(dep: number[], dwell: number[] | undefined): number[] {
+  return dep.map((d, i) => {
+    const a = d - Math.max(0, Math.round(dwell?.[i] ?? 0));
+    return i > 0 && a < dep[i - 1] ? dep[i - 1] : a;
+  });
 }
 
 function buildIndex(xs: Float64Array, ys: Float64Array): StopIndex {

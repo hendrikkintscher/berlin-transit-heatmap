@@ -42,8 +42,13 @@ export interface Route {
   mode: RouteMode;
   /** Stop indices in travel order. */
   stops: number[];
-  /** trips[t][i] = departure time at stops[i] (arrival == departure); sorted by first departure. */
+  /** trips[t][i] = departure time at stops[i]; sorted by first departure. */
   trips: number[][];
+  /**
+   * dwells[t][i] = seconds the vehicle of trip t waits at stops[i]: it arrives at
+   * trips[t][i] - dwells[t][i]. Absent: arrival == departure everywhere. (Addition to Contract 1.)
+   */
+  dwells?: number[][];
   /** false: trips not marked wheelchair-accessible. Absent: accessible or unknown. (Addition to Contract 1.) */
   stepFree?: false;
 }

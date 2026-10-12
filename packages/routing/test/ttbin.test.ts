@@ -52,6 +52,28 @@ describe('binary timetable', () => {
     });
   });
 
+  it('keeps dwells, and leaves them out where no trip waits', () => {
+    const withDwells: TimetableData = {
+      ...tt,
+      routes: [
+        {
+          ...tt.routes[0]!,
+          dwells: [
+            [0, 30],
+            [0, 45],
+          ],
+        },
+        { ...tt.routes[1]!, dwells: [[0, 0, 0]] },
+      ],
+    };
+    const back = decodeTimetable(encodeTimetable(withDwells));
+    expect(back.routes[0]!.dwells).toEqual([
+      [0, 30],
+      [0, 45],
+    ]);
+    expect(back.routes[1]!.dwells).toBeUndefined();
+  });
+
   it('rejects other and broken files', () => {
     expect(() => decodeTimetable(new Uint8Array([1, 2, 3, 4, 1]))).toThrow();
     const bin = encodeTimetable(tt);

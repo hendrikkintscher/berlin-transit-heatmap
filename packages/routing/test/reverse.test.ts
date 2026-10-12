@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadTimetable, reverseTimetable, travelTimes } from '../src';
-import { A, B, D, I, miniTimetable, randomTimetable, STOP_POS } from './fixture';
+import { A, B, C, D, I, miniTimetable, randomTimetable, STOP_POS } from './fixture';
 import { referenceTravelTimes } from './reference';
 
 const H10 = 10 * 3600;
@@ -48,5 +48,30 @@ describe('reverseTimetable (arrive by)', () => {
       STOP_POS[D],
     );
     expect(bwd.stopSeconds[A]).toBe(fwd[D]);
+  });
+});
+
+describe('reverseTimetable with dwells', () => {
+  const raw = miniTimetable('day');
+  const u1 = raw.routes.find((r) => r.name === 'U1')!;
+  // A minute's wait at B (passed through) and at C (where the trip ends here).
+  u1.dwells = u1.trips.map(() => [0, 60, 60, 0]);
+
+  it('arrives by the arrival and rides through on the departure', () => {
+    const toC = travelTimes(
+      loadTimetable(reverseTimetable(raw, H10 + 1800, H10 + 2400)),
+      STOP_POS[C],
+    );
+    // Leaves A at :x0, arrives at C at :x3 (it leaves C at :x4).
+    expect(toC.stopSeconds[A]).toBe(180);
+    // Boards at B when it leaves (:x2), not when it arrives (:x1).
+    expect(toC.stopSeconds[B]).toBe(60);
+  });
+
+  it('keeps the dwells when reversed twice', () => {
+    const twice = reverseTimetable(reverseTimetable(raw, 0, 1), -raw.windowEnd, -raw.windowStart);
+    const back = twice.routes.find((r) => r.name === 'U1')!;
+    expect(back.trips).toEqual(u1.trips);
+    expect(back.dwells).toEqual(u1.dwells);
   });
 });
