@@ -4,7 +4,7 @@
 // to remove it.
 
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
-import { escapeHtml, gridSeconds, whenText } from './format';
+import { escapeHtml, eveningClock, gridSeconds, whenText } from './format';
 import { lang, t } from './i18n';
 import { STATIONS_LAYER, TRIP_SOURCE, TRIP_STOPS_SOURCE } from './map-layers';
 import type { StationProps, ToWorker } from './protocol';
@@ -35,6 +35,8 @@ export interface TapDeps {
   onCard: () => void;
   /** The favourites' names, in list order, for the where-to-live card. */
   favouriteLabels: () => string[];
+  /** "Bis wann komme ich heim?" to start i. */
+  showHome: (i: number) => void;
 }
 
 export function initTap(deps: TapDeps, initial: Point | null) {
@@ -43,6 +45,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   const readoutText = $('readout-text');
   const secondBtn = $<HTMLButtonElement>('readout-second');
   const removeBtn = $<HTMLButtonElement>('readout-remove');
+  const homeBtn = $<HTMLButtonElement>('readout-home');
 
   let spot: Spot | null = initial && { ...initial, title: '', searched: false };
   /** Where "Hier starten", "2. Start" and "Merken" act: the place, or the address it snapped to. */
@@ -86,16 +89,17 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       html =
         t('stationFreq', { name: escapeHtml(p.name), n: p.perHour }) +
         (p.lines ? `<small>${escapeHtml(p.lines)}</small>` : '');
-    } else if (!state.origin && !state.living && !(state.desert && data)) {
+    } else if (!state.origin && !state.special && !(state.desert && data)) {
       setSpot(null);
       deps.setOrigin({ lat, lon: lng });
       return;
     } else {
       const r = state.result;
-      const secs = r && (state.origin || state.living) ? gridSeconds(r, lat, lng) : NaN;
+      const secs = r && (state.origin || state.special) ? gridSeconds(r, lat, lng) : NaN;
       const parts: string[] = [];
       let tripSlot = '';
-      if (secs >= 0 && r?.living)
+      if (secs >= 0 && r?.home) parts.push(homeText(r, lat, lng));
+      else if (secs >= 0 && r?.living)
         parts.push(
           secs < Infinity ? t('livingScore', { n: Math.round(secs / 60) }) : t('unreachable'),
         );
@@ -141,7 +145,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
         send(
           r.living
             ? { type: 'livingAt', id: tripId, map: r.id, lat, lon: lng }
-            : { type: 'trip', id: tripId, lat, lon: lng },
+            : r.home
+              ? { type: 'homeTrip', id: tripId, map: r.id, lat, lon: lng }
+              : { type: 'trip', id: tripId, lat, lon: lng },
         );
         tripSlot = '<span id="trip" class="trip"></span>';
       }
@@ -158,7 +164,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     showCard(html, false, searched);
     pending = { lat, lon: lng };
     const count = state.origin ? 1 + state.others.length : 0;
-    secondBtn.hidden = !count || count >= MAX_STARTS || state.living;
+    secondBtn.hidden = !count || count >= MAX_STARTS || !!state.special;
     secondBtn.textContent = t('secondHere', { n: count + 1 });
     if (!title && map.getZoom() >= 15) void showAddress(pending);
     deps.onCard();
@@ -187,13 +193,33 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     pending = { lat: place.lat, lon: place.lon };
   }
 
+  /**
+   * Home map: until when the fast connection home runs, and how long the night network
+   * carries on after it. Both are "seconds before end" on the grid, so smaller is later.
+   */
+  function homeText(r: NonNullable<State['result']>, lat: number, lng: number): string {
+    const h = r.home!;
+    const fast = gridSeconds(r, lat, lng);
+    const any = gridSeconds(r, lat, lng, h.any);
+    if (!(fast < Infinity)) return t('homeNone');
+    // Leaving at 2 Uhr or later still gets home by 4: the night network carries on.
+    const allNight = (v: number) => v <= 2 * 3600;
+    if (allNight(fast)) return t('homeAllNight');
+    const night = allNight(any)
+      ? t('homeNightAll')
+      : any < fast - 300
+        ? t('homeNightUntil', { time: eveningClock(h.end - any) })
+        : t('homeNoNight');
+    return `${t('homeFast', { time: eveningClock(h.end - fast) })}<small>${night}</small>`;
+  }
+
   /** The card at the bottom: minutes for a spot, or a start point with a remove button. */
   function showCard(html: string, start: boolean, searched = false) {
     readoutText.innerHTML = html;
     // A search result offers "Neuer Start" next to "2. Start"; the trip shown is the "Ziel".
     $('readout-start').textContent = t(searched ? 'newStart' : 'startHere');
     for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
-    removeBtn.hidden = !start;
+    removeBtn.hidden = homeBtn.hidden = !start;
     readout.hidden = false;
   }
 
@@ -234,9 +260,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
 
   /** Redraws the place's card now, for a change that needs no new map (language, layers). */
   function redrawSpot() {
-    if (!spot || (!state.origin && !state.living && !state.desert)) return hideReadout();
+    if (!spot || (!state.origin && !state.special && !state.desert)) return hideReadout();
     // Without a map yet, the coming one redraws it.
-    if (state.result || (!state.origin && !state.living))
+    if (state.result || (!state.origin && !state.special))
       tapAt(spot.lat, spot.lon, undefined, spot.title, spot.searched);
   }
 
@@ -261,10 +287,12 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (m.id !== tripId || readout.hidden) return;
     const el = document.getElementById('trip');
     if (!el) return;
+    // On the home map the trip runs from the place to home.
+    const home = state.special?.kind === 'home' ? state.special.at : null;
     el.innerHTML = tripHtml(m, {
-      starts: [state.origin, ...state.others],
+      starts: home ? [home] : [state.origin, ...state.others],
       here: pending,
-      direction: state.direction,
+      direction: home ? 'arrive' : state.direction,
       travel: state.travel,
     });
     setTrip(m);
@@ -299,6 +327,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     deps.addFavourite(at);
   });
   removeBtn.addEventListener('click', () => deps.removeStart(removeWhich));
+  homeBtn.addEventListener('click', () => deps.showHome(removeWhich));
   $('readout-close').addEventListener('click', hideReadout);
 
   return {

@@ -64,7 +64,25 @@ export type ToWorker =
       travel?: Travel;
     }
   /** Minutes from a place to each favourite on the "where can I live?" map with id `map`. */
-  | { type: 'livingAt'; id: number; map: number; lat: number; lon: number };
+  | { type: 'livingAt'; id: number; map: number; lat: number; lon: number }
+  /**
+   * "Bis wann komme ich heim?": RAPTOR passes arriving at the point every 15 minutes
+   * through the evening and night, one hourly file after the other. Answered with
+   * progress and a result carrying `home`.
+   */
+  | {
+      type: 'home';
+      id: number;
+      /** The evening and night files in time order (20 Uhr to 1 Uhr). */
+      windows: Window[];
+      lat: number;
+      lon: number;
+      walkKmh: number;
+      stepFree?: boolean;
+      travel?: Travel;
+    }
+  /** The last fast connection home from a place on the home map `map`; answered as a 'trip'. */
+  | { type: 'homeTrip'; id: number; map: number; lat: number; lon: number };
 
 export interface TimetableInfo {
   window: Window;
@@ -101,7 +119,8 @@ export type FromWorker =
   | { type: 'loaded'; info: TimetableInfo }
   /** The footpath network has arrived: maps computed so far used straight-line walks. */
   | { type: 'walk' }
-  | { type: 'livingProgress'; id: number; done: number; total: number }
+  /** A map computed in steps (where-to-live, the way home): `done` of `total` are in. */
+  | { type: 'mapProgress'; id: number; done: number; total: number }
   | { type: 'livingAt'; id: number; minutes: (number | null)[] }
   | {
       type: 'result';
@@ -124,6 +143,12 @@ export type FromWorker =
       extraBase?: number;
       /** "Where can I live?": `grid` holds the weighted average to the favourites, not trip times. */
       living?: true;
+      /**
+       * "Bis wann komme ich heim?": `grid` holds, per place, how long before `end` (seconds
+       * after midnight of the evening, past 24 h) the last fast connection home leaves;
+       * `any` the same for the last connection at all, night network included.
+       */
+      home?: { end: number; any: Float32Array<ArrayBuffer> };
       /** When comparing: times at the second time on the same grid; the image shows the difference. */
       compare?: Float32Array<ArrayBuffer>;
       /** Network hops the fastest journeys rely on, with share of reachable map. */

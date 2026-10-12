@@ -743,7 +743,8 @@ dialog.menu[open] {
   color: var(--ink);
   max-width: 96px;
 }
-.fav-del {
+.fav-del,
+.fav-home {
   width: 32px;
   height: 32px;
   border: 0;
@@ -787,8 +788,8 @@ dialog.menu[open] {
   display: none;
 }
 /* While it is shown, the meeting-point and compare banners step aside. */
-body.living #meet,
-body.living #cmp {
+body.special #meet,
+body.special #cmp {
   display: none;
 }
 .menu-note {
@@ -1000,8 +1001,20 @@ dialog.when .seg-wide + .seg-wide {
   flex: 1;
   opacity: 0.85;
 }
+#home-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+#home-bar span {
+  flex: 1;
+  opacity: 0.85;
+}
 #diff-bar[hidden],
 #diff-ticks[hidden],
+#home-bar[hidden],
+#home-ticks[hidden],
 #legend-bar[hidden],
 #legend-ticks[hidden] {
   display: none;

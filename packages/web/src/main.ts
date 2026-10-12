@@ -4,7 +4,15 @@
 // modules, wired up at the end of this file.
 import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import { listen, send } from './boot';
-import { BAND_COLORS, BAND_EDGES_MIN, DIFF_COLORS, DIFF_EDGES_MIN, bandLabel } from './colors';
+import {
+  BAND_COLORS,
+  BAND_EDGES_MIN,
+  DIFF_COLORS,
+  DIFF_EDGES_MIN,
+  HOME_COLORS,
+  HOME_TICKS,
+  bandLabel,
+} from './colors';
 import { formatDate, gridSeconds, shortStop, stopName, escapeHtml, whenText } from './format';
 import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import {
@@ -36,12 +44,12 @@ import {
   STATIONS_SOURCE,
 } from './map-layers';
 import { initMenu } from './menu';
-import { $, createState, NOW_WHEN, remember, seen, type Result } from './state';
+import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
 import { initTap } from './tap';
 import { linkQuery, MAX_STARTS, readLink, type Point } from './url';
 import { computeWindow, desertThresholds, leaveOffset, windowName } from './when';
 import { initWhenSheet } from './when-sheet';
-import type { FromWorker } from './protocol';
+import type { FromWorker, ToWorker } from './protocol';
 
 const BERLIN: [number, number] = [13.405, 52.515];
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
@@ -115,13 +123,42 @@ $('diff-ticks').append(
   }),
   Object.assign(document.createElement('span'), { textContent: 'min' }),
 );
-/** The travel-time legend, the comparison legend, or (meeting point) extra minutes "+0 … +120". */
-function showLegend(diff: boolean, extra = false) {
-  for (const id of ['legend-bar', 'legend-ticks']) $(id).hidden = diff;
-  for (const id of ['diff-bar', 'diff-ticks']) $(id).hidden = !diff;
+// The home map: the last quick connection home, latest (all night) on the left.
+$('home-bar').append(
+  ...HOME_COLORS.map((c) => {
+    const s = document.createElement('span');
+    s.style.background = c;
+    return s;
+  }),
+);
+$('home-ticks').append(
+  ...HOME_TICKS.map((label, i) => {
+    const tick = document.createElement('span');
+    tick.style.left = `${(100 * (i + 1)) / HOME_COLORS.length}%`;
+    tick.textContent = label;
+    return tick;
+  }),
+);
+
+/**
+ * The travel-time legend (with `extra`: meeting point minutes "+0 … +120"), the comparison
+ * legend, or the home map's clock times.
+ */
+function showLegend(kind: 'time' | 'diff' | 'home', extra = false) {
+  for (const id of ['legend-bar', 'legend-ticks']) $(id).hidden = kind !== 'time';
+  for (const id of ['diff-bar', 'diff-ticks']) $(id).hidden = kind !== 'diff';
+  for (const id of ['home-bar', 'home-ticks']) $(id).hidden = kind !== 'home';
   $('legend-bar').parentElement!.setAttribute(
     'aria-label',
-    t(diff ? 'legendDiff' : extra ? 'legendExtra' : 'legend'),
+    t(
+      kind === 'diff'
+        ? 'legendDiff'
+        : kind === 'home'
+          ? 'legendHome'
+          : extra
+            ? 'legendExtra'
+            : 'legend',
+    ),
   );
   for (const tick of legendTicks) {
     const m = Number(tick.dataset.m);
@@ -157,12 +194,11 @@ listen((ev: MessageEvent<FromWorker>) => {
     state.info[m.info.window] = m.info;
     if (m.info.window === computedWindow()) loadbar.hidden = true;
     renderFeedInfo();
-  } else if (m.type === 'livingProgress') {
+  } else if (m.type === 'mapProgress') {
     if (m.id !== state.requestId) return;
     loadbar.classList.remove('indeterminate');
     (loadbar.firstElementChild as HTMLElement).style.width = `${(100 * m.done) / m.total}%`;
-    const i = Math.min(m.done + 1, m.total);
-    setStatus(() => t('livingProgress', { i, n: m.total }));
+    special.progress(m.done, m.total);
   } else if (m.type === 'livingAt') {
     tap.onLiving(m);
   } else if (m.type === 'walk') {
@@ -170,7 +206,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     redoWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
-    if (m.living) living.done(m);
+    if (m.living || m.home) special.done(m);
     state.result = m;
     showResult(m);
     tap.onResult();
@@ -199,11 +235,11 @@ function renderFeedInfo() {
 
 /** Recomputes the map and the walk-based layers, e.g. after a walking-speed change. */
 function redoWalks() {
-  living.forget();
+  special.forget();
   state.layers = {};
   layersRequested.clear();
   showLayers();
-  if (state.origin || state.living) tap.keepSpot();
+  if (state.origin || state.special) tap.keepSpot();
   compute();
 }
 
@@ -211,7 +247,7 @@ function redoWalks() {
 const computedWindow = () => computeWindow(state.when, state.direction);
 
 function compute() {
-  if (state.living) return living.compute();
+  if (state.special) return special.compute();
   if (!state.origin) return;
   state.requestId++;
   loadbar.hidden = false;
@@ -289,15 +325,15 @@ function showOrigin() {
   startMarkers.forEach((m, i) => i >= list.length && m.remove());
   list.forEach((p, i) => startMarker(i).setLngLat([p.lon, p.lat]).addTo(map));
   meetChip.hidden = list.length < 2;
-  hint.hidden = list.length > 0 || state.living || !$('search').hidden;
+  hint.hidden = list.length > 0 || !!state.special || !$('search').hidden;
 }
 
 /** The starts changed: markers, the tapped place, the link and the map follow. */
 function startsChanged() {
   // Setting a start leaves the where-to-live map for the start's own map.
-  if (state.living) {
-    state.living = false;
-    living.render();
+  if (state.special) {
+    state.special = null;
+    special.render();
   }
   showOrigin();
   if (state.origin) tap.keepSpot();
@@ -346,7 +382,7 @@ function clearResult() {
   loadbar.hidden = true;
   setStatus(() => '');
   renderFavourites();
-  showLegend(false);
+  showLegend('time');
   if (!state.mapReady) return;
   if (map.getLayer(HEAT_LAYER)) map.setLayoutProperty(HEAT_LAYER, 'visibility', 'none');
   const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -457,7 +493,7 @@ showMeetNames();
 function showResult(r: Result) {
   renderMeet(r.meet);
   renderFavourites();
-  showLegend(!!r.compare, r.extraBase !== undefined);
+  showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined);
   if (!state.mapReady) return;
   const { width, height, rgba } = r.image;
   heatCanvas.width = width;
@@ -502,7 +538,11 @@ function showResult(r: Result) {
   (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
   (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
   if (map.getLayer('outlines-label'))
-    map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(r.extraBase !== undefined));
+    map.setLayoutProperty(
+      'outlines-label',
+      'text-field',
+      outlineLabel(r.home ? 'home' : r.extraBase !== undefined ? 'extra' : 'time'),
+    );
   map.triggerRepaint();
 }
 
@@ -633,7 +673,7 @@ function openSearch() {
 }
 function closeSearch() {
   searchPanel.hidden = true;
-  hint.hidden = !!state.origin || state.living;
+  hint.hidden = !!state.origin || !!state.special;
   searchAbort?.abort();
   clearTimeout(searchTimer);
   searchInput.blur();
@@ -780,7 +820,7 @@ function addFavourites(places: { label: string; lat: number; lon: number }[]) {
 
 function favouriteTimes() {
   const r = state.result;
-  return r && state.origin && !r.living
+  return r && state.origin && !r.living && !r.home
     ? score(favourites, (lat, lon) => gridSeconds(r, lat, lon))
     : null;
 }
@@ -789,38 +829,80 @@ function favouriteTimes() {
 function favouritesChanged() {
   saveFavourites(favourites);
   renderFavourites();
-  if (state.living) compute();
+  if (state.special?.kind === 'living') compute();
 }
 
-// ---------- "where can I live?" map ----------
-// Shades the whole map by the weighted average to the favourite places, arriving in the
-// chosen hour. It takes a few seconds (one pass per place), so it runs only on request,
-// with progress, and the last one is kept until the places or settings change.
-const living = (() => {
-  const chip = $('living');
+// ---------- maps shown instead of the start's ----------
+// "Where can I live?" shades the map by the weighted average to the favourite places,
+// arriving in the chosen hour (one pass per place). "Bis wann komme ich heim?" shows, for
+// home (a start or a favourite), until when a quick connection runs through the evening
+// and night (passes every 15 minutes, one hourly file after the other). Both take a few
+// seconds, so they run only on request, with progress; the last one is kept until its
+// places or the settings change.
+/** The evening and night hours the home map reads, in order. */
+const HOME_HOURS = [20, 21, 22, 23, 0, 1];
+
+const special = (() => {
+  const chip = $('special');
   let last: { key: string; result: Result } | null = null;
   let pending = '';
 
   function render() {
-    chip.hidden = !state.living;
-    document.body.classList.toggle('living', state.living);
+    const s = state.special;
+    chip.hidden = !s;
+    document.body.classList.toggle('special', !!s);
     // The "tap the map or search a start" hint would sit on the banner.
-    hint.hidden = state.living || !!state.origin || !$('search').hidden;
-    $('living-text').textContent = t('living', {
-      count: favourites.length,
-      when: whenText(state.when, 'arrive'),
-    });
+    hint.hidden = !!s || !!state.origin || !$('search').hidden;
+    if (!s) return;
+    $('special-text').textContent =
+      s.kind === 'living'
+        ? t('living', { count: favourites.length, when: whenText(state.when, 'arrive') })
+        : t('home', {
+            name: s.name,
+            night: t(state.when.day === 'weekday' ? 'homeWeekday' : 'homeWeekend'),
+          });
   }
 
-  function compute() {
-    if (!favourites.length) return show(false);
-    const req = {
-      window: computeWindow(state.when, 'arrive'),
-      places: favourites.map((f) => ({ lat: f.lat, lon: f.lon, weight: f.weight })),
+  /** What the worker is asked for (without the id), or null when there is nothing to show. */
+  function request():
+    | Omit<Extract<ToWorker, { type: 'living' }>, 'id'>
+    | Omit<Extract<ToWorker, { type: 'home' }>, 'id'>
+    | null {
+    const s = state.special;
+    const how = {
       walkKmh: state.walkKmh,
       ...(state.stepFree ? { stepFree: true } : {}),
       ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
     };
+    if (s?.kind === 'living')
+      return favourites.length
+        ? {
+            type: 'living',
+            window: computeWindow(state.when, 'arrive'),
+            places: favourites.map((f) => ({ lat: f.lat, lon: f.lon, weight: f.weight })),
+            ...how,
+          }
+        : null;
+    if (s?.kind === 'home')
+      return {
+        type: 'home',
+        windows: HOME_HOURS.map((hour) => windowName({ day: state.when.day, hour })),
+        lat: s.at.lat,
+        lon: s.at.lon,
+        ...how,
+      };
+    return null;
+  }
+
+  function progress(done: number, total: number) {
+    const i = Math.min(done + 1, total);
+    const key = state.special?.kind === 'home' ? 'homeProgress' : 'livingProgress';
+    setStatus(() => t(key, { i, n: total }));
+  }
+
+  function run() {
+    const req = request();
+    if (!req) return show(null);
     const key = JSON.stringify(req);
     render();
     state.requestId++;
@@ -835,18 +917,18 @@ const living = (() => {
     loadbar.hidden = false;
     loadbar.classList.remove('indeterminate');
     (loadbar.firstElementChild as HTMLElement).style.width = '0%';
-    setStatus(() => t('livingProgress', { i: 1, n: req.places.length }));
-    send({ type: 'living', id: state.requestId, ...req });
+    progress(0, req.type === 'home' ? req.windows.length : req.places.length);
+    send({ ...req, id: state.requestId });
   }
 
-  /** Turns the map on (computing it) or off (back to the start's map, if any). */
-  function show(on: boolean) {
-    if (on === state.living) return;
-    state.living = on;
+  /** Shows a special map (computing it) or none (back to the start's map, if any). */
+  function show(s: Special | null) {
+    if (JSON.stringify(s) === JSON.stringify(state.special)) return;
+    state.special = s;
     render();
-    if (on) {
+    if (s) {
       tap.hideReadout();
-      compute();
+      run();
     } else if (state.origin) {
       tap.keepSpot();
       compute();
@@ -856,15 +938,16 @@ const living = (() => {
     }
   }
 
-  chip.querySelector('button')!.addEventListener('click', () => show(false));
+  $('special-close').addEventListener('click', () => show(null));
   $('fav-living').addEventListener('click', () => {
     menu.close();
-    show(true);
+    show({ kind: 'living' });
   });
   return {
-    compute,
+    compute: run,
     show,
     render,
+    progress,
     done: (result: Result) => (last = { key: pending, result }),
     /** The footpaths arrived: the next map is better than the kept one. */
     forget: () => (last = null),
@@ -906,7 +989,17 @@ function renderFavourites() {
         favourites = favourites.filter((x) => x !== f);
         favouritesChanged();
       });
-      li.append(name, min, weight, del);
+      const home = document.createElement('button');
+      home.type = 'button';
+      home.className = 'fav-home';
+      home.textContent = '🌙';
+      home.setAttribute('aria-label', t('homeFav', { name: f.label }));
+      home.title = t('homeFav', { name: f.label });
+      home.addEventListener('click', () => {
+        menu.close();
+        special.show({ kind: 'home', at: { lat: f.lat, lon: f.lon }, name: f.label });
+      });
+      li.append(name, min, weight, home, del);
       return li;
     }),
   );
@@ -1019,6 +1112,15 @@ const tap = initTap(
       if (tipKey === 'tap') hideTip();
     },
     favouriteLabels: () => favourites.map((f) => f.label),
+    showHome: (i) => {
+      const at = starts()[i];
+      if (at)
+        special.show({
+          kind: 'home',
+          at,
+          name: i ? t('secondPoint', { n: i + 1 }) : t('startPoint'),
+        });
+    },
   },
   link.to,
 );
@@ -1027,12 +1129,12 @@ const whenSheet = initWhenSheet({
   state,
   closeSearch,
   changed: () => {
-    if (state.origin || state.living) tap.keepSpot();
+    if (state.origin || state.special) tap.keepSpot();
     else tap.hideReadout();
     renderFeedInfo();
     writeUrl();
     showLayers();
-    if (state.origin || state.living) compute();
+    if (state.origin || state.special) compute();
     else send({ type: 'load', window: computedWindow() });
   },
 });
@@ -1067,7 +1169,7 @@ const menu = initMenu({
     renderFavourites();
     whenSheet.renderWhen();
     renderTip();
-    living.render();
+    special.render();
     statusEl.textContent = state.status();
     tap.redrawSpot();
     searchCache.clear();
