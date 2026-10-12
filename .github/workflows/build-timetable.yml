@@ -10,6 +10,13 @@ on:
     workflows: ['Refresh VBB GTFS', 'Refresh OSM footpaths']
     types: [completed]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release to publish on (another tag for a trial run)
+        default: timetable-latest
+      swap_above:
+        description: Calls above which a fresh release replaces the old one (0 forces it)
+        default: '300'
 
 permissions:
   contents: write
@@ -21,7 +28,7 @@ concurrency:
 env:
   GTFS_TAG: gtfs-latest
   OSM_TAG: osm-latest
-  TIMETABLE_TAG: timetable-latest
+  TIMETABLE_TAG: ${{ inputs.tag || 'timetable-latest' }}
   # Budget from the alpha plan, per timetable file.
   MAX_BYTES: 8000000
   MAX_GZIP_BYTES: 2000000
@@ -32,7 +39,7 @@ jobs:
   build:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -82,29 +89,13 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           service=$(jq -r .serviceDate work/out/build-info.json)
           feed=$(jq -r '.gtfs.serviceStart + " to " + .gtfs.serviceEnd' work/out/build-info.json)
           dates=$(jq -r '.stats.dates | if length > 0 then "\(.[0]) to \(.[-1])" else "none" end' work/out/build-info.json)
           notes="Timetable files for the web app, built $(date -u +%Y-%m-%d) from VBB GTFS ($feed). Reference service day: $service. Real dates: $dates. Data © VBB, CC BY 4.0."
-          if ! gh release view "$TIMETABLE_TAG" >/dev/null 2>&1; then
-            gh release create "$TIMETABLE_TAG" --title "Timetable (latest)" --notes "$notes" --latest=false
-          else
-            gh release edit "$TIMETABLE_TAG" --notes "$notes"
-          fi
-          gh release upload "$TIMETABLE_TAG" \
-            work/out/timetable-*.json work/out/timetable-*.bin \
-            work/out/stops.json work/out/stop-ids.json work/out/build-info.json \
-            $(ls work/out/changes.json 2>/dev/null) --clobber
-          if [ -f work/out/walk.bin ]; then
-            gh release upload "$TIMETABLE_TAG" work/out/walk.bin --clobber
-          fi
-          # Files of dates that have passed are no longer built: remove them.
-          dated='^timetable-[0-9]{8}-[0-9]{2}\.bin$'
-          ls work/out | grep -E "$dated" > work/keep.txt || true
-          gh release view "$TIMETABLE_TAG" --json assets -q '.assets[].name' | grep -E "$dated" | while read -r name; do
-            if ! grep -qx "$name" work/keep.txt; then
-              echo "Removing $name"
-              gh release delete-asset "$TIMETABLE_TAG" "$name" -y
-            fi
-          done
+          # Only new and changed files go up, never leaving one missing (scripts/publish).
+          keep=""
+          if [ ! -f work/out/walk.bin ]; then keep="--keep walk.bin"; fi
+          node scripts/publish/publish.mjs --dir work/out --tag "$TIMETABLE_TAG" --notes "$notes" --swap-above "${{ inputs.swap_above || '300' }}" $keep
