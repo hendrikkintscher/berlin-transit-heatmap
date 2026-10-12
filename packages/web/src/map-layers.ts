@@ -257,10 +257,11 @@ export function addMapLayers(
       type: 'line',
       source: 'ring',
       layout: { 'line-join': 'round' },
+      // A soft wide band: where the Ring is, without another hard line.
       paint: {
         'line-color': '#1d1530',
-        'line-opacity': 0.35,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 14, 3],
+        'line-opacity': 0.1,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 9, 4, 14, 10],
       },
     },
     ROUTE_LAYERS[0],
@@ -464,12 +465,13 @@ export function addMapLayers(
     map.setPaintProperty('label_other', 'text-halo-width', 1.8);
   }
   calmPaths(map);
+  calmBasemap(map);
   map.addSource('landmarks', { type: 'geojson', data: orient(landmarks) });
   map.addLayer({
     id: 'landmarks',
     type: 'symbol',
     source: 'landmarks',
-    minzoom: 10.5,
+    minzoom: 12,
     layout: {
       'text-field': ['concat', '◆ ', ['get', 'name']],
       'text-font': font,
@@ -520,14 +522,15 @@ export function outlineLabel(kind: 'time' | 'extra' | 'home'): maplibregl.Expres
 
 /**
  * Outline look for the kind of map and whether the colour fill is on. With the fill, thin
- * dark lines labelled at 15, 30 and 45 min. Without it, a thin dashed line every 10 minutes
- * in one hue, darkest near the start, its minutes repeated along it; the home map's few
- * outlines take its legend colours instead.
+ * dark lines labelled at 15, 30 and 45 min. Without it, a soft wide line every 10 minutes
+ * in one hue, darkest near the start, its minutes repeated along it, and every 30 minutes
+ * (30, 60, 90) a stronger one; the home map's few outlines take its legend colours instead.
  */
 export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: boolean): void {
   if (!map.getLayer('outlines-line')) return;
   const steps = !heat && kind !== 'home';
   const tens: maplibregl.FilterSpecification = ['==', ['%', ['get', 'min'], 10], 0];
+  const half: maplibregl.ExpressionSpecification = ['==', ['%', ['get', 'min'], 30], 0];
   const major: maplibregl.ExpressionSpecification = [
     'match',
     ['get', 'min'],
@@ -543,7 +546,19 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
   map.setPaintProperty(
     'outlines-line',
     'line-opacity',
-    heat ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4] : steps ? 0.9 : 1,
+    heat
+      ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4]
+      : steps
+        ? ['case', half, 0.75, 0.45]
+        : 1,
+  );
+  // Soft edges: the outlines read as gentle bands under the streets and lines.
+  map.setPaintProperty(
+    'outlines-line',
+    'line-blur',
+    steps
+      ? ['interpolate', ['linear'], ['zoom'], 9, ['case', half, 2.5, 2], 14, ['case', half, 3.5, 3]]
+      : 0,
   );
   map.setPaintProperty(
     'outlines-line',
@@ -559,7 +574,7 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
           ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
         ]
       : steps
-        ? ['interpolate', ['linear'], ['zoom'], 9, 1, 14, 1.8]
+        ? ['interpolate', ['linear'], ['zoom'], 9, ['case', half, 4, 2.5], 14, ['case', half, 6, 4]]
         : [
             'interpolate',
             ['linear'],
@@ -570,9 +585,8 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
             ['+', 2.6, ['*', 1.4, major]],
           ],
   );
-  // Dashed lines go without the white edge, which would show through their gaps.
+  // The soft lines go without the white edge.
   map.setPaintProperty('outlines-casing', 'line-opacity', heat || steps ? 0 : 0.9);
-  map.setPaintProperty('outlines-line', 'line-dasharray', steps ? [4, 2.5] : [1, 0]);
   map.setPaintProperty(
     'outlines-casing',
     'line-width',
@@ -592,7 +606,7 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
   );
   map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind));
   // Without the fill the labels are the key, so they repeat about every 3 cm on a phone.
-  map.setLayoutProperty('outlines-label', 'symbol-spacing', steps ? 160 : 300);
+  map.setLayoutProperty('outlines-label', 'symbol-spacing', steps ? 260 : 300);
 }
 
 /** The 10-minute outlines in one hue, darkest near the start. */
@@ -643,6 +657,50 @@ function calmPaths(map: maplibregl.Map): void {
     20,
     ['case', alongStreets, 2, 3.5],
   ]);
+}
+
+/**
+ * A calmer base map under the outlines and Lines: its own railways (which doubled the
+ * Lines) and road shields go, small streets wait until zoom 12, and the city view's streets
+ * are softer, coming to full strength at street level.
+ */
+function calmBasemap(map: maplibregl.Map): void {
+  for (const id of [
+    'railway_transit',
+    'railway_transit_dashline',
+    'railway_service',
+    'railway_service_dashline',
+    'railway',
+    'railway_dashline',
+    'highway-shield-non-us',
+    'highway-shield-us-interstate',
+    'road_shield_us',
+  ])
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+  if (map.getLayer('highway_minor')) map.setLayerZoomRange('highway_minor', 12, 24);
+  for (const id of [
+    'highway_minor',
+    'highway_major_casing',
+    'highway_major_inner',
+    'highway_major_subtle',
+    'highway_motorway_casing',
+    'highway_motorway_inner',
+    'highway_motorway_subtle',
+    'highway_motorway_bridge_casing',
+    'highway_motorway_bridge_inner',
+  ])
+    if (map.getLayer(id))
+      map.setPaintProperty(id, 'line-opacity', [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10,
+        0.3,
+        12,
+        0.55,
+        14,
+        1,
+      ]);
 }
 
 /** [west, south, east, north] as the corners a canvas source wants. */
