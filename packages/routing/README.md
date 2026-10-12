@@ -50,6 +50,9 @@ All additive; nothing in the contract changed.
 - `travelTimes` option `trackLegs` fills `TravelTimeResult.legs`: the last leg of each stop's
   fastest journey (a ridden route stretch, a footpath, or the walk from the origin). Following
   legs back gives a journey tree; a parent is always strictly faster than its child.
+  Leaving at one moment (`leaveAt`), `legs.rounds` also keeps every RAPTOR round's legs, and
+  `journeyTo` follows those, so a trip shows only the rides it actually took (a stop's own
+  fastest leg can come from a later round than the arrival a vehicle was boarded with).
 - `heatGrid` option `trackStops` fills `HeatGrid.stop`: the stop each cell's time comes from.
 - `routeUsage(tt, result, grid, { minShare })` uses both to weight every stop-to-stop hop by the
   number of grid cells whose fastest journey rides it. The web app draws these as the "Lines"
