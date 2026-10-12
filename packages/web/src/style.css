@@ -358,6 +358,11 @@ dialog form button {
 .maplibregl-ctrl-bottom-left {
   margin-bottom: calc(var(--sb) + var(--bottom-h, 40px));
 }
+/* With the colour legend on the right edge, the (i) sits left of it, so the two never
+   overlap (landscape, or a tall bottom panel with the install tip). */
+body:not(.no-legend) .maplibregl-ctrl-bottom-right {
+  margin-right: calc(var(--sr) + 46px);
+}
 
 .search {
   position: fixed;
@@ -820,6 +825,11 @@ body.special #changes,
 body.special #cmp {
   display: none;
 }
+/* Its banner can run to three lines: the legend starts below it, so its top label shows. */
+body.special .legend {
+  top: calc(var(--st) + 190px);
+  height: min(40vh, 340px);
+}
 .menu-note {
   margin: 6px 0 0;
   font-size: 12px;
@@ -992,6 +1002,11 @@ body.special #cmp {
 .hour-grid button[aria-pressed='true'] {
   background: var(--accent);
   color: #fff;
+}
+.hour-grid button:disabled {
+  background: #f6f4f8;
+  color: #b9b2c3;
+  cursor: default;
 }
 
 /* App title: first in the chip row, only where there is room for it. */

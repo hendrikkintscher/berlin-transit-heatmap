@@ -32,7 +32,7 @@ export const FREQ_STEPS = [4, 12, 30, 60];
 export const FREQ_COLORS = ['#c6dbef', '#6baed6', '#2171b5', '#08519c', '#08306b'];
 export const OUTLINES_SOURCE = 'outlines';
 export const OUTLINE_LAYERS = ['outlines-casing', 'outlines-line', 'outlines-label'];
-export type OutlineKind = 'time' | 'extra' | 'home';
+export type OutlineKind = 'time' | 'extra' | 'living' | 'home';
 /** Labelled, bolder outlines; the other 5-minute steps are drawn thin. */
 const MAJOR_OUTLINES = [15, 30, 45];
 const AREA_SOURCE = 'area';
@@ -514,9 +514,11 @@ export function heatOpacity(percent: number): maplibregl.ExpressionSpecification
  * Outline labels: minutes ("15 min"), extra minutes at a meeting point ("+15 min"), or on
  * the home map the clock time, its levels being minutes before 4 Uhr ("1:00").
  */
-export function outlineLabel(kind: 'time' | 'extra' | 'home'): maplibregl.ExpressionSpecification {
+export function outlineLabel(kind: OutlineKind): maplibregl.ExpressionSpecification {
   if (kind === 'home')
     return ['concat', ['to-string', ['%', ['-', 28, ['/', ['get', 'min'], 60]], 24]], ':00'];
+  // The where-to-live map shows a weighted average: "Ø 40".
+  if (kind === 'living') return ['concat', 'Ø ', ['to-string', ['get', 'min']]];
   return ['concat', kind === 'extra' ? '+' : '', ['to-string', ['get', 'min']], ' min'];
 }
 

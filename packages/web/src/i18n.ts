@@ -136,6 +136,9 @@ const de = {
   locate: 'Mein Standort als Startpunkt',
   locating: 'Standort wird gesucht…',
   locateOutside: 'Dein Standort liegt außerhalb der Karte (Berlin, Potsdam und Umland).',
+  legendAllNight: 'ganze Nacht',
+  legendBefore23: 'vor 23 Uhr',
+  linkOutside: 'Der Startpunkt im Link liegt außerhalb der Karte (Berlin, Potsdam und Umland).',
   locateDenied: 'Kein Zugriff auf den Standort. Erlaube ihn in den Browser-Einstellungen.',
   locateFailed: 'Standort nicht gefunden.',
   share: 'Link zu dieser Karte teilen',
@@ -152,7 +155,6 @@ const de = {
   travelBikeOnly: 'Nur Rad',
   travelHelp:
     'Rad + Bahn: mit 15 km/h zur Station und vom Ausstieg zum Ziel, 2 Min. pro Station fürs Mitnehmen, ohne Busse. Nur Rad: bis 60 Min. auf Straßen und Wegen.',
-  travelBikeOnlyPill: 'Nur Rad 🚲',
   stepFree: 'Barrierefrei',
   stepFreeHint:
     'Für Rollstuhl, Kinderwagen und Koffer: nur Bahnsteige mit Aufzug oder Rampe und Fahrzeuge, die als barrierefrei markiert sind',
@@ -372,6 +374,10 @@ const en: Record<Key, string> = {
   locate: 'Use my location as starting point',
   locating: 'Finding your location…',
   locateOutside: 'Your location is outside the map (Berlin, Potsdam and the surrounding area).',
+  legendAllNight: 'all night',
+  legendBefore23: 'before 23:00',
+  linkOutside:
+    'The start in this link is outside the map (Berlin, Potsdam and the surrounding area).',
   locateDenied: 'No access to your location. Allow it in the browser settings.',
   locateFailed: 'Location not found.',
   share: 'Share a link to this map',
@@ -388,7 +394,6 @@ const en: Record<Key, string> = {
   travelBikeOnly: 'Bike only',
   travelHelp:
     'Bike + train: 15 km/h to the station and from the last stop, 2 min per station to take the bike along, no buses. Bike only: up to 60 min on streets and paths.',
-  travelBikeOnlyPill: 'Bike only 🚲',
   stepFree: 'Accessible',
   stepFreeHint:
     'For wheelchairs, prams and suitcases: only platforms with a lift or ramp, and vehicles marked accessible',

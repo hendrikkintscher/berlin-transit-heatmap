@@ -147,6 +147,33 @@ export function leaveOffset(when: When, now = new Date()): number {
 }
 
 /**
+ * Whether `hour` of today's date is already over: departing in an earlier hour, or
+ * arriving by an hour that has begun (arriving "an 18 Uhr" means by 18:00).
+ */
+export function isPastHour(
+  day: Day,
+  hour: number,
+  direction: Direction,
+  now = new Date(),
+): boolean {
+  const w = whenAt(now);
+  if (day !== w.day) return false;
+  return direction === 'arrive' ? hour <= w.hour : hour < w.hour;
+}
+
+/**
+ * Switching to arriving in an hour that has begun moves on to the next full hour
+ * (18:02 -> an 19 Uhr; 23:10 -> tomorrow 0 Uhr), so the map never starts in the past.
+ */
+export function arriveWhen(when: When, now = new Date()): When {
+  const w = whenAt(now);
+  const today = when.day === w.day || when.day === dayType(w.day);
+  if (!today || when.hour !== w.hour) return when;
+  if (when.hour < 23) return { ...when, hour: when.hour + 1 };
+  return { day: isDate(when.day) ? addDays(when.day, 1) : when.day, hour: 0 };
+}
+
+/**
  * Seconds since midnight in Berlin now, when `when` is today (or the typical day of
  * today's kind), so a trip's times can count down; null for another day.
  */

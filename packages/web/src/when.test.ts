@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  arriveWhen,
   computeWindow,
   dayType,
   desertThresholds,
   eveningWindow,
+  isPastHour,
   leaveOffset,
   parseWhen,
   typicalWindow,
@@ -103,5 +105,24 @@ describe('when', () => {
     expect(computeWindow({ day: 'weekend', hour: 0 }, 'arrive')).toBe('weekday-23');
     expect(computeWindow({ day: 'weekend', hour: 5 }, 'arrive')).toBe('weekend-04');
     expect(computeWindow({ day: '20261014', hour: 0 }, 'arrive')).toBe('20261013-23');
+  });
+
+  it('greys out the hours that are over today', () => {
+    const now = new Date('2026-10-12T16:02:00Z'); // 18:02 in Berlin
+    expect(isPastHour('20261012', 17, 'depart', now)).toBe(true);
+    expect(isPastHour('20261012', 18, 'depart', now)).toBe(false);
+    expect(isPastHour('20261012', 18, 'arrive', now)).toBe(true);
+    expect(isPastHour('20261012', 19, 'arrive', now)).toBe(false);
+    expect(isPastHour('20261013', 8, 'depart', now)).toBe(false);
+    expect(isPastHour('weekday', 8, 'depart', now)).toBe(false);
+  });
+
+  it('arrives in the next full hour when switching from now', () => {
+    const now = new Date('2026-10-12T16:02:00Z');
+    expect(arriveWhen({ day: '20261012', hour: 18 }, now)).toEqual({ day: '20261012', hour: 19 });
+    expect(arriveWhen({ day: 'weekday', hour: 18 }, now)).toEqual({ day: 'weekday', hour: 19 });
+    expect(arriveWhen({ day: '20261012', hour: 20 }, now)).toEqual({ day: '20261012', hour: 20 });
+    const late = new Date('2026-10-12T21:10:00Z'); // 23:10
+    expect(arriveWhen({ day: '20261012', hour: 23 }, late)).toEqual({ day: '20261013', hour: 0 });
   });
 });
