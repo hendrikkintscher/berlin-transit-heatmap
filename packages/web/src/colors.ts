@@ -212,27 +212,18 @@ export function homeLut(): Uint8Array {
 }
 
 /**
- * Outlines without the colour fill: one every 10 minutes, in a single hue, darkest near the
- * start and lighter further out, so the base map stays in front.
+ * Outlines without the colour fill: one every 10 minutes, dashed, in a single hue from
+ * near-black purple at the start to a pale lilac far out, so the order reads at a glance.
  */
 export const OUTLINE_STEP_MINUTES = [10, 20, 30, 40, 50, 60];
 export const OUTLINE_STEP_COLORS = [
-  '#2e1670',
-  '#47308a',
-  '#634ba3',
-  '#8068ba',
-  '#9d88cf',
-  '#bba9e0',
+  '#1a0848',
+  '#3b1d86',
+  '#6440b4',
+  '#8f6dd0',
+  '#b69ce3',
+  '#d6c8f2',
 ];
-/** Beyond the last outline, in the legend. */
-export const OUTLINE_BEYOND_COLOR = '#ece8f4';
-
-/** The legend colour of a travel-time band when only outlines show: the step it lies inside. */
-export function outlineBandColor(band: number): string {
-  const upper = BAND_EDGES_MIN[band + 1] ?? Infinity;
-  const i = Math.ceil(upper / 10) - 1;
-  return OUTLINE_STEP_COLORS[i] ?? OUTLINE_BEYOND_COLOR;
-}
 
 /** Line colours, roughly following the usual Berlin map conventions. */
 export const MODE_COLORS: Record<string, string> = {
