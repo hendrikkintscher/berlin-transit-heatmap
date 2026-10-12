@@ -4,12 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #145. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #151. Build in this order, one step per PR:
 
-1. **Next:** Bug bundle: ten small defects (A1, group 15)
-2. Permanent search bar at the top, chip row fits without scrolling (group 12, with C1)
-3. Walking network: visible loading, no blocked taps (B1, group 15)
-4. Lean deploy: only the files the app uses (B2, group 15)
+1. **Next:** Permanent search bar at the top, chip row fits without scrolling (group 12, with C1)
+2. Walking network: visible loading, no blocked taps (B1, group 15)
+3. Lean deploy: only the files the app uses (B2, group 15)
 
 From Hendrik on 2026-10-12, to be built now. More items from the third suggestions list (plan/suggestions-3.md) are added as Hendrik picks them. After these, Hendrik picks the next step before anything starts.
 
@@ -786,7 +785,7 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 
 ### Bug bundle (A1)
 
-Picked by Hendrik on 2026-10-12 ("Yes, all 10"). Ten small defects, built as one step:
+**Done** (PR #151): all ten fixed. A same-day comparison starts 2 hours later, since the same hour would show no difference, and on the special maps the legend sits below the banner. Picked by Hendrik on 2026-10-12 ("Yes, all 10"). Ten small defects, built as one step:
 
 1. **Vergleichen picks 2 Uhr:** turning on a comparison keeps the same hour instead of jumping to 2 Uhr.
 2. **Past hours give "jetzt los":** for Heute, past hours are greyed out and no countdown shows for a window in the past.
