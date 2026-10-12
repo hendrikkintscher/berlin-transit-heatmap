@@ -24,6 +24,8 @@ From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next
 
 **Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
 
+**On the roadmap, not started** (Hendrik, 2026-10-12: "Only add to roadmap, don't start working on it"): trip drawer with more connections, and a detailed connection view (group 6). They wait until Hendrik picks them.
+
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
@@ -121,6 +123,14 @@ Picked by Hendrik on 2026-10-12 ("Both fixes"). From the connection test, findin
 ### Less walking on equal arrival (low priority)
 
 Parked by Hendrik on 2026-10-12. From the connection test, finding 5. When two trips arrive at the same time, prefer the one with less walking or leaving later; today the earliest departure wins, for example an earlier tram from a farther stop. Cosmetic, and a reverse pass would cost time on every tap, so it is only built if it keeps taps as fast as now.
+
+### Trip drawer with more connections
+
+Hendrik, 2026-10-12 (roadmap only, not to be started until he picks it): "instead of the box showing the connection, we have a drawer instead, when drawn upwards we see more connections, rearrange the buttons on the connection box/drawer". The trip card becomes a drawer at the bottom: collapsed it shows the connection as today, pulled up it lists further connections (later departures or alternatives), and its buttons are rearranged for the drawer. Builds on trip card B (PR #174).
+
+### Detailed connection view
+
+Hendrik, 2026-10-12 (roadmap only, not to be started until he picks it): "when tapping on a connection, we get a more detailed description of the connection: wait time at stops in between etc." Tapping a connection opens a detailed view: each leg with its stops, times, the wait at each change, and walking minutes. Pairs with the trip drawer and with real arrival times at stops.
 
 ## 7. Reading the map
 
