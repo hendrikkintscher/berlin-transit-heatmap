@@ -8,9 +8,9 @@
     "ms": 30
   },
   "bundle": {
-    "index.css": 13853,
-    "index.js": 2071,
-    "main.js": 314710,
-    "worker.js": 20501
+    "index.js": 2070,
+    "index.css": 14191,
+    "main.js": 316400,
+    "worker.js": 20666
   }
 }

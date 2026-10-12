@@ -56,6 +56,8 @@ export type ToWorker =
   /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
   | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
+  /** Station names and places for search suggestions, from the loaded timetable. */
+  | { type: 'stations'; window: Window }
   /**
    * "Where can I live?": one Typisch pass arriving at each favourite place, combined into
    * the weighted average per cell (see favourites.ts). Answered with progress and a result
@@ -105,6 +107,16 @@ export interface RouteProps {
   mode: string;
   /** Line names, heaviest first, joined with "/". */
   names: string;
+}
+
+/** A station for search suggestions. */
+export interface SearchStation {
+  name: string;
+  lat: number;
+  lon: number;
+  /** Up to eight line names, e.g. "S5, S7, U2". */
+  lines: string;
+  perHour: number;
 }
 
 export interface StationProps {
@@ -175,6 +187,7 @@ export type FromWorker =
       id: number;
       image: { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer> };
     }
+  | { type: 'stations'; list: SearchStation[] }
   | {
       type: 'layers';
       window: Window;

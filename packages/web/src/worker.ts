@@ -239,6 +239,16 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'load') {
       // A quiet (background) load that fails is retried when the window is actually needed.
       await (msg.quiet ? ensure(msg.window).catch(() => undefined) : ensure(msg.window));
+    } else if (msg.type === 'stations') {
+      const tt = await ensure(msg.window);
+      const list = stations(tt, departuresPerHour(tt)).features.map((f) => ({
+        name: f.properties.name,
+        lon: f.geometry.coordinates[0],
+        lat: f.geometry.coordinates[1],
+        lines: f.properties.lines,
+        perHour: f.properties.perHour,
+      }));
+      post({ type: 'stations', list });
     } else if (msg.type === 'layers') {
       walkSpeedMps = msg.walkKmh / 3.6;
       const tt = await ensure(msg.window);
