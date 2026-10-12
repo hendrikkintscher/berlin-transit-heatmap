@@ -4,12 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #126. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #129. Build in this order, one step per PR:
 
-1. **Next:** Calmer default map, option B with solid, wider, blurred time lines (group 12)
-2. Rename to "Wohin jetzt? · Öffis mit einem Tap" (group 12). Queued, not started: Hendrik confirms when it is built.
+1. **Next:** Rename to "Wohin jetzt? · Öffis mit einem Tap" (group 12). Queued, not started: Hendrik confirms when it is built.
 
-Picked by Hendrik on 2026-10-12. After the calmer map, Hendrik picks the next step before anything starts.
+Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -665,6 +664,8 @@ Hendrik, 2026-10-12, two minor fixes before anything else:
 Notes: layout only, URL parameters unchanged; check at 360×740 in German and English, and keep the flicker-free first view from PR #111. Small effort.
 
 ### Calmer default map (option B)
+
+**Done** (PR #129): in the outlines-only view the time lines are soft, solid and blurred; rail, highway shields and minor roads are hidden at city zoom and the Ring is a faint band. The heatmap view is unchanged; the first view stays flicker-free.
 
 Hendrik, 2026-10-12: option B from the clean-map mockups (plan files under web/clean-map/, b-soft.png), "but normal lines instead of dashed lines", and the time lines a bit wider and blurred. All paint and filter changes in packages/web/src/map-layers.ts:
 
