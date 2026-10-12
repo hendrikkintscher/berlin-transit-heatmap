@@ -10,7 +10,7 @@ State on 2026-10-11, live through PR #50. Build in this order, one step per PR:
 2. Calmer street level: footpaths next to streets (group 7)
 3. UI overhaul (group 13), once Hendrik has picked one of the three design options
 4. Android app, starting with a TWA (group 11)
-6. Ersatzverkehr and other temporary changes (group 12)
+5. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
