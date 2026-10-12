@@ -1,22 +1,16 @@
-// The journey to a tapped place, as shown in its card: line badges and a link to Google
-// Maps, then changes, cycling and walking minutes and the stops along the way.
+// The journey to a tapped place, as shown in its card: line badges, then changes, cycling
+// and walking minutes and the stops along the way.
 
 import { MODE_COLORS } from './colors';
-import { escapeHtml, eveningClock, googleDirections, shortStop } from './format';
+import { escapeHtml, eveningClock, shortStop } from './format';
 import { t } from './i18n';
-import type { FromWorker, Travel } from './protocol';
-import type { Point } from './url';
+import type { FromWorker } from './protocol';
 import type { Direction } from './when';
 
 export type Trip = Extract<FromWorker, { type: 'trip' }>;
 
 export interface TripContext {
-  /** The start of each journey: one, or two with a meeting point. */
-  starts: (Point | null)[];
-  /** The tapped place. */
-  here: Point | null;
   direction: Direction;
-  travel: Travel;
   /** Seconds since midnight now, when the map is for today; null for another day. */
   now: number | null;
   /** "U2: Ersatzverkehr Pankow – Alexanderplatz" for a ride whose line runs differently. */
@@ -70,20 +64,11 @@ export function tripHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string {
       const stops = rides.length
         ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
         : [];
-      const start = c.starts[i];
-      const link =
-        start && c.here
-          ? `<a class="trip-link" href="${googleDirections(
-              c.direction === 'depart' ? start : c.here,
-              c.direction === 'depart' ? c.here : start,
-              c.travel === 'bikeonly',
-            )}" target="_blank" rel="noopener">${t('openGoogle')}</a>`
-          : '';
       // What runs differently today on the lines of this connection.
       const notes = [...new Set(rides.map((l) => c.changeNote?.(l)).filter(Boolean))];
       return (
         own +
-        `<span class="trip-sum">${own ? '' : mark}${badges}${link}</span>` +
+        `<span class="trip-sum">${own ? '' : mark}${badges}</span>` +
         `<small class="trip-stops">${[sum.join(' · '), stops.join(' → ')].filter(Boolean).join(' · ')}</small>` +
         notes.map((n) => `<small class="trip-change">${escapeHtml(n!)}</small>`).join('')
       );

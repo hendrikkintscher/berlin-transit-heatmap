@@ -4,7 +4,6 @@ import {
   dayLabel,
   escapeHtml,
   eveningClock,
-  googleDirections,
   gridSeconds,
   shortStop,
   stopName,
@@ -28,15 +27,6 @@ describe('format', () => {
     expect(whenText({ day: 'weekday', hour: 23 }, 'arrive')).toBe(
       'werktags, Ankunft 23 Uhr bis 0 Uhr',
     );
-  });
-
-  it('links Google Maps directions', () => {
-    const a = { lat: 52.5, lon: 13.4 };
-    const b = { lat: 52.45, lon: 13.5 };
-    expect(googleDirections(a, b)).toBe(
-      'https://www.google.com/maps/dir/?api=1&origin=52.50000,13.40000&destination=52.45000,13.50000&travelmode=transit',
-    );
-    expect(googleDirections(a, b, true)).toContain('travelmode=bicycling');
   });
 
   it('reads a raster cell, Infinity outside', () => {

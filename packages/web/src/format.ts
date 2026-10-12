@@ -2,7 +2,6 @@
 
 import { lang, t } from './i18n';
 import type { RasterLayer } from './protocol';
-import type { Point } from './url';
 import {
   addDays,
   isDate,
@@ -91,13 +90,6 @@ export function formatDate(iso: string) {
     month: lang() === 'de' ? 'numeric' : 'short',
     year: 'numeric',
   });
-}
-
-/** Google Maps directions (public transport, or cycling); opens the app on phones. */
-export function googleDirections(from: Point, to: Point, bicycling = false) {
-  const p = (o: Point) => `${o.lat.toFixed(5)},${o.lon.toFixed(5)}`;
-  const mode = bicycling ? 'bicycling' : 'transit';
-  return `https://www.google.com/maps/dir/?api=1&origin=${p(from)}&destination=${p(to)}&travelmode=${mode}`;
 }
 
 /** The value of a raster at a position, Infinity outside it. */
