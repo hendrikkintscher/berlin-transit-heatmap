@@ -35,6 +35,7 @@ export type ToWorker =
        * hour; arriving: the last one arriving on the hour).
        */
       measure: Measure;
+      /** Seconds into the hour it is now (0 for another hour); trips on tap leave then. */
       leaveOffset?: number;
       /** Compare: a second timetable file; the map then shows how much longer trips take there. */
       compare?: Window;
@@ -124,7 +125,15 @@ export type FromWorker =
       type: 'trip';
       id: number;
       /** One journey per start (two with a meeting point); null where unreachable. */
-      journeys: ({ legs: TripLeg[]; transfers: number } | null)[];
+      journeys: ({
+        legs: TripLeg[];
+        transfers: number;
+        /**
+         * Under Typisch and Bestfall: the minutes of this connection, which leaves now
+         * (arriving: arrives by the end of the hour). Under Nächste the map's own minutes.
+         */
+        minutes?: number;
+      } | null)[];
       /** The journeys drawn on the map: rides coloured by mode, walks dashed. */
       lines: FeatureCollection<LineString, { mode: string; walk: boolean }>;
       /** Where the journeys get on, change and get off. */

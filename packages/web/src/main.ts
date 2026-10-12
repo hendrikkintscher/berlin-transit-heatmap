@@ -64,6 +64,8 @@ const installBtn = $<HTMLButtonElement>('install-btn');
 const state = createState();
 const link = readLink(location.search, { ...state, to: null });
 Object.assign(state, link, { window: windowName(link.when) });
+// A meeting-point link on Typisch goes back to "Nächste" without the second start.
+if (state.second && state.measure === 'typical') state.measureBefore = 'next';
 const urlLang = new URLSearchParams(location.search).get('lang');
 setLang(initialLang(location.search, readStoredLang()), false);
 /** Layer windows already asked of the worker. */
@@ -210,7 +212,7 @@ function compute() {
     window: computedWindow(),
     direction: state.direction,
     measure: state.measure,
-    ...(state.measure === 'next' ? { leaveOffset: leaveOffset(state.when) } : {}),
+    leaveOffset: leaveOffset(state.when),
     walkKmh: state.walkKmh,
     ...(state.stepFree ? { stepFree: true } : {}),
     ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
@@ -304,6 +306,12 @@ function removeStart(which: 1 | 2) {
     state.origin = state.second;
     state.second = null;
   } else state.second = null;
+  // Back to the choice before the meeting point, unless one was made since.
+  if (state.measureBefore) {
+    state.measure = state.measureBefore;
+    state.measureBefore = null;
+    whenSheet.renderWhen();
+  }
   showOrigin();
   if (state.origin) tap.keepSpot();
   else tap.hideReadout();
@@ -330,6 +338,12 @@ function clearResult() {
 
 /** Meeting point on (a second start) or off (null). */
 function setSecond(p: { lat: number; lon: number } | null) {
+  // A meeting point compares on Typisch; the choice before comes back without it.
+  if (p && !state.second && state.measure !== 'typical') {
+    state.measureBefore = state.measure;
+    state.measure = 'typical';
+    whenSheet.renderWhen();
+  }
   state.second = p;
   showOrigin();
   tap.keepSpot();

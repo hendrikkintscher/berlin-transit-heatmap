@@ -37,8 +37,13 @@ export interface State {
   window: Window;
   /** Leave in the chosen hour, or arrive in it. */
   direction: Direction;
-  /** Typical (averaged over the hour, waiting included) or best-case minutes. */
+  /** Next connection from now (the default), typical (averaged over the hour, waiting included) or best-case minutes. */
   measure: Measure;
+  /**
+   * Adding a second start switched to Typisch; this is the choice before it, back when the
+   * second start goes. Null once a choice is made in between.
+   */
+  measureBefore: Measure | null;
   /** Compare: a second time; the map then shows how much longer trips take then. */
   compare: When | null;
   origin: Point | null;
@@ -74,7 +79,8 @@ export function createState(): State {
     when: NOW_WHEN,
     window: windowName(NOW_WHEN),
     direction: 'depart',
-    measure: 'typical',
+    measure: 'next',
+    measureBefore: null,
     compare: null,
     origin: null,
     second: null,

@@ -43,6 +43,12 @@ export function tripHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string {
         bike ? t('tripBike', { n: bike }) : '',
         walk ? t('tripWalk', { n: walk }) : '',
       ].filter(Boolean);
+      // Under Typisch and Bestfall the map's minutes are an average or a best case; the
+      // connection shown is the next one, with minutes of its own.
+      const own =
+        j.minutes !== undefined
+          ? `<span class="trip-now">${mark}${t(c.direction === 'depart' ? 'tripNext' : 'tripLast', { n: j.minutes })}</span>`
+          : '';
       // Stops where you get on, change and get off.
       const stops = rides.length
         ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
@@ -57,7 +63,8 @@ export function tripHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string {
             )}" target="_blank" rel="noopener">${t('openGoogle')}</a>`
           : '';
       return (
-        `<span class="trip-sum">${mark}${badges}${link}</span>` +
+        own +
+        `<span class="trip-sum">${own ? '' : mark}${badges}${link}</span>` +
         `<small class="trip-stops">${[sum.join(' · '), stops.join(' → ')].filter(Boolean).join(' · ')}</small>`
       );
     })

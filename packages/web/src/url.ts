@@ -14,6 +14,13 @@ export const TRAVELS: Travel[] = ['walk', 'bike', 'bikeonly'];
 export const travelOf = (v: string | null): Travel =>
   TRAVELS.includes(v as Travel) ? (v as Travel) : 'walk';
 
+/**
+ * The app opens on "Nächste"; a meeting point (two starts) on "Typisch", which is fairer
+ * to compare when neither person knows when the other leaves.
+ */
+export const defaultMeasure = (s: { second: Point | null }): Measure =>
+  s.second ? 'typical' : 'next';
+
 export interface Point {
   lat: number;
   lon: number;
@@ -58,7 +65,8 @@ export function readLink(search: string, base: LinkState): LinkState {
   s.to = s.origin ? parsePoint(p.get('to')) : null;
   s.when = whenFromParams(p, base.when);
   if (p.get('dir') === 'arr') s.direction = 'arrive';
-  if (p.get('m') === 'best' || p.get('m') === 'next') s.measure = p.get('m') as Measure;
+  const m = p.get('m');
+  s.measure = m === 'typical' || m === 'best' || m === 'next' ? m : defaultMeasure(s);
   s.compare = parseWhen(p.get('cmp'));
   if (p.has('walk')) s.walkKmh = walkSpeed(Number(p.get('walk')));
   if (p.has('sf')) s.stepFree = p.get('sf') === '1';
@@ -78,7 +86,7 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
   if (s.to) p.set('to', pointParam(s.to));
   if (windowName(s.when) !== windowName(now)) p.set('t', windowName(s.when));
   if (s.direction === 'arrive') p.set('dir', 'arr');
-  if (s.measure !== 'typical') p.set('m', s.measure);
+  if (s.measure !== defaultMeasure(s)) p.set('m', s.measure);
   if (s.compare) p.set('cmp', windowName(s.compare));
   if (s.walkKmh !== DEFAULT_WALK_KMH) p.set('walk', String(s.walkKmh));
   if (s.stepFree) p.set('sf', '1');

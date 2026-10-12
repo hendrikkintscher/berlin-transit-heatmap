@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tripHtml, type TripContext } from './trip-card';
+import { tripHtml, type Trip, type TripContext } from './trip-card';
 
 const ctx: TripContext = {
   starts: [{ lat: 52.5037, lon: 13.4108 }],
@@ -44,6 +44,20 @@ describe('trip card', () => {
     expect(html).toContain('12 Min. Rad');
     // No second start known: no Google link for it.
     expect(html.match(/trip-link/g)).toBeNull();
+  });
+
+  it('gives the minutes of a connection leaving now', () => {
+    const j: Trip['journeys'][number] = {
+      transfers: 0,
+      minutes: 17,
+      legs: [{ type: 'walk', minutes: 4 }],
+    };
+    expect(tripHtml({ journeys: [j] }, ctx)).toContain(
+      '<span class="trip-now">Nächste Verbindung: 17 Min.</span>',
+    );
+    const two = tripHtml({ journeys: [j, j] }, { ...ctx, direction: 'arrive' });
+    expect(two).toContain('<span class="trip-now"><i class="p2"></i>Letzte Verbindung');
+    expect(two).not.toContain('<span class="trip-sum"><i');
   });
 
   it('turns the link around when arriving', () => {

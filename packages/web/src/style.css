@@ -995,6 +995,10 @@ dialog.when .seg-wide + .seg-wide {
   display: inline !important;
   margin: 0 0 0 4px !important;
 }
+.trip-now {
+  display: block;
+  font-weight: 600;
+}
 .trip-sep {
   color: var(--muted);
 }

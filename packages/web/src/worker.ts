@@ -6,8 +6,10 @@ import {
   bikeTimetable,
   decodeTimetable,
   gridLayout,
+  distanceM,
   heatGrid,
   journeyTo,
+  NETWORK_WALK_SPEED_MPS,
   walkPath,
   loadTimetable,
   loadWalkNetwork,
@@ -249,12 +251,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
       const typical = msg.measure === 'typical';
       // Next connection: plain RAPTOR from one moment (reversed files count backwards).
-      const leaveAt = (t: PreparedTimetable) =>
-        msg.measure !== 'next'
-          ? undefined
-          : msg.direction === 'depart'
-            ? t.windowStart + (msg.leaveOffset ?? 0)
-            : t.windowEnd;
+      const now = (t: PreparedTimetable) =>
+        msg.direction === 'depart' ? t.windowStart + (msg.leaveOffset ?? 0) : t.windowEnd;
+      const leaveAt = (t: PreparedTimetable) => (msg.measure === 'next' ? now(t) : undefined);
       const runs = starts.map((o) => run(tt, o, typical, travel, true, leaveAt(tt)));
       const shown = (r: Run) => r.shown;
       const grid =
@@ -262,7 +261,15 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const used = runs.flatMap((r) => r.used);
       const routes = usageGeoJSON(tt, used);
       const labels = labelLines(tt, used);
-      lastTrip = { tt, runs, direction: msg.direction, travel };
+      lastTrip = {
+        tt,
+        runs,
+        direction: msg.direction,
+        travel,
+        // Trips on tap leave now (or, arriving, arrive by the end of the hour): the map's
+        // own pass for "Nächste", a pass of their own for Typisch and Bestfall.
+        leaveAt: msg.measure === 'next' ? null : now(tt),
+      };
 
       let image: ReturnType<typeof paint>;
       let outlines: ReturnType<typeof contours>;
@@ -332,7 +339,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         ],
       );
     } else if (msg.type === 'trip') {
-      const journeys = (lastTrip?.runs ?? []).map((r) => trip(lastTrip!, r, msg));
+      const last = lastTrip;
+      const journeys = (last?.runs ?? []).map((r) => trip(last!, nowRun(last!, r, msg), msg));
       post({ type: 'trip', id: msg.id, ...tripMessage(journeys) });
     }
   } catch (err) {
@@ -377,6 +385,8 @@ function cellSeconds(g: HeatGrid, p: { lat: number; lon: number }): number {
 
 interface Run {
   result: TravelTimeResult;
+  /** The pass from now that trips on tap follow (see nowRun), made on the first tap. */
+  now?: TravelTimeResult;
   /** Best-case grid with the stop each cell is reached from (lines and trips follow it). */
   best: HeatGrid;
   /** The grid the map shows: best case, or typical with waiting included. */
@@ -404,20 +414,7 @@ function run(
     const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, ...w, ...reach });
     return { result, best, shown: best, used: [] };
   }
-  const w =
-    travel === 'bike'
-      ? {
-          walk,
-          walkSpeedMps: BIKE_SPEED_MPS,
-          accessPenaltySeconds: BIKE_STATION_SECONDS,
-          egressPenaltySeconds: BIKE_STATION_SECONDS,
-          // Cycling all the way stays an option where it beats the trains.
-          maxOriginSeconds: BIKE_ONLY_MAX_SECONDS,
-          // Until the street network is in, straight-line rides spread over ten
-          // minutes only, so the first map is as quick as on foot.
-          ...(walk ? {} : { maxFinalWalkSeconds: 600, maxFallbackWalkSeconds: 600 }),
-        }
-      : { walk, walkSpeedMps };
+  const w = travelOptions(travel);
   const result = travelTimes(tt, origin, { trackLegs: usage, typical, leaveAt, ...w });
   const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, ...w });
   const shown =
@@ -428,33 +425,94 @@ function run(
   return { result, best, shown, used };
 }
 
+/** Routing and grid options for walking, or cycling to and from the stations. */
+function travelOptions(travel: Travel) {
+  return travel === 'bike'
+    ? {
+        walk,
+        walkSpeedMps: BIKE_SPEED_MPS,
+        accessPenaltySeconds: BIKE_STATION_SECONDS,
+        egressPenaltySeconds: BIKE_STATION_SECONDS,
+        // Cycling all the way stays an option where it beats the trains.
+        maxOriginSeconds: BIKE_ONLY_MAX_SECONDS,
+        // Until the street network is in, straight-line rides spread over ten
+        // minutes only, so the first map is as quick as on foot.
+        ...(walk ? {} : { maxFinalWalkSeconds: 600, maxFallbackWalkSeconds: 600 }),
+      }
+    : { walk, walkSpeedMps };
+}
+
 /** The last computed map, kept for trip lookups on tap. */
 let lastTrip: {
   tt: PreparedTimetable;
   runs: Run[];
   direction: Direction;
   travel: Travel;
+  /** When trips on tap leave, if not with the map's own pass. */
+  leaveAt: number | null;
 } | null = null;
+
+/** What a trip is rebuilt from; `seconds` is the trip's own time when it leaves now. */
+type TripRun = Pick<Run, 'result' | 'best'> & { seconds?: number };
+
+/**
+ * What a trip on tap follows: the connection that arrives earliest when leaving now,
+ * waiting for the departure included. With "Nächste" that is the map itself; otherwise a
+ * single RAPTOR pass from now (once per map and start), and a grid around the tapped
+ * place only, so a tap stays quick.
+ */
+function nowRun(
+  last: NonNullable<typeof lastTrip>,
+  r: Run,
+  at: { lat: number; lon: number },
+): TripRun {
+  if (last.leaveAt === null || last.travel === 'bikeonly') return r;
+  const w = travelOptions(last.travel);
+  const o = r.result.origin!;
+  r.now ??= travelTimes(last.tt, o, { trackLegs: true, leaveAt: last.leaveAt, ...w });
+  // Only stops within the longest walk (or ride) from the place can be its last stop.
+  const reachM = 2 * 900 * (w.walkSpeedMps ?? NETWORK_WALK_SPEED_MPS) + 100;
+  const stopSeconds = Float32Array.from(r.now.stopSeconds);
+  const stops = last.tt.stops;
+  for (let s = 0; s < stopSeconds.length; s++)
+    if (distanceM(at.lat, at.lon, stops[s].lat, stops[s].lon) > reachM) stopSeconds[s] = Infinity;
+  const best = heatGrid(
+    last.tt,
+    { ...r.now, stopSeconds },
+    { cellSizeM: CELL_M, trackStops: true, ...w },
+  );
+  const [minLon, minLat, maxLon, maxLat] = best.bbox;
+  const c = Math.floor(((at.lon - minLon) / (maxLon - minLon)) * best.cols);
+  const row = Math.floor(((maxLat - at.lat) / (maxLat - minLat)) * best.rows);
+  const inside = c >= 0 && c < best.cols && row >= 0 && row < best.rows;
+  return { result: r.now, best, seconds: inside ? best.seconds[row * best.cols + c] : Infinity };
+}
 
 /** The fastest journey to (or, arriving, from) the tapped spot, in travel order. */
 function trip(
   last: NonNullable<typeof lastTrip>,
-  r: Run,
+  r: TripRun,
   at: { lat: number; lon: number },
-): { journey: Journey; start: [number, number]; end: [number, number] } | null {
+): {
+  journey: Journey;
+  start: [number, number];
+  end: [number, number];
+  seconds?: number;
+} | null {
   const j = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
   if (!j) return null;
+  const seconds = r.seconds;
   const o = r.result.origin!;
   const here: [number, number] = [at.lon, at.lat];
   const point: [number, number] = [o.lon, o.lat];
-  if (last.direction === 'depart') return { journey: j, start: point, end: here };
+  if (last.direction === 'depart') return { journey: j, start: point, end: here, seconds };
   // Arriving: the tree runs backwards in time from the destination, so flip it.
   const legs = [...j.legs]
     .reverse()
     .map((l) =>
       l.type === 'ride' ? { ...l, from: l.to, to: l.from, stops: [...l.stops].reverse() } : l,
     );
-  return { journey: { ...j, legs }, start: here, end: point };
+  return { journey: { ...j, legs }, start: here, end: point, seconds };
 }
 
 function tripMessage(
@@ -522,7 +580,11 @@ function tripMessage(
       });
     }
     walkLine(at, f.end, cycling);
-    return { legs, transfers: f.journey.transfers };
+    return {
+      legs,
+      transfers: f.journey.transfers,
+      ...(f.seconds !== undefined ? { minutes: Math.round(f.seconds / 60) } : {}),
+    };
   });
   return {
     journeys,

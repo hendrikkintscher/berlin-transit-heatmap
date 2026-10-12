@@ -8,7 +8,7 @@ const BASE: LinkState = {
   to: null,
   when: NOW,
   direction: 'depart',
-  measure: 'typical',
+  measure: 'next',
   compare: null,
   walkKmh: 4,
   stepFree: false,
@@ -72,6 +72,17 @@ describe('links', () => {
       to: null,
     });
     expect(readLink('?from=x,13.4&walk=9&go=car&m=fast&t=weekday-30', BASE)).toEqual(BASE);
+  });
+
+  it('opens on Nächste, a meeting point on Typisch', () => {
+    const meet = '?from=52.5,13.4&with=52.52,13.37';
+    expect(readLink(meet, BASE).measure).toBe('typical');
+    expect(readLink(`${meet}&m=next`, BASE).measure).toBe('next');
+    expect(readLink('?from=52.5,13.4&m=typical', BASE).measure).toBe('typical');
+    const two = { ...BASE, origin: { lat: 52.5, lon: 13.4 }, second: { lat: 52.52, lon: 13.37 } };
+    expect(linkQuery({ ...two, measure: 'typical' }, NOW)).not.toMatch(/(^|&)m=/);
+    expect(linkQuery({ ...two, measure: 'next' }, NOW)).toContain('m=next');
+    expect(linkQuery({ ...BASE, measure: 'typical' }, NOW)).toBe('m=typical');
   });
 
   it('reads the old night link', () => {
