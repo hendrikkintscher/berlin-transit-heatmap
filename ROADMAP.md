@@ -7,7 +7,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #158. Build in this order, one step per PR:
 
 1. **Next:** Exact minutes and "Jetzt" in the time sheet (group 4)
-2. Tap card: larger buttons, shorter meeting card (C2, group 15)
+2. Redesign of the time sheet and the trip card, including C2 (group 12): mock-ups first, Hendrik picks before building
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -728,6 +728,12 @@ Hendrik, 2026-10-12: "Let's have a permanent search bar on the top, remove the s
 
 Built together with C1 from plan/suggestions-3.md, picked by Hendrik on 2026-10-12 ("Shorter labels"): the chip row fits on a 390 px phone with every chip visible without scrolling. The time chip shows only the time for today and adds the day only when it isn't today; Ebenen and Mehr become icon-only chips. Measured before: the row is 541 px on a 393 px Pixel 5 and 582 px on a 390 px iPhone 13.
 
+### Redesign of the time sheet and the trip card
+
+Hendrik, 2026-10-12: "Make a sensible redesign of the whole times and trips card". One step that reworks the time sheet and the trip card (the card shown after a tap) together, so neither is rebuilt twice. It includes C2 (group 15: every button at least 44 px tall, meeting trips after the first folded behind "N weitere Fahrten") and keeps the exact minutes and "Jetzt" from PR #160.
+
+Mock-ups come first: the builder shows Hendrik screenshots of the redesign at 360×740 and, where a choice matters, 2–4 options via the coordinator. It is built only after his pick. Snappiness stays the rule: tap to trip must stay as fast as now.
+
 ## 13. Wider area and other regions
 
 ### Potsdam and the commuter belt (C6)
@@ -830,7 +836,7 @@ Picked by Hendrik on 2026-10-12 ("Yes"). Measured: each deploy uploads 459 MB, o
 
 ### Tap card: larger buttons, shorter meeting card (C2)
 
-Picked by Hendrik on 2026-10-12 ("Yes, both"). Measured: the secondary buttons are 121×30 px and the close button 36 px; a meeting card for three people is about 1,000 px tall.
+Part of the redesign of the time sheet and trip card (group 12), built together with it. Picked by Hendrik on 2026-10-12 ("Yes, both"). Measured: the secondary buttons are 121×30 px and the close button 36 px; a meeting card for three people is about 1,000 px tall.
 
 - Every button on the tap card is at least 44 px tall, including the secondary row and the close button.
 - In meeting mode, trips after the first fold behind "2 weitere Fahrten" ("N weitere Fahrten"), and a tap unfolds them.
