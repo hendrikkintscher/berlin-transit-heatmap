@@ -6,6 +6,7 @@ import {
   desertThresholds,
   eveningWindow,
   isPastHour,
+  catchUp,
   leaveOffset,
   parseWhen,
   typicalWindow,
@@ -115,6 +116,27 @@ describe('when', () => {
     expect(isPastHour('20261012', 19, 'arrive', now)).toBe(false);
     expect(isPastHour('20261013', 8, 'depart', now)).toBe(false);
     expect(isPastHour('weekday', 8, 'depart', now)).toBe(false);
+  });
+
+  it('moves a date hour that is over on to now', () => {
+    const now = new Date('2026-10-12T09:05:00Z'); // 11:05 in Berlin
+    expect(catchUp({ day: '20261012', hour: 10 }, 'depart', now)).toEqual({
+      day: '20261012',
+      hour: 11,
+    });
+    expect(catchUp({ day: '20261012', hour: 11 }, 'depart', now)).toBeNull();
+    expect(catchUp({ day: '20261012', hour: 14 }, 'depart', now)).toBeNull();
+    expect(catchUp({ day: '20261013', hour: 8 }, 'depart', now)).toBeNull();
+    expect(catchUp({ day: 'weekday', hour: 10 }, 'depart', now)).toBeNull();
+    expect(catchUp({ day: '20261011', hour: 23 }, 'depart', now)).toEqual({
+      day: '20261012',
+      hour: 11,
+    });
+    expect(catchUp({ day: '20261012', hour: 11 }, 'arrive', now)).toEqual({
+      day: '20261012',
+      hour: 12,
+    });
+    expect(catchUp({ day: '20261012', hour: 12 }, 'arrive', now)).toBeNull();
   });
 
   it('arrives in the next full hour when switching from now', () => {

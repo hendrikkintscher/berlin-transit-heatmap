@@ -162,6 +162,18 @@ export function isPastHour(
 }
 
 /**
+ * The current hour when a date's hour chosen earlier is over by now (the app stayed open
+ * past the hour or past midnight), so "Nächste" never leaves in the past; null otherwise.
+ */
+export function catchUp(when: When, direction: Direction, now = new Date()): When | null {
+  if (!isDate(when.day)) return null;
+  const w = whenAt(now);
+  if (when.day > w.day || (when.day === w.day && !isPastHour(when.day, when.hour, direction, now)))
+    return null;
+  return direction === 'arrive' ? arriveWhen(w, now) : w;
+}
+
+/**
  * Switching to arriving in an hour that has begun moves on to the next full hour
  * (18:02 -> an 19 Uhr; 23:10 -> tomorrow 0 Uhr), so the map never starts in the past.
  */
