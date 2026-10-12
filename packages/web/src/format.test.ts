@@ -5,11 +5,12 @@ import {
   escapeHtml,
   eveningClock,
   gridSeconds,
+  pillText,
   shortStop,
   stopName,
   whenText,
 } from './format';
-import { leaveOffset } from './when';
+import { leaveOffset, upcomingDays } from './when';
 
 describe('format', () => {
   it('shortens VBB stop names', () => {
@@ -62,5 +63,14 @@ describe('day labels', () => {
     expect(dayLabel('20261014', now)).toBe('Mi 14.');
     expect(dateLabel('20261101')).toBe('So 1.');
     expect(dayLabel('weekend', now)).toBe('Sa+So');
+  });
+
+  it('leaves "Heute" out of the short chip text only', () => {
+    const [today, tomorrow] = upcomingDays();
+    expect(pillText({ day: today!, hour: 18 }, false, '18 Uhr', true)).toBe('ab 18 Uhr');
+    expect(pillText({ day: today!, hour: 19 }, true, '19 Uhr', true)).toBe('an 19 Uhr');
+    expect(pillText({ day: today!, hour: 18 }, false, '18 Uhr')).toBe('Heute ab 18 Uhr');
+    expect(pillText({ day: tomorrow!, hour: 8 }, false, '8 Uhr', true)).toBe('Morgen ab 8 Uhr');
+    expect(pillText({ day: 'weekday', hour: 10 }, false, '10 Uhr', true)).toBe('Mo–Fr ab 10 Uhr');
   });
 });

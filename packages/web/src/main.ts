@@ -318,7 +318,7 @@ listen((ev: MessageEvent<FromWorker>) => {
       kind: 'station' as const,
       weight: s.perHour,
     }));
-    if (!searchPanel.hidden) showSuggestions();
+    if (isSearchOpen()) showSuggestions();
   } else if (m.type === 'layers') {
     state.layers[m.window] = m;
     if (m.window === state.window) showLayers();
@@ -473,7 +473,7 @@ function showOrigin() {
   startMarkers.forEach((m, i) => i >= list.length && m.remove());
   list.forEach((p, i) => startMarker(i).setLngLat([p.lon, p.lat]).addTo(map));
   meetChip.hidden = list.length < 2;
-  hint.hidden = list.length > 0 || !!state.special || !$('search').hidden;
+  hint.hidden = list.length > 0 || !!state.special || isSearchOpen();
   // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
   secondBtn.hidden = !list.length || list.length >= MAX_STARTS || !!state.special;
   secondBtn.querySelector('span')!.textContent = t('secondHere', { n: list.length + 1 });
@@ -843,11 +843,13 @@ $('tip-close').addEventListener('click', hideTip);
 tipAction.addEventListener('click', () => void install());
 
 // ---------- address search ----------
-const searchBtn = $<HTMLButtonElement>('search-btn');
 const searchPanel = $('search');
 const searchInput = $<HTMLInputElement>('search-input');
 const searchResults = $<HTMLUListElement>('search-results');
 const searchMsg = $('search-msg');
+const searchClose = $<HTMLButtonElement>('search-close');
+/** The bar is always there; open means its suggestions show under it. */
+const isSearchOpen = () => searchPanel.classList.contains('open');
 let searchTimer = 0;
 let searchAbort: AbortController | null = null;
 let places: Place[] = [];
@@ -875,7 +877,9 @@ function houseQuery(): string | null {
 
 function openSearch() {
   chips.close();
-  searchPanel.hidden = false;
+  searchPanel.classList.add('open');
+  searchClose.hidden = false;
+  searchInput.setAttribute('aria-expanded', 'true');
   hint.hidden = true;
   searchInput.focus();
   searchInput.select();
@@ -894,7 +898,7 @@ function openSearch() {
         const step = (from: number) => {
           searchStreets.push(...parseStreetLines(file.box, lines.slice(from, from + 2000)));
           if (from + 2000 < lines.length) setTimeout(() => step(from + 2000));
-          else if (!searchPanel.hidden) showSuggestions();
+          else if (isSearchOpen()) showSuggestions();
         };
         step(0);
       })
@@ -946,7 +950,9 @@ function showSuggestions(remote = lastRemote) {
   if (list.length) showMsg('');
 }
 function closeSearch() {
-  searchPanel.hidden = true;
+  searchPanel.classList.remove('open');
+  searchClose.hidden = true;
+  searchInput.setAttribute('aria-expanded', 'false');
   hint.hidden = !!state.origin || !!state.special;
   searchAbort?.abort();
   clearTimeout(searchTimer);
@@ -1098,7 +1104,8 @@ function pickPlace(p: Place) {
     addStart({ lat: p.lat, lon: p.lon });
     return;
   }
-  searchInput.value = p.label;
+  // The bar empties again: the place shows on the map and in its card.
+  searchInput.value = '';
   map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
   // With a start set, the place may be a new start, a destination or another start:
   // show the trip there, with buttons for the other two.
@@ -1106,15 +1113,21 @@ function pickPlace(p: Place) {
   else setOrigin(p);
 }
 
-searchBtn.addEventListener('click', () => {
+// A tap into the bar searches for a start (the other searches open it themselves).
+searchInput.addEventListener('focus', () => {
+  if (isSearchOpen()) return;
   searchFor = 'start';
-  if (searchPanel.hidden) openSearch();
-  else closeSearch();
+  openSearch();
 });
-$('search-close').addEventListener('click', closeSearch);
+searchClose.addEventListener('click', () => {
+  searchFor = 'start';
+  searchInput.value = '';
+  streetPick = null;
+  closeSearch();
+});
 for (const ev of ['mousedown', 'touchstart'] as const) {
   map.on(ev, () => {
-    ignoreClick = !searchPanel.hidden;
+    ignoreClick = isSearchOpen();
     if (ignoreClick) closeSearch();
   });
 }
@@ -1170,7 +1183,7 @@ const special = (() => {
     chip.hidden = !s;
     document.body.classList.toggle('special', !!s);
     // The "tap the map or search a start" hint would sit on the banner.
-    hint.hidden = !!s || !!state.origin || !$('search').hidden;
+    hint.hidden = !!s || !!state.origin || isSearchOpen();
     if (!s) return;
     $('special-text').textContent =
       s.kind === 'living'
@@ -1531,6 +1544,7 @@ menu.applyLang(lang(), false);
 // First view: the chip labels are known now (they start hidden, so the page never
 // paints the HTML's placeholder time or German labels for an English link).
 $('chips').classList.remove('unrendered');
+searchPanel.classList.remove('unrendered');
 hint.hidden = !!state.origin || !!state.special;
 showHeat();
 if (linkOutside) setStatus(() => t('linkOutside'), true);

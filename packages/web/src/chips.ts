@@ -1,6 +1,7 @@
-// The chip row at the top: search first, then Zeit (with Reisezeit), Bahn (with
-// Barrierefrei) and Ebenen (with Vergleich), which show at a glance what is set (a chip
-// that differs from the default is purple), and Mehr (the menu) last. A tap opens that
+// The chip row under the search bar: Zeit (with Reisezeit), Bahn (with Barrierefrei),
+// then Ebenen (with Vergleich) and Mehr (the menu) as icons, so the row fits a phone
+// without scrolling. They show at a glance what is set (a chip that differs from the
+// default is purple). A tap opens that
 // chip's small panel right under the row, with only its own settings; the map stays
 // visible, and a tap outside closes it.
 
@@ -71,7 +72,10 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
   function render() {
     const set = (id: string, text: string, on: boolean) => {
       const chip = $(id);
-      chip.querySelector('span')!.textContent = text;
+      // Icon-only chips (Ebenen, Mehr) carry their name as the label.
+      const label = chip.querySelector('span');
+      if (label) label.textContent = text;
+      else chip.setAttribute('aria-label', text);
       chip.classList.toggle('on', on);
     };
     set(
