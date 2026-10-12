@@ -4,11 +4,10 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #151. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #153. Build in this order, one step per PR:
 
-1. **Next:** Permanent search bar at the top, chip row fits without scrolling (group 12, with C1)
-2. Walking network: visible loading, no blocked taps (B1, group 15)
-3. Lean deploy: only the files the app uses (B2, group 15)
+1. **Next:** Walking network: visible loading, no blocked taps (B1, group 15)
+2. Lean deploy: only the files the app uses (B2, group 15)
 
 From Hendrik on 2026-10-12, to be built now. More items from the third suggestions list (plan/suggestions-3.md) are added as Hendrik picks them. After these, Hendrik picks the next step before anything starts.
 
@@ -718,6 +717,8 @@ Hendrik, 2026-10-12: the app is called **"Wohin jetzt?"** with the tagline **"Ö
 Notes: names only, URL parameters and the address unchanged (the domain is still open in the beta plan). Check at 360×740 in German and English. Small effort. Hendrik gave the go on 2026-10-12.
 
 ### Permanent search bar at the top
+
+**Done** (PR #153): the search field sits permanently at the top. Suggestions for search, a second start and favourites appear in 27–44 ms, the field empties after a pick, and a tap on the map closes it. Ebenen and Mehr are icon chips, and today's time chip reads "ab 18:42 Uhr". The row fits without scrolling at 393, 390 and 360 px in German and English. For another day it fits everywhere except English at 360 px, and it still scrolls with "Mo–Fr ab 10 Uhr · Typisch" plus "♿ Rad + Bahn".
 
 Hendrik, 2026-10-12: "Let's have a permanent search bar on the top, remove the symbol from the scroll bar instead." A search field is always visible in its own row at the top of the screen, above the chip row, and the search chip leaves the scrolling chip row. This frees about 60 px in the chip row, which partly addresses C1 in plan/suggestions-3.md (Ebenen and Mehr off-screen on first load). Measure whether Ebenen then fits on a 393 px phone. Keep the flicker-free first view and the instant suggestions.
 
