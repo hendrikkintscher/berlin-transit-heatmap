@@ -4,12 +4,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #153. Build in this order, one step per PR:
-
-1. **Next:** Walking network: visible loading, no blocked taps (B1, group 15)
-2. Lean deploy: only the files the app uses (B2, group 15)
-
-From Hendrik on 2026-10-12, to be built now. More items from the third suggestions list (plan/suggestions-3.md) are added as Hendrik picks them. After these, Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #156. Nothing is queued: Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -811,6 +806,8 @@ Picked by Hendrik on 2026-10-12 ("Yes, now"). Measured on a shared link over a 3
 
 Not included: splitting walk.bin by area.
 
+**Done** (PR #155): the walking network loads after the first map. Live, the trip card appeared at 6.4 s, and the loading bar with "Fußwege werden geladen…" stays visible from 6.3 to 26 s while it streams. Taps in that time are answered in 0.14–1.4 s.
+
 ### Lean deploy: only the files the app uses (B2)
 
 Picked by Hendrik on 2026-10-12 ("Yes"). Measured: each deploy uploads 459 MB, of which 280 MB are JSON timetables the app no longer reads; stops.json is not referenced; 77 of the last 159 commits changed only the roadmap or README but still redeployed.
@@ -818,4 +815,6 @@ Picked by Hendrik on 2026-10-12 ("Yes"). Measured: each deploy uploads 459 MB, o
 - The timetable build stops writing the hourly JSON timetables and the old day/night windows.
 - The app drops its JSON fallback, which never triggers.
 - The Pages deploy copies only an allow-list of release files: timetable-\*.bin, walk.bin, lines.bin, changes.json, stop-ids.json and build-info.json.
+  **Done** (PR #156): timetables are .bin only, and each deploy copies only the files the app loads (streets.json added to the list for search). Pushes that change only Markdown no longer redeploy. The old JSON files leave the release with the next nightly build.
+
 - Commits that only change the roadmap or README no longer redeploy (a paths filter on the push trigger). The redeploy after the nightly timetable build stays.
