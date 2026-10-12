@@ -71,6 +71,8 @@ export const WALK_SPEED_MPS = 1.2;
 export const TRANSFER_RADIUS_M = 400;
 export const TRANSFER_PENALTY_S = 60;
 export const SAME_STATION_TRANSFER_S = 120;
+/** Both edges of one island platform (stop ids differing only in the last part): across it. */
+export const SAME_PLATFORM_TRANSFER_S = 60;
 /** Stops further than this from any footpath keep straight-line transfers. */
 export const MAX_STOP_SNAP_M = 150;
 
@@ -699,6 +701,18 @@ export async function stairsOnlyPlatforms(
   return result;
 }
 
+/**
+ * Two stops on one island platform: ids that differ only after their last colon, as in
+ * "de:11000:900110011:1:50" and "…:1:51" (DHID station, platform, edge).
+ */
+export function samePlatform(a: string, b: string): boolean {
+  const parts = a.split(':');
+  // Bus stop positions have no platform part ("…:900120001::5").
+  if (parts.length < 5 || !parts[parts.length - 2]) return false;
+  const i = a.lastIndexOf(':');
+  return a.slice(0, i) === b.slice(0, b.lastIndexOf(':'));
+}
+
 async function buildTransfers(
   source: GtfsSource,
   rawStops: RawStop[],
@@ -756,28 +770,40 @@ async function buildTransfers(
     if (list) list.push(newIndex.get(s)!);
     else byStation.set(p, [newIndex.get(s)!]);
   }
+  const idOf = new Map(servedList.map((s) => [newIndex.get(s)!, rawStops[s]!.id]));
   for (const list of byStation.values())
     for (const a of list)
       for (const b of list) {
         if (a === b) continue;
+        const floor = samePlatform(idOf.get(a)!, idOf.get(b)!)
+          ? SAME_PLATFORM_TRANSFER_S
+          : SAME_STATION_TRANSFER_S;
         const current = seconds.get(`${a},${b}`);
-        if (current === undefined || current > SAME_STATION_TRANSFER_S)
-          set(a, b, SAME_STATION_TRANSFER_S);
+        if (current === undefined || current > floor) set(a, b, floor);
       }
 
-  // GTFS transfers.txt with a minimum transfer time and no route/trip restriction.
+  // GTFS transfers.txt: minimum transfer times (type 2) and timed transfers (type 1,
+  // the connection is held: no time needed). Rows tied to routes count for a pair of
+  // stops only where no general row does, with the longest of them, since a footpath
+  // here holds for every line.
   if (source.has('transfers.txt')) {
     const given = new Map<string, number>();
+    const tied = new Map<string, number>();
     await readCsv(await source.open('transfers.txt'), (get) => {
-      if (get('transfer_type') !== '2' || get('min_transfer_time') === '') return;
-      if (get('from_route_id') || get('to_route_id') || get('from_trip_id') || get('to_trip_id'))
-        return;
+      const type = get('transfer_type');
+      if (type !== '1' && !(type === '2' && get('min_transfer_time') !== '')) return;
+      if (get('from_trip_id') || get('to_trip_id')) return;
       const from = stopIndex.get(get('from_stop_id'));
       const to = stopIndex.get(get('to_stop_id'));
       if (from === undefined || to === undefined || from === to) return;
       if (!served.has(from) || !served.has(to)) return;
-      given.set(`${newIndex.get(from)},${newIndex.get(to)}`, Number(get('min_transfer_time')));
+      const key = `${newIndex.get(from)},${newIndex.get(to)}`;
+      const s = type === '1' ? 0 : Number(get('min_transfer_time'));
+      if (get('from_route_id') || get('to_route_id'))
+        tied.set(key, Math.max(tied.get(key) ?? 0, s));
+      else given.set(key, Math.min(given.get(key) ?? Infinity, s));
     });
+    for (const [key, s] of tied) if (!given.has(key)) given.set(key, s);
     for (const [key, s] of given) seconds.set(key, s);
     // Keep both directions present when the feed only lists one.
     for (const [key, s] of given) {

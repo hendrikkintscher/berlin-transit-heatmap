@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillTimes, modeOf } from '../src/build.ts';
+import { fillTimes, modeOf, samePlatform } from '../src/build.ts';
 import { berlinHolidays, pickReferenceDay, ServiceCalendar } from '../src/calendar.ts';
 import { parseTime, splitCsvLine } from '../src/csv.ts';
 import { distanceM, forEachNearbyPair } from '../src/geo.ts';
@@ -97,5 +97,15 @@ describe('build helpers', () => {
     expect(fillTimes(times)).toBe(true);
     expect(times).toEqual([100, 100, 120, 140, 160, 160, 160]);
     expect(fillTimes([NaN, 5])).toBe(false);
+  });
+});
+
+describe('samePlatform', () => {
+  it('pairs the two edges of one island platform, not other platforms or plain ids', () => {
+    expect(samePlatform('de:11000:900110011:1:50', 'de:11000:900110011:1:51')).toBe(true);
+    expect(samePlatform('de:11000:900110011:1:50', 'de:11000:900110011:2:52')).toBe(false);
+    expect(samePlatform('de:11000:900120001::5', 'de:11000:900120001::6')).toBe(false);
+    expect(samePlatform('A', 'B')).toBe(false);
+    expect(samePlatform('x:1', 'x:2')).toBe(false);
   });
 });
