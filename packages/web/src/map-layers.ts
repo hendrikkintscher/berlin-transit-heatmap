@@ -419,6 +419,7 @@ export function addMapLayers(
     map.setPaintProperty('label_other', 'text-color', '#2a2140');
     map.setPaintProperty('label_other', 'text-halo-width', 1.8);
   }
+  calmPaths(map);
   map.addSource('landmarks', { type: 'geojson', data: landmarks });
   map.addLayer({
     id: 'landmarks',
@@ -539,6 +540,35 @@ function outlineColors(kind: OutlineKind): maplibregl.ExpressionSpecification {
   const color = (min: number) =>
     kind === 'home' ? HOME_COLORS[homeBandOf(min * 60 - 1)] : bandColor(bandOf(min * 60 - 1));
   return ['match', ['get', 'min'], ...levels.flatMap((m) => [m, color(m)]), '#1d1530'] as never;
+}
+
+/**
+ * Footpaths and cycle tracks drawn thin and faint at street level. Many of them are
+ * sidewalks and cycle tracks mapped as their own lines right next to a street, which made
+ * streets look doubled or tripled; the tiles do not say which ones (no sidewalk tag), so
+ * those along streets (footway, cycleway) go almost silent, while paths through parks,
+ * squares and steps stay a little more visible. A tapped trip's walk is drawn on its own.
+ */
+function calmPaths(map: maplibregl.Map): void {
+  if (!map.getLayer('highway_path')) return;
+  const alongStreets: maplibregl.ExpressionSpecification = [
+    'match',
+    ['get', 'subclass'],
+    ['footway', 'cycleway', 'platform', 'corridor'],
+    true,
+    false,
+  ];
+  map.setPaintProperty('highway_path', 'line-color', '#e0e0dc');
+  map.setPaintProperty('highway_path', 'line-opacity', ['case', alongStreets, 0.55, 0.9]);
+  map.setPaintProperty('highway_path', 'line-width', [
+    'interpolate',
+    ['exponential', 1.2],
+    ['zoom'],
+    13,
+    ['case', alongStreets, 0.4, 0.6],
+    20,
+    ['case', alongStreets, 2, 3.5],
+  ]);
 }
 
 /** [west, south, east, north] as the corners a canvas source wants. */
