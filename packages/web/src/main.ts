@@ -110,6 +110,21 @@ secondBtn.addEventListener('click', () => {
 const state = createState();
 const link = readLink(location.search, { ...state, to: null });
 Object.assign(state, link, { window: windowName(link.when) });
+/** A point on the map's area (Berlin, Potsdam and the commuter belt). */
+function inArea({ lat, lon }: Point) {
+  const [w, s, e, n] = SEARCH_BBOX;
+  return lon >= w && lon <= e && lat >= s && lat <= n;
+}
+// A link's starts outside the area would compute an empty map: they are dropped (and a
+// note says why, once the page is up).
+const linkStarts = state.origin ? [state.origin, ...state.others] : [];
+const linkOutside = linkStarts.some((o) => !inArea(o));
+if (linkOutside) {
+  const kept = linkStarts.filter(inArea);
+  state.origin = kept[0] ?? null;
+  state.others = kept.slice(1);
+}
+if (link.to && (!state.origin || !inArea(link.to))) link.to = null;
 // A meeting-point link on Typisch goes back to "Nächste" without the other starts.
 if (state.others.length && state.measure === 'typical') state.measureBefore = 'next';
 const urlLang = new URLSearchParams(location.search).get('lang');
@@ -171,13 +186,22 @@ $('home-bar').append(
     return s;
   }),
 );
+// Its ends say what they mean: the top band runs all night, the bottom one ends before 23 Uhr.
+function homeEnd(key: 'legendAllNight' | 'legendBefore23') {
+  const tick = document.createElement('span');
+  tick.dataset.t = key;
+  tick.textContent = t(key);
+  return tick;
+}
 $('home-ticks').append(
+  homeEnd('legendAllNight'),
   ...HOME_TICKS.map((label, i) => {
     const tick = document.createElement('span');
     tick.style.top = `${(100 * (i + 1)) / HOME_COLORS.length}%`;
     tick.textContent = label;
     return tick;
   }),
+  homeEnd('legendBefore23'),
 );
 
 /**
@@ -210,13 +234,26 @@ function showLegend(kind: 'time' | 'diff' | 'home', extra = false) {
 }
 
 let statusTimer = 0;
-/** Sets the status line; `fade` hides it again after a few seconds. */
+/** How long the status line fades out (style.css .status). */
+const STATUS_FADE_MS = 600;
+/**
+ * Sets the status line; `fade` hides it again after a few seconds and then clears it, so
+ * it leaves the layout and screen readers do not find it again.
+ */
 function setStatus(render: () => string, fade = false) {
   state.status = render;
   statusEl.textContent = render();
   statusEl.classList.remove('faded');
   clearTimeout(statusTimer);
-  if (fade) statusTimer = window.setTimeout(() => statusEl.classList.add('faded'), 5000);
+  if (fade)
+    statusTimer = window.setTimeout(() => {
+      statusEl.classList.add('faded');
+      statusTimer = window.setTimeout(() => {
+        state.status = () => '';
+        statusEl.textContent = '';
+        statusEl.classList.remove('faded');
+      }, STATUS_FADE_MS);
+    }, 5000);
 }
 
 // ---------- worker ----------
@@ -497,8 +534,9 @@ function clearResult() {
   setStatus(() => '');
   renderFavourites();
   showLegend('time');
+  // Back to the switch's own look (a where-to-live or home map had the colours on).
+  showHeat();
   if (!state.mapReady) return;
-  if (map.getLayer(HEAT_LAYER)) map.setLayoutProperty(HEAT_LAYER, 'visibility', 'none');
   const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
   for (const id of [ROUTES_SOURCE, LABELS_SOURCE, OUTLINES_SOURCE])
     (map.getSource(id) as GeoJSONSource | undefined)?.setData(empty);
@@ -675,19 +713,24 @@ function drawHeat(r: Result) {
 }
 
 /**
- * The colour fill follows the Heatmap switch (a comparison always shows it: it has no
- * outlines), and the outlines change their look with it.
+ * The colour fill follows the Heatmap switch, and the outlines change their look with it.
+ * A comparison (it has no outlines) and the where-to-live and home maps (their colours are
+ * the point) always show it; the switch is left as it was for the start's map.
  */
 function showHeat() {
   const r = state.result;
-  const heat = state.heat || !!r?.compare;
+  const heat = state.heat || !!r?.compare || !!r?.living || !!r?.home;
   // Outlines alone carry their minutes, so the colour legend steps aside (not the home
   // map's clock colours).
   document.body.classList.toggle('no-legend', !heat && !r?.home);
   if (!state.mapReady) return;
   if (map.getLayer(HEAT_LAYER))
     map.setLayoutProperty(HEAT_LAYER, 'visibility', r && heat ? 'visible' : 'none');
-  styleOutlines(map, r?.home ? 'home' : r?.extraBase !== undefined ? 'extra' : 'time', heat);
+  styleOutlines(
+    map,
+    r?.home ? 'home' : r?.living ? 'living' : r?.extraBase !== undefined ? 'extra' : 'time',
+    heat,
+  );
 }
 
 // A tap that only closes the search panel should not also set a point.
@@ -716,7 +759,7 @@ document.addEventListener('visibilitychange', () => {
 // ---------- my location ----------
 locateBtn.addEventListener('click', () => {
   if (!('geolocation' in navigator)) {
-    setStatus(() => t('locateFailed'));
+    setStatus(() => t('locateFailed'), true);
     return;
   }
   closeSearch();
@@ -725,10 +768,9 @@ locateBtn.addEventListener('click', () => {
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
       locateBtn.classList.remove('busy');
-      const [w, s, e, n] = SEARCH_BBOX;
       const { latitude: lat, longitude: lon } = coords;
-      if (lon < w || lon > e || lat < s || lat > n) {
-        setStatus(() => t('locateOutside'));
+      if (!inArea({ lat, lon })) {
+        setStatus(() => t('locateOutside'), true);
         return;
       }
       setOrigin({ lat, lon });
@@ -736,7 +778,10 @@ locateBtn.addEventListener('click', () => {
     },
     (err) => {
       locateBtn.classList.remove('busy');
-      setStatus(() => t(err.code === err.PERMISSION_DENIED ? 'locateDenied' : 'locateFailed'));
+      setStatus(
+        () => t(err.code === err.PERMISSION_DENIED ? 'locateDenied' : 'locateFailed'),
+        true,
+      );
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
   );
@@ -1488,6 +1533,7 @@ menu.applyLang(lang(), false);
 $('chips').classList.remove('unrendered');
 hint.hidden = !!state.origin || !!state.special;
 showHeat();
+if (linkOutside) setStatus(() => t('linkOutside'), true);
 
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

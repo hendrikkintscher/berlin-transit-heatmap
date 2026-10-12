@@ -21,7 +21,10 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
   const pops = $('pops');
   let open: Pop | null = null;
 
+  const scroller = row.querySelector<HTMLElement>('.chip-scroll')!;
   const panel = (p: Pop) => $(`pop-${p}`);
+  /** Back to the start of the row, so search and Zeit are in view again. */
+  const scrollHome = () => scroller.scrollTo({ left: 0, behavior: 'smooth' });
   const chipOf = (p: Pop) => row.querySelector<HTMLElement>(`[data-pop="${p}"]`);
 
   function show(p: Pop | null) {
@@ -29,7 +32,9 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
       panel(open).hidden = true;
       chipOf(open)?.setAttribute('aria-expanded', 'false');
     }
+    const closing = open !== null && !p;
     open = p;
+    if (closing) scrollHome();
     if (!p) return;
     closeSearch();
     panel(p).hidden = false;
@@ -59,6 +64,8 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && open) show(null);
   });
+  // Mehr (the last chip) opens the menu: closing it scrolls the row back too.
+  $('menu').addEventListener('close', scrollHome);
 
   /** Chip labels and which ones differ from the default. */
   function render() {

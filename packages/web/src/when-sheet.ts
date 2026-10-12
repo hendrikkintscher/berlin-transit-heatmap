@@ -6,7 +6,16 @@ import { clockLabel, dayLabel, hourLabel, pillText } from './format';
 import { t } from './i18n';
 import type { Measure } from './protocol';
 import { $, type State } from './state';
-import { leaveOffset, upcomingDays, windowName, type Day, type Direction, type When } from './when';
+import {
+  arriveWhen,
+  isPastHour,
+  leaveOffset,
+  upcomingDays,
+  windowName,
+  type Day,
+  type Direction,
+  type When,
+} from './when';
 
 export interface WhenSheetDeps {
   state: State;
@@ -60,21 +69,21 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     const w = state.when;
     const arrive = state.direction === 'arrive';
     const offset = !arrive && state.measure === 'next' ? leaveOffset(w) : 0;
-    // Cycling alone has no timetable time.
     whenBtn.querySelector('span')!.textContent =
-      state.travel === 'bikeonly'
-        ? t('travelBikeOnlyPill')
-        : pillText(
-            w,
-            arrive,
-            offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-          ) +
-          // Reisezeit lives in this panel too; the pill names it when it is not the default.
-          (state.measure === 'typical'
-            ? ` · ${t('measureTypical')}`
-            : state.measure === 'best'
-              ? ` · ${t('measureBest')}`
-              : '');
+      pillText(
+        w,
+        arrive,
+        offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
+      ) +
+      // Cycling alone has no timetable, so no Reisezeit: the bike stands in for it.
+      (state.travel === 'bikeonly'
+        ? ' · 🚲'
+        : // Reisezeit lives in this panel too; the pill names it when it is not the default.
+          state.measure === 'typical'
+          ? ` · ${t('measureTypical')}`
+          : state.measure === 'best'
+            ? ` · ${t('measureBest')}`
+            : '');
     renderDays();
     $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
     for (const b of dirButtons)
@@ -109,8 +118,13 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
       });
     for (const b of [...dayGrid.children, ...typicalButtons])
       b.setAttribute('aria-checked', String((b as HTMLElement).dataset.day === w.day));
-    for (const b of hourGrid.children)
-      b.setAttribute('aria-pressed', String(Number((b as HTMLElement).dataset.hour) === w.hour));
+    // Today's hours that are over are greyed out (the chosen one stays as it is).
+    const now = new Date();
+    for (const b of hourGrid.children as HTMLCollectionOf<HTMLButtonElement>) {
+      const h = Number(b.dataset.hour);
+      b.setAttribute('aria-pressed', String(h === w.hour));
+      b.disabled = h !== w.hour && isPastHour(w.day, h, state.direction, now);
+    }
     rendered();
   }
 
@@ -144,9 +158,14 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   );
   for (const b of typicalButtons) b.addEventListener('click', () => pickDay(b.dataset.day));
   for (const b of dirButtons)
-    b.addEventListener('click', () =>
-      setWhen(state.when, { direction: b.dataset.dir as Direction }),
-    );
+    b.addEventListener('click', () => {
+      const direction = b.dataset.dir as Direction;
+      const w =
+        direction === 'arrive' && state.direction !== 'arrive'
+          ? arriveWhen(state.when)
+          : state.when;
+      setWhen(w, { direction });
+    });
   for (const b of measureButtons)
     b.addEventListener('click', () => {
       state.measureBefore = null;
@@ -155,9 +174,16 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   const readCompare = (): When | null =>
     cmpDay.value ? { day: cmpDay.value, hour: Number(cmpHour.value) } : null;
   cmpDay.addEventListener('change', () => {
-    // Turning it on for the same day suggests the other end of it: night by day, 10 Uhr by night.
+    // Turning it on keeps the hour (another day at the same time); for the same day it
+    // suggests two hours later (earlier late in the evening), still within the day's service.
     const c = readCompare();
-    if (c && !state.compare && c.day === state.when.day) c.hour = state.when.hour >= 5 ? 2 : 10;
+    if (c && !state.compare)
+      c.hour =
+        c.day !== state.when.day
+          ? state.when.hour
+          : state.when.hour + 2 <= 23
+            ? state.when.hour + 2
+            : state.when.hour - 2;
     setWhen(state.when, { compare: c });
   });
   cmpHour.addEventListener('change', () => setWhen(state.when, { compare: readCompare() }));

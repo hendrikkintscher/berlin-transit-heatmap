@@ -104,5 +104,7 @@ describe('trip card', () => {
     expect(leaveText(36000, 35000)).toBe('los in 16 Min.');
     expect(leaveText(36000, null)).toBe('los um 10:00 Uhr');
     expect(leaveText(36000, 30000)).toBe('los um 10:00 Uhr');
+    // An hour earlier today: gone, so no "jetzt los".
+    expect(leaveText(30000, 36000)).toBe('los um 08:20 Uhr');
   });
 });

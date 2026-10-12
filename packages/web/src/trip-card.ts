@@ -17,9 +17,13 @@ export interface TripContext {
   changeNote?: (ride: { name: string; mode: string }) => string | null;
 }
 
-/** "los in 5 Min.", "jetzt los", or "los um 10:07" when it is not today or over an hour off. */
+/**
+ * "los in 5 Min.", "jetzt los", or "los um 10:07" when it is not today, over an hour off
+ * or already gone (an hour earlier today).
+ */
 export function leaveText(leave: number, now: number | null): string {
   const wait = now === null ? Infinity : leave - now;
+  if (wait < -60) return t('tripLeaveAt', { time: eveningClock(leave) });
   if (wait < 60) return t('tripGoNow');
   if (wait < 3600) return t('tripLeaveIn', { n: Math.floor(wait / 60) });
   return t('tripLeaveAt', { time: eveningClock(leave) });
