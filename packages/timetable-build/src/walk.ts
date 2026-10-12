@@ -93,7 +93,7 @@ function unescapeOpl(s: string): string {
   );
 }
 
-function parseTags(field: string): Map<string, string> {
+export function parseTags(field: string): Map<string, string> {
   const tags = new Map<string, string>();
   if (field.length <= 1) return tags;
   for (const kv of field.slice(1).split(',')) {

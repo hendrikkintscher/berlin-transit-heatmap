@@ -27,9 +27,14 @@ import {
   loadRecent,
   localMatches,
   matchScore,
+  parseStreetLines,
   rememberRecent,
+  streetMatches,
   withoutLocal,
+  withRemoteDetail,
   type LocalPlace,
+  type LocalStreet,
+  type StreetsFile,
 } from './search-local';
 import {
   loadFavourites,
@@ -806,6 +811,9 @@ const searchCache = new Map<string, Place[]>();
 /** Stations of the loaded timetable, asked from the worker when the search first opens. */
 let searchStations: LocalPlace[] | null = null;
 let stationsAsked = false;
+/** The region's streets (streets.json), loaded when the search first opens. */
+const searchStreets: LocalStreet[] = [];
+let streetsAsked = false;
 /** Photon's last answer, kept on screen (filtered) while the next one is on its way. */
 let lastRemote: Place[] = [];
 /**
@@ -829,6 +837,26 @@ function openSearch() {
   if (!stationsAsked) {
     stationsAsked = true;
     send({ type: 'stations', window: state.window });
+  }
+  if (!streetsAsked) {
+    streetsAsked = true;
+    fetch(new URL('streets.json', dataBase()))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((file: StreetsFile | null) => {
+        if (!file) return;
+        // A few thousand lines at a time, so opening the keyboard and typing stay smooth.
+        const lines = file.streets.split('\n');
+        const step = (from: number) => {
+          searchStreets.push(...parseStreetLines(file.box, lines.slice(from, from + 2000)));
+          if (from + 2000 < lines.length) setTimeout(() => step(from + 2000));
+          else if (!searchPanel.hidden) showSuggestions();
+        };
+        step(0);
+      })
+      .catch(() => {
+        // No street list: streets still come from Photon.
+        streetsAsked = false;
+      });
   }
   showSuggestions();
 }
@@ -854,12 +882,19 @@ function showSuggestions(remote = lastRemote) {
   const house = houseQuery();
   if (streetPick?.street && house !== null) {
     // The street's houses for the typed number, and the street itself to pick as is.
-    const whole = { ...streetPick, street: undefined, detail: streetPick.detail };
-    renderPlaces([...(house ? streetHouses(remote, streetPick.street) : []), whole].slice(0, 8));
+    const { label, detail, lat, lon } = streetPick;
+    const whole = { label, detail, lat, lon };
+    renderPlaces(
+      [...(house ? streetHouses(remote, streetPick.street, streetPick) : []), whole].slice(0, 8),
+    );
     showMsg(house ? '' : t('houseNumberHint'));
     return;
   }
-  const local = localMatches(q, localPool(), q.length >= 3 ? 3 : 5);
+  const c = map.getCenter();
+  const local = [
+    ...localMatches(q, localPool(), q.length >= 3 ? 3 : 5),
+    ...withRemoteDetail(streetMatches(q, searchStreets, { lat: c.lat, lon: c.lng }), remote),
+  ];
   const fitting = remote.filter((p) => matchScore(`${p.label} ${p.detail}`, q) > 0);
   const list = [...local, ...withoutLocal(fitting, local)].slice(0, 8);
   renderPlaces(list);
@@ -916,9 +951,12 @@ function setActive(i: number) {
 
 async function runSearch(q: string) {
   // After a picked street: its houses, in its postcode ("Torstraße 12, 10119").
-  const street = houseQuery() ? streetPick?.street : undefined;
+  const picked = houseQuery() ? streetPick : null;
+  const street = picked?.street;
   if (street) q = [`${street.name} ${houseQuery()}`, street.postcode].filter(Boolean).join(', ');
-  const key = `${street ? 'house:' : ''}${q.toLowerCase()}`;
+  // Houses are asked for around the picked street: there may be twenty of that name.
+  const c = picked ? { lat: picked.lat, lng: picked.lon } : map.getCenter();
+  const key = `${picked ? `house:${picked.lat},${picked.lon}:` : ''}${q.toLowerCase()}`;
   const cached = searchCache.get(key);
   if (cached) {
     lastRemote = cached;
@@ -928,7 +966,6 @@ async function runSearch(q: string) {
   }
   searchAbort?.abort();
   const ctrl = (searchAbort = new AbortController());
-  const c = map.getCenter();
   try {
     const list = await searchPlaces(
       q,

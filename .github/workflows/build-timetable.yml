@@ -97,5 +97,5 @@ jobs:
           notes="Timetable files for the web app, built $(date -u +%Y-%m-%d) from VBB GTFS ($feed). Reference service day: $service. Real dates: $dates. Data © VBB, CC BY 4.0."
           # Only new and changed files go up, never leaving one missing (scripts/publish).
           keep=""
-          if [ ! -f work/out/walk.bin ]; then keep="--keep walk.bin"; fi
+          if [ ! -f work/out/walk.bin ]; then keep="--keep walk.bin --keep streets.json"; fi
           node scripts/publish/publish.mjs --dir work/out --tag "$TIMETABLE_TAG" --notes "$notes" --swap-above "${{ inputs.swap_above || '300' }}" $keep

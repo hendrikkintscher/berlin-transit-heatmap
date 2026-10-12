@@ -5,6 +5,7 @@ import { buildTimetables } from './build.ts';
 import { addDays, berlinToday } from './calendar.ts';
 import { openGtfs } from './source.ts';
 import { writeOutputs } from './output.ts';
+import { addTowns, encodeStreets, readStreetsFile, type Street } from './streets.ts';
 import { encodeWalkGraph, readOplFile } from './walk.ts';
 import { gzipSync } from 'node:zlib';
 
@@ -36,12 +37,15 @@ const log = (message: string) =>
   console.log(`[${((Date.now() - started) / 1000).toFixed(1)}s] ${message}`);
 
 let walk: Awaited<ReturnType<typeof readOplFile>> | undefined;
+let streets: Street[] | undefined;
 if (values.osm) {
   walk = await readOplFile(resolve(values.osm));
   const st = walk.stats;
   log(
     `walking network: ${st.nodes} nodes, ${st.edges} edges, ${Math.round(st.lengthKm)} km from ${st.keptWays} of ${st.osmWays} OSM ways`,
   );
+  streets = await readStreetsFile(resolve(values.osm));
+  log(`street list: ${streets.length} streets`);
 }
 
 // Real dates: today in Berlin and the days after it, each with its own 24 hourly windows.
@@ -70,8 +74,23 @@ try {
       gzipBytes: gzipSync(bin, { level: 9 }).length,
     };
   }
+  if (streets) {
+    addTowns(streets, result.stopsFile.stops);
+    const json = JSON.stringify(encodeStreets(streets));
+    mkdirSync(resolve(values.out), { recursive: true });
+    writeFileSync(join(resolve(values.out), 'streets.json'), json);
+    extra.streets = {
+      count: streets.length,
+      bytes: json.length,
+      gzipBytes: gzipSync(json, { level: 9 }).length,
+    };
+  }
   const info = writeOutputs(result, resolve(values.out), extra);
   if (walk) log(`walk.bin: ${mb(bin(info).bytes)} (${mb(bin(info).gzipBytes)} gzipped)`);
+  if (streets) {
+    const st = (info as unknown as { streets: { bytes: number; gzipBytes: number } }).streets;
+    log(`streets.json: ${mb(st.bytes)} (${mb(st.gzipBytes)} gzipped)`);
+  }
   log(`service date ${info.serviceDate}, feed ${info.feedVersion}`);
   log(`stops ${info.stats.stops} (of which stations ${info.stats.stations})`);
   for (const [name, w] of Object.entries(info.stats.windows))

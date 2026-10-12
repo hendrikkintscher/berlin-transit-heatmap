@@ -114,3 +114,12 @@ describe('staged address search', () => {
     expect(list[0]?.label).toBe('Bäckerei');
   });
 });
+
+describe('streetHouses without a postcode', () => {
+  it('keeps the houses near the picked street', () => {
+    const house = (lat: number) => ({ label: 'Hauptstraße 5', detail: '', lat, lon: 13.1 });
+    expect(
+      streetHouses([house(52.4), house(52.6)], { name: 'Hauptstraße' }, { lat: 52.401, lon: 13.1 }),
+    ).toEqual([house(52.4)]);
+  });
+});
