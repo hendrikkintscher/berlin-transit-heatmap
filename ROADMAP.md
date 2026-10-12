@@ -18,6 +18,7 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 10. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
 11. Default view readability: two variants to compare (C9, group 15)
 12. Named starts in meeting mode (D2, group 15)
+13. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -923,3 +924,15 @@ The builder posts both links with the same start point so Hendrik can compare th
 ### Named starts in meeting mode (D2)
 
 Picked by Hendrik on 2026-10-12 ("Yes"). In meeting mode each start can carry an optional name (default "1. Start", "2. Start"). The name and its colour match on the map marker, in the trip card and in the suggested meeting places, and names travel in the link. "Teilen" prefills the message with the three suggested places and each person's minutes. Nothing changes for a single start.
+
+### Code health, no change in behaviour (E1)
+
+Picked by Hendrik on 2026-10-12 ("Yes"), the last item of the third suggestions list. One or two PRs, nothing visible changes:
+
+- The READMEs describe today's app (no day/night windows, no JSON timetable examples, no "comes next" notes), the routing types are tidied and a stale comment goes.
+- One shared helper cleans stop names per region, replacing three separate copies.
+- The two largest files are split into smaller modules (pure moves): the app's main file into search, favourites and special maps, and the worker into timetables, painting, trips, home and living maps.
+- The region script runs with plain Node, covered by a test.
+- The worker keeps 4–5 timetables loaded instead of 3, so the current and next hour, a comparison and a step-free toggle don't push each other out.
+
+Slotted in whenever no feature step is waiting.
