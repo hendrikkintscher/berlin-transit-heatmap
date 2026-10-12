@@ -14,7 +14,9 @@ import {
   bandLabel,
 } from './colors';
 import {
+  dayLabel,
   formatDate,
+  hourLabel,
   gridSeconds,
   nightText,
   shortStop,
@@ -52,6 +54,7 @@ import {
   STATIONS_SOURCE,
 } from './map-layers';
 import { initChanges } from './changes';
+import { initChips } from './chips';
 import { initMenu } from './menu';
 import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
 import { initTap } from './tap';
@@ -84,6 +87,11 @@ const tip = $('tip');
 const tipText = $('tip-text');
 const tipAction = $<HTMLButtonElement>('tip-action');
 const installBtn = $<HTMLButtonElement>('install-btn');
+const secondBtn = $<HTMLButtonElement>('second-btn');
+secondBtn.addEventListener('click', () => {
+  searchFor = 'another';
+  openSearch();
+});
 
 // ---------- state, from the link (see url.ts) ----------
 const state = createState();
@@ -105,7 +113,8 @@ const desertCanvas = document.createElement('canvas');
 desertCanvas.width = desertCanvas.height = 1;
 
 // ---------- legend ----------
-// Every band gets the same width, so the finer 20–50 min bands get the most room.
+// A slim bar on the right edge, 0 at the top; every band gets the same height, so the finer
+// 20–50 min bands get the most room.
 const legendBands = BAND_COLORS.map((c, b) => {
   const s = document.createElement('span');
   s.style.background = c;
@@ -116,7 +125,7 @@ $('legend-bar').append(...legendBands);
 const legendTicks = [0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
   const tick = document.createElement('span');
   const i = BAND_EDGES_MIN.indexOf(m);
-  tick.style.left = `${(100 * i) / BAND_COLORS.length}%`;
+  tick.style.top = `${(100 * i) / BAND_COLORS.length}%`;
   tick.textContent = String(m);
   tick.dataset.m = String(m);
   if (m === 120) tick.dataset.t = 'legendMax';
@@ -135,13 +144,13 @@ $('diff-bar').append(
 $('diff-ticks').append(
   ...[-20, -10, -5, 5, 10, 20, 30].map((m) => {
     const tick = document.createElement('span');
-    tick.style.left = `${(100 * DIFF_EDGES_MIN.indexOf(m)) / DIFF_COLORS.length}%`;
+    tick.style.top = `${(100 * DIFF_EDGES_MIN.indexOf(m)) / DIFF_COLORS.length}%`;
     tick.textContent = m > 0 ? `+${m}` : `−${-m}`;
     return tick;
   }),
   Object.assign(document.createElement('span'), { textContent: 'min' }),
 );
-// The home map: the last quick connection home, latest (all night) on the left.
+// The home map: the last quick connection home, latest (all night) at the top.
 $('home-bar').append(
   ...HOME_COLORS.map((c) => {
     const s = document.createElement('span');
@@ -152,7 +161,7 @@ $('home-bar').append(
 $('home-ticks').append(
   ...HOME_TICKS.map((label, i) => {
     const tick = document.createElement('span');
-    tick.style.left = `${(100 * (i + 1)) / HOME_COLORS.length}%`;
+    tick.style.top = `${(100 * (i + 1)) / HOME_COLORS.length}%`;
     tick.textContent = label;
     return tick;
   }),
@@ -227,11 +236,20 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (m.living || m.home) special.done(m);
     state.result = m;
     showResult(m);
+    // The switch went on while it was computing.
+    if (m.unpainted && state.heat) send({ type: 'paint', id: m.id });
     tap.onResult();
     loadbar.hidden = true;
     const s = m.totalMs / 1000;
     setStatus(() => t('computed', { s: formatDecimal(s, 1) }), true);
     showTips();
+  } else if (m.type === 'image') {
+    const r = state.result;
+    if (!r || r.id !== m.id || !r.unpainted) return;
+    r.image = m.image;
+    delete r.unpainted;
+    drawHeat(r);
+    showHeat();
   } else if (m.type === 'trip') {
     tap.onTrip(m);
   } else if (m.type === 'layers') {
@@ -291,6 +309,7 @@ function compute() {
     ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
     ...(state.others.length ? { others: state.others } : {}),
+    ...(state.heat ? {} : { noImage: true as const }),
   });
 }
 
@@ -352,6 +371,9 @@ function showOrigin() {
   list.forEach((p, i) => startMarker(i).setLngLat([p.lon, p.lat]).addTo(map));
   meetChip.hidden = list.length < 2;
   hint.hidden = list.length > 0 || !!state.special || !$('search').hidden;
+  // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
+  secondBtn.hidden = !list.length || list.length >= MAX_STARTS || !!state.special;
+  secondBtn.querySelector('span')!.textContent = t('secondHere', { n: list.length + 1 });
 }
 
 /** The starts changed: markers, the tapped place, the link and the map follow. */
@@ -522,6 +544,17 @@ function showResult(r: Result) {
   renderFavourites();
   showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined);
   if (!state.mapReady) return;
+  drawHeat(r);
+  (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
+  (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
+  (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
+  showHeat();
+  map.triggerRepaint();
+}
+
+/** Puts the result's colour image on the map (an empty one while it is unpainted). */
+function drawHeat(r: Result) {
+  if (!state.mapReady) return;
   const { width, height, rgba } = r.image;
   heatCanvas.width = width;
   heatCanvas.height = height;
@@ -560,10 +593,6 @@ function showResult(r: Result) {
     src.play();
     src.pause();
   }
-  (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
-  (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
-  (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
-  showHeat();
   map.triggerRepaint();
 }
 
@@ -703,6 +732,7 @@ let active = -1;
 const searchCache = new Map<string, Place[]>();
 
 function openSearch() {
+  chips.close();
   searchPanel.hidden = false;
   hint.hidden = true;
   searchInput.focus();
@@ -805,8 +835,8 @@ searchInput.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-/** What a picked search result does: set the start, or add a favourite place. */
-let searchFor: 'start' | 'favourite' = 'start';
+/** What a picked search result does: set the start, add a favourite place or one more start. */
+let searchFor: 'start' | 'favourite' | 'another' = 'start';
 function pickPlace(p: Place) {
   closeSearch();
   if (searchFor === 'favourite') {
@@ -814,6 +844,12 @@ function pickPlace(p: Place) {
     searchInput.value = '';
     addFavourites([{ label: p.label, lat: p.lat, lon: p.lon }]);
     menu.open();
+    return;
+  }
+  if (searchFor === 'another') {
+    searchFor = 'start';
+    searchInput.value = '';
+    addStart({ lat: p.lat, lon: p.lon });
     return;
   }
   searchInput.value = p.label;
@@ -1162,9 +1198,17 @@ const tap = initTap(
   link.to,
 );
 
-const whenSheet = initWhenSheet({
+const chips = initChips({
   state,
   closeSearch,
+  compareText: () =>
+    state.compare ? `${dayLabel(state.compare.day)} ${hourLabel(state.compare.hour)}` : '',
+});
+
+const whenSheet = initWhenSheet({
+  state,
+  closePanel: () => chips.close(),
+  rendered: () => chips.render(),
   changed: () => {
     if (state.origin || state.special) tap.keepSpot();
     else tap.hideReadout();
@@ -1186,17 +1230,28 @@ const menu = initMenu({
     writeUrl();
     compute();
   },
-  walkChanged: redoWalks,
+  walkChanged: () => {
+    redoWalks();
+    chips.render();
+  },
   layerChanged: () => {
     showLayers();
     tap.redrawSpot();
+    chips.render();
   },
   setLayerVisible: (layers, on) => {
+    chips.render();
     if (!state.mapReady) return;
     for (const id of layers === 'routes' ? ROUTE_LAYERS : OUTLINE_LAYERS)
       map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
   },
-  heatChanged: showHeat,
+  heatChanged: () => {
+    // Computed with the switch off: the colours are drawn now, from the same grid.
+    const r = state.result;
+    if (state.heat && r?.unpainted) send({ type: 'paint', id: r.id });
+    showHeat();
+    chips.render();
+  },
   opacityChanged: () => {
     if (map.getLayer(HEAT_LAYER))
       map.setPaintProperty(HEAT_LAYER, 'raster-opacity', heatOpacity(state.opacity));

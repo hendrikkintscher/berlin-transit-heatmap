@@ -71,6 +71,6 @@ describe('day labels', () => {
     expect(dayLabel('20261013', now)).toBe('Morgen');
     expect(dayLabel('20261014', now)).toBe('Mi 14.');
     expect(dateLabel('20261101')).toBe('So 1.');
-    expect(dayLabel('weekend', now)).toBe('Wochenende');
+    expect(dayLabel('weekend', now)).toBe('Sa+So');
   });
 });

@@ -287,6 +287,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       let outlines: ReturnType<typeof traceOutlines>;
       let compare: Float32Array<ArrayBuffer> | undefined;
       let extraBase: number | undefined;
+      unpainted = null;
       if (msg.compare) {
         const tt2 = await prepared(msg.compare, msg.direction, variant);
         const other = starts.map((o) => run(tt2, o, typical, travel, false, leaveAt(tt2)).shown);
@@ -298,7 +299,11 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         // Meeting point: colour the extra minutes over the best spot, so it is always green.
         extraBase = meeting ? minFinite(grid.seconds) : 0;
         const shownSeconds = extraBase ? grid.seconds.map((v) => v - extraBase!) : grid.seconds;
-        image = paint(grid, shownSeconds);
+        if (msg.noImage) {
+          // Heatmap off: the outlines come first; the colours wait for a 'paint'.
+          image = { width: 1, height: 1, rgba: new Uint8ClampedArray(4) };
+          unpainted = { id: msg.id, grid, values: shownSeconds };
+        } else image = paint(grid, shownSeconds);
         // Outlines follow a more strongly blurred field, so walk bubbles round off.
         outlines = traceOutlines(shownSeconds, grid.cols, grid.rows, grid.bbox, OUTLINE_BLUR_CELLS);
       }
@@ -331,6 +336,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           outlines,
           computedInMs: runs.reduce((a, r) => a + r.result.computedInMs, 0),
           totalMs: performance.now() - t0,
+          ...(unpainted ? { unpainted: true as const } : {}),
         } satisfies FromWorker,
         [
           image.rgba.buffer,
@@ -339,6 +345,13 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           ...(compare ? [compare.buffer] : []),
         ],
       );
+    } else if (msg.type === 'paint') {
+      if (unpainted?.id !== msg.id) return;
+      const image = paint(unpainted.grid, unpainted.values);
+      unpainted = null;
+      ctx.postMessage({ type: 'image', id: msg.id, image } satisfies FromWorker, [
+        image.rgba.buffer,
+      ]);
     } else if (msg.type === 'living') {
       await living(msg);
     } else if (msg.type === 'home') {
@@ -388,6 +401,9 @@ const eveningSeconds = (window: Window) => {
 };
 
 /** The last home map: what a tap needs to rebuild its last fast connection. */
+/** The last map, computed without its colour image (Heatmap off). */
+let unpainted: { id: number; grid: HeatGrid; values: Float32Array } | null = null;
+
 let lastHome: {
   id: number;
   origin: { lat: number; lon: number };
