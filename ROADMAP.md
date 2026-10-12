@@ -4,14 +4,13 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #64. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #66. Build in this order, one step per PR:
 
-1. **Next:** "Bis wann komme ich heim?": the last connection home (group 6)
-2. Wider area: Potsdam and the commuter belt (group 13)
-3. Calmer street level: footpaths next to streets (group 7)
-4. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-5. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-6. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Wider area: Potsdam and the commuter belt (group 13)
+2. Calmer street level: footpaths next to streets (group 7)
+3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+5. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -287,6 +286,8 @@ Today a tapped place (the destination whose minutes and trip are shown in the in
 Notes: every settings change calls hideReadout() in main.ts, which drops the tapped place; instead keep the point and re-run the trip request once the new grid is ready. One trip per change, so no cost to speed. Small effort; added from Hendrik's request on 2026-10-11.
 
 ### "Bis wann komme ich heim?": the last connection home (C3)
+
+**Done** (PR #66): from the start card (🌙 Bis wann heim?) or a favourite's 🌙, the map colours every place by the latest departure that still gets you home fast, over the evening and night timetables (20–04 Uhr). A tap shows that last connection and whether the night network carries on later. Closing a special map (this one or the Wohnlage-Karte) now brings the start's map back.
 
 At night the question is not how long, but how late you can still leave. With home (the start, or a favourite) as the target, colour each place by the latest departure that still gets you home, with a marker where the night network takes over. A tap shows that last connection.
 
