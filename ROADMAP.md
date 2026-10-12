@@ -7,8 +7,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #158. Build in this order, one step per PR:
 
 1. **Next:** Exact minutes and "Jetzt" in the time sheet (group 4)
+2. Tap card: larger buttons, shorter meeting card (C2, group 15)
 
-From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -826,3 +827,10 @@ Picked by Hendrik on 2026-10-12 ("Yes"). Measured: each deploy uploads 459 MB, o
   **Done** (PR #156): timetables are .bin only, and each deploy copies only the files the app loads (streets.json added to the list for search). Pushes that change only Markdown no longer redeploy. The old JSON files leave the release with the next nightly build.
 
 - Commits that only change the roadmap or README no longer redeploy (a paths filter on the push trigger). The redeploy after the nightly timetable build stays.
+
+### Tap card: larger buttons, shorter meeting card (C2)
+
+Picked by Hendrik on 2026-10-12 ("Yes, both"). Measured: the secondary buttons are 121×30 px and the close button 36 px; a meeting card for three people is about 1,000 px tall.
+
+- Every button on the tap card is at least 44 px tall, including the secondary row and the close button.
+- In meeting mode, trips after the first fold behind "2 weitere Fahrten" ("N weitere Fahrten"), and a tap unfolds them.
