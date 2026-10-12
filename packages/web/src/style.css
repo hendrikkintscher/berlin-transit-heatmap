@@ -962,6 +962,13 @@ dialog.when {
   width: 100%;
   accent-color: var(--accent);
 }
+/* The opacity slider belongs to the Heatmap switch above it, and rests while that is off. */
+.slider-sub {
+  padding-left: 14px;
+}
+.slider:has(input:disabled) {
+  opacity: 0.45;
+}
 
 /* When dialog: compare with a second time. */
 .compare-row {

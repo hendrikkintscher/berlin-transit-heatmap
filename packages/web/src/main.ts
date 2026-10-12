@@ -37,7 +37,7 @@ import {
   LABELS_SOURCE,
   OUTLINE_LAYERS,
   OUTLINES_SOURCE,
-  outlineLabel,
+  styleOutlines,
   ROUTE_LAYERS,
   ROUTES_SOURCE,
   STATIONS_LAYER,
@@ -410,6 +410,7 @@ map.on('load', () => {
   // Start with the attribution collapsed to its (i) button so it does not cover the legend.
   document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
   addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
+  showHeat();
   if (state.result) showResult(state.result);
   showLayers();
 });
@@ -528,7 +529,6 @@ function showResult(r: Result) {
       DESERT_LAYER,
     );
   } else {
-    map.setLayoutProperty(HEAT_LAYER, 'visibility', 'visible');
     src.setCoordinates(coordinates);
     // A non-animated canvas source re-reads its canvas only while "playing".
     src.play();
@@ -537,13 +537,21 @@ function showResult(r: Result) {
   (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
   (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
   (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
-  if (map.getLayer('outlines-label'))
-    map.setLayoutProperty(
-      'outlines-label',
-      'text-field',
-      outlineLabel(r.home ? 'home' : r.extraBase !== undefined ? 'extra' : 'time'),
-    );
+  showHeat();
   map.triggerRepaint();
+}
+
+/**
+ * The colour fill follows the Heatmap switch (a comparison always shows it: it has no
+ * outlines), and the outlines change their look with it.
+ */
+function showHeat() {
+  if (!state.mapReady) return;
+  const r = state.result;
+  const heat = state.heat || !!r?.compare;
+  if (map.getLayer(HEAT_LAYER))
+    map.setLayoutProperty(HEAT_LAYER, 'visibility', r && heat ? 'visible' : 'none');
+  styleOutlines(map, r?.home ? 'home' : r?.extraBase !== undefined ? 'extra' : 'time', heat);
 }
 
 // A tap that only closes the search panel should not also set a point.
@@ -1159,6 +1167,7 @@ const menu = initMenu({
     for (const id of layers === 'routes' ? ROUTE_LAYERS : OUTLINE_LAYERS)
       map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
   },
+  heatChanged: showHeat,
   opacityChanged: () => {
     if (map.getLayer(HEAT_LAYER))
       map.setPaintProperty(HEAT_LAYER, 'raster-opacity', heatOpacity(state.opacity));

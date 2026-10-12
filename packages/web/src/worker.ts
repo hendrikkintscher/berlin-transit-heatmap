@@ -28,7 +28,7 @@ import {
   type WalkNetwork,
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
-import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut, homeLut } from './colors';
+import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut, homeLut, HOME_OUTLINE_MINUTES } from './colors';
 import { blurSeconds, warpField } from './soften';
 import { outlines as traceOutlines } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
@@ -64,8 +64,6 @@ const SOFT = { blurCells: 2, warpCells: 2.5, warpWavelengthCells: 9, featherSeco
 const LUT = colorLut(SOFT.featherSeconds);
 const DIFF_LUT = diffLut();
 const HOME_LUT = homeLut();
-/** Home map outlines on the hour: 2, 1, 0 and 23 Uhr (minutes before 4 Uhr). */
-const HOME_OUTLINE_MINUTES = [120, 180, 240, 300];
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 const post = (m: FromWorker) => ctx.postMessage(m);
