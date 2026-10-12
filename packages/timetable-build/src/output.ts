@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { isDatedWindow, type BuildResult } from './build.ts';
+import type { ChangesFile } from './changes.ts';
 // The binary format (Contract 4) lives with its decoder; that file imports nothing.
 import { encodeTimetable } from '../../routing/src/ttbin.ts';
 
@@ -22,7 +23,8 @@ export interface BuildInfo {
 /**
  * Writes timetable-<window>.bin (Contract 4, what the app loads) for every window, the
  * same as timetable-<window>.json for the reference-day windows (the real dates only get
- * the binary: there are many of them), stops.json and build-info.json.
+ * the binary: there are many of them), stops.json, changes.json (with real dates) and
+ * build-info.json.
  */
 export function writeOutputs(result: BuildResult, outDir: string, extra: object = {}): BuildInfo {
   mkdirSync(outDir, { recursive: true });
@@ -37,6 +39,14 @@ export function writeOutputs(result: BuildResult, outDir: string, extra: object 
     save(`timetable-${name}.bin`, encodeTimetable(tt));
   }
   write('stops.json', result.stopsFile);
+  if (result.changes) {
+    const changes: ChangesFile = {
+      version: 1,
+      feedVersion: result.stats.feedVersion,
+      days: result.changes,
+    };
+    write('changes.json', changes);
+  }
   const info: BuildInfo = {
     version: 1,
     builtAt: new Date().toISOString(),

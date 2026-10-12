@@ -6,6 +6,7 @@ import {
   pickWeekendDay,
   ServiceCalendar,
 } from './calendar.ts';
+import { findChanges, WATCHED_MODES, type Change, type WatchedTrip } from './changes.ts';
 import { parseTime, readCsv } from './csv.ts';
 import { BERLIN_BBOX, type BBox, forEachNearbyPair, inBBox } from './geo.ts';
 import type { GtfsSource } from './source.ts';
@@ -95,6 +96,8 @@ export interface WindowStats {
 export interface BuildResult {
   /** "day", "night" and, when built, the hourly windows such as "weekday-10". */
   timetables: Record<string, Timetable>;
+  /** With real dates: per date the lines that run differently from usual (changes.ts). */
+  changes?: Record<string, Change[]>;
   stopsFile: StopsFile;
   stats: {
     serviceDate: string;
@@ -184,13 +187,23 @@ export async function buildTimetables(
   log(`stops.txt: ${rawStops.length} rows`);
 
   // --- routes ------------------------------------------------------------
-  const routes = new Map<string, { name: string; mode: Mode }>();
+  const routes = new Map<string, { name: string; mode: Mode; agency: string }>();
   await readCsv(await source.open('routes.txt'), (get) => {
     routes.set(get('route_id'), {
       name: get('route_short_name') || get('route_long_name') || get('route_id'),
       mode: modeOf(Number(get('route_type'))),
+      agency: get('agency_id'),
     });
   });
+  // With real dates, every trip of the watched lines (and of buses with their names, the
+  // rail replacement) is kept as a station list to find what runs differently (changes.ts).
+  const watchChanges = (options.dates?.length ?? 0) > 0;
+  const lineKey = (r: { name: string; agency: string }) => `${r.agency}|${r.name}`;
+  const watchedLines = new Map<string, { name: string; mode: Mode }>();
+  if (watchChanges)
+    for (const r of routes.values())
+      if (WATCHED_MODES.includes(r.mode)) watchedLines.set(lineKey(r), r);
+  const watched = new Map<string, WatchedTrip & { seq: number[]; stops: number[] }>();
 
   // --- calendar ----------------------------------------------------------
   const calendar = new ServiceCalendar();
@@ -242,6 +255,19 @@ export async function buildTimetables(
   const trips = new Map<string, TripRows>();
   await readCsv(await source.open('trips.txt'), (get) => {
     const serviceId = get('service_id');
+    const route = routes.get(get('route_id'));
+    if (route && watchedLines.has(lineKey(route))) {
+      const replacement = !WATCHED_MODES.includes(route.mode);
+      if (!replacement || route.mode === 'bus')
+        watched.set(get('trip_id'), {
+          line: lineKey(route),
+          serviceId,
+          replacement,
+          stations: [],
+          seq: [],
+          stops: [],
+        });
+    }
     if (!anyActive(serviceId)) return;
     if (!routes.has(get('route_id'))) return;
     trips.set(get('trip_id'), {
@@ -257,10 +283,17 @@ export async function buildTimetables(
 
   // --- stop_times (large: streamed, only in-bbox rows of active trips kept) ---
   const stopTimeRows = await readCsv(await source.open('stop_times.txt'), (get) => {
-    const trip = trips.get(get('trip_id'));
-    if (!trip) return;
+    const tripId = get('trip_id');
+    const trip = trips.get(tripId);
+    const w = watched.get(tripId);
+    if (!trip && !w) return;
     const s = stopIndex.get(get('stop_id'));
     if (s === undefined || !rawStops[s]!.inside) return;
+    if (w) {
+      w.seq.push(Number(get('stop_sequence')));
+      w.stops.push(s);
+    }
+    if (!trip) return;
     if (get('pickup_type') === '1' && get('drop_off_type') === '1') return;
     let t = parseTime(get('departure_time'));
     if (Number.isNaN(t)) t = parseTime(get('arrival_time'));
@@ -350,6 +383,39 @@ export async function buildTimetables(
     return stop;
   });
 
+  // --- what runs differently on each date ---------------------------------
+  let changes: Record<string, Change[]> | undefined;
+  if (watchChanges) {
+    const list: WatchedTrip[] = [];
+    for (const w of watched.values()) {
+      const order = w.seq.map((_, i) => i).sort((a, b) => w.seq[a]! - w.seq[b]!);
+      const stations: number[] = [];
+      for (const i of order) {
+        const st = parentOf(w.stops[i]!) ?? w.stops[i]!;
+        if (stations.at(-1) !== st) stations.push(st);
+      }
+      list.push({ line: w.line, serviceId: w.serviceId, replacement: w.replacement, stations });
+    }
+    watched.clear();
+    changes = findChanges({
+      trips: list,
+      lines: watchedLines,
+      stations: (i) => ({
+        name: rawStops[i]!.name,
+        lat: round5(rawStops[i]!.lat),
+        lon: round5(rawStops[i]!.lon),
+      }),
+      isActive: (id, date) => calendar.isActive(id, date),
+      dates: options.dates!,
+      feedEnd: calendar.endDate(),
+    });
+    log(
+      `changes: ${Object.entries(changes)
+        .map(([d, c]) => `${d} ${c.length}`)
+        .join(', ')}`,
+    );
+  }
+
   // --- transfers (shared by both windows) --------------------------------
   const walk = options.walk ? new WalkDistances(options.walk) : undefined;
   const transfers = await buildTransfers(
@@ -395,6 +461,7 @@ export async function buildTimetables(
 
   return {
     timetables,
+    ...(changes ? { changes } : {}),
     stopsFile: { version: 1, serviceDate: isoDate(serviceDay), feedVersion, stops },
     stats: {
       serviceDate: isoDate(serviceDay),

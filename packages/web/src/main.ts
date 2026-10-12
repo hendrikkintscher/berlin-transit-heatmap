@@ -51,6 +51,7 @@ import {
   STATIONS_LAYER,
   STATIONS_SOURCE,
 } from './map-layers';
+import { initChanges } from './changes';
 import { initMenu } from './menu';
 import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
 import { initTap } from './tap';
@@ -92,6 +93,8 @@ Object.assign(state, link, { window: windowName(link.when) });
 if (state.others.length && state.measure === 'typical') state.measureBefore = 'next';
 const urlLang = new URLSearchParams(location.search).get('lang');
 setLang(initialLang(location.search, readStoredLang()), false);
+/** The "what's different today" notice, once the map exists. */
+let changes: ReturnType<typeof initChanges> | null = null;
 /** Layer windows already asked of the worker. */
 const layersRequested = new Set<string>();
 
@@ -247,6 +250,7 @@ function renderFeedInfo() {
     : t('feedLoading');
   // A date shows its own timetable, or says when its typical day stood in for it.
   const date = isDate(state.when.day) ? isoDay(state.when.day) : null;
+  changes?.update();
   $('data-note').textContent = !i
     ? ''
     : t(!date ? 'dataNote' : date === i.serviceDate ? 'dataNoteDate' : 'dataNoteFallback', {
@@ -313,6 +317,7 @@ const map = new maplibregl.Map({
   pitchWithRotate: false,
 });
 map.touchZoomRotate.disableRotation();
+changes = initChanges({ map, state, dataBase: new URL('data/', document.baseURI).href });
 
 // Start markers: the first, and up to four more for a meeting point, each in its colour.
 // Dragging one moves that start; tapping it offers to remove it (a drag is not a tap).

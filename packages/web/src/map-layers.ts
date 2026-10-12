@@ -34,6 +34,9 @@ const AREA_SOURCE = 'area';
 const WATER = '#a9c7dc';
 export const TRIP_SOURCE = 'trip';
 export const TRIP_STOPS_SOURCE = 'trip-stops';
+/** "What's different today": the stretch of a line that does not run, from changes.json. */
+export const CHANGES_SOURCE = 'changes';
+const CHANGE_COLOR = '#d6336c';
 const BOLD_FONT = ['Noto Sans Bold'];
 
 const modeColor = [
@@ -381,6 +384,50 @@ export function addMapLayers(
       'text-optional': true,
     },
     paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
+  });
+  map.addSource(CHANGES_SOURCE, { type: 'geojson', data: empty });
+  map.addLayer({
+    id: 'changes-casing',
+    type: 'line',
+    source: CHANGES_SOURCE,
+    filter: ['==', ['geometry-type'], 'LineString'],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: { 'line-color': '#ffffff', 'line-width': 9 },
+  });
+  map.addLayer({
+    id: 'changes-line',
+    type: 'line',
+    source: CHANGES_SOURCE,
+    filter: ['==', ['geometry-type'], 'LineString'],
+    layout: { 'line-join': 'round' },
+    paint: { 'line-color': CHANGE_COLOR, 'line-width': 5, 'line-dasharray': [1.6, 1] },
+  });
+  map.addLayer({
+    id: 'changes-stops',
+    type: 'circle',
+    source: CHANGES_SOURCE,
+    filter: ['==', ['geometry-type'], 'Point'],
+    paint: {
+      'circle-radius': 5,
+      'circle-color': ['case', ['get', 'gone'], CHANGE_COLOR, '#ffffff'],
+      'circle-stroke-color': CHANGE_COLOR,
+      'circle-stroke-width': 2.5,
+    },
+  });
+  map.addLayer({
+    id: 'changes-label',
+    type: 'symbol',
+    source: CHANGES_SOURCE,
+    filter: ['has', 'name'],
+    layout: {
+      'text-field': ['get', 'name'],
+      'text-font': BOLD_FONT,
+      'text-size': 12,
+      'text-anchor': 'left',
+      'text-offset': [0.8, 0],
+      'text-optional': true,
+    },
+    paint: { 'text-color': CHANGE_COLOR, 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
   });
   // Bezirke at city zoom; the basemap's Ortsteil names take over from zoom 11.5.
   map.addSource('bezirke', { type: 'geojson', data: bezirke });

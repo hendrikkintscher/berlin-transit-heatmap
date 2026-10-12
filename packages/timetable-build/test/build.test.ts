@@ -252,6 +252,10 @@ describe('real dates', () => {
     });
   });
 
+  it('lists what runs differently for each date', () => {
+    expect(Object.keys(dated.changes ?? {})).toEqual(['20261014', '20261015', '20261017']);
+  });
+
   it('carries a one-off trip only on its own date', () => {
     // t8 runs only on Wed 14 October (calendar_dates), at 02:15.
     expect(firstTimes(dated.timetables['20261014-02']!, 'N9')).toContain(t('02:15'));
