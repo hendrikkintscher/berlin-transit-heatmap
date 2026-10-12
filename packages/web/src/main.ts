@@ -12,6 +12,7 @@ import {
   HOME_COLORS,
   HOME_TICKS,
   bandLabel,
+  outlineBandColor,
 } from './colors';
 import { formatDate, gridSeconds, shortStop, stopName, escapeHtml, whenText } from './format';
 import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
@@ -87,14 +88,21 @@ desertCanvas.width = desertCanvas.height = 1;
 
 // ---------- legend ----------
 // Every band gets the same width, so the finer 20–50 min bands get the most room.
-$('legend-bar').append(
-  ...BAND_COLORS.map((c, b) => {
-    const s = document.createElement('span');
-    s.style.background = c;
-    s.title = `${bandLabel(b)} min`;
-    return s;
-  }),
-);
+const legendBands = BAND_COLORS.map((c, b) => {
+  const s = document.createElement('span');
+  s.style.background = c;
+  s.title = `${bandLabel(b)} min`;
+  return s;
+});
+$('legend-bar').append(...legendBands);
+/** Without the colour fill the legend shows the outlines' one hue in 10-minute steps. */
+function paintLegendBands(outlinesOnly: boolean) {
+  $('legend-bar').classList.toggle('steps', outlinesOnly);
+  legendBands.forEach((s, b) => {
+    s.style.background = outlinesOnly ? outlineBandColor(b) : BAND_COLORS[b];
+  });
+}
+paintLegendBands(!state.heat);
 const legendTicks = [0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
   const tick = document.createElement('span');
   const i = BAND_EDGES_MIN.indexOf(m);
@@ -546,9 +554,10 @@ function showResult(r: Result) {
  * outlines), and the outlines change their look with it.
  */
 function showHeat() {
-  if (!state.mapReady) return;
   const r = state.result;
   const heat = state.heat || !!r?.compare;
+  paintLegendBands(!heat);
+  if (!state.mapReady) return;
   if (map.getLayer(HEAT_LAYER))
     map.setLayoutProperty(HEAT_LAYER, 'visibility', r && heat ? 'visible' : 'none');
   styleOutlines(map, r?.home ? 'home' : r?.extraBase !== undefined ? 'extra' : 'time', heat);

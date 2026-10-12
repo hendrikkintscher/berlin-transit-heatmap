@@ -17,6 +17,10 @@ import {
   diffLut,
   MAX_BAND,
   oklab,
+  OUTLINE_BEYOND_COLOR,
+  OUTLINE_STEP_COLORS,
+  OUTLINE_STEP_MINUTES,
+  outlineBandColor,
 } from './colors';
 
 describe('colour bands', () => {
@@ -106,5 +110,23 @@ describe('difference colours', () => {
     expect(homeBandOf(10 * 3600)).toBe(HOME_COLORS.length - 1); // 18 Uhr
     expect(HOME_TICKS).toHaveLength(HOME_COLORS.length - 1);
     expect(homeLut()[3]).toBe(255);
+  });
+});
+
+describe('single-hue outlines', () => {
+  it('has one colour per 10-minute step, darkest first', () => {
+    expect(OUTLINE_STEP_MINUTES).toEqual([10, 20, 30, 40, 50, 60]);
+    expect(OUTLINE_STEP_COLORS).toHaveLength(OUTLINE_STEP_MINUTES.length);
+    const light = OUTLINE_STEP_COLORS.map((c) => oklab(c)[0]);
+    for (let i = 1; i < light.length; i++) expect(light[i]).toBeGreaterThan(light[i - 1]);
+  });
+
+  it('colours each legend band by the outline it lies inside', () => {
+    expect(outlineBandColor(bandOf(4 * 60))).toBe(OUTLINE_STEP_COLORS[0]);
+    expect(outlineBandColor(bandOf(9 * 60))).toBe(OUTLINE_STEP_COLORS[0]);
+    expect(outlineBandColor(bandOf(23 * 60))).toBe(OUTLINE_STEP_COLORS[2]);
+    expect(outlineBandColor(bandOf(58 * 60))).toBe(OUTLINE_STEP_COLORS[5]);
+    expect(outlineBandColor(bandOf(80 * 60))).toBe(OUTLINE_BEYOND_COLOR);
+    expect(outlineBandColor(MAX_BAND)).toBe(OUTLINE_BEYOND_COLOR);
   });
 });
