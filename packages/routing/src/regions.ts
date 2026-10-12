@@ -9,8 +9,9 @@ export type Box = [number, number, number, number];
 export interface Region {
   /** Short id: the data folder (data/<id>/) and the prefix of what the phone stores. */
   id: string;
-  /** The app's name in the region. */
+  /** The app's name in the region, and its tagline. */
   title: { de: string; en: string };
+  tagline: { de: string; en: string };
   /** The heatmap grid's area; search results are kept inside it too. */
   bbox: Box;
   /** Stops kept by the timetable build: the grid plus a margin. */
@@ -34,7 +35,8 @@ export interface Region {
 export const REGIONS = {
   berlin: {
     id: 'berlin',
-    title: { de: 'Berlin in Minuten', en: 'Berlin in Minutes' },
+    title: { de: 'Wohin jetzt?', en: 'Wohin jetzt?' },
+    tagline: { de: 'Öffis mit einem Tap', en: 'Transit in one tap' },
     // Berlin, Potsdam and the commuter belt (Werder, Oranienburg, Bernau, Strausberg,
     // Erkner, Königs Wusterhausen).
     bbox: [12.9, 52.27, 13.92, 52.8],

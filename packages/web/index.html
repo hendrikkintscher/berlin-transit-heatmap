@@ -11,11 +11,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Berlin Transit" />
+    <meta name="apple-mobile-web-app-title" content="Wohin jetzt?" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-    <title>Berlin in Minuten</title>
+    <title>Wohin jetzt? · Öffis mit einem Tap</title>
   </head>
   <!-- Starts without the colour legend (colours are off by default; main.ts shows it). -->
   <body class="no-legend">
@@ -23,7 +23,7 @@
     <div id="loadbar" hidden><div></div></div>
 
     <nav id="chips" class="chips unrendered" aria-label="Einstellungen" data-t-label="chipsLabel">
-      <div class="app-title" data-t="title">Berlin in Minuten</div>
+      <div class="app-title" data-t="title">Wohin jetzt?</div>
       <div class="chip-scroll">
         <button
           id="search-btn"
@@ -482,7 +482,7 @@
 
     <dialog id="menu" class="menu" aria-labelledby="menu-title">
       <div class="menu-head">
-        <h2 id="menu-title" data-t="title">Berlin in Minuten</h2>
+        <h2 id="menu-title" data-t="title">Wohin jetzt?</h2>
         <button
           id="menu-close"
           class="menu-x"
@@ -545,7 +545,8 @@
     </dialog>
 
     <dialog id="info">
-      <h2 data-t="title">Berlin in Minuten</h2>
+      <h2 data-t="title">Wohin jetzt?</h2>
+      <p class="tagline" data-t="tagline">Öffis mit einem Tap</p>
       <p data-t-html="aboutHow"></p>
       <p data-t-html="aboutLines"></p>
       <p data-t-html="aboutWindows"></p>
