@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and group 14 the Android app, which stays the last step. Items from the second suggestions list (plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and group 14 the Android app, postponed with no date (Hendrik, 2026-10-12). Items from the second suggestions list (plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
@@ -9,7 +9,10 @@ State on 2026-10-12, live through PR #85. Build in this order, one step per PR:
 1. **Next:** What's different today: notice of affected lines (group 11)
 2. Live disruptions as text (group 11)
 3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-4. Android app, starting with a TWA (group 14), always the last step
+
+After the UI overhaul, the list is done for now. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+
+Hendrik's standing go (2026-10-12): the builder keeps going through these steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -496,6 +499,8 @@ The covered rectangle is 13.05–13.80 E, 52.33–52.70 N (timetable-build/src/g
 Notes: a larger area means bigger timetables and walking network and more cells per tap, so measure first against the snappiness rule (and the CI speed budget from B1); a possible middle way is the wider area at a coarser grid outside Berlin. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 ## 14. Android app
+
+**Postponed** (Hendrik, 2026-10-12): not started yet and not planned any time soon.
 
 ### Native Android app and how to ship it
 
