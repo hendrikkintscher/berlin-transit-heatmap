@@ -31,6 +31,8 @@ From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next
 
 **Blocked until Hendrik agrees:** Beta testing readiness (group 14). The plan is written down there (packages A, B and C, plus the address choice); nothing starts until Hendrik explicitly agrees to a package and an address. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
+General rule (Hendrik, 2026-10-12): every instruction is first only noted. The roadmap editor (or, for group 17, the Review negotiator) places it on the roadmap and hands it to the builder only when it judges it the next thing to do; builders take work only from their editor or negotiator.
+
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
 **Not planned** (Hendrik, 2026-10-12): these were offered as next steps and set aside. They stay listed in archive/plan/suggestions-2.md and are not built unless Hendrik brings them back.
