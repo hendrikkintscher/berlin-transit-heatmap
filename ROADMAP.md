@@ -4,7 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #111. Nothing is queued: Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #111. Build in this order, one step per PR:
+
+1. **Next:** Top bar polish: everything in one scrolling bar, "Mehr" as a plain chip, "Heute anders" right above the trip card (group 12)
+
+From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -613,6 +617,16 @@ Hendrik, 2026-10-12: on first load the "Heute anders" frame still appears, and s
 - Elements needed only later load in the background or on first use, as in the load-order rule of the UI overhaul.
 
 Notes: check with a slowed-down network and CPU that the first frames show only base map, start point, outlines and the bar. No cost to the first map; it may get faster. Small effort.
+
+### Top bar polish
+
+Hendrik, 2026-10-12, two minor fixes after PR #111:
+
+- **One scrolling bar:** every item of the top bar, the search included, is part of the one horizontally scrolling bar; nothing stays fixed beside it.
+- **"Mehr" like the others:** the "Mehr" chip loses its ≡ symbol and looks like the other chips, with the drop-down indicator next to its label.
+- **"Heute anders" above the trip card:** the "Heute anders" note appears directly above the connection info box at the bottom, not elsewhere on the screen.
+
+Notes: layout only, URL parameters unchanged; check at 360×740 in German and English, and keep the flicker-free first view from PR #111. Small effort.
 
 ## 13. Wider area
 
