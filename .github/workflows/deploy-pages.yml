@@ -55,7 +55,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p packages/web/dist/data
-          if gh release download timetable-latest --repo "$GITHUB_REPOSITORY" --pattern '*.json' --pattern '*.bin' --dir packages/web/dist/data; then
+          if scripts/publish/download.sh timetable-latest packages/web/dist/data; then
             ls -la packages/web/dist/data
           else
             echo "::warning::No timetable-latest release yet; the app will run on demo data."
