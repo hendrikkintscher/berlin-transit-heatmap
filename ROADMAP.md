@@ -4,17 +4,16 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #55. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #57. Build in this order, one step per PR:
 
-1. **Next:** Speed budget checked in CI (group 10)
-2. Split main.ts before the UI overhaul (group 10)
-3. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
-4. "Bis wann komme ich heim?": the last connection home (group 6)
-5. Wider area: Potsdam and the commuter belt (group 13)
-6. Calmer street level: footpaths next to streets (group 7)
-7. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-8. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-9. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Split main.ts before the UI overhaul (group 10)
+2. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
+3. "Bis wann komme ich heim?": the last connection home (group 6)
+4. Wider area: Potsdam and the commuter belt (group 13)
+5. Calmer street level: footpaths next to streets (group 7)
+6. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+7. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+8. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -384,6 +383,8 @@ First load is about 1.2 MB (JS about 300 KB gzipped plus one hourly timetable of
 ### Speed budget checked in CI (B1)
 
 The snappiness rule is checked by hand in each PR today. A CI job fails a PR that makes things slower: gzipped JS size per chunk, timetable file size, and a headless timing of routing per origin in Node (packages/routing already has a bench), each against a stored baseline with some tolerance. Protects the USP automatically as features pile up. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+**Done** (PR #57): a CI job "speed" checks bundle sizes against `scripts/speed/budget.json`, and routing time and timetable size against main on the same runner.
 
 ### Split main.ts before the UI overhaul (B2)
 
