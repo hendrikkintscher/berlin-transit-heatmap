@@ -22,6 +22,10 @@ export const hourLabel = (h: number) =>
 export const clockLabel = (h: number, m: number) =>
   `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` + (lang() === 'de' ? ' Uhr' : '');
 
+/** A time in seconds after midnight of the evening (25 h = 1 Uhr), as "01:05 Uhr". */
+export const eveningClock = (s: number) =>
+  clockLabel(Math.floor(s / 3600) % 24, Math.floor((s % 3600) / 60));
+
 /** "werktags ab 10 Uhr" / "weekends from 02:00", for the tap readout. */
 export function whenText(w: When, direction: Direction) {
   if (direction === 'arrive')

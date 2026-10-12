@@ -166,14 +166,14 @@
       </button>
     </div>
 
-    <div id="living" class="chip meet" hidden>
-      <span id="living-text"></span>
+    <div id="special" class="chip meet" hidden>
+      <span id="special-text"></span>
       <button
-        id="living-close"
+        id="special-close"
         class="x"
         type="button"
-        aria-label="Wohnlage-Karte schließen"
-        data-t-label="livingClose"
+        aria-label="Zurück zur Karte"
+        data-t-label="specialClose"
       >
         ✕
       </button>
@@ -207,6 +207,9 @@
           <button id="readout-remove" class="alt" type="button" data-t="removeStart" hidden>
             Entfernen
           </button>
+          <button id="readout-home" class="alt" type="button" data-t="homeHere" hidden>
+            🌙 Bis wann heim?
+          </button>
         </span>
         <button
           id="readout-close"
@@ -223,6 +226,8 @@
         <div id="legend-ticks" class="legend-ticks"></div>
         <div id="diff-bar" hidden></div>
         <div id="diff-ticks" class="legend-ticks" hidden></div>
+        <div id="home-bar" hidden></div>
+        <div id="home-ticks" class="legend-ticks" hidden></div>
       </div>
     </footer>
 

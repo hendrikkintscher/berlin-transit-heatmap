@@ -170,6 +170,45 @@ export function diffLut(): Uint8Array {
   return lut;
 }
 
+// Home map ("Bis wann komme ich heim?"): the last fast connection home, as minutes before
+// 4 Uhr. Green = all night, then later to earlier through yellow, red and purple to navy.
+
+/**
+ * Lower band edges in minutes before 4 Uhr: from 2 Uhr (a connection that late means the
+ * night network carries on: all night), 1, 0:30, 0, 23:30, 23, earlier.
+ */
+export const HOME_EDGES_MIN = [0, 120, 180, 210, 240, 270, 300];
+export const HOME_COLORS = [
+  '#1f8a5b',
+  '#b5d53a',
+  '#f7a334',
+  '#ea5a3a',
+  '#c22d5b',
+  '#7c2287',
+  '#2c3e8f',
+];
+/** Clock labels for the legend, one per band edge (band 0 is "after 3 Uhr"). */
+export const HOME_TICKS = ['2', '1', '0:30', '0', '23:30', '23'];
+
+export function homeBandOf(seconds: number): number {
+  const min = seconds / 60;
+  let b = 0;
+  while (b < HOME_EDGES_MIN.length - 1 && min >= HOME_EDGES_MIN[b + 1]) b++;
+  return b;
+}
+
+/** RGBA lookup for the home map, indexed by whole seconds before 4 Uhr. */
+export function homeLut(): Uint8Array {
+  const n = (HOME_EDGES_MIN[HOME_EDGES_MIN.length - 1] + 60) * 60 + 1;
+  const lut = new Uint8Array(n * 4);
+  const rgb = HOME_COLORS.map(hexToRgb);
+  for (let i = 0; i < n; i++) {
+    const c = rgb[homeBandOf(i)];
+    lut.set([c[0], c[1], c[2], 255], i * 4);
+  }
+  return lut;
+}
+
 /** Line colours, roughly following the usual Berlin map conventions. */
 export const MODE_COLORS: Record<string, string> = {
   sbahn: '#00843d',

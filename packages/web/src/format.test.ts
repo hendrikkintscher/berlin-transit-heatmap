@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { escapeHtml, googleDirections, gridSeconds, shortStop, stopName, whenText } from './format';
+import {
+  escapeHtml,
+  eveningClock,
+  googleDirections,
+  gridSeconds,
+  shortStop,
+  stopName,
+  whenText,
+} from './format';
 import { leaveOffset } from './when';
 
 describe('format', () => {
@@ -46,5 +54,10 @@ describe('format', () => {
     expect(leaveOffset({ day: 'weekday', hour: 10 }, now)).toBe(25 * 60 + 30);
     expect(leaveOffset({ day: 'weekday', hour: 11 }, now)).toBe(0);
     expect(leaveOffset({ day: 'weekend', hour: 10 }, now)).toBe(0);
+  });
+
+  it('reads evening seconds past midnight as a clock time', () => {
+    expect(eveningClock(25 * 3600 + 5 * 60)).toBe('01:05 Uhr');
+    expect(eveningClock(23 * 3600 + 59 * 60 + 30)).toBe('23:59 Uhr');
   });
 });

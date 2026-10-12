@@ -215,7 +215,7 @@ export function addMapLayers(
       visibility: isoVisibility,
       'symbol-placement': 'line',
       'symbol-spacing': 300,
-      'text-field': outlineLabel(false),
+      'text-field': outlineLabel('time'),
       'text-font': font,
       'text-size': 11,
       'text-keep-upright': true,
@@ -443,8 +443,14 @@ export function heatOpacity(percent: number): maplibregl.ExpressionSpecification
 }
 
 /** Outline labels: "15 min", or "+15 min" (extra minutes) at a meeting point. */
-export function outlineLabel(extra: boolean): maplibregl.ExpressionSpecification {
-  return ['concat', extra ? '+' : '', ['to-string', ['get', 'min']], ' min'];
+/**
+ * Outline labels: minutes ("15 min"), extra minutes at a meeting point ("+15 min"), or on
+ * the home map the clock time, its levels being minutes before 4 Uhr ("1:00").
+ */
+export function outlineLabel(kind: 'time' | 'extra' | 'home'): maplibregl.ExpressionSpecification {
+  if (kind === 'home')
+    return ['concat', ['to-string', ['%', ['-', 28, ['/', ['get', 'min'], 60]], 24]], ':00'];
+  return ['concat', kind === 'extra' ? '+' : '', ['to-string', ['get', 'min']], ' min'];
 }
 
 /** [west, south, east, north] as the corners a canvas source wants. */

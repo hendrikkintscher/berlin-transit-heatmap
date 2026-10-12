@@ -31,6 +31,8 @@ export const DEFAULT_OPACITY = 80;
 export type Result = Extract<FromWorker, { type: 'result' }>;
 export type Layers = Extract<FromWorker, { type: 'layers' }>;
 
+export type Special = { kind: 'living' } | { kind: 'home'; at: Point; name: string };
+
 export interface State {
   /** Weekday or weekend, and the departure hour; `window` names its timetable file. */
   when: When;
@@ -49,8 +51,11 @@ export interface State {
   origin: Point | null;
   /** Meeting point: the other people's starts (up to four). */
   others: Point[];
-  /** The "where can I live?" map from the favourites is shown instead of the start's map. */
-  living: boolean;
+  /**
+   * A map shown instead of the start's: "where can I live?" from the favourites, or
+   * "Bis wann komme ich heim?" to `at` (a start or a favourite, named `name`).
+   */
+  special: Special | null;
   requestId: number;
   info: Partial<Record<Window, TimetableInfo>>;
   routes: boolean;
@@ -86,7 +91,7 @@ export function createState(): State {
     compare: null,
     origin: null,
     others: [],
-    living: false,
+    special: null,
     requestId: 0,
     info: {},
     routes: true,

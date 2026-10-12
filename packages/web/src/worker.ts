@@ -28,7 +28,7 @@ import {
   type WalkNetwork,
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
-import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut } from './colors';
+import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut, homeLut } from './colors';
 import { blurSeconds, warpField } from './soften';
 import { contours } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
@@ -60,6 +60,9 @@ const OUTLINE_BLUR_CELLS = 6;
 const SOFT = { blurCells: 2, warpCells: 2.5, warpWavelengthCells: 9, featherSeconds: 45 };
 const LUT = colorLut(SOFT.featherSeconds);
 const DIFF_LUT = diffLut();
+const HOME_LUT = homeLut();
+/** Home map outlines on the hour: 2, 1, 0 and 23 Uhr (minutes before 4 Uhr). */
+const HOME_OUTLINE_MINUTES = [120, 180, 240, 300];
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
 const post = (m: FromWorker) => ctx.postMessage(m);
@@ -335,6 +338,11 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       );
     } else if (msg.type === 'living') {
       await living(msg);
+    } else if (msg.type === 'home') {
+      await home(msg);
+    } else if (msg.type === 'homeTrip') {
+      const journey = await homeTrip(msg);
+      post({ type: 'trip', id: msg.id, ...tripMessage([journey]) });
     } else if (msg.type === 'livingAt') {
       const l = livings.get(msg.map);
       const minutes = (l?.seconds ?? []).map((g) => {
@@ -351,6 +359,151 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
   }
 };
+
+// ---------- "Bis wann komme ich heim?" ----------
+/** Deadlines step through each file this far apart, from 2 h after its start. */
+const HOME_STEP_S = 900;
+/** A connection counts as fast while it takes at most this much longer than in the evening. */
+const HOME_SLACK_S = 1200;
+/** Trips longer than this (waiting at home included) do not count as getting home. */
+const HOME_MAX_S = 7200;
+
+/** Seconds after midnight of the evening a file's hour starts at (1 Uhr = 25 h). */
+const eveningSeconds = (window: Window) => {
+  const h = Number(window.slice(-2));
+  return (h < 12 ? h + 24 : h) * 3600;
+};
+
+/** The last home map: what a tap needs to rebuild its last fast connection. */
+let lastHome: {
+  id: number;
+  origin: { lat: number; lon: number };
+  travel: Travel;
+  variant: Variant;
+  /** Per pass: its file and deadline (reversed time). */
+  passes: { window: Window; leaveAt: number }[];
+  /** Per stop: the pass its last fast connection came from. */
+  fastPass: Uint8Array;
+  grid: HeatGrid;
+} | null = null;
+
+/**
+ * Per stop, the latest departure that still gets home (any) and the latest whose trip is at
+ * most HOME_SLACK_S longer than in the evening (fast; after it the night network takes
+ * over). Each pass is an arrive-by RAPTOR from home: a deadline D gives every stop's latest
+ * departure L = D - seconds. File h serves deadlines from h+2:15 to h+3, which its trips
+ * (departing up to 3 h after its start) cover for journeys leaving after h.
+ */
+async function home(msg: Extract<ToWorker, { type: 'home' }>) {
+  const t0 = performance.now();
+  livingId = msg.id;
+  walkSpeedMps = msg.walkKmh / 3.6;
+  const travel = msg.travel ?? 'walk';
+  const variant = { stepFree: msg.stepFree, bike: travel === 'bike' };
+  const w = travelOptions(travel);
+  const origin = { lat: msg.lat, lon: msg.lon };
+  const passes: { window: Window; leaveAt: number }[] = [];
+  let fast: Float64Array | null = null;
+  let any: Float64Array | null = null;
+  let base: Float64Array | null = null;
+  let fastPass: Uint8Array | null = null;
+  let tt: PreparedTimetable | null = null;
+  let computedInMs = 0;
+  const steps = 3600 / HOME_STEP_S;
+  for (const [f, window] of msg.windows.entries()) {
+    tt = await prepared(window, 'arrive', variant);
+    const S = tt.stopCount;
+    fast ??= new Float64Array(S).fill(-Infinity);
+    any ??= new Float64Array(S).fill(-Infinity);
+    base ??= new Float64Array(S).fill(Infinity);
+    fastPass ??= new Uint8Array(S);
+    const start = eveningSeconds(window);
+    // The reversed file counts backwards from its end: its windowEnd is -(file end).
+    const fileEnd = -tt.windowEnd;
+    for (let q = 1; q <= steps; q++) {
+      const after = 3600 + q * HOME_STEP_S; // deadline, seconds after the file's end
+      const leaveAt = -(fileEnd + after);
+      const r = travelTimes(tt, origin, { leaveAt, ...w });
+      computedInMs += r.computedInMs;
+      passes.push({ window, leaveAt });
+      const deadline = start + 3600 + after;
+      for (let s = 0; s < S; s++) {
+        const secs = r.stopSeconds[s];
+        if (!(secs <= HOME_MAX_S)) continue;
+        const L = deadline - secs;
+        if (f === 0) base[s] = Math.min(base[s], secs);
+        if (L > any[s]) any[s] = L;
+        if (secs <= base[s] + HOME_SLACK_S && L > fast[s]) {
+          fast[s] = L;
+          fastPass[s] = passes.length - 1;
+        }
+      }
+    }
+    post({ type: 'mapProgress', id: msg.id, done: f + 1, total: msg.windows.length });
+    await new Promise((r) => setTimeout(r, 0));
+    if (livingId !== msg.id) return;
+  }
+  if (!tt || !fast || !any || !fastPass) return;
+  // On the grid: the latest departure from a place is its stops' minus the walk there,
+  // so rasterise end - L (smallest wins) with the walk added; next to home, walking wins.
+  const end = eveningSeconds(msg.windows[msg.windows.length - 1]) + 3 * 3600;
+  const toGrid = (L: Float64Array, trackStops: boolean) =>
+    heatGrid(
+      tt!,
+      {
+        stopSeconds: Float32Array.from(L, (v) => (v > -Infinity ? end - v : Infinity)),
+        origin,
+        computedInMs: 0,
+      } as TravelTimeResult,
+      { cellSizeM: CELL_M, trackStops, ...w },
+    );
+  const grid = toGrid(fast, true);
+  const anyGrid = toGrid(any, false);
+  lastHome = { id: msg.id, origin, travel, variant, passes, fastPass, grid };
+  const image = paint(grid, undefined, HOME_LUT);
+  const outlines = contours(
+    blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
+    grid.cols,
+    grid.rows,
+    grid.bbox,
+    HOME_OUTLINE_MINUTES,
+  );
+  const empty = { type: 'FeatureCollection' as const, features: [] };
+  const values = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
+  const anyValues = anyGrid.seconds as Float32Array<ArrayBuffer>;
+  ctx.postMessage(
+    {
+      type: 'result',
+      id: msg.id,
+      window: msg.windows[0],
+      image,
+      bbox: grid.bbox,
+      grid: { cols: grid.cols, rows: grid.rows, seconds: values },
+      home: { end, any: anyValues },
+      routes: empty,
+      labels: empty,
+      outlines,
+      computedInMs,
+      totalMs: performance.now() - t0,
+    } satisfies FromWorker,
+    [image.rgba.buffer, values.buffer, anyValues.buffer],
+  );
+}
+
+/** The last fast connection home from `at`: its pass again, with legs, then the trip. */
+async function homeTrip(msg: Extract<ToWorker, { type: 'homeTrip' }>) {
+  const h = lastHome;
+  if (!h || h.id !== msg.map) return null;
+  const cell = cellIndex(h.grid, msg);
+  const stop = cell < 0 ? -1 : h.grid.stop![cell];
+  const pass = h.passes[stop >= 0 ? h.fastPass[stop] : h.passes.length - 1];
+  const tt = await prepared(pass.window, 'arrive', h.variant);
+  const w = travelOptions(h.travel);
+  const result = travelTimes(tt, h.origin, { trackLegs: true, leaveAt: pass.leaveAt, ...w });
+  lastTrip = { tt, runs: [], direction: 'arrive', travel: h.travel, leaveAt: null };
+  // Its minutes would include waiting at home for the deadline, so the card leaves them out.
+  return trip(lastTrip, { ...nearRun(tt, result, msg, w), seconds: undefined }, msg);
+}
 
 /** The last two "where can I live?" maps by id: each favourite's grid, for the minutes on tap. */
 const livings = new Map<number, { layout: HeatGrid; seconds: Float32Array[] }>();
@@ -379,7 +532,7 @@ async function living(msg: Extract<ToWorker, { type: 'living' }>) {
     }
     layout ??= g;
     seconds.push(g.seconds);
-    post({ type: 'livingProgress', id: msg.id, done: i + 1, total: msg.places.length });
+    post({ type: 'mapProgress', id: msg.id, done: i + 1, total: msg.places.length });
     // Let a newer request (or a tap) in between places.
     await new Promise((r) => setTimeout(r, 0));
     if (livingId !== msg.id) return;
@@ -449,13 +602,18 @@ function minFinite(values: Float32Array): number {
   return m < Infinity ? m : 0;
 }
 
-/** A grid's time at a point; Infinity outside it. */
-function cellSeconds(g: HeatGrid, p: { lat: number; lon: number }): number {
+/** The grid cell at a point; -1 outside the grid. */
+function cellIndex(g: HeatGrid, p: { lat: number; lon: number }): number {
   const [w, s, e, n] = g.bbox;
   const c = Math.floor(((p.lon - w) / (e - w)) * g.cols);
   const r = Math.floor(((n - p.lat) / (n - s)) * g.rows);
-  if (c < 0 || c >= g.cols || r < 0 || r >= g.rows) return Infinity;
-  return g.seconds[r * g.cols + c];
+  return c < 0 || c >= g.cols || r < 0 || r >= g.rows ? -1 : r * g.cols + c;
+}
+
+/** A grid's time at a point; Infinity outside it. */
+function cellSeconds(g: HeatGrid, p: { lat: number; lon: number }): number {
+  const i = cellIndex(g, p);
+  return i < 0 ? Infinity : g.seconds[i];
 }
 
 interface Run {
@@ -545,22 +703,32 @@ function nowRun(
   const w = travelOptions(last.travel);
   const o = r.result.origin!;
   r.now ??= travelTimes(last.tt, o, { trackLegs: true, leaveAt: last.leaveAt, ...w });
+  return nearRun(last.tt, r.now, at, w);
+}
+
+/** A grid around `at` only (from the stops it can be walked or ridden to), for its trip. */
+function nearRun(
+  tt: PreparedTimetable,
+  result: TravelTimeResult,
+  at: { lat: number; lon: number },
+  w: ReturnType<typeof travelOptions>,
+): TripRun {
   // Only stops within the longest walk (or ride) from the place can be its last stop.
   const reachM = 2 * 900 * (w.walkSpeedMps ?? NETWORK_WALK_SPEED_MPS) + 100;
-  const stopSeconds = Float32Array.from(r.now.stopSeconds);
-  const stops = last.tt.stops;
+  const stopSeconds = Float32Array.from(result.stopSeconds);
+  const stops = tt.stops;
   for (let s = 0; s < stopSeconds.length; s++)
     if (distanceM(at.lat, at.lon, stops[s].lat, stops[s].lon) > reachM) stopSeconds[s] = Infinity;
   const best = heatGrid(
-    last.tt,
-    { ...r.now, stopSeconds },
+    tt,
+    { ...result, stopSeconds },
     { cellSizeM: CELL_M, trackStops: true, ...w },
   );
   const [minLon, minLat, maxLon, maxLat] = best.bbox;
   const c = Math.floor(((at.lon - minLon) / (maxLon - minLon)) * best.cols);
   const row = Math.floor(((maxLat - at.lat) / (maxLat - minLat)) * best.rows);
   const inside = c >= 0 && c < best.cols && row >= 0 && row < best.rows;
-  return { result: r.now, best, seconds: inside ? best.seconds[row * best.cols + c] : Infinity };
+  return { result, best, seconds: inside ? best.seconds[row * best.cols + c] : Infinity };
 }
 
 /** The fastest journey to (or, arriving, from) the tapped spot, in travel order. */

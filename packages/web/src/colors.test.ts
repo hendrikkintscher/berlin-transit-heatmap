@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HOME_COLORS,
+  HOME_TICKS,
+  homeBandOf,
+  homeLut,
   BAND_COLORS,
   BAND_EDGES_MIN,
   bandLabel,
@@ -93,5 +97,14 @@ describe('difference colours', () => {
     const lut = diffLut();
     expect(lut.length).toBe((DIFF_MAX_S - DIFF_MIN_S + 1) * 4);
     expect(lut[(0 - DIFF_MIN_S) * 4 + 3]).toBe(255);
+  });
+
+  it('bands the home map by the clock, all night first', () => {
+    expect(homeBandOf(0)).toBe(0); // leaving at 4 Uhr
+    expect(homeBandOf(119 * 60)).toBe(0); // 2:01
+    expect(homeBandOf(3 * 3600)).toBe(2); // 1 Uhr
+    expect(homeBandOf(10 * 3600)).toBe(HOME_COLORS.length - 1); // 18 Uhr
+    expect(HOME_TICKS).toHaveLength(HOME_COLORS.length - 1);
+    expect(homeLut()[3]).toBe(255);
   });
 });
