@@ -113,9 +113,10 @@ export function initWhenSheet({ state, changed, closeSearch }: WhenSheetDeps) {
       setWhen(state.when, { direction: b.dataset.dir as Direction }),
     );
   for (const b of measureButtons)
-    b.addEventListener('click', () =>
-      setWhen(state.when, { measure: b.dataset.measure as Measure }),
-    );
+    b.addEventListener('click', () => {
+      state.measureBefore = null;
+      setWhen(state.when, { measure: b.dataset.measure as Measure });
+    });
   const readCompare = (): When | null =>
     cmpDay.value ? { day: cmpDay.value as DayType, hour: Number(cmpHour.value) } : null;
   cmpDay.addEventListener('change', () => {
