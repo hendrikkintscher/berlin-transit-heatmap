@@ -9,7 +9,7 @@ State on 2026-10-12, live through PR #50. Build in this order, one step per PR:
 1. **Next:** The tapped place stays when settings change (group 6)
 2. Calmer street level: footpaths next to streets (group 7)
 3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-4. UI overhaul (group 12), once Hendrik has picked one of the three design options
+4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
 5. Android app, starting with a TWA (group 13), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
@@ -372,11 +372,17 @@ Notes: the app still downloads only the hour it shows (about 270 KB with the bin
 
 ## 12. UI overhaul
 
-### Bring all the features together in one clear interface
+### Bring all the features together: a chip row under the search (option B)
 
-Many features have been added one by one (time sheet, Unterwegs, Stufenlos, layers, meeting point, favourites, compare, outlines, share), and they are now spread across the top bar, the menu and the time sheet. Rework the interface so they are organised meaningfully: the everyday controls at hand, the rest easy to find, and the map kept as clear as possible on a phone.
+Many features have been added one by one and are now spread across the top bar, the menu and the time sheet. Hendrik picked **option B** of three rendered designs (2026-10-12; mockup `web/ui-options/option-b-schalter-oben.png` in the project files):
 
-Status: three design options are being made and rendered for Hendrik to choose from (thread "UI overhaul options"). This item is built once he has picked one; the details here will be filled in from his choice. Large effort; the snappiness rule applies to every option. Added from Hendrik's request on 2026-10-11.
+- **Chip row under the search:** one row of chips shows at a glance what is set: **Zeit** ("Werktag 10 Uhr"), **Unterwegs** ("Zu Fuß"), **Reisezeit** ("Typisch"), **Ebenen**, **Stufenlos**, **Vergleich**. The row scrolls sideways when it doesn't fit. A chip that differs from the default turns purple, so e.g. Rad + Bahn or Stufenlos is visible at once.
+- **Each chip opens a small popover** with only its own settings, directly under the row, while the map stays visible: Zeit has the day, hour, Losfahren/Ankommen (and later the dates from group 11); Unterwegs has Zu Fuß / Rad + Bahn / Nur Rad, Gehtempo and Stufenlos; Reisezeit has Typisch / Bestfall / Nächste; Ebenen has Lines, outlines, stop frequency, transit deserts and opacity; Vergleich picks the second time. A tap outside closes it.
+- **The menu keeps only** Orte (favourites), Teilen, Sprache and Info.
+- **Slim vertical legend:** a thin colour bar (about 9 px) on the right edge, 0 at the top to 120+ at the bottom, haloed tick labels, no box or frame. It replaces the legend panel at the bottom (from the visual polish step), so the trip card no longer carries it.
+- **Bottom:** the tap info card stays at the bottom (minutes, line, walking, Maps link, Hier starten / 2. Start / ★ Merken, ✕); with no card shown, a "2. Start" button sits bottom right. Top buttons (menu, search, locate) stay round as now.
+
+Notes: layout and CSS on the existing controls, no new data, so no cost to taps or first load; the popovers are plain DOM, opened instantly. Check at 360×740 and on an iPhone-sized screen, in German and English (chip labels must fit). Large effort. Added from Hendrik's request on 2026-10-11, filled in from his pick on 2026-10-12.
 
 ## 13. Android app
 
