@@ -14,9 +14,7 @@ import {
   bandLabel,
 } from './colors';
 import {
-  dayLabel,
   formatDate,
-  hourLabel,
   gridSeconds,
   nightText,
   shortStop,
@@ -515,10 +513,22 @@ function addStart(p: Point) {
 // The banner's ✕ ends the meeting point: only the first start stays.
 $('meet-close').addEventListener('click', () => setStarts(starts().slice(0, 1)));
 
+// Start with the attribution collapsed to its (i) button so it does not cover the legend:
+// MapLibre opens it when the style's sources arrive; until the map has loaded, it is
+// closed again before it is painted (observer callbacks run before the next frame).
+const attrib = map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+if (attrib) {
+  new MutationObserver((_, obs) => {
+    if (state.mapReady) obs.disconnect();
+    // (Only when set: removing a missing class still writes the attribute, and loops.)
+    else if (attrib.classList.contains('maplibregl-compact-show'))
+      attrib.classList.remove('maplibregl-compact-show');
+  }).observe(attrib, { attributes: true, attributeFilter: ['class'] });
+}
+
 map.on('load', () => {
   state.mapReady = true;
-  // Start with the attribution collapsed to its (i) button so it does not cover the legend.
-  document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+  attrib?.classList.remove('maplibregl-compact-show');
   addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
   showHeat();
   if (state.result) showResult(state.result);
@@ -1305,12 +1315,7 @@ const tap = initTap(
   link.to,
 );
 
-const chips = initChips({
-  state,
-  closeSearch,
-  compareText: () =>
-    state.compare ? `${dayLabel(state.compare.day)} ${hourLabel(state.compare.hour)}` : '',
-});
+const chips = initChips({ state, closeSearch });
 
 const whenSheet = initWhenSheet({
   state,
@@ -1381,6 +1386,11 @@ const menu = initMenu({
 whenSheet.setWhen(state.when);
 showOrigin();
 menu.applyLang(lang(), false);
+// First view: the chip labels are known now (they start hidden, so the page never
+// paints the HTML's placeholder time or German labels for an English link).
+$('chips').classList.remove('unrendered');
+hint.hidden = !!state.origin || !!state.special;
+showHeat();
 
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

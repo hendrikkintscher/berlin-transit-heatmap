@@ -63,21 +63,6 @@ body {
   }
 }
 
-/* Locate and search: round buttons on the right, under the chip row. */
-.top {
-  position: fixed;
-  z-index: 4;
-  top: calc(var(--st) + 60px);
-  left: calc(var(--sl) + 10px);
-  right: calc(var(--sr) + 10px);
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  pointer-events: none;
-}
-.top > * {
-  pointer-events: auto;
-}
 .seg {
   display: flex;
   background: var(--panel);
@@ -480,18 +465,15 @@ dialog form button {
   .seg button small {
     display: none;
   }
-  .top {
-    gap: 6px;
-  }
 }
 
-/* Menu: a sheet under the chip row on the left, below its ≡ chip; secondary controls. */
+/* Menu: a sheet under the chip row on the right, below Mehr; secondary controls. */
 dialog.menu {
   position: fixed;
   margin: 0;
   top: calc(var(--st) + 58px);
-  left: calc(var(--sl) + 10px);
-  right: auto;
+  right: calc(var(--sr) + 10px);
+  left: auto;
   bottom: auto;
   width: min(340px, calc(100vw - 20px));
   max-width: none;
@@ -855,11 +837,25 @@ body.special #cmp {
   display: flex;
   gap: 8px;
   padding: 2px calc(var(--sr) + 10px) 6px calc(var(--sl) + 10px);
-  overflow-x: auto;
-  scrollbar-width: none;
   pointer-events: none;
 }
-.chips::-webkit-scrollbar {
+/* Until main.ts has rendered them, the chips show without their (placeholder) labels. */
+.chips.unrendered .chip-btn span {
+  visibility: hidden;
+}
+/* Search and Mehr stay put at the ends; the setting chips between them scroll. */
+.chip-scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Room for the chips' shadows inside the scroller. */
+  margin: -2px 0 -6px;
+  padding: 2px 0 6px;
+}
+.chip-scroll::-webkit-scrollbar {
   display: none;
 }
 .chip-btn {
@@ -895,11 +891,14 @@ body.special #cmp {
   margin-top: 3px;
   transform: rotate(-135deg);
 }
-/* Mehr (the menu): a round chip at the start of the row, always in view. */
-.chip-btn.menu-chip {
+/* Search (first) and Mehr (the menu, last): always in view. */
+.chip-btn.search-chip {
   width: 40px;
   padding: 0;
   justify-content: center;
+}
+.chip-btn.menu-chip {
+  padding: 0 14px 0 11px;
 }
 .chip-btn.on {
   background: var(--accent);
@@ -1000,15 +999,6 @@ body.special #cmp {
     font-weight: 800;
     font-size: 18px;
     color: var(--accent);
-  }
-}
-@media (max-width: 380px) {
-  .top {
-    gap: 6px;
-  }
-  .top .round {
-    width: 44px;
-    height: 44px;
   }
 }
 #locate-btn.busy svg {
@@ -1348,9 +1338,19 @@ body.special #cmp {
   vertical-align: 1px;
 }
 
-/* One more start (meeting point) while no card is shown, bottom right. */
+/* Locate (bottom left) and one more starting point (meeting point, bottom right). */
+.bottom-row {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.bottom-row > * {
+  pointer-events: auto;
+}
 .second-btn {
-  align-self: flex-end;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 7px;
