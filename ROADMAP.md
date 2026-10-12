@@ -4,7 +4,12 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #103. Nothing is queued: Hendrik picks the next step before anything starts (candidates are sent to him as a short choice). **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+State on 2026-10-12, live through PR #103. Build in this order, one step per PR:
+
+1. **Next:** Chip bar rearranged: menu as "Mehr" chip, search and locate below, "Bahn" chip, Barrierefrei, Reisezeit in Zeit (group 12)
+2. Shown connection without a black border (group 7)
+
+Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -353,6 +358,10 @@ Hendrik, 2026-10-12: the lines on the Lines layer (and the drawn route) have cor
 
 Medium effort; finding the data source comes first. Added from Hendrik's request on 2026-10-12.
 
+### Shown connection without a black border
+
+Hendrik, 2026-10-12: the lines of the connection shown on the map should not have a black border. Draw the ride legs in their line colours without the dark outline from PR #27; keep them apart from the Lines layer by width and the faded Lines (30 %) instead. Walks and stop dots stay as they are. Small effort.
+
 ### Orientation: which part of Berlin am I looking at?
 
 **Done** (PR #27): water (rivers, canals, lakes) is drawn over the colours in clear blue; parks and woods get a light green veil; the twelve Bezirke are named at city zoom and the basemap's Ortsteil names are bolder from zoom 11.5; the Ringbahn is a faint frame; seven landmarks are marked from zoom 10.5. District boundaries left out.
@@ -565,6 +574,18 @@ Many features have been added one by one and are now spread across the top bar, 
 - **Bottom:** the tap info card stays at the bottom (minutes, line, walking, Maps link, Hier starten / 2. Start / ★ Merken, ✕); with no card shown, a "2. Start" button sits bottom right. Top buttons (menu, search, locate) stay round as now.
 
 Notes: layout and CSS on the existing controls, no new data, so no cost to taps or first load; the popovers are plain DOM, opened instantly. Check at 360×740 and on an iPhone-sized screen, in German and English (chip labels must fit). Large effort. Added from Hendrik's request on 2026-10-11, filled in from his pick on 2026-10-12.
+
+### Chip bar rearranged
+
+Hendrik, 2026-10-12: the horizontal chip bar from PR #92 is good, but rearrange it:
+
+- **Menu into the bar:** the burger menu becomes a chip at the end of the bar, called something like "Mehr" (English: "More"), opening the same items (Orte, Teilen, Sprache, Info).
+- **Search and locate below the bar:** the search and "my location" buttons move from the top row to just under the chip bar.
+- **"Zu Fuß" becomes "Bahn":** the Unterwegs chip is labelled "Bahn" (English: "Transit") while public transport plus walking is chosen. Its panel keeps Rad + Bahn, Nur Rad and Gehtempo.
+- **Stufenlos leaves the bar** and stays only inside that chip's panel, renamed **Barrierefrei** (English: "Step-free" stays, or "Accessible").
+- **Reisezeit moves into Zeit:** Typisch / Bestfall / Nächste become part of the Zeit chip's panel, so the bar has one chip fewer.
+
+Notes: layout only; the URL parameters stay the same, so shared links keep working. Check at 360×740 in German and English. Small to medium effort.
 
 ## 13. Wider area
 
