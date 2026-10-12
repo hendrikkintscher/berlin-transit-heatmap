@@ -6,7 +6,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 State on 2026-10-12, live through PR #129. Build in this order, one step per PR:
 
-1. **Next:** Rename to "Wohin jetzt? · Öffis mit einem Tap" (group 12). Queued, not started: Hendrik confirms when it is built.
+1. **Next:** Rename to "Wohin jetzt? · Öffis mit einem Tap" (group 12). Hendrik gave the go on 2026-10-12.
 
 Hendrik picks the next step before anything starts.
 
@@ -679,7 +679,7 @@ Notes: paint only, URL parameters unchanged; check at 360×740 in German and Eng
 
 Hendrik, 2026-10-12: the app is called **"Wohin jetzt?"** with the tagline **"Öffis mit einem Tap"** (English: "Transit in one tap"), replacing "Berlin in Minuten" / "Berlin Transit". The rename covers the title in the app, the installed-app (manifest) name, the About text and the sharepics.
 
-Notes: names only, URL parameters and the address unchanged (the domain is still open in the beta plan). Check at 360×740 in German and English. Small effort. Queued after the calmer default map; not started until Hendrik confirms.
+Notes: names only, URL parameters and the address unchanged (the domain is still open in the beta plan). Check at 360×740 in German and English. Small effort. Hendrik gave the go on 2026-10-12.
 
 ## 13. Wider area and other regions
 
