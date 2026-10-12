@@ -4,11 +4,10 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #111. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #114. Build in this order, one step per PR:
 
-1. **Next:** Top bar polish: everything in one scrolling bar, "Mehr" as a plain chip, "Heute anders" right above the trip card (group 12)
-2. "Lieblingsort" toggle instead of "Merken" (group 3)
-3. Addresses in the search suggestions, street first, then house number or postcode (group 1)
+1. **Next:** "Lieblingsort" toggle instead of "Merken" (group 3)
+2. Addresses in the search suggestions, street first, then house number or postcode (group 1)
 
 All from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
@@ -637,6 +636,8 @@ Hendrik, 2026-10-12: on first load the "Heute anders" frame still appears, and s
 Notes: check with a slowed-down network and CPU that the first frames show only base map, start point, outlines and the bar. No cost to the first map; it may get faster. Small effort.
 
 ### Top bar polish
+
+**Done** (PR #114): the whole top bar scrolls, with search first and "Mehr" last as a plain chip with a drop-down indicator; "Heute anders" sits directly above the trip card. Checked at 360×740 in German and English; the first view stays flicker-free.
 
 Hendrik, 2026-10-12, two minor fixes after PR #111:
 
