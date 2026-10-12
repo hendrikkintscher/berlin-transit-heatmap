@@ -8,6 +8,7 @@ State on 2026-10-12, live through PR #145. Build in this order, one step per PR:
 
 1. **Next:** Bug bundle: ten small defects (A1, group 15)
 2. Permanent search bar at the top (group 12)
+3. Walking network: visible loading, no blocked taps (B1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. More items from the third suggestions list (plan/suggestions-3.md) are added as Hendrik picks them. After these, Hendrik picks the next step before anything starts.
 
@@ -796,3 +797,13 @@ Picked by Hendrik on 2026-10-12 ("Yes, all 10"). Ten small defects, built as one
 10. **Heimweg legend has no end labels:** label "ganze Nacht" and "vor 23 Uhr" and tint the all-night area.
 
 Notes: check at 360×740 in German and English and keep the flicker-free first view. Medium effort in total, each fix small.
+
+### Walking network: visible loading, no blocked taps (B1)
+
+Picked by Hendrik on 2026-10-12 ("Yes, now"). Measured on a shared link over a 3G-like connection: the trip card appears after 4.9 s but the outlines only after 24.6 s, and the loading bar is hidden from 4.9 s to 23.6 s. The worker blocks for about 1 s (loading the walking network 0.56 s plus snapping cells 0.45 s).
+
+- Keep the loading bar, or a "Fußwege werden geladen…" note, visible while the walking network (walk.bin) streams.
+- Start loading the walking network only after the first map is on screen.
+- Split the cell snapping into chunks so taps queued meanwhile are answered.
+
+Not included: splitting walk.bin by area.
