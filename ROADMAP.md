@@ -4,16 +4,15 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #59. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #62. Build in this order, one step per PR:
 
-1. **Next:** Start on "Nächste", earliest arrival on tap, Typisch for meeting points (group 6)
-2. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
-3. "Bis wann komme ich heim?": the last connection home (group 6)
-4. Wider area: Potsdam and the commuter belt (group 13)
-5. Calmer street level: footpaths next to streets (group 7)
-6. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-7. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-8. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
+2. "Bis wann komme ich heim?": the last connection home (group 6)
+3. Wider area: Potsdam and the commuter belt (group 13)
+4. Calmer street level: footpaths next to streets (group 7)
+5. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+6. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+7. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -249,6 +248,8 @@ Add a third choice under Reisezeit next to Typisch and Bestfall: **Nächste** sh
 Notes: one RAPTOR pass from the current minute instead of the range over the hour, so it is as fast as Bestfall or faster. It uses the hour file the map already opens at (the map now opens at the current hour); each hourly file holds the trips running into the next hour, so later departures are covered. In the time sheet it makes most sense for the current hour; for another hour it would mean leaving at the start of that hour. Kept in the link (`m=next`); trip on tap shows the actual next departure. Small effort; added from Hendrik's request on 2026-10-11.
 
 ### Start on "Nächste", earliest arrival on tap, Typisch for meeting points
+
+**Done** (PR #62): the app opens on "Nächste"; a link carrying `m=` keeps its setting (`m=typical` is now named in links). Under Typisch and Bestfall a tapped place also shows the next connection from now with its own minutes, and the drawn trip is that connection. Adding a second start switches to Typisch; removing it returns to the earlier choice unless another was picked meanwhile.
 
 Three changes to the defaults:
 
