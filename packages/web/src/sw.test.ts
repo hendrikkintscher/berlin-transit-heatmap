@@ -11,10 +11,15 @@ function load() {
     unknown
   >;
   vm.createContext(sandbox);
-  vm.runInContext(`${src}\nthis.trim = trim; this.today = today;`, sandbox);
+  vm.runInContext(
+    `${src}\nthis.trim = trim; this.today = today; this.pruneAssets = pruneAssets; this.trimTiles = trimTiles;`,
+    sandbox,
+  );
   return sandbox as unknown as {
     trim: (cache: unknown) => Promise<void>;
     today: () => string;
+    pruneAssets: (cache: unknown, html: string) => Promise<void>;
+    trimTiles: (cache: unknown) => Promise<void>;
   };
 }
 
@@ -49,5 +54,64 @@ describe('offline timetable cache', () => {
       ),
       `timetable-${today}-10.bin`,
     ]);
+  });
+});
+
+/** A fake Cache holding `files` (url -> text). */
+function fakeCache(files: Record<string, string>) {
+  let keys = Object.keys(files).map((url) => ({ url }));
+  return {
+    left: () => keys.map((k) => k.url.split('/').pop()),
+    keys: async () => keys,
+    match: async (k: { url: string }) => ({ text: async () => files[k.url] ?? '' }),
+    delete: async (k: unknown) => {
+      keys = keys.filter((x) => x !== k);
+    },
+  };
+}
+
+describe('offline app cache', () => {
+  it('keeps the bundles the page uses, directly or through another bundle, and drops old ones', async () => {
+    const a = 'https://x/app/assets/';
+    const cache = fakeCache({
+      'https://x/app/': '',
+      [`${a}index-NEWNEW01.js`]: 'import("./main-NEWNEW02.js"); new URL("worker-NEWNEW03.js")',
+      [`${a}main-NEWNEW02.js`]: 'main',
+      [`${a}worker-NEWNEW03.js`]: 'worker',
+      [`${a}index-NEWNEW04.css`]: '',
+      [`${a}index-OLDOLD01.js`]: 'import("./main-OLDOLD02.js")',
+      [`${a}main-OLDOLD02.js`]: 'old main',
+    });
+    await load().pruneAssets(
+      cache,
+      '<script src="./assets/index-NEWNEW01.js"></script><link href="./assets/index-NEWNEW04.css">',
+    );
+    expect(cache.left()).toEqual([
+      '',
+      'index-NEWNEW01.js',
+      'main-NEWNEW02.js',
+      'worker-NEWNEW03.js',
+      'index-NEWNEW04.css',
+    ]);
+  });
+
+  it('leaves the cache alone for a page that names no bundles', async () => {
+    const cache = fakeCache({ 'https://x/assets/main-OLDOLD02.js': '' });
+    await load().pruneAssets(cache, '<html>Offline</html>');
+    expect(cache.left()).toEqual(['main-OLDOLD02.js']);
+  });
+
+  it('keeps the 400 most recent map tiles and always the style, sprites and fonts', async () => {
+    const t = 'https://tiles.openfreemap.org/planet/v/';
+    const cache = fakeCache({
+      'https://tiles.openfreemap.org/styles/positron': '',
+      'https://tiles.openfreemap.org/fonts/Noto/0-255.pbf': '',
+      ...Object.fromEntries(Array.from({ length: 405 }, (_, i) => [`${t}14/${i}/5.pbf`, ''])),
+    });
+    await load().trimTiles(cache);
+    const left = cache.left();
+    expect(left).toHaveLength(402);
+    expect(left.slice(0, 3)).toEqual(['positron', '0-255.pbf', '5.pbf']);
+    expect(left.filter((n) => n === '5.pbf')).toHaveLength(400);
   });
 });
