@@ -6,9 +6,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 State on 2026-10-12, live through PR #122. Build in this order, one step per PR:
 
-1. **Next:** Other regions, Oldenburg first, each region at its own address (group 13). Held until the editor has checked with the coordinator that the beta-testing domain and naming questions don't change the `/berlin/` addresses.
+1. **Next:** Region-ready code, prep only (group 13)
 
-All from Hendrik on 2026-10-12. After them, Hendrik picks the next step before anything starts.
+Hendrik, 2026-10-12: prep only for now. After it, Hendrik picks the next step before anything starts.
+
+**Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the name, the domain and the timetable feed account are settled.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -684,7 +686,12 @@ Hendrik, 2026-10-12: add other regions, the first one Oldenburg / Weser-Ems. **D
 - **Stored on the phone:** favourites and recent places are kept per region, so switching doesn't mix them.
 - **Builds:** each region has its own nightly build and release tag, run at different times so the release rate-limit problem doesn't return.
 
-Notes: before the builder starts, the editor checks with the coordinator, because the beta-testing domain question and the naming thread may change the `/berlin/` addresses. Measure against the snappiness rule and the CI speed budget. Large effort; may be split into several PRs (region folders and addresses first, then Oldenburg data, then the region switch).
+**Split (Hendrik, 2026-10-12: prep only).** The work is built in two parts:
+
+1. **Region-ready code (prep), to be built now:** a region config holding everything that is Berlin-specific today (area box, map start point, names, timetable and walking-path sources, Berlin-only extras such as Ring, Bezirke, landmarks and live status), data loaded from a folder per region, and favourites and recent places stored per region, with existing Berlin favourites kept. Berlin stays the only region and keeps its current address; nothing visible changes and the first map is no slower.
+2. **Region addresses and Oldenburg, held:** the `/berlin/` and `/oldenburg/` addresses, the forward from the root address, the region switch, and the Oldenburg data and build. Not started until the name, the domain and the timetable feed account are settled.
+
+Notes: measure against the snappiness rule and the CI speed budget. The prep is medium effort; part 2 is large and may itself be split (addresses, then Oldenburg data, then the region switch).
 
 ## 14. Android app
 
