@@ -16,7 +16,7 @@ import {
   walkPath,
   loadTimetable,
   loadWalkNetwork,
-  snapCells,
+  snapCellsInSteps,
   reverseTimetable,
   routeUsage,
   stepFreeTimetable,
@@ -117,9 +117,11 @@ async function fetchTimetable(window: Window, file: string = window): Promise<Ti
 }
 
 /**
- * The footpath network, fetched in the background once the first timetable is in, so
- * the first map is never held up by it. Until it is ready, walks are straight lines;
- * the UI recomputes the map when it arrives.
+ * The footpath network, fetched in the background when the UI asks (once the first map
+ * is on screen), so the first map never shares the connection with it. Until it is ready,
+ * walks are straight lines; the UI recomputes the map when it arrives. Its download
+ * reports progress, and the grid snapping runs in steps, so taps in the meantime are
+ * answered.
  */
 let walk: WalkNetwork | undefined;
 let walkStarted = false;
@@ -131,16 +133,36 @@ async function loadWalk(): Promise<void> {
   walkStarted = true;
   try {
     const res = await fetch(new URL('walk.bin', dataBase));
-    if (!res.ok) return;
-    const net = loadWalkNetwork(await res.arrayBuffer());
-    // Snapping the map grid to the network takes a moment; do it now rather than on a tap.
+    if (!res.ok || !res.body) throw new Error(`walk.bin: ${res.status}`);
+    const total = Number(res.headers.get('content-length')) || 0;
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let loaded = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.length;
+      post({ type: 'walkProgress', loaded, total });
+    }
+    const buf = new Uint8Array(loaded);
+    let off = 0;
+    for (const c of chunks) {
+      buf.set(c, off);
+      off += c.length;
+    }
+    const net = loadWalkNetwork(buf);
+    // Snapping the map grid to the network takes a moment; do it now rather than on a
+    // tap, a slice at a time with pauses for any messages that queued up.
     const layout = gridLayout({ cellSizeM: CELL_M });
-    snapCells(net, layout.bbox, layout.cols, layout.rows);
+    const steps = snapCellsInSteps(net, layout.bbox, layout.cols, layout.rows);
+    while (!steps.next().done) await new Promise((r) => setTimeout(r, 0));
     walk = net;
     post({ type: 'walk' });
   } catch (err) {
     // Straight-line walking stays in place.
     console.warn('Walking network not used:', err);
+    post({ type: 'walkFailed' });
   }
 }
 
@@ -227,7 +249,6 @@ function ensure(window: Window, variant: Variant = {}): Promise<PreparedTimetabl
     const raw = rawTimetable(window);
     p = raw.then((json) => {
       const tt = loadTimetable(filtered(json, variant));
-      void loadWalk();
       post({
         type: 'loaded',
         info: {
@@ -286,6 +307,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const variant = { stepFree: msg.stepFree, bike: msg.bike };
       const p = prepared(msg.window, msg.direction ?? 'depart', variant);
       await (msg.quiet ? p.catch(() => undefined) : p);
+    } else if (msg.type === 'loadWalk') {
+      void loadWalk();
     } else if (msg.type === 'stations') {
       const tt = await ensure(msg.window);
       const list = stations(tt, departuresPerHour(tt)).features.map((f) => ({

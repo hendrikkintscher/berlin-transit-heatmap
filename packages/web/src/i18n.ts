@@ -38,6 +38,7 @@ const de = {
   credits:
     'Fahrplandaten: <a href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/" target="_blank" rel="noopener">VBB Open Data</a> (CC BY 4.0). Karte und Fußwege: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende (ODbL). Adresssuche: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> von Komoot.',
   feedLoading: 'Fahrplan wird geladen…',
+  walkLoading: 'Fußwege werden geladen…',
   feedInfo: 'Fahrplan des VBB, Verkehrstag {date} (Datensatz {version}, {stops} Haltestellen).',
   failed: 'Etwas ist schiefgelaufen: {message}',
   minutes: '<b>{n} Min.</b>',
@@ -278,6 +279,7 @@ const en: Record<Key, string> = {
   credits:
     'Timetable data: <a href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/" target="_blank" rel="noopener">VBB open data</a> (CC BY 4.0). Map and footpaths: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors (ODbL). Address search: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> by Komoot.',
   feedLoading: 'Loading timetable…',
+  walkLoading: 'Loading footpaths…',
   feedInfo: 'Timetable from VBB, service day {date} (feed {version}, {stops} stops).',
   failed: 'Something went wrong: {message}',
   minutes: '<b>{n} min</b>',

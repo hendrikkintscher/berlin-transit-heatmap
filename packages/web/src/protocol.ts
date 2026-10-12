@@ -67,6 +67,8 @@ export type ToWorker =
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
   /** Station names and places for search suggestions, from the loaded timetable. */
   | { type: 'stations'; window: Window }
+  /** Fetch the footpath network now (the first map is on screen, or there is none to wait for). */
+  | { type: 'loadWalk' }
   /**
    * "Where can I live?": one Typisch pass arriving at each favourite place, combined into
    * the weighted average per cell (see favourites.ts). Answered with progress and a result
@@ -146,8 +148,12 @@ export interface RasterLayer {
 export type FromWorker =
   | { type: 'progress'; window: Window; loaded: number; total: number }
   | { type: 'loaded'; info: TimetableInfo }
+  /** The footpath network is on its way: `loaded` of `total` bytes (0 when unknown). */
+  | { type: 'walkProgress'; loaded: number; total: number }
   /** The footpath network has arrived: maps computed so far used straight-line walks. */
   | { type: 'walk' }
+  /** The footpath network could not be loaded: walks stay straight lines. */
+  | { type: 'walkFailed' }
   /** A map computed in steps (where-to-live, the way home): `done` of `total` are in. */
   | { type: 'mapProgress'; id: number; done: number; total: number }
   | { type: 'livingAt'; id: number; minutes: (number | null)[] }
