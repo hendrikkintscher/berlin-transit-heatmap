@@ -4,12 +4,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #108. Build in this order, one step per PR:
-
-1. **Next:** Chip bar round two: "Mehr" chip last, Vergleich in Ebenen, search first in the top bar, locate at the bottom, "Startpunkt" (group 12)
-2. First view without flicker: nothing that is off by default appears and disappears, including the "Heute anders" notice (group 12)
-
-Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #111. Nothing is queued: Hendrik picks the next step before anything starts.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -595,6 +590,8 @@ Notes: layout only; the URL parameters stay the same, so shared links keep worki
 
 ### Chip bar round two
 
+**Done** (PR #111): the top bar reads search, the scrolling chips, then "Mehr" last. Vergleich is in the Ebenen panel, locate sits bottom left, and "Startpunkt" / "Starting point" is used everywhere. Links are unchanged.
+
 Hendrik, 2026-10-12, after seeing PR #108 live:
 
 - **Menu chip last, called "Mehr":** the ≡ chip moves to the end of the bar and is labelled "Mehr" (English: "More"). This reverses the PR #108 choice of putting it first.
@@ -606,6 +603,8 @@ Hendrik, 2026-10-12, after seeing PR #108 live:
 Notes: layout and labels only; URL parameters stay the same. Check at 360×740 in German and English that the bar and the bottom row fit. Small effort.
 
 ### First view without flicker
+
+**Done** (PR #111): checked on slow 4G with a 4× slower CPU, nothing is shown and then hidden. The legend, the hint, the attribution and "Heute anders" stay out of the first view, and chip labels appear only once filled in. First map about 0.4–0.6 s.
 
 Hendrik, 2026-10-12: on first load the "Heute anders" frame still appears, and some elements that are not part of the default view are loaded, shown and then switched off. Optimise so that:
 
