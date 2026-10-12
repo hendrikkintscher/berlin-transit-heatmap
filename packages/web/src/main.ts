@@ -42,7 +42,7 @@ import {
   type Favourite,
   type Weight,
 } from './favourites';
-import { formatDecimal, formatNumber, initialLang, lang, readStoredLang, setLang, t } from './i18n';
+import { formatNumber, initialLang, lang, readStoredLang, setLang, t } from './i18n';
 import {
   addMapLayers,
   cornerCoordinates,
@@ -248,8 +248,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (m.unpainted && state.heat) send({ type: 'paint', id: m.id });
     tap.onResult();
     loadbar.hidden = true;
-    const s = m.totalMs / 1000;
-    setStatus(() => t('computed', { s: formatDecimal(s, 1) }), true);
+    setStatus(() => '');
     showTips();
     preloadNextHour();
   } else if (m.type === 'image') {
@@ -352,7 +351,7 @@ function compute() {
   state.requestId++;
   loadbar.hidden = false;
   loadbar.classList.add('indeterminate');
-  setStatus(() => t('computing'));
+  setStatus(() => '');
   send({
     type: 'compute',
     id: state.requestId,

@@ -35,14 +35,16 @@ body {
   inset: 0;
 }
 
+/* Loading and computing: a slim bar along the bottom edge, over the map; gone when done. */
 #loadbar {
   position: fixed;
-  top: var(--st);
+  bottom: var(--sb);
   left: 0;
   right: 0;
-  height: 3px;
-  z-index: 5;
+  height: 2px;
+  z-index: 6;
   background: rgba(94, 31, 140, 0.15);
+  pointer-events: none;
 }
 #loadbar > div {
   height: 100%;
@@ -836,7 +838,7 @@ body.special #cmp {
   right: 0;
   display: flex;
   gap: 8px;
-  padding: 2px calc(var(--sr) + 10px) 6px calc(var(--sl) + 10px);
+  padding: 2px 0 6px;
   pointer-events: none;
 }
 /* Until main.ts has rendered them, the chips show without their (placeholder) labels. */
@@ -851,9 +853,10 @@ body.special #cmp {
   gap: 8px;
   overflow-x: auto;
   scrollbar-width: none;
-  /* Room for the chips' shadows inside the scroller. */
+  /* Edge to edge; the chips start and end at the usual margin. Room for their shadows. */
   margin: -2px 0 -6px;
-  padding: 2px 0 6px;
+  padding: 2px calc(var(--sr) + 10px) 6px calc(var(--sl) + 10px);
+  pointer-events: auto;
 }
 .chip-scroll::-webkit-scrollbar {
   display: none;
@@ -990,6 +993,7 @@ body.special #cmp {
     display: block;
     flex: none;
     align-self: center;
+    margin-left: calc(var(--sl) + 10px);
     background: var(--panel);
     box-shadow: var(--shadow);
     border-radius: 999px;
