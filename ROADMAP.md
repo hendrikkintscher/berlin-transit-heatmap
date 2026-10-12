@@ -4,18 +4,16 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #90. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #93. Build in this order, one step per PR:
 
-1. **Next:** Fairer meeting point suggestions: slowest trip and average count equally (group 3)
-2. Timetable publish uploads only changed files (group 10)
-3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-4. Snappier address search (group 1)
-5. "Heute anders" in the chosen connection (group 11)
-6. Smooth line overlays along the real tracks and roads (group 7)
+1. **Next:** Timetable publish uploads only changed files (group 10)
+2. Snappier address search (group 1)
+3. "Heute anders" in the chosen connection (group 11)
+4. Smooth line overlays along the real tracks and roads (group 7)
 
-Steps 4–6 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Steps 2–4 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
-Hendrik's standing go (2026-10-12): the builder keeps going through these steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
+Hendrik's standing go (2026-10-12): the builder keeps going through the steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -134,6 +132,8 @@ Friends often meet in groups of three to five. Generalise the meeting point to u
 Notes: one routing pass per start, so five starts take about 2.5 times the two-start time; start with three and measure against the snappiness rule. Medium effort; built in one step with C2. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 ### Fairer meeting point suggestions
+
+**Done** (PR #93): suggestions rank by slowest trip + average trip; the map colours still show the slowest trip.
 
 Hendrik, 2026-10-12 (option C from research/meeting-fairness/meeting-fairness.md): the suggested meeting points rank by **slowest trip + average trip**, counted equally, instead of slowest trip first with the total only breaking ties. One extra minute for the slowest person is then worth it when the group saves at least (people + 1) minutes. With 3+ people this stops picks like Hermannstr. 39/39/31 over Friedrichstr. 40/38/12, and with two people it mostly keeps today's fair picks.
 
@@ -532,6 +532,8 @@ Notes: the app still downloads only the hour it shows (about 270 KB with the bin
 ## 12. UI overhaul
 
 ### Bring all the features together: a chip row under the search (option B)
+
+**Done** (PR #92): chip row with small panels, slim vertical legend, "2. Start" button, Mo–Fr / Sa+So, checked at 360×740 in German and English. With the colour fill off, its image is only painted once switched on, so a map takes about 0.7 s instead of 0.9–1.1 s.
 
 Many features have been added one by one and are now spread across the top bar, the menu and the time sheet. Hendrik picked **option B** of three rendered designs (2026-10-12; mockup `web/ui-options/option-b-schalter-oben.png` in the project files):
 
