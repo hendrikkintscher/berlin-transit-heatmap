@@ -69,12 +69,10 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     const w = state.when;
     const arrive = state.direction === 'arrive';
     const offset = !arrive && state.measure === 'next' ? leaveOffset(w) : 0;
+    const hour = offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour);
+    // Today goes without "Heute", so the chips fit a phone's width.
     whenBtn.querySelector('span')!.textContent =
-      pillText(
-        w,
-        arrive,
-        offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-      ) +
+      pillText(w, arrive, hour, true) +
       // Cycling alone has no timetable, so no Reisezeit: the bike stands in for it.
       (state.travel === 'bikeonly'
         ? ' · 🚲'
@@ -113,7 +111,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     cmpChip.hidden = !c;
     if (c)
       $('cmp-text').textContent = t('compareChip', {
-        a: whenBtn.querySelector('span')!.textContent ?? '',
+        a: pillText(w, arrive, hour),
         b: pillText(c, arrive, hourLabel(c.hour)),
       });
     for (const b of [...dayGrid.children, ...typicalButtons])

@@ -126,7 +126,7 @@ body {
 #hint {
   position: fixed;
   z-index: 3;
-  top: calc(var(--st) + 122px);
+  top: calc(var(--st) + 178px);
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -234,7 +234,7 @@ body.no-legend .legend {
   position: fixed;
   z-index: 2;
   right: calc(var(--sr) + 6px);
-  top: calc(var(--st) + 150px);
+  top: calc(var(--st) + 206px);
   height: min(44vh, 380px);
   display: grid;
   grid-template-columns: auto 9px;
@@ -364,18 +364,34 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
   margin-right: calc(var(--sr) + 46px);
 }
 
+/* The search bar: always on top, above the chips; its suggestions open under it. */
 .search {
   position: fixed;
   z-index: 6;
   top: calc(var(--st) + 10px);
   left: calc(var(--sl) + 10px);
-  right: calc(var(--sr) + 10px);
-  max-width: 520px;
-  margin: 0 auto;
+  width: min(520px, calc(100vw - var(--sl) - var(--sr) - 20px));
   background: #fff;
+  border-radius: 23px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.search.open {
   border-radius: 16px;
   box-shadow: 0 6px 24px rgba(20, 10, 40, 0.28);
-  overflow: hidden;
+}
+.search:not(.open) .search-results,
+.search:not(.open) .search-msg {
+  display: none;
+}
+.search-icon {
+  flex: none;
+  margin-left: 14px;
+  color: var(--muted);
+}
+/* Until main.ts has set the language, no placeholder (no German flash on an English link). */
+.search.unrendered #search-input::placeholder {
+  color: transparent;
 }
 .search-box {
   display: flex;
@@ -384,10 +400,10 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
 #search-input {
   flex: 1;
   min-width: 0;
-  height: 50px;
+  height: 46px;
   border: 0;
   outline: 0;
-  padding: 0 4px 0 16px;
+  padding: 0 4px 0 10px;
   /* 16px keeps iOS Safari from zooming into the field. */
   font: inherit;
   font-size: 16px;
@@ -400,8 +416,8 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
   display: none;
 }
 #search-close {
-  width: 50px;
-  height: 50px;
+  width: 46px;
+  height: 46px;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -488,13 +504,13 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
 dialog.menu {
   position: fixed;
   margin: 0;
-  top: calc(var(--st) + 58px);
+  top: calc(var(--st) + 114px);
   right: calc(var(--sr) + 10px);
   left: auto;
   bottom: auto;
   width: min(340px, calc(100vw - 20px));
   max-width: none;
-  max-height: calc(100dvh - var(--st) - var(--sb) - 84px);
+  max-height: calc(100dvh - var(--st) - var(--sb) - 140px);
   overflow-y: auto;
   padding: 14px 16px 16px;
 }
@@ -675,7 +691,7 @@ dialog.menu[open] {
 .meet {
   position: fixed;
   z-index: 3;
-  top: calc(var(--st) + 114px);
+  top: calc(var(--st) + 170px);
   left: 50%;
   transform: translateX(-50%);
   width: max-content;
@@ -827,7 +843,7 @@ body.special #cmp {
 }
 /* Its banner can run to three lines: the legend starts below it, so its top label shows. */
 body.special .legend {
-  top: calc(var(--st) + 190px);
+  top: calc(var(--st) + 246px);
   height: min(40vh, 340px);
 }
 .menu-note {
@@ -853,7 +869,8 @@ body.special .legend {
 .chips {
   position: fixed;
   z-index: 4;
-  top: calc(var(--st) + 10px);
+  /* Under the search bar (46px and a 10px gap). */
+  top: calc(var(--st) + 66px);
   left: 0;
   right: 0;
   display: flex;
@@ -865,12 +882,12 @@ body.special .legend {
 .chips.unrendered .chip-btn span {
   visibility: hidden;
 }
-/* The whole row scrolls sideways: search first, Mehr last. */
+/* The row can still scroll sideways when a long label needs it (Zeit first, Mehr last). */
 .chip-scroll {
   flex: 1;
   min-width: 0;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow-x: auto;
   scrollbar-width: none;
   /* Edge to edge; the chips start and end at the usual margin. Room for their shadows. */
@@ -885,9 +902,9 @@ body.special .legend {
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 40px;
-  padding: 0 14px;
+  padding: 0 12px;
   border: 0;
   border-radius: 999px;
   background: var(--panel);
@@ -915,11 +932,15 @@ body.special .legend {
   margin-top: 3px;
   transform: rotate(-135deg);
 }
-/* Search: a round icon chip, first in the row. */
-.chip-btn.search-chip {
+/* Ebenen and Mehr: round icon chips without the arrow. */
+.chip-btn.icon-chip {
   width: 40px;
   padding: 0;
   justify-content: center;
+}
+.chip-btn.icon-chip[data-pop]::after,
+.chip-btn.icon-chip.menu-chip::after {
+  content: none;
 }
 .chip-btn.on {
   background: var(--accent);
@@ -929,10 +950,10 @@ body.special .legend {
 .pop {
   position: fixed;
   z-index: 5;
-  top: calc(var(--st) + 58px);
+  top: calc(var(--st) + 114px);
   left: calc(var(--sl) + 10px);
   width: min(420px, calc(100vw - 20px));
-  max-height: calc(100dvh - var(--st) - var(--sb) - 130px);
+  max-height: calc(100dvh - var(--st) - var(--sb) - 186px);
   overflow-y: auto;
   padding: 4px 16px 14px;
   border-radius: 16px;
@@ -1127,7 +1148,7 @@ body.special .legend {
 }
 /* Both chips at once: the compare chip goes below the meeting-point chip. */
 #meet:not([hidden]) ~ #cmp {
-  top: calc(var(--st) + 158px);
+  top: calc(var(--st) + 214px);
 }
 
 #diff-bar[hidden],

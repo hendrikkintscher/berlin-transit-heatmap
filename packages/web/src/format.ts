@@ -46,8 +46,13 @@ export function dayLabel(day: Day, now = new Date()) {
   return i === 0 ? t('today') : i === 1 ? t('tomorrow') : dateLabel(day);
 }
 
-/** The pill: "Heute ab 10 Uhr", "Werktag an 9 Uhr". */
-export function pillText(w: When, arrive: boolean, hour: string) {
+/**
+ * The pill: "Heute ab 10 Uhr", "Mo–Fr an 9 Uhr"; `short` (the Zeit chip) leaves out
+ * "Heute": "ab 10 Uhr".
+ */
+export function pillText(w: When, arrive: boolean, hour: string, short = false) {
+  if (short && isDate(w.day) && upcomingDays().indexOf(w.day) === 0)
+    return t(arrive ? 'todayArr' : 'todayAt', { hour });
   if (isDate(w.day)) return t(arrive ? 'dateArr' : 'dateAt', { day: dayLabel(w.day), hour });
   const weekday = w.day === 'weekday';
   return t(weekday ? (arrive ? 'weekdayArr' : 'weekdayAt') : arrive ? 'weekendArr' : 'weekendAt', {
