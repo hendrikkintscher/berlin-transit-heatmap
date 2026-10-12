@@ -10,6 +10,9 @@ State on 2026-10-12, live through PR #88. Build in this order, one step per PR:
 2. Fairer meeting point suggestions: slowest trip and average count equally (group 3)
 3. Timetable publish uploads only changed files (group 10)
 4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+5. Snappier address search (group 1)
+6. "Heute anders" in the chosen connection (group 11)
+7. Smooth line overlays along the real tracks and roads (group 7)
 
 After the UI overhaul, the list is done for now. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -44,6 +47,16 @@ Notes: the interface is in English today (`<html lang="en">`). All UI text moves
 Only suggest addresses and places inside the area the map covers. If that's hard, limit them to Berlin addresses and places instead.
 
 Notes: the search (packages/web/src/search.ts) already sends Photon a rectangular bbox around Berlin. A rectangle still includes parts of Brandenburg, so the plan is to also drop results that fall outside the heatmap's covered area (or outside the Berlin state boundary) on the client, before showing them.
+
+### Snappier address search
+
+Hendrik, 2026-10-12: the address search should feel snappier. Today every keystroke waits for Photon (photon.komoot.io), a free public server, before anything shows. Ideas, measured against the snappiness rule:
+
+- Show local matches at once from data the app already has, such as station names from the timetable, favourites and recent searches, and add Photon's addresses as they arrive.
+- Keep the wait between keystrokes short, cancel requests that are out of date, and cache answers for the session.
+- Measure the time from keystroke to first suggestion on a phone, before and after.
+
+Small to medium effort. Added from Hendrik's request on 2026-10-12.
 
 ## 2. New map layers
 
@@ -327,6 +340,16 @@ From Hendrik's review of group 6: the tapped route looks too much like the Lines
 
 While a route is shown, the Lines layer steps back (about 30 % opacity, thinner, no labels) and the route comes forward: thicker, with a dark outline instead of the white casing the Lines use, round stop dots where you get on, change and get off (with the stop names), and walking legs as a dark dotted line. Closing the card brings the Lines back. Small.
 
+### Smooth line overlays along the real tracks and roads
+
+Hendrik, 2026-10-12: the lines on the Lines layer (and the drawn route) have corners that are too sharp. U-Bahn, S-Bahn and tram lines should follow where they actually run. Bus lines may stay simpler, but should follow the road.
+
+- **Find the real geometry:** check whether VBB's GTFS feed carries `shapes.txt` for these lines. If not, take the tracks from OpenStreetMap (the route relations for U-Bahn, S-Bahn and tram, or the rail and tram ways), which the build already reads for footpaths.
+- **Buses:** snap the line to the streets between stops if that is cheap at build time. Otherwise smooth the stop-to-stop line so it at least has no sharp corners.
+- **Speed:** the geometry is prepared in the build and simplified per zoom level, so the Lines layer loads no slower than now.
+
+Medium effort; finding the data source comes first. Added from Hendrik's request on 2026-10-12.
+
 ### Orientation: which part of Berlin am I looking at?
 
 **Done** (PR #27): water (rivers, canals, lakes) is drawn over the colours in clear blue; parks and woods get a light green veil; the twelve Bezirke are named at city zoom and the basemap's Ortsteil names are bolder from zoom 11.5; the Ringbahn is a faint frame; seven landmarks are marked from zoom 10.5. District boundaries left out.
@@ -492,6 +515,16 @@ The map should show what is actually running, not a typical day. Today the build
 **Done** (PR #88): What's different today. Each day is compared with the typical pattern at build time, and a small notice lists the lines that run differently.
 
 **Finding for live disruptions** (builder, 2026-10-12): VBB's GTFS-RT feed exists but carries no notices, only delays and cancellations of single trips (about 2.4 MB per download), and the journey API has no network-wide notices either, so "disruption notices as text" is not available. Hendrik is choosing between: A) skip it, B) a live check of the tapped trip ("fällt aus" / "+4 Min."), C) a network-wide list of cancellations. B is being built until he decides.
+
+### "Heute anders" in the chosen connection
+
+Hendrik, 2026-10-12: what is different today should count in the connection you pick, and if that is too costly, at least the information that matters for that connection should show. Since PR #78 the routing already uses each day's real timetable, so planned changes (Ersatzverkehr, closures) are already in the connections it finds. This step is about what the user sees:
+
+- **On the trip card:** when a line in the chosen connection runs differently today, say so on that leg, for example "U2: Ersatzverkehr Pankow–Alexanderplatz". This uses the same build-time comparison as the notice from PR #88.
+- **The general notice** then only lists the changes that touch the map you are looking at, or steps back, so it no longer shows things that don't matter for your trip.
+- If counting the changes in routing turns out not to be the case somewhere (for example the "Typisch" times, which use the typical day), only the per-connection information shows there.
+
+Small to medium effort. Added from Hendrik's request on 2026-10-12.
 
 Notes: the app still downloads only the hour it shows (about 270 KB with the binary format), so first load and taps stay as fast as now; the release grows to about 8 days × 24 files, which is fine for GitHub Pages. The daily refresh runs in the existing GTFS workflow. Medium effort; reworked from Hendrik's request on 2026-10-12 (previously "Ersatzverkehr and other temporary changes" with only a reference-day fix).
 
