@@ -4,6 +4,7 @@ import {
   BIKE_SPEED_MPS,
   BIKE_STATION_SECONDS,
   bikeTimetable,
+  decodeTimetable,
   gridLayout,
   heatGrid,
   journeyTo,
@@ -63,11 +64,20 @@ const loading = new Map<Window, Promise<PreparedTimetable>>();
 let dataBase = '';
 
 async function fetchTimetable(window: Window): Promise<Timetable> {
-  const url = new URL(`timetable-${window}.json`, dataBase);
-  const res = await fetch(url);
-  if (!res.ok || !res.headers.get('content-type')?.includes('json') || !res.body) {
-    throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
+  // The binary file is about a third of the JSON one; the JSON stays as a fallback
+  // until every deploy carries the binary files.
+  let url = new URL(`timetable-${window}.bin`, dataBase);
+  let res = await fetch(url);
+  // (Some servers answer a missing file with the app's own page.)
+  const binary = res.ok && res.body !== null && !res.headers.get('content-type')?.includes('html');
+  if (!binary) {
+    url = new URL(`timetable-${window}.json`, dataBase);
+    res = await fetch(url);
+    if (!res.ok || !res.headers.get('content-type')?.includes('json')) {
+      throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
+    }
   }
+  if (!res.body) throw new Error(`Timetable not available (${url.pathname})`);
   // Content-Length is the compressed size when the server gzips, so progress is approximate.
   const total = Number(res.headers.get('content-length')) || 0;
   const reader = res.body.getReader();
@@ -86,6 +96,7 @@ async function fetchTimetable(window: Window): Promise<Timetable> {
     buf.set(c, off);
     off += c.length;
   }
+  if (binary) return decodeTimetable(buf) as Timetable;
   return JSON.parse(new TextDecoder().decode(buf)) as Timetable;
 }
 
