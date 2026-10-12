@@ -118,45 +118,38 @@
         data-t-label="whenTitle"
         hidden
       >
-        <div class="when-now">
+        <!-- Quick times first: Jetzt and a bit later (exact times, always Nächste). -->
+        <div class="when-quick">
           <button type="button" id="now-btn" aria-pressed="false" data-t="whenNow">Jetzt</button>
+          <button type="button" data-later="15">+15</button>
+          <button type="button" data-later="30">+30</button>
+          <button type="button" data-later="60">+60</button>
+        </div>
+        <div class="when-dir">
+          <div class="seg seg-wide" role="radiogroup" aria-label="Richtung" data-t-label="whenDir">
+            <button role="radio" data-dir="depart" aria-checked="true" data-t="dirDepart">
+              Losfahren
+            </button>
+            <button role="radio" data-dir="arrive" aria-checked="false" data-t="dirArrive">
+              Ankommen
+            </button>
+          </div>
           <label class="when-time" id="when-time-box">
-            <span data-t="whenExact">Uhrzeit</span>
+            <span class="sr-only" data-t="whenExact">Uhrzeit</span>
             <input type="time" id="when-time" step="60" />
           </label>
         </div>
-        <div
-          id="day-grid"
-          class="day-grid"
-          role="radiogroup"
-          aria-label="Tag"
-          data-t-label="whenDay"
-        ></div>
-        <h3 data-t="whenTypical">Typischer Tag, zum Planen</h3>
-        <div
-          class="seg seg-wide"
-          role="radiogroup"
-          aria-label="Typischer Tag"
-          data-t-label="whenTypical"
-        >
-          <button role="radio" data-day="weekday" aria-checked="false" data-t="weekday">
-            Werktag
+        <h3 data-t="whenDay">Tag</h3>
+        <!-- Today and the next days, then the typical days to plan with; scrolls sideways. -->
+        <div class="day-row" role="radiogroup" aria-label="Tag" data-t-label="whenDay">
+          <div id="day-grid" class="day-dates"></div>
+          <button role="radio" data-day="weekday" aria-checked="false" data-t="typicalWeekday">
+            Typisch Mo–Fr
           </button>
-          <button role="radio" data-day="weekend" aria-checked="false" data-t="weekend">
-            Wochenende
+          <button role="radio" data-day="weekend" aria-checked="false" data-t="typicalWeekend">
+            Typisch Sa+So
           </button>
         </div>
-        <div class="seg seg-wide" role="radiogroup" aria-label="Richtung" data-t-label="whenDir">
-          <button role="radio" data-dir="depart" aria-checked="true" data-t="dirDepart">
-            Abfahrt ab
-          </button>
-          <button role="radio" data-dir="arrive" aria-checked="false" data-t="dirArrive">
-            Ankunft bis
-          </button>
-        </div>
-        <h3 id="when-hour">Stunde der Abfahrt</h3>
-        <div id="hour-grid" class="hour-grid"></div>
-        <p class="menu-note" data-t="whenNote"></p>
         <h3 data-t="measureTitle">Reisezeit</h3>
         <div
           class="seg seg-wide"
@@ -164,17 +157,21 @@
           aria-label="Reisezeit"
           data-t-label="measureTitle"
         >
+          <button role="radio" data-measure="next" aria-checked="true" data-t="measureNext">
+            Nächste
+          </button>
           <button role="radio" data-measure="typical" aria-checked="false" data-t="measureTypical">
             Typisch
           </button>
           <button role="radio" data-measure="best" aria-checked="false" data-t="measureBest">
             Bestfall
           </button>
-          <button role="radio" data-measure="next" aria-checked="true" data-t="measureNext">
-            Nächste
-          </button>
         </div>
         <p class="menu-note" id="measure-note"></p>
+        <h3 id="when-hour">Stunde</h3>
+        <div id="hour-grid" class="hour-grid"></div>
+        <p class="menu-note" data-t="whenHourNote"></p>
+        <p class="menu-note" data-t="whenNote"></p>
       </section>
       <section
         id="pop-travel"
@@ -274,7 +271,7 @@
         </label>
         <label class="toggle">
           <span class="toggle-text">
-            <b data-t="freq">Takt der Haltestellen</b>
+            <b data-t="freq">Abfahrten pro Stunde</b>
             <small data-t="freqHint"
               >Abfahrten pro Stunde, alle Linien und Richtungen zusammen</small
             >
@@ -474,17 +471,37 @@
       </div>
       <div id="readout" class="chip" hidden>
         <span id="readout-text"></span>
+        <!-- One row of 44 px buttons: start here, another start, favourite, details. -->
         <span class="readout-btns">
-          <button id="readout-start" type="button" data-t="startHere">Als Startpunkt</button>
-          <button id="readout-second" class="alt" type="button" hidden>2. Startpunkt</button>
-          <button id="readout-fav" class="alt" type="button" aria-pressed="false">
-            ☆ Lieblingsort
+          <button id="readout-start" type="button" data-t="startHere">Hier starten</button>
+          <button id="readout-second" class="alt icon" type="button" hidden>
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2" />
+              <path
+                d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5M18 8v6M15 11h6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
           </button>
+          <button id="readout-fav" class="alt icon" type="button" aria-pressed="false">☆</button>
           <button id="readout-remove" class="alt" type="button" data-t="removeStart" hidden>
             Entfernen
           </button>
           <button id="readout-home" class="alt" type="button" data-t="homeHere" hidden>
             🌙 Bis wann heim?
+          </button>
+          <button
+            id="readout-details"
+            class="alt details-btn"
+            type="button"
+            aria-expanded="false"
+            data-t="details"
+            hidden
+          >
+            Details
           </button>
         </span>
         <button

@@ -225,3 +225,9 @@ export function clockNow(when: When, now = new Date()): number | null {
   if (when.day !== w.day && when.day !== dayType(w.day)) return null;
   return w.hour * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
 }
+
+/** "+15", "+30", "+60" in the time panel: that many minutes from now in Berlin, exact. */
+export function laterWhen(minutes: number, now = new Date()): When {
+  const at = new Date(now.getTime() + minutes * 60_000);
+  return { ...whenAt(at), minute: at.getUTCMinutes() };
+}

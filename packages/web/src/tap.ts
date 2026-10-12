@@ -54,6 +54,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   const readout = $('readout');
   const readoutText = $('readout-text');
   const secondBtn = $<HTMLButtonElement>('readout-second');
+  const detailsBtn = $<HTMLButtonElement>('readout-details');
   const removeBtn = $<HTMLButtonElement>('readout-remove');
   const homeBtn = $<HTMLButtonElement>('readout-home');
 
@@ -174,7 +175,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     pending = { lat, lon: lng };
     const count = state.origin ? 1 + state.others.length : 0;
     secondBtn.hidden = !count || count >= MAX_STARTS || !!state.special;
-    secondBtn.textContent = t('secondHere', { n: count + 1 });
+    const second = t('secondHere', { n: count + 1 });
+    secondBtn.setAttribute('aria-label', second);
+    secondBtn.title = second;
     if (!title && map.getZoom() >= 15) void showAddress(pending);
     deps.onCard();
   }
@@ -228,6 +231,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     // A search result offers "Neuer Start" next to "2. Start"; the trip shown is the "Ziel".
     $('readout-start').textContent = t(searched ? 'newStart' : 'startHere');
     for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
+    // Details (the stops) once a trip with stops has come.
+    detailsBtn.hidden = true;
     showFav();
     removeBtn.hidden = homeBtn.hidden = !start;
     readout.hidden = false;
@@ -324,11 +329,15 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (!el) return;
     // On the home map the trip runs from the place to home.
     const home = state.special?.kind === 'home' ? state.special.at : null;
+    // A meeting point's other trips stay unfolded when the card refreshes.
+    const open = el.querySelector('details')?.open;
     el.innerHTML = tripHtml(m, {
       direction: home ? 'arrive' : state.direction,
       now: clockNow(state.when),
       changeNote: deps.changeNote,
     });
+    if (open) el.querySelector('details')!.open = true;
+    detailsBtn.hidden = !el.querySelector('.stops');
     shownRides = m.journeys.flatMap((j) =>
       (j?.legs ?? []).flatMap((l) => (l.type === 'ride' ? [{ name: l.name, mode: l.mode }] : [])),
     );
@@ -397,7 +406,10 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   const favBtn = $<HTMLButtonElement>('readout-fav');
   function showFav() {
     const on = !!pending && deps.isFavourite(pending);
-    favBtn.textContent = t(on ? 'favOn' : 'favHere');
+    // A star icon; its words for screen readers and as a tooltip.
+    favBtn.textContent = on ? '★' : '☆';
+    favBtn.setAttribute('aria-label', t(on ? 'favOn' : 'favHere').replace(/^[☆★] /, ''));
+    favBtn.title = favBtn.getAttribute('aria-label')!;
     favBtn.setAttribute('aria-pressed', String(on));
   }
   favBtn.addEventListener('click', () => {
@@ -408,6 +420,11 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   removeBtn.addEventListener('click', () => deps.removeStart(removeWhich));
   homeBtn.addEventListener('click', () => deps.showHome(removeWhich));
   $('readout-close').addEventListener('click', hideReadout);
+  // Details opens the stops and stays open for the next cards, until closed again.
+  detailsBtn.addEventListener('click', () => {
+    const open = readout.classList.toggle('details');
+    detailsBtn.setAttribute('aria-expanded', String(open));
+  });
 
   return {
     tapAt,

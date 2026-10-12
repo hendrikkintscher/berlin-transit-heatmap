@@ -6,6 +6,7 @@ import {
   desertThresholds,
   eveningWindow,
   isNow,
+  laterWhen,
   isPastHour,
   catchUp,
   whenParam,
@@ -175,5 +176,20 @@ describe('when', () => {
     expect(isNow({ day: '20261012', hour: 18, minute: 20 }, now)).toBe(false);
     expect(isNow({ day: 'weekday', hour: 18 }, now)).toBe(false);
     expect(isNow({ day: '20261012', hour: 19 }, now)).toBe(false);
+  });
+});
+
+describe('laterWhen', () => {
+  it('leaves that many minutes from now, across midnight too', () => {
+    expect(laterWhen(30, new Date('2026-10-13T07:20:00Z'))).toEqual({
+      day: '20261013',
+      hour: 9,
+      minute: 50,
+    });
+    expect(laterWhen(30, new Date('2026-10-13T21:45:00Z'))).toEqual({
+      day: '20261014',
+      hour: 0,
+      minute: 15,
+    });
   });
 });
