@@ -66,3 +66,14 @@ export function computeWindow(when: When, direction: Direction): string {
 export function desertThresholds(when: When): readonly [number, number] {
   return isNightHour(when.hour) ? [1200, 1800] : [600, 900];
 }
+
+/**
+ * "Nächste" leaves now when `when` is the current hour in Berlin, otherwise on the hour:
+ * seconds into the chosen hour.
+ */
+export function leaveOffset(when: When, now = new Date()): number {
+  const w = whenAt(now);
+  if (w.day !== when.day || w.hour !== when.hour) return 0;
+  // Berlin is a whole number of hours from UTC, so minutes and seconds match.
+  return now.getUTCMinutes() * 60 + now.getUTCSeconds();
+}

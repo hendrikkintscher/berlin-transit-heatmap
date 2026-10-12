@@ -1,8 +1,12 @@
+// The app: the map and its colours, the start markers, the worker's results, search,
+// favourite places and hints. The time sheet (when-sheet.ts), the menu (menu.ts), taps and
+// the card at the bottom (tap.ts, trip-card.ts) and the link (url.ts) live in their own
+// modules, wired up at the end of this file.
 import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import { listen, send } from './boot';
 import { BAND_COLORS, BAND_EDGES_MIN, DIFF_COLORS, DIFF_EDGES_MIN, bandLabel } from './colors';
-import { reverseAddress, reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
-import { bezirke, landmarks, ringLine } from './orientation';
+import { formatDate, gridSeconds, shortStop, stopName, escapeHtml } from './format';
+import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import {
   loadFavourites,
   newId,
@@ -12,188 +16,58 @@ import {
   WEIGHTS,
   type Weight,
 } from './favourites';
+import { formatDecimal, formatNumber, initialLang, lang, readStoredLang, setLang, t } from './i18n';
 import {
-  formatDecimal,
-  formatNumber,
-  initialLang,
-  lang,
-  readStoredLang,
-  setLang,
-  t,
-  type Lang,
-} from './i18n';
-import {
-  computeWindow,
-  desertThresholds,
-  parseWhen,
-  whenAt,
-  whenFromParams,
-  windowName,
-  type DayType,
-  type Direction,
-  type When,
-} from './when';
-import type {
-  FromWorker,
-  Measure,
-  RasterLayer,
-  StationProps,
-  TimetableInfo,
-  Travel,
-  Window,
-} from './protocol';
+  addMapLayers,
+  cornerCoordinates,
+  DESERT_LAYER,
+  DESERT_SOURCE,
+  FREQ_COLORS,
+  HEAT_LAYER,
+  HEAT_SOURCE,
+  heatOpacity,
+  LABELS_SOURCE,
+  OUTLINE_LAYERS,
+  OUTLINES_SOURCE,
+  outlineLabel,
+  ROUTE_LAYERS,
+  ROUTES_SOURCE,
+  STATIONS_LAYER,
+  STATIONS_SOURCE,
+} from './map-layers';
+import { initMenu } from './menu';
+import { $, createState, NOW_WHEN, remember, seen, type Result } from './state';
+import { initTap } from './tap';
+import { linkQuery, readLink, type Point } from './url';
+import { computeWindow, desertThresholds, leaveOffset, windowName } from './when';
+import { initWhenSheet } from './when-sheet';
+import type { FromWorker } from './protocol';
 
 const BERLIN: [number, number] = [13.405, 52.515];
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
-const HEAT_SOURCE = 'heat';
-const HEAT_LAYER = 'heat-raster';
-const ROUTES_SOURCE = 'routes';
-const LABELS_SOURCE = 'route-labels';
-const ROUTE_LAYERS = ['routes-casing', 'routes-line', 'routes-label'];
-const STATIONS_SOURCE = 'stations';
-const STATIONS_LAYER = 'stations-dot';
-const DESERT_SOURCE = 'desert';
-const DESERT_LAYER = 'desert-raster';
-/** Departures-per-hour steps for the stop-frequency dots, and their colours. */
-const FREQ_STEPS = [4, 12, 30, 60];
-const FREQ_COLORS = ['#c6dbef', '#6baed6', '#2171b5', '#08519c', '#08306b'];
-const OUTLINES_SOURCE = 'outlines';
-const OUTLINE_LAYERS = ['outlines-line', 'outlines-label'];
-/** Labelled, bolder outlines; the other 5-minute steps are drawn thin. */
-const MAJOR_OUTLINES = [15, 30, 45];
-const AREA_SOURCE = 'area';
-const WATER = '#a9c7dc';
-const TRIP_SOURCE = 'trip';
-const TRIP_STOPS_SOURCE = 'trip-stops';
-const BOLD_FONT = ['Noto Sans Bold'];
-const DEFAULT_OPACITY = 80;
-/** The map opens at the current day type and hour in Berlin, unless a link says otherwise. */
-const NOW_WHEN = whenAt(new Date());
-/** Walking speeds offered in the menu, in km/h; 4 is the default. */
-const WALK_SPEEDS = [3, 4, 5, 6];
-const DEFAULT_WALK_KMH = 4;
-const walkSpeed = (v: number) => (WALK_SPEEDS.includes(v) ? v : DEFAULT_WALK_KMH);
-/** Ways of getting around, in menu order (stored by index on the device). */
-const TRAVELS: Travel[] = ['walk', 'bike', 'bikeonly'];
-const travelOf = (v: string | null): Travel =>
-  TRAVELS.includes(v as Travel) ? (v as Travel) : 'walk';
 
-// Line colours roughly follow the usual Berlin map conventions.
-const MODE_COLORS: Record<string, string> = {
-  sbahn: '#00843d',
-  ubahn: '#0a5ea8',
-  tram: '#c8102e',
-  bus: '#7b2d8e',
-  regional: '#8a1c1c',
-  ferry: '#0090c8',
-};
-
-const modeColor = [
-  'match',
-  ['get', 'mode'],
-  ...Object.entries(MODE_COLORS).flat(),
-  '#444444',
-] as unknown as maplibregl.ExpressionSpecification;
-
-const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const loadbar = $('loadbar');
 const hint = $('hint');
-const readout = $('readout');
-const readoutText = $('readout-text');
 const statusEl = $('status');
 const feedInfo = $('feed-info');
-const infoDialog = $<HTMLDialogElement>('info');
-const whenBtn = $<HTMLButtonElement>('when-btn');
-const whenDialog = $<HTMLDialogElement>('when');
-const dayButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-day]')];
-const hourGrid = $('hour-grid');
-const dirButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-dir]')];
-const measureButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-measure]')];
-const cmpDay = $<HTMLSelectElement>('cmp-day');
-const cmpHour = $<HTMLSelectElement>('cmp-hour');
-const cmpChip = $('cmp');
-const routesToggle = $<HTMLInputElement>('routes-toggle');
-const freqToggle = $<HTMLInputElement>('freq-toggle');
-const desertToggle = $<HTMLInputElement>('desert-toggle');
 const layerLegend = $('layer-legend');
 const meetChip = $('meet');
 const favChip = $<HTMLButtonElement>('fav-score');
 const favList = $<HTMLUListElement>('fav-list');
-const secondBtn = $<HTMLButtonElement>('readout-second');
-const menuDialog = $<HTMLDialogElement>('menu');
-const langButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-lang]')];
-const travelButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-travel]')];
-const walkButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-walk]')];
-const isoToggle = $<HTMLInputElement>('iso-toggle');
-const stepFreeToggle = $<HTMLInputElement>('stepfree-toggle');
-const opacityInput = $<HTMLInputElement>('opacity');
 const locateBtn = $<HTMLButtonElement>('locate-btn');
 const tip = $('tip');
 const tipText = $('tip-text');
 const tipAction = $<HTMLButtonElement>('tip-action');
 const installBtn = $<HTMLButtonElement>('install-btn');
 
-const state: {
-  /** Weekday or weekend, and the departure hour; `window` names its timetable file. */
-  when: When;
-  window: Window;
-  /** Leave in the chosen hour, or arrive in it. */
-  direction: Direction;
-  /** Typical (averaged over the hour, waiting included) or best-case minutes. */
-  measure: Measure;
-  /** Compare: a second time; the map then shows how much longer trips take then. */
-  compare: When | null;
-  origin: { lat: number; lon: number } | null;
-  /** Meeting point: the second person's start. */
-  second: { lat: number; lon: number } | null;
-  pending: { lat: number; lon: number } | null;
-  requestId: number;
-  tripId: number;
-  info: Partial<Record<Window, TimetableInfo>>;
-  routes: boolean;
-  /** Stop-frequency dots and transit-desert shading. */
-  freq: boolean;
-  desert: boolean;
-  /** Isochrone outlines at 15/30/45 min. */
-  iso: boolean;
-  /** Heatmap opacity in percent; remembered on this device. */
-  opacity: number;
-  /** Walking speed in km/h; remembered on this device, carried in shared links. */
-  walkKmh: number;
-  /** Step-free journeys only; remembered on this device, carried in shared links. */
-  stepFree: boolean;
-  /** Walking, cycling to and from stations, or cycling only; remembered, carried in links. */
-  travel: Travel;
-  /** Re-renders the status line, so it follows a language switch. */
-  status: () => string;
-} = {
-  when: NOW_WHEN,
-  window: windowName(NOW_WHEN),
-  direction: 'depart',
-  measure: 'typical',
-  compare: null,
-  origin: null,
-  second: null,
-  pending: null,
-  requestId: 0,
-  tripId: 0,
-  info: {},
-  routes: true,
-  freq: false,
-  desert: false,
-  iso: false,
-  opacity: readNumber('heat-opacity', DEFAULT_OPACITY),
-  walkKmh: walkSpeed(readNumber('walk-kmh', DEFAULT_WALK_KMH)),
-  stepFree: readNumber('step-free', 0) > 0,
-  travel: TRAVELS[readNumber('travel', 0)] ?? 'walk',
-  status: () => '',
-};
-type Result = Extract<FromWorker, { type: 'result' }>;
-let lastResult: Result | null = null;
-type Layers = Extract<FromWorker, { type: 'layers' }>;
-/** Layer data per window, fetched from the worker the first time a layer is shown. */
-const layerData: Partial<Record<Window, Layers>> = {};
-const layersRequested = new Set<Window>();
+// ---------- state, from the link (see url.ts) ----------
+const state = createState();
+const link = readLink(location.search, { ...state, to: null });
+Object.assign(state, link, { window: windowName(link.when) });
+const urlLang = new URLSearchParams(location.search).get('lang');
+setLang(initialLang(location.search, readStoredLang()), false);
+/** Layer windows already asked of the worker. */
+const layersRequested = new Set<string>();
 
 // The heatmap is painted into this canvas and shown through a MapLibre canvas source.
 const heatCanvas = document.createElement('canvas');
@@ -256,24 +130,6 @@ function showLegend(diff: boolean, extra = false) {
   }
 }
 
-/** Small per-device settings and "hint seen" flags; storage may be blocked. */
-function readNumber(key: string, fallback: number): number {
-  try {
-    const v = Number(localStorage.getItem(key));
-    return localStorage.getItem(key) !== null && Number.isFinite(v) ? v : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function remember(key: string, value: string) {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Storage blocked: the setting lasts for this visit only.
-  }
-}
-const seen = (key: string) => readNumber(`seen-${key}`, 0) > 0;
-
 let statusTimer = 0;
 /** Sets the status line; `fade` hides it again after a few seconds. */
 function setStatus(render: () => string, fade = false) {
@@ -304,17 +160,17 @@ listen((ev: MessageEvent<FromWorker>) => {
     redoWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
-    lastResult = m;
+    state.result = m;
     showResult(m);
-    if (spot) tapAt(spot.lat, spot.lon, undefined, spot.title, spot.searched);
+    tap.onResult();
     loadbar.hidden = true;
     const s = m.totalMs / 1000;
     setStatus(() => t('computed', { s: formatDecimal(s, 1) }), true);
     showTips();
   } else if (m.type === 'trip') {
-    if (m.id === state.tripId && !readout.hidden) showTrip(m);
+    tap.onTrip(m);
   } else if (m.type === 'layers') {
-    layerData[m.window] = m;
+    state.layers[m.window] = m;
     if (m.window === state.window) showLayers();
   } else if (m.type === 'error') {
     loadbar.hidden = true;
@@ -329,23 +185,13 @@ function renderFeedInfo() {
     : t('feedLoading');
   $('data-note').textContent = i ? t('dataNote', { date: formatDate(i.serviceDate) }) : '';
 }
-/** "13.10.2026" / "13 Oct 2026" from an ISO date. */
-function formatDate(iso: string) {
-  const d = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(lang() === 'de' ? 'de-DE' : 'en-GB', {
-    day: 'numeric',
-    month: lang() === 'de' ? 'numeric' : 'short',
-    year: 'numeric',
-  });
-}
 
 /** Recomputes the map and the walk-based layers, e.g. after a walking-speed change. */
 function redoWalks() {
-  for (const w of Object.keys(layerData)) delete layerData[w];
+  state.layers = {};
   layersRequested.clear();
   showLayers();
-  if (state.origin) keepSpot();
+  if (state.origin) tap.keepSpot();
   compute();
 }
 
@@ -364,7 +210,7 @@ function compute() {
     window: computedWindow(),
     direction: state.direction,
     measure: state.measure,
-    ...(state.measure === 'next' ? { leaveOffset: leaveOffset() } : {}),
+    ...(state.measure === 'next' ? { leaveOffset: leaveOffset(state.when) } : {}),
     walkKmh: state.walkKmh,
     ...(state.stepFree ? { stepFree: true } : {}),
     ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
@@ -374,64 +220,15 @@ function compute() {
   });
 }
 
-/**
- * The tapped place (destination): it stays through settings changes, recomputed for each,
- * until the ✕ or a new tap. Kept in the link as ?to=.
- */
-type Spot = { lat: number; lon: number; title: string; searched: boolean };
-let spot: Spot | null = null;
-
-// ---------- URL state (?from=lat,lon&w=night&routes=0&lang=en) ----------
-function readUrl() {
-  const p = new URLSearchParams(location.search);
-  if (p.get('routes') === '0') state.routes = false;
-  const layers = (p.get('layers') ?? '').split(',');
-  state.freq = layers.includes('freq');
-  state.desert = layers.includes('desert');
-  state.iso = layers.includes('iso');
-  state.origin = parsePoint(p.get('from'));
-  state.second = state.origin ? parsePoint(p.get('with')) : null;
-  const to = state.origin ? parsePoint(p.get('to')) : null;
-  spot = to && { ...to, title: '', searched: false };
-  state.when = whenFromParams(p, NOW_WHEN);
-  state.window = windowName(state.when);
-  if (p.get('dir') === 'arr') state.direction = 'arrive';
-  if (p.get('m') === 'best' || p.get('m') === 'next') state.measure = p.get('m') as Measure;
-  state.compare = parseWhen(p.get('cmp'));
-  if (p.has('walk')) state.walkKmh = walkSpeed(Number(p.get('walk')));
-  if (p.has('sf')) state.stepFree = p.get('sf') === '1';
-  if (p.has('go')) state.travel = travelOf(p.get('go'));
-}
-function parsePoint(v: string | null) {
-  const [lat, lon] = (v ?? '').split(',').map(Number);
-  return Number.isFinite(lat) && Number.isFinite(lon) && lat && lon ? { lat, lon } : null;
-}
-const pointParam = (o: { lat: number; lon: number }) => `${o.lat.toFixed(5)},${o.lon.toFixed(5)}`;
 function writeUrl() {
-  const p = new URLSearchParams();
-  if (state.origin) p.set('from', pointParam(state.origin));
-  if (state.second) p.set('with', pointParam(state.second));
-  if (spot) p.set('to', pointParam(spot));
-  if (state.window !== windowName(NOW_WHEN)) p.set('t', state.window);
-  if (state.direction === 'arrive') p.set('dir', 'arr');
-  if (state.measure !== 'typical') p.set('m', state.measure);
-  if (state.compare) p.set('cmp', windowName(state.compare));
-  if (state.walkKmh !== DEFAULT_WALK_KMH) p.set('walk', String(state.walkKmh));
-  if (state.stepFree) p.set('sf', '1');
-  if (state.travel !== 'walk') p.set('go', state.travel);
-  if (!state.routes) p.set('routes', '0');
-  const layers = [state.freq && 'freq', state.desert && 'desert', state.iso && 'iso']
-    .filter(Boolean)
-    .join(',');
-  if (layers) p.set('layers', layers);
-  // Keep an explicit ?lang= so a shared English link stays English.
-  if (urlLang && urlLang === lang()) p.set('lang', urlLang);
-  const q = p.toString();
+  const q = linkQuery(
+    { ...state, to: tap.spot() },
+    NOW_WHEN,
+    // Keep an explicit ?lang= so a shared English link stays English.
+    urlLang && urlLang === lang() ? urlLang : null,
+  );
   history.replaceState(null, '', q ? `?${q}` : location.pathname);
 }
-readUrl();
-const urlLang = new URLSearchParams(location.search).get('lang');
-setLang(initialLang(location.search, readStoredLang()), false);
 
 // ---------- map ----------
 const map = new maplibregl.Map({
@@ -452,7 +249,7 @@ markerEl.className = 'origin-marker';
 const marker = new maplibregl.Marker({ element: markerEl, draggable: true });
 marker.on('dragend', () => {
   const { lat, lng } = marker.getLngLat();
-  setOrigin(lat, lng);
+  setOrigin({ lat, lon: lng });
 });
 
 const marker2El = document.createElement('div');
@@ -474,16 +271,9 @@ for (const [m, el, which] of [
   el.addEventListener('click', (e) => {
     e.stopPropagation();
     if (Date.now() - draggedAt < 400) return;
-    showStartCard(which);
+    tap.showStartCard(which);
   });
 }
-
-const spotEl = document.createElement('div');
-spotEl.className = 'spot-marker';
-const spotMarker = new maplibregl.Marker({ element: spotEl });
-// A place from the link (?to=) shows at once; its card follows with the first map.
-const linked = spot as Spot | null;
-if (linked) spotMarker.setLngLat([linked.lon, linked.lat]).addTo(map);
 
 function showOrigin() {
   if (!state.origin) {
@@ -500,10 +290,10 @@ function showOrigin() {
   hint.hidden = true;
 }
 
-function setOrigin(lat: number, lon: number) {
-  state.origin = { lat, lon };
+function setOrigin(p: Point) {
+  state.origin = p;
   showOrigin();
-  keepSpot();
+  tap.keepSpot();
   writeUrl();
   compute();
 }
@@ -515,8 +305,8 @@ function removeStart(which: 1 | 2) {
     state.second = null;
   } else state.second = null;
   showOrigin();
-  if (state.origin) keepSpot();
-  else hideReadout();
+  if (state.origin) tap.keepSpot();
+  else tap.hideReadout();
   writeUrl();
   if (state.origin) compute();
   else clearResult();
@@ -525,13 +315,13 @@ function removeStart(which: 1 | 2) {
 /** No start: drop the colours, lines and outlines. */
 function clearResult() {
   state.requestId++;
-  lastResult = null;
+  state.result = null;
   renderMeet(undefined);
   loadbar.hidden = true;
   setStatus(() => '');
   renderFavourites();
   showLegend(false);
-  if (!mapReady) return;
+  if (!state.mapReady) return;
   if (map.getLayer(HEAT_LAYER)) map.setLayoutProperty(HEAT_LAYER, 'visibility', 'none');
   const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
   for (const id of [ROUTES_SOURCE, LABELS_SOURCE, OUTLINES_SOURCE])
@@ -542,401 +332,17 @@ function clearResult() {
 function setSecond(p: { lat: number; lon: number } | null) {
   state.second = p;
   showOrigin();
-  keepSpot();
+  tap.keepSpot();
   writeUrl();
   compute();
 }
 
-let mapReady = false;
 map.on('load', () => {
-  mapReady = true;
+  state.mapReady = true;
   // Start with the attribution collapsed to its (i) button so it does not cover the legend.
   document.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
-  const firstSymbol = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-  // The colours go under the basemap's roads, so streets stay readable on top of them.
-  const firstRoad =
-    map.getStyle().layers.find((l) => 'source-layer' in l && l['source-layer'] === 'transportation')
-      ?.id ?? ROUTE_LAYERS[0];
-  // Faint roads in the city view, full strength once zoomed in to street level.
-  for (const l of map.getStyle().layers) {
-    if (l.type === 'line' && 'source-layer' in l && l['source-layer'] === 'transportation') {
-      map.setPaintProperty(l.id, 'line-opacity', [
-        'interpolate',
-        ['linear'],
-        ['zoom'],
-        10,
-        0.45,
-        13,
-        1,
-      ]);
-    }
-  }
-  const font = textFont();
-  const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
-  map.addSource(ROUTES_SOURCE, { type: 'geojson', data: empty });
-  map.addSource(LABELS_SOURCE, { type: 'geojson', data: empty });
-  // Width follows the share of the map reached over a hop: 1 % thin, 50 %+ thick.
-  const width = (extra: number): maplibregl.ExpressionSpecification => {
-    const byShare = (k: number): maplibregl.ExpressionSpecification => [
-      '+',
-      extra,
-      ['*', k, ['interpolate', ['linear'], ['sqrt', ['get', 'share']], 0.1, 1, 0.7, 7]],
-    ];
-    return ['interpolate', ['linear'], ['zoom'], 9, byShare(0.6), 14, byShare(1.4)];
-  };
-  const visibility = state.routes ? 'visible' : 'none';
-  map.addLayer(
-    {
-      id: 'routes-casing',
-      type: 'line',
-      source: ROUTES_SOURCE,
-      layout: { 'line-cap': 'round', 'line-join': 'round', visibility },
-      paint: { 'line-color': '#ffffff', 'line-width': width(2.5), 'line-opacity': 0.9 },
-    },
-    firstSymbol,
-  );
-  map.addLayer(
-    {
-      id: 'routes-line',
-      type: 'line',
-      source: ROUTES_SOURCE,
-      layout: { 'line-cap': 'round', 'line-join': 'round', visibility },
-      paint: {
-        'line-color': modeColor,
-        'line-width': width(0),
-      },
-    },
-    firstSymbol,
-  );
-  map.addLayer({
-    id: 'routes-label',
-    type: 'symbol',
-    source: LABELS_SOURCE,
-    layout: {
-      visibility,
-      'symbol-placement': 'line',
-      'symbol-spacing': 220,
-      'text-field': ['get', 'names'],
-      'text-font': font,
-      'text-size': 11,
-      'text-max-angle': 40,
-    },
-    paint: { 'text-color': '#1d1d2b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
-  });
-  map.addSource(DESERT_SOURCE, {
-    type: 'canvas',
-    canvas: desertCanvas,
-    coordinates: [
-      [13.08, 52.68],
-      [13.77, 52.68],
-      [13.77, 52.33],
-      [13.08, 52.33],
-    ],
-    animate: false,
-  });
-  map.addLayer(
-    {
-      id: DESERT_LAYER,
-      type: 'raster',
-      source: DESERT_SOURCE,
-      layout: { visibility: 'none' },
-      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear' },
-    },
-    firstRoad,
-  );
-  // Orientation on top of the colours: water in clear blue, parks and woods under a light
-  // green veil, and the Ringbahn as a faint frame.
-  const tiles = 'openmaptiles';
-  map.addLayer(
-    {
-      id: 'green-veil',
-      type: 'fill',
-      source: tiles,
-      'source-layer': 'park',
-      paint: { 'fill-color': '#e4eedb', 'fill-opacity': 0.45 },
-    },
-    firstRoad,
-  );
-  map.addLayer(
-    {
-      id: 'wood-veil',
-      type: 'fill',
-      source: tiles,
-      'source-layer': 'landcover',
-      filter: ['==', ['get', 'class'], 'wood'],
-      paint: { 'fill-color': '#e4eedb', 'fill-opacity': 0.35 },
-    },
-    firstRoad,
-  );
-  map.addLayer(
-    {
-      id: 'water-top',
-      type: 'fill',
-      source: tiles,
-      'source-layer': 'water',
-      filter: ['!=', ['get', 'brunnel'], 'tunnel'],
-      paint: { 'fill-color': WATER },
-    },
-    firstRoad,
-  );
-  map.addLayer(
-    {
-      id: 'waterway-top',
-      type: 'line',
-      source: tiles,
-      'source-layer': 'waterway',
-      filter: ['!=', ['get', 'brunnel'], 'tunnel'],
-      paint: {
-        'line-color': WATER,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 14, 3],
-      },
-    },
-    firstRoad,
-  );
-  map.addSource(OUTLINES_SOURCE, { type: 'geojson', data: empty });
-  const isoVisibility = state.iso ? 'visible' : 'none';
-  map.addLayer(
-    {
-      id: 'outlines-line',
-      type: 'line',
-      source: OUTLINES_SOURCE,
-      layout: { 'line-join': 'round', visibility: isoVisibility },
-      paint: {
-        'line-color': '#1d1530',
-        'line-opacity': ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4],
-        // 15 min boldest, then 30 and 45; the other 5-minute steps are hairlines.
-        'line-width': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          9,
-          ['match', ['get', 'min'], 15, 2, 30, 1.5, 45, 1.1, 0.5],
-          14,
-          ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
-        ],
-      },
-    },
-    ROUTE_LAYERS[0],
-  );
-  map.addLayer({
-    id: 'outlines-label',
-    type: 'symbol',
-    source: OUTLINES_SOURCE,
-    filter: ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]],
-    layout: {
-      visibility: isoVisibility,
-      'symbol-placement': 'line',
-      'symbol-spacing': 300,
-      'text-field': outlineLabel(false),
-      'text-font': font,
-      'text-size': 11,
-      'text-keep-upright': true,
-    },
-    paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
-  });
-  map.addSource('ring', { type: 'geojson', data: ringLine });
-  map.addLayer(
-    {
-      id: 'ring-line',
-      type: 'line',
-      source: 'ring',
-      layout: { 'line-join': 'round' },
-      paint: {
-        'line-color': '#1d1530',
-        'line-opacity': 0.35,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.5, 14, 3],
-      },
-    },
-    ROUTE_LAYERS[0],
-  );
-  // A faint frame where the computed area ends.
-  const [aw, as, ae, an] = SEARCH_BBOX;
-  map.addSource(AREA_SOURCE, {
-    type: 'geojson',
-    data: {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [aw, an],
-          [ae, an],
-          [ae, as],
-          [aw, as],
-          [aw, an],
-        ],
-      },
-    },
-  });
-  map.addLayer(
-    {
-      id: 'area-outline',
-      type: 'line',
-      source: AREA_SOURCE,
-      paint: {
-        'line-color': '#5e1f8c',
-        'line-opacity': 0.4,
-        'line-width': 1.5,
-        'line-dasharray': [3, 2],
-      },
-    },
-    firstSymbol,
-  );
-  map.addSource(STATIONS_SOURCE, { type: 'geojson', data: empty });
-  map.addLayer(
-    {
-      id: STATIONS_LAYER,
-      type: 'circle',
-      source: STATIONS_SOURCE,
-      layout: { visibility: 'none' },
-      paint: {
-        'circle-color': [
-          'step',
-          ['get', 'perHour'],
-          FREQ_COLORS[0],
-          ...FREQ_STEPS.flatMap((s, i) => [s, FREQ_COLORS[i + 1]]),
-        ] as unknown as maplibregl.ExpressionSpecification,
-        // Busier stations are bigger; everything grows as you zoom in.
-        'circle-radius': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          9,
-          ['interpolate', ['linear'], ['get', 'perHour'], 0, 1.2, 60, 2.5, 200, 4],
-          14,
-          ['interpolate', ['linear'], ['get', 'perHour'], 0, 4, 60, 8, 200, 12],
-        ] as unknown as maplibregl.ExpressionSpecification,
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 9, 0.4, 14, 1.5],
-      },
-    },
-    'routes-label',
-  );
-  // The connection to a tapped spot: rides in their line colours, walks dashed, rides
-  // by bike as a thin solid line.
-  map.addSource(TRIP_SOURCE, { type: 'geojson', data: empty });
-  const tripLines = ['==', ['get', 'walk'], false] as maplibregl.FilterSpecification;
-  map.addLayer({
-    id: 'trip-casing',
-    type: 'line',
-    source: TRIP_SOURCE,
-    filter: tripLines,
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': '#1d1530', 'line-width': 9.5 },
-  });
-  map.addLayer({
-    id: 'trip-line',
-    type: 'line',
-    source: TRIP_SOURCE,
-    filter: tripLines,
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': modeColor, 'line-width': 5.5 },
-  });
-  map.addLayer({
-    id: 'trip-walk',
-    type: 'line',
-    source: TRIP_SOURCE,
-    filter: ['all', ['==', ['get', 'walk'], true], ['!=', ['get', 'mode'], 'bike']],
-    layout: { 'line-cap': 'round' },
-    paint: { 'line-color': '#1d1530', 'line-width': 3, 'line-dasharray': [0.4, 1.6] },
-  });
-  map.addLayer({
-    id: 'trip-bike',
-    type: 'line',
-    source: TRIP_SOURCE,
-    filter: ['==', ['get', 'mode'], 'bike'],
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': '#1d1530', 'line-width': 3.5 },
-  });
-  map.addSource(TRIP_STOPS_SOURCE, { type: 'geojson', data: empty });
-  map.addLayer({
-    id: 'trip-stops',
-    type: 'circle',
-    source: TRIP_STOPS_SOURCE,
-    paint: {
-      'circle-radius': 5,
-      'circle-color': '#ffffff',
-      'circle-stroke-color': '#1d1530',
-      'circle-stroke-width': 2.5,
-    },
-  });
-  map.addLayer({
-    id: 'trip-stop-label',
-    type: 'symbol',
-    source: TRIP_STOPS_SOURCE,
-    layout: {
-      'text-field': ['get', 'name'],
-      'text-font': BOLD_FONT,
-      'text-size': 12,
-      'text-anchor': 'left',
-      'text-offset': [0.8, 0],
-      'text-optional': true,
-    },
-    paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
-  });
-  // Bezirke at city zoom; the basemap's Ortsteil names take over from zoom 11.5.
-  map.addSource('bezirke', { type: 'geojson', data: bezirke });
-  map.addLayer({
-    id: 'bezirke-label',
-    type: 'symbol',
-    source: 'bezirke',
-    maxzoom: 11.5,
-    layout: {
-      'text-field': ['get', 'name'],
-      'text-font': BOLD_FONT,
-      'text-size': ['interpolate', ['linear'], ['zoom'], 9, 10, 11, 13],
-      'text-transform': 'uppercase',
-      'text-letter-spacing': 0.06,
-      'text-max-width': 7,
-    },
-    paint: {
-      'text-color': '#2a2140',
-      'text-opacity': 0.8,
-      'text-halo-color': '#ffffff',
-      'text-halo-width': 1.8,
-    },
-  });
-  if (map.getLayer('label_other')) {
-    map.setLayoutProperty('label_other', 'text-font', BOLD_FONT);
-    map.setLayoutProperty('label_other', 'text-size', [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      11,
-      11,
-      14,
-      14,
-    ]);
-    map.setPaintProperty('label_other', 'text-color', '#2a2140');
-    map.setPaintProperty('label_other', 'text-halo-width', 1.8);
-  }
-  map.addSource('landmarks', { type: 'geojson', data: landmarks });
-  map.addLayer({
-    id: 'landmarks',
-    type: 'symbol',
-    source: 'landmarks',
-    minzoom: 10.5,
-    layout: {
-      'text-field': ['concat', '◆ ', ['get', 'name']],
-      'text-font': font,
-      'text-size': 11,
-      'text-anchor': 'left',
-      'text-offset': [-0.45, 0],
-      'text-optional': true,
-    },
-    paint: { 'text-color': '#4a3d63', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
-  });
-  // House numbers at street level, so a tap can pick an exact address.
-  map.addLayer({
-    id: 'housenumbers',
-    type: 'symbol',
-    source: tiles,
-    'source-layer': 'housenumber',
-    minzoom: 17,
-    layout: { 'text-field': ['get', 'housenumber'], 'text-font': font, 'text-size': 11 },
-    paint: { 'text-color': '#4a4458', 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 },
-  });
-  if (lastResult) showResult(lastResult);
+  addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
+  if (state.result) showResult(state.result);
   showLayers();
 });
 
@@ -944,8 +350,8 @@ map.on('load', () => {
 function showLayers() {
   layerLegend.hidden = !(state.freq || state.desert);
   renderLayerLegend();
-  if (!mapReady) return;
-  const data = layerData[state.window];
+  if (!state.mapReady) return;
+  const data = state.layers[state.window];
   if ((state.freq || state.desert) && !data && !layersRequested.has(state.window)) {
     layersRequested.add(state.window);
     send({
@@ -970,15 +376,6 @@ function showLayers() {
   map.triggerRepaint();
 }
 
-function cornerCoordinates([w, s, e, n]: [number, number, number, number]) {
-  return [
-    [w, n],
-    [e, n],
-    [e, s],
-    [w, s],
-  ] as [[number, number], [number, number], [number, number], [number, number]];
-}
-
 function renderLayerLegend() {
   const rows: string[] = [];
   if (state.freq) {
@@ -1000,22 +397,6 @@ function renderLayerLegend() {
   layerLegend.innerHTML = rows.join('');
 }
 
-/** A font the basemap's glyph server has, taken from its own labels. */
-function textFont(): string[] {
-  for (const l of map.getStyle().layers) {
-    if (l.type !== 'symbol') continue;
-    const f = map.getLayoutProperty(l.id, 'text-font') as unknown;
-    if (Array.isArray(f) && f.every((x) => typeof x === 'string')) return f as string[];
-  }
-  return ['Noto Sans Regular'];
-}
-
-/** The chosen opacity in the city view, fading at street level so names and numbers read. */
-function heatOpacity(): maplibregl.ExpressionSpecification {
-  const o = state.opacity / 100;
-  return ['interpolate', ['linear'], ['zoom'], 13, o, 16, o * 0.45];
-}
-
 // ---------- suggested meeting points ----------
 let meetMarkers: maplibregl.Marker[] = [];
 /** Pins for the suggested meeting points; a tap shows both trips there. */
@@ -1029,7 +410,7 @@ function renderMeet(list: Result['meet']) {
     el.title = t('meetSuggestion', { name: stopName(s.name), a: s.a, b: s.b });
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      tapAt(s.lat, s.lon, undefined, stopName(s.name));
+      tap.tapAt(s.lat, s.lon, undefined, stopName(s.name));
     });
     return new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(map);
   });
@@ -1041,16 +422,11 @@ const showMeetNames = () =>
 map.on('zoomend', showMeetNames);
 showMeetNames();
 
-/** Outline labels: "15 min", or "+15 min" (extra minutes) at a meeting point. */
-function outlineLabel(extra: boolean): maplibregl.ExpressionSpecification {
-  return ['concat', extra ? '+' : '', ['to-string', ['get', 'min']], ' min'];
-}
-
 function showResult(r: Result) {
   renderMeet(r.meet);
   renderFavourites();
   showLegend(!!r.compare, r.extraBase !== undefined);
-  if (!mapReady) return;
+  if (!state.mapReady) return;
   const { width, height, rgba } = r.image;
   heatCanvas.width = width;
   heatCanvas.height = height;
@@ -1076,7 +452,7 @@ function showResult(r: Result) {
         type: 'raster',
         source: HEAT_SOURCE,
         paint: {
-          'raster-opacity': heatOpacity(),
+          'raster-opacity': heatOpacity(state.opacity),
           'raster-fade-duration': 0,
           'raster-resampling': 'linear',
         },
@@ -1098,15 +474,6 @@ function showResult(r: Result) {
   map.triggerRepaint();
 }
 
-function gridSeconds(r: RasterLayer, lat: number, lon: number, values = r.grid.seconds): number {
-  const [w, s, e, n] = r.bbox;
-  const { cols, rows } = r.grid;
-  const c = Math.floor(((lon - w) / (e - w)) * cols);
-  const row = Math.floor(((n - lat) / (n - s)) * rows);
-  if (c < 0 || c >= cols || row < 0 || row >= rows) return Infinity;
-  return values[row * cols + c];
-}
-
 // A tap that only closes the search panel should not also set a point.
 let ignoreClick = false;
 map.on('click', (e: MapMouseEvent) => {
@@ -1114,144 +481,8 @@ map.on('click', (e: MapMouseEvent) => {
     ignoreClick = false;
     return;
   }
-  tapAt(e.lngLat.lat, e.lngLat.lng, e.point);
+  tap.tapAt(e.lngLat.lat, e.lngLat.lng, e.point);
 });
-
-/**
- * The card for a spot: minutes, line, access time and the trip there. `at` is the spot on
- * screen, for picking up a station dot or line under the finger; `title` names the spot
- * (a meeting-point suggestion or a search result).
- */
-function tapAt(
-  lat: number,
-  lng: number,
-  at?: { x: number; y: number },
-  title = '',
-  searched = false,
-) {
-  const near = (layers: string[]) =>
-    at
-      ? map.queryRenderedFeatures(
-          [
-            [at.x - 8, at.y - 8],
-            [at.x + 8, at.y + 8],
-          ],
-          { layers },
-        )
-      : [];
-  const data = layerData[state.window];
-  const station = state.freq && data ? near([STATIONS_LAYER])[0] : undefined;
-  let html: string;
-  if (station) {
-    setSpot(null);
-    const p = station.properties as StationProps;
-    html =
-      t('stationFreq', { name: escapeHtml(p.name), n: p.perHour }) +
-      (p.lines ? `<small>${escapeHtml(p.lines)}</small>` : '');
-  } else if (!state.origin && !(state.desert && data)) {
-    setSpot(null);
-    setOrigin(lat, lng);
-    return;
-  } else {
-    const r = lastResult;
-    const secs = r && state.origin ? gridSeconds(r, lat, lng) : NaN;
-    const parts: string[] = [];
-    let tripSlot = '';
-    if (secs >= 0 && r?.compare) {
-      const b = gridSeconds(r, lat, lng, r.compare);
-      const fmt = (v: number) => (v < Infinity ? String(Math.round(v / 60)) : '–');
-      const d = Math.round(b / 60) - Math.round(secs / 60);
-      parts.push(
-        t('cmpMinutes', {
-          a: fmt(secs),
-          b: fmt(b),
-          d: Number.isFinite(d) ? (d > 0 ? `+${d}` : d < 0 ? `−${-d}` : '±0') : '–',
-        }) + `<small>${whenText(state.when)} → ${whenText(state.compare!)}</small>`,
-      );
-    } else if (secs === Infinity) parts.push(t('unreachable'));
-    else if (secs >= 0 && r?.each) {
-      const [a, b] = r.each.map((v) => gridSeconds(r, lat, lng, v) / 60);
-      parts.push(t('minutesBoth', { a: Math.round(a), b: Math.round(b) }));
-      if (r.extraBase !== undefined)
-        parts.push(
-          `<small>${t('extraMinutes', { n: Math.max(0, Math.round((secs - r.extraBase) / 60)) })}</small>`,
-        );
-    } else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60) }));
-    if (state.routes && state.origin) {
-      const top = near(['routes-line']).sort((a, b) => b.properties.share - a.properties.share)[0];
-      if (top) {
-        const pct = Math.round(100 * (top.properties.share as number));
-        parts.push(
-          `<small>${t('lineShare', { names: escapeHtml(String(top.properties.names)), pct })}</small>`,
-        );
-      }
-    }
-    // The connection itself arrives from the worker a moment later.
-    if (secs < Infinity && r) {
-      state.tripId++;
-      send({ type: 'trip', id: state.tripId, lat, lon: lng });
-      tripSlot = '<span id="trip" class="trip"></span>';
-    }
-    if (state.desert && data) {
-      const access = gridSeconds(data.desert, lat, lng);
-      parts.push(
-        access === Infinity ? t('accessNone') : t('access', { n: Math.round(access / 60) }),
-      );
-    }
-    html = parts.join('<br>') + tripSlot;
-    setSpot({ lat, lon: lng, title, searched });
-  }
-  if (title) html = `<b class="spot-name">${escapeHtml(title)}</b>${html}`;
-  showReadoutCard(html, false, searched);
-  state.pending = { lat, lon: lng };
-  secondBtn.hidden = !state.origin;
-  if (!title && map.getZoom() >= 15) showAddress(state.pending);
-  if (tipKey === 'tap') hideTip();
-}
-
-/**
- * At street level, names the address under the tap; "Hier starten" then starts there, so the
- * start sits on the house rather than a few metres off it.
- */
-async function showAddress(at: { lat: number; lon: number }) {
-  let place: Place | null = null;
-  try {
-    place = await reverseAddress(at, lang());
-  } catch {
-    return; // Offline or Photon down: the card works without it.
-  }
-  if (!place || state.pending !== at || readout.hidden) return;
-  // Only snap to an address close to the tap (about 60 m).
-  const dy = (place.lat - at.lat) * 111_000;
-  const dx = (place.lon - at.lon) * 111_000 * Math.cos((at.lat * Math.PI) / 180);
-  if (Math.hypot(dx, dy) > 60) return;
-  const el = document.createElement('small');
-  el.className = 'addr';
-  el.textContent = place.label;
-  readoutText.prepend(el);
-  state.pending = { lat: place.lat, lon: place.lon };
-}
-
-const removeBtn = $<HTMLButtonElement>('readout-remove');
-let removeWhich: 1 | 2 = 1;
-/** The card at the bottom: minutes for a spot, or a start point with a remove button. */
-function showReadoutCard(html: string, start: boolean, searched = false) {
-  readoutText.innerHTML = html;
-  // A search result offers "Neuer Start" next to "2. Start"; the trip shown is the "Ziel".
-  $('readout-start').textContent = t(searched ? 'newStart' : 'startHere');
-  for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
-  removeBtn.hidden = !start;
-  readout.hidden = false;
-}
-function showStartCard(which: 1 | 2) {
-  hideReadout();
-  removeWhich = which;
-  const mark = state.second ? `<i class="p${which}"></i>` : '';
-  showReadoutCard(`${mark}<b>${t(which === 1 ? 'startPoint' : 'secondPoint')}</b>`, true);
-  if (tipKey === 'tap') hideTip();
-}
-removeBtn.addEventListener('click', () => removeStart(removeWhich));
-$('readout-close').addEventListener('click', hideReadout);
 
 // The map's (i) attribution sits just above the bottom panel, which changes height.
 const bottomPanel = document.querySelector<HTMLElement>('.bottom')!;
@@ -1259,379 +490,10 @@ new ResizeObserver(() =>
   document.documentElement.style.setProperty('--bottom-h', `${bottomPanel.offsetHeight}px`),
 ).observe(bottomPanel);
 
-function hideReadout() {
-  readout.hidden = true;
-  state.tripId++;
-  setTrip(null);
-  setSpot(null);
-}
-
-function setSpot(p: Spot | null) {
-  readout.classList.remove('stale');
-  const same = p === spot || (p && spot && p.lat === spot.lat && p.lon === spot.lon);
-  spot = p;
-  if (p) spotMarker.setLngLat([p.lon, p.lat]).addTo(map);
-  else spotMarker.remove();
-  if (!same) writeUrl();
-}
-
-/**
- * A setting changed and a new map is on its way: the tapped place stays, dimmed until the
- * new map recomputes its card and trip. Any other card (a start, a station) closes.
- */
-function keepSpot() {
-  if (!spot) return hideReadout();
-  state.tripId++;
-  setTrip(null);
-  readout.classList.add('stale');
-}
-/** Redraws the place's card now, for a change that needs no new map (language, layers). */
-function redrawSpot() {
-  if (!spot || (!state.origin && !state.desert)) return hideReadout();
-  // Without a map yet, the coming one redraws it.
-  if (lastResult || !state.origin) tapAt(spot.lat, spot.lon, undefined, spot.title, spot.searched);
-}
-
-type Trip = Extract<FromWorker, { type: 'trip' }>;
-/** Draws a journey (or clears it); while one is shown the Lines layer steps back. */
-function setTrip(trip: Pick<Trip, 'lines' | 'stops'> | null) {
-  if (!mapReady) return;
-  const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
-  (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.lines ?? empty);
-  (map.getSource(TRIP_STOPS_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.stops ?? empty);
-  map.setPaintProperty('routes-line', 'line-opacity', trip ? 0.3 : 1);
-  map.setPaintProperty('routes-casing', 'line-opacity', trip ? 0.2 : 0.9);
-  map.setLayoutProperty('routes-label', 'visibility', state.routes && !trip ? 'visible' : 'none');
-}
-
-/** The journey to the tapped spot: changes and walking, then one row per ride. */
-function showTrip(m: Extract<FromWorker, { type: 'trip' }>) {
-  const el = document.getElementById('trip');
-  if (!el) return;
-  const two = m.journeys.length > 1;
-  const starts = [state.origin, state.second];
-  const here = state.pending;
-  el.innerHTML = m.journeys
-    .map((j, i) => {
-      const mark = two ? `<i class="p${i + 1}"></i>` : '';
-      if (!j) return `<span class="trip-sum">${mark}${t('tripNone')}</span>`;
-      const walk = j.legs.reduce((a, l) => a + (l.type === 'walk' && !l.bike ? l.minutes : 0), 0);
-      const bike = j.legs.reduce((a, l) => a + (l.type === 'walk' && l.bike ? l.minutes : 0), 0);
-      const rides = j.legs.filter((l) => l.type === 'ride');
-      const badges = rides
-        .map(
-          (l) =>
-            `<span class="line-badge" style="background:${MODE_COLORS[l.mode] ?? '#444'}">${escapeHtml(l.name)}</span>`,
-        )
-        .join('<span class="trip-sep">›</span>');
-      const sum = [
-        rides.length
-          ? t(j.transfers === 0 ? 'noTransfer' : j.transfers === 1 ? 'oneTransfer' : 'transfers', {
-              n: j.transfers,
-            })
-          : '',
-        bike ? t('tripBike', { n: bike }) : '',
-        walk ? t('tripWalk', { n: walk }) : '',
-      ].filter(Boolean);
-      // Stops where you get on, change and get off.
-      const stops = rides.length
-        ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
-        : [];
-      const start = starts[i];
-      const link =
-        start && here
-          ? `<a class="trip-link" href="${googleTransit(
-              state.direction === 'depart' ? start : here,
-              state.direction === 'depart' ? here : start,
-            )}" target="_blank" rel="noopener">${t('openGoogle')}</a>`
-          : '';
-      return (
-        `<span class="trip-sum">${mark}${badges}${link}</span>` +
-        `<small class="trip-stops">${[sum.join(' · '), stops.join(' → ')].filter(Boolean).join(' · ')}</small>`
-      );
-    })
-    .join('');
-  setTrip(m);
-}
-
-/** Google Maps public-transport directions; opens the app on phones. */
-function googleTransit(from: { lat: number; lon: number }, to: { lat: number; lon: number }) {
-  const p = (o: { lat: number; lon: number }) => `${o.lat.toFixed(5)},${o.lon.toFixed(5)}`;
-  const mode = state.travel === 'bikeonly' ? 'bicycling' : 'transit';
-  return `https://www.google.com/maps/dir/?api=1&origin=${p(from)}&destination=${p(to)}&travelmode=${mode}`;
-}
-
-/** VBB names carry the town: "U Hermannplatz (Berlin)", "Berlin, Greifswalder Str." */
-const stopName = (n: string) => n.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, '');
-/** Shorter still for the stop chain: "S+U Alexanderplatz Bhf" -> "Alexanderplatz". */
-const shortStop = (n: string) =>
-  stopName(n)
-    .replace(/^(S\+U|S|U) /, '')
-    .replace(/ Bhf\b/, '');
-
-function escapeHtml(t: string): string {
-  return t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-}
-
-// The place becomes a start, so it no longer stays as the destination.
-$('readout-start').addEventListener('click', () => {
-  const at = state.pending;
-  hideReadout();
-  if (at) setOrigin(at.lat, at.lon);
-});
-secondBtn.addEventListener('click', () => {
-  const at = state.pending;
-  hideReadout();
-  if (at) setSecond(at);
-});
-$('readout-fav').addEventListener('click', async () => {
-  const at = state.pending;
-  if (!at) return;
-  hideReadout();
-  let label = `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`;
-  try {
-    label = (await reversePlace(at, lang())) ?? label;
-  } catch {
-    // Offline or Photon down: keep the coordinates as the name.
-  }
-  addFavourites([{ label, ...at }]);
-});
-$('meet-close').addEventListener('click', () => removeStart(2));
-
-// ---------- controls ----------
-/** "werktags ab 10 Uhr" / "weekends from 02:00", for the tap readout. */
-function whenText(w: When) {
-  if (state.direction === 'arrive')
-    return t(w.day === 'weekday' ? 'onWeekdaysArr' : 'onWeekendsArr', {
-      hour: hourLabel(w.hour),
-      next: hourLabel((w.hour + 1) % 24),
-    });
-  return t(w.day === 'weekday' ? 'onWeekdays' : 'onWeekends', { hour: hourLabel(w.hour) });
-}
-const hourLabel = (h: number) =>
-  lang() === 'de' ? `${h} Uhr` : `${String(h).padStart(2, '0')}:00`;
-const clockLabel = (h: number, m: number) =>
-  `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` + (lang() === 'de' ? ' Uhr' : '');
-
-/**
- * "Nächste" leaves now when the chosen hour is the current one in Berlin, otherwise on
- * the hour: seconds into the chosen hour.
- */
-function leaveOffset(): number {
-  const now = new Date();
-  const w = whenAt(now);
-  if (w.day !== state.when.day || w.hour !== state.when.hour) return 0;
-  // Berlin is a whole number of hours from UTC, so minutes and seconds match.
-  return now.getUTCMinutes() * 60 + now.getUTCSeconds();
-}
-
-function renderWhen() {
-  const w = state.when;
-  const arrive = state.direction === 'arrive';
-  const pill =
-    w.day === 'weekday'
-      ? arrive
-        ? 'weekdayArr'
-        : 'weekdayAt'
-      : arrive
-        ? 'weekendArr'
-        : 'weekendAt';
-  const offset = !arrive && state.measure === 'next' ? leaveOffset() : 0;
-  // Signs in the pill show step-free and bike modes are on.
-  whenBtn.querySelector('span')!.textContent =
-    (state.travel === 'bikeonly'
-      ? t('travelBikeOnlyPill')
-      : t(pill, {
-          hour: offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-        }) + (state.travel === 'bike' ? ' 🚲' : '')) + (state.stepFree ? ' ♿' : '');
-  $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
-  for (const b of dirButtons)
-    b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));
-  for (const b of measureButtons)
-    b.setAttribute('aria-checked', String(b.dataset.measure === state.measure));
-  $('measure-note').textContent = t(
-    state.measure === 'best'
-      ? 'measureNoteBest'
-      : state.measure === 'next'
-        ? arrive
-          ? 'measureNoteNextArr'
-          : 'measureNoteNext'
-        : arrive
-          ? 'measureNoteTypicalArr'
-          : 'measureNoteTypical',
-  );
-  const c = state.compare;
-  cmpDay.value = c?.day ?? '';
-  cmpHour.disabled = !c;
-  if (cmpHour.options.length !== 24)
-    cmpHour.replaceChildren(
-      ...Array.from({ length: 24 }, (_, h) => new Option(hourLabel(h), String(h))),
-    );
-  for (const o of cmpHour.options) o.textContent = hourLabel(Number(o.value));
-  cmpHour.value = String(c?.hour ?? w.hour);
-  cmpChip.hidden = !c;
-  if (c)
-    $('cmp-text').textContent = t('compareChip', {
-      a: whenBtn.querySelector('span')!.textContent ?? '',
-      b: t(
-        c.day === 'weekday'
-          ? arrive
-            ? 'weekdayArr'
-            : 'weekdayAt'
-          : arrive
-            ? 'weekendArr'
-            : 'weekendAt',
-        {
-          hour: hourLabel(c.hour),
-        },
-      ),
-    });
-  for (const b of dayButtons) b.setAttribute('aria-checked', String(b.dataset.day === w.day));
-  for (const b of hourGrid.children)
-    b.setAttribute('aria-pressed', String(Number((b as HTMLElement).dataset.hour) === w.hour));
-}
-
-function setWhen(
-  w: When,
-  more: Partial<Pick<typeof state, 'direction' | 'measure' | 'compare'>> = {},
-) {
-  Object.assign(state, more);
-  state.when = w;
-  state.window = windowName(w);
-  renderWhen();
-  if (state.origin) keepSpot();
-  else hideReadout();
-  renderFeedInfo();
-  writeUrl();
-  showLayers();
-  if (state.origin) compute();
-  else send({ type: 'load', window: computedWindow() });
-}
-hourGrid.append(
-  ...Array.from({ length: 24 }, (_, h) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.dataset.hour = String(h);
-    b.textContent = String(h);
-    b.addEventListener('click', () => {
-      setWhen({ ...state.when, hour: h });
-      whenDialog.close();
-    });
-    return b;
-  }),
-);
-for (const b of dayButtons)
-  b.addEventListener('click', () => setWhen({ ...state.when, day: b.dataset.day as DayType }));
-for (const b of dirButtons)
-  b.addEventListener('click', () => setWhen(state.when, { direction: b.dataset.dir as Direction }));
-for (const b of measureButtons)
-  b.addEventListener('click', () => setWhen(state.when, { measure: b.dataset.measure as Measure }));
-const readCompare = (): When | null =>
-  cmpDay.value ? { day: cmpDay.value as DayType, hour: Number(cmpHour.value) } : null;
-cmpDay.addEventListener('change', () => {
-  // Turning it on for the same day suggests the other end of it: night by day, 10 Uhr by night.
-  const c = readCompare();
-  if (c && !state.compare && c.day === state.when.day) c.hour = state.when.hour >= 5 ? 2 : 10;
-  setWhen(state.when, { compare: c });
-});
-cmpHour.addEventListener('change', () => setWhen(state.when, { compare: readCompare() }));
-$('cmp-close').addEventListener('click', () => setWhen(state.when, { compare: null }));
-whenBtn.addEventListener('click', () => {
-  closeSearch();
-  whenDialog.showModal();
-});
-$('when-close').addEventListener('click', () => whenDialog.close());
-setWhen(state.when);
-showOrigin();
-
-function setRoutes(on: boolean) {
-  state.routes = on;
-  routesToggle.checked = on;
-  if (mapReady) {
-    for (const id of ROUTE_LAYERS) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
-  }
-  writeUrl();
-}
-routesToggle.addEventListener('change', () => setRoutes(routesToggle.checked));
-routesToggle.checked = state.routes;
-
-function setLayer(name: 'freq' | 'desert', on: boolean) {
-  state[name] = on;
-  showLayers();
-  redrawSpot();
-  writeUrl();
-}
-freqToggle.addEventListener('change', () => setLayer('freq', freqToggle.checked));
-desertToggle.addEventListener('change', () => setLayer('desert', desertToggle.checked));
-freqToggle.checked = state.freq;
-desertToggle.checked = state.desert;
-
-function setIso(on: boolean) {
-  state.iso = on;
-  if (mapReady) {
-    for (const id of OUTLINE_LAYERS)
-      map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
-  }
-  writeUrl();
-}
-isoToggle.addEventListener('change', () => setIso(isoToggle.checked));
-isoToggle.checked = state.iso;
-
-opacityInput.value = String(state.opacity);
-opacityInput.addEventListener('input', () => {
-  state.opacity = Number(opacityInput.value);
-  remember('heat-opacity', opacityInput.value);
-  if (map.getLayer(HEAT_LAYER)) map.setPaintProperty(HEAT_LAYER, 'raster-opacity', heatOpacity());
-});
-
-function renderWalk() {
-  for (const b of walkButtons)
-    b.setAttribute('aria-checked', String(Number(b.dataset.walk) === state.walkKmh));
-}
-for (const b of walkButtons)
-  b.addEventListener('click', () => {
-    const kmh = Number(b.dataset.walk);
-    if (kmh === state.walkKmh) return;
-    state.walkKmh = kmh;
-    remember('walk-kmh', String(kmh));
-    renderWalk();
-    writeUrl();
-    redoWalks();
-  });
-renderWalk();
-
-function renderTravel() {
-  for (const b of travelButtons)
-    b.setAttribute('aria-checked', String(b.dataset.travel === state.travel));
-}
-for (const b of travelButtons)
-  b.addEventListener('click', () => {
-    const travel = travelOf(b.dataset.travel ?? null);
-    if (travel === state.travel) return;
-    state.travel = travel;
-    remember('travel', String(TRAVELS.indexOf(travel)));
-    renderTravel();
-    renderWhen();
-    keepSpot();
-    writeUrl();
-    compute();
-  });
-renderTravel();
-
-stepFreeToggle.checked = state.stepFree;
-stepFreeToggle.addEventListener('change', () => {
-  state.stepFree = stepFreeToggle.checked;
-  remember('step-free', state.stepFree ? '1' : '0');
-  renderWhen();
-  keepSpot();
-  writeUrl();
-  compute();
-});
-
 // "Nächste" follows the clock: coming back to the app recomputes from the new "now".
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || state.measure !== 'next') return;
-  renderWhen();
+  whenSheet.renderWhen();
   compute();
 });
 
@@ -1653,7 +515,7 @@ locateBtn.addEventListener('click', () => {
         setStatus(() => t('locateOutside'));
         return;
       }
-      setOrigin(lat, lon);
+      setOrigin({ lat, lon });
       map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
     },
     (err) => {
@@ -1662,30 +524,6 @@ locateBtn.addEventListener('click', () => {
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
   );
-});
-
-// ---------- share ----------
-$('share-btn').addEventListener('click', async () => {
-  // A shared map keeps its time, even when that is the current one here.
-  const shared = new URL(location.href);
-  shared.searchParams.set('t', state.window);
-  const url = shared.href;
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: t('title'), text: t('shareText'), url });
-      menuDialog.close();
-    } catch {
-      // Cancelled by the user.
-    }
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(url);
-    menuDialog.close();
-    setStatus(() => t('linkCopied'), true);
-  } catch {
-    prompt(t('share'), url);
-  }
 });
 
 // ---------- hints: first use, then installing the app ----------
@@ -1714,10 +552,6 @@ async function install() {
   installBtn.hidden = true;
   hideTip();
 }
-installBtn.addEventListener('click', () => {
-  menuDialog.close();
-  void install();
-});
 
 /** One hint at a time: how to read the map on first use, on a later visit how to install. */
 function showTips() {
@@ -1746,41 +580,6 @@ function hideTip() {
 }
 $('tip-close').addEventListener('click', hideTip);
 tipAction.addEventListener('click', () => void install());
-
-// ---------- menu and language ----------
-$('menu-btn').addEventListener('click', () => {
-  closeSearch();
-  menuDialog.showModal();
-});
-$('menu-close').addEventListener('click', () => menuDialog.close());
-$('about-btn').addEventListener('click', () => {
-  menuDialog.close();
-  infoDialog.showModal();
-});
-// A tap on the backdrop (outside the panel) closes either sheet.
-for (const d of [menuDialog, infoDialog, whenDialog]) {
-  d.addEventListener('click', (e) => {
-    if (e.target === d) d.close();
-  });
-}
-
-function applyLang(l: Lang, remember: boolean) {
-  setLang(l, remember);
-  for (const b of langButtons) b.setAttribute('aria-checked', String(b.dataset.lang === l));
-  renderFeedInfo();
-  renderLayerLegend();
-  renderFavourites();
-  renderWhen();
-  renderTip();
-  statusEl.textContent = state.status();
-  redrawSpot();
-  searchCache.clear();
-}
-for (const b of langButtons)
-  b.addEventListener('click', () => {
-    applyLang(b.dataset.lang as Lang, true);
-    writeUrl();
-  });
 
 // ---------- address search ----------
 const searchBtn = $<HTMLButtonElement>('search-btn');
@@ -1905,15 +704,15 @@ function pickPlace(p: Place) {
     searchFor = 'start';
     searchInput.value = '';
     addFavourites([{ label: p.label, lat: p.lat, lon: p.lon }]);
-    menuDialog.showModal();
+    menu.open();
     return;
   }
   searchInput.value = p.label;
   map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
   // With a start set, the place may be a new start, a destination or a second start:
   // show the trip there, with buttons for the other two.
-  if (state.origin && lastResult) tapAt(p.lat, p.lon, undefined, p.label, true);
-  else setOrigin(p.lat, p.lon);
+  if (state.origin && state.result) tap.tapAt(p.lat, p.lon, undefined, p.label, true);
+  else setOrigin(p);
 }
 
 searchBtn.addEventListener('click', () => {
@@ -1949,7 +748,7 @@ function addFavourites(places: { label: string; lat: number; lon: number }[]) {
 }
 
 function favouriteTimes() {
-  const r = lastResult;
+  const r = state.result;
   return r && state.origin ? score(favourites, (lat, lon) => gridSeconds(r, lat, lon)) : null;
 }
 
@@ -2026,11 +825,11 @@ function renderFavourites() {
 }
 
 favChip.addEventListener('click', () => {
-  menuDialog.showModal();
+  menu.open();
   $('fav-title').scrollIntoView({ block: 'start' });
 });
 $('fav-add').addEventListener('click', () => {
-  menuDialog.close();
+  menu.close();
   searchFor = 'favourite';
   openSearch();
 });
@@ -2078,7 +877,88 @@ $('fav-export').addEventListener('click', () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
-applyLang(lang(), false);
+
+// ---------- the parts in their own modules ----------
+const tap = initTap(
+  {
+    map,
+    state,
+    send,
+    setOrigin,
+    setSecond,
+    removeStart,
+    addFavourite: async (at) => {
+      let label = `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`;
+      try {
+        label = (await reversePlace(at, lang())) ?? label;
+      } catch {
+        // Offline or Photon down: keep the coordinates as the name.
+      }
+      addFavourites([{ label, ...at }]);
+    },
+    writeUrl,
+    onCard: () => {
+      if (tipKey === 'tap') hideTip();
+    },
+  },
+  link.to,
+);
+
+const whenSheet = initWhenSheet({
+  state,
+  closeSearch,
+  changed: () => {
+    if (state.origin) tap.keepSpot();
+    else tap.hideReadout();
+    renderFeedInfo();
+    writeUrl();
+    showLayers();
+    if (state.origin) compute();
+    else send({ type: 'load', window: computedWindow() });
+  },
+});
+
+const menu = initMenu({
+  state,
+  writeUrl,
+  closeSearch,
+  travelChanged: () => {
+    whenSheet.renderWhen();
+    tap.keepSpot();
+    writeUrl();
+    compute();
+  },
+  walkChanged: redoWalks,
+  layerChanged: () => {
+    showLayers();
+    tap.redrawSpot();
+  },
+  setLayerVisible: (layers, on) => {
+    if (!state.mapReady) return;
+    for (const id of layers === 'routes' ? ROUTE_LAYERS : OUTLINE_LAYERS)
+      map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+  },
+  opacityChanged: () => {
+    if (map.getLayer(HEAT_LAYER))
+      map.setPaintProperty(HEAT_LAYER, 'raster-opacity', heatOpacity(state.opacity));
+  },
+  langChanged: () => {
+    renderFeedInfo();
+    renderLayerLegend();
+    renderFavourites();
+    whenSheet.renderWhen();
+    renderTip();
+    statusEl.textContent = state.status();
+    tap.redrawSpot();
+    searchCache.clear();
+  },
+  setStatus,
+  install: () => void install(),
+});
+
+whenSheet.setWhen(state.when);
+showOrigin();
+menu.applyLang(lang(), false);
 
 // ---------- PWA ----------
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
