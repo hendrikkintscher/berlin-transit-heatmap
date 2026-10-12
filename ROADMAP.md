@@ -4,13 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #95. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #98. Build in this order, one step per PR:
 
-1. **Next:** Snappier address search (group 1)
-2. "Heute anders" in the chosen connection (group 11)
-3. Smooth line overlays along the real tracks and roads (group 7)
+1. **Next:** Smooth line overlays along the real tracks and roads (group 7)
 
-Steps 1–3 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Added by Hendrik on 2026-10-12, after the UI overhaul; after it the list is done until Hendrik adds more. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Hendrik's standing go (2026-10-12): the builder keeps going through the steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -45,6 +43,8 @@ Only suggest addresses and places inside the area the map covers. If that's hard
 Notes: the search (packages/web/src/search.ts) already sends Photon a rectangular bbox around Berlin. A rectangle still includes parts of Brandenburg, so the plan is to also drop results that fall outside the heatmap's covered area (or outside the Berlin state boundary) on the client, before showing them.
 
 ### Snappier address search
+
+**Done** (PR #96): the first suggestion shows about 0.14 s after typing, instead of 1.9–2.7 s.
 
 Hendrik, 2026-10-12: the address search should feel snappier. Today every keystroke waits for Photon (photon.komoot.io), a free public server, before anything shows. Ideas, measured against the snappiness rule:
 
@@ -519,6 +519,8 @@ The map should show what is actually running, not a typical day. Today the build
 **Done** (PR #90): live disruptions as option B. The tap card shows the live status of the first vehicle of the chosen trip, from VBB's GTFS-RT feed.
 
 ### "Heute anders" in the chosen connection
+
+**Done** (PR #98): the trip card notes on a leg when its line runs differently today. The PR also stops each deploy from using about 300 API calls.
 
 Hendrik, 2026-10-12: what is different today should count in the connection you pick, and if that is too costly, at least the information that matters for that connection should show. Since PR #78 the routing already uses each day's real timetable, so planned changes (Ersatzverkehr, closures) are already in the connections it finds. This step is about what the user sees:
 
