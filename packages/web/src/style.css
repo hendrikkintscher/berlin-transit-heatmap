@@ -1197,14 +1197,6 @@ body.special #cmp {
 #readout .trip-stops {
   margin-top: 0;
 }
-.trip-link {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-  text-decoration: none;
-  white-space: nowrap;
-}
 .line-badge {
   display: inline-block;
   min-width: 26px;

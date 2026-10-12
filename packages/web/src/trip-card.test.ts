@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { leaveText, tripHtml, type Trip, type TripContext } from './trip-card';
 
 const ctx: TripContext = {
-  starts: [{ lat: 52.5037, lon: 13.4108 }],
-  here: { lat: 52.43915, lon: 13.47215 },
   direction: 'depart',
-  travel: 'walk',
   now: null,
 };
 const ride = (name: string, mode: string, from: string, to: string) =>
@@ -31,7 +28,7 @@ describe('trip card', () => {
     );
     expect(html).toContain('>U8</span><span class="trip-sep">›</span><span');
     expect(html).toContain('1 Umstieg · 8 Min. Fußweg · Moritzplatz → Hermannplatz → Rudow');
-    expect(html).toContain('origin=52.50370,13.41080&destination=52.43915,13.47215');
+    expect(html).not.toContain('google');
     expect(html).not.toContain('<i class="p1">');
   });
 
@@ -62,13 +59,12 @@ describe('trip card', () => {
   it('marks two journeys and says when there is none', () => {
     const html = tripHtml(
       { journeys: [null, { transfers: 0, legs: [{ type: 'walk', minutes: 12, bike: true }] }] },
-      { ...ctx, starts: [ctx.starts[0], null] },
+      ctx,
     );
     expect(html).toContain('<i class="p1"></i>Keine Verbindung gefunden');
     expect(html).toContain('<i class="p2"></i>');
     expect(html).toContain('12 Min. Rad');
-    // No second start known: no Google link for it.
-    expect(html.match(/trip-link/g)).toBeNull();
+    expect(html).not.toContain('google');
   });
 
   it('gives the minutes of a connection leaving now', () => {
@@ -83,15 +79,6 @@ describe('trip card', () => {
     const two = tripHtml({ journeys: [j, j] }, { ...ctx, direction: 'arrive' });
     expect(two).toContain('<span class="trip-now"><i class="p2"></i>Letzte Verbindung');
     expect(two).not.toContain('<span class="trip-sum"><i');
-  });
-
-  it('turns the link around when arriving', () => {
-    const html = tripHtml(
-      { journeys: [{ transfers: 0, legs: [{ type: 'walk', minutes: 4 }] }] },
-      { ...ctx, direction: 'arrive', travel: 'bikeonly' },
-    );
-    expect(html).toContain('origin=52.43915,13.47215&destination=52.50370,13.41080');
-    expect(html).toContain('travelmode=bicycling');
   });
 
   it('leads with the connection minutes and arrival, then when to leave', () => {

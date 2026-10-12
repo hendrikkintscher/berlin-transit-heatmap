@@ -238,7 +238,6 @@ const de = {
   startPoint: 'Startpunkt',
   secondPoint: 'Startpunkt {n}',
   removeStart: '✕ Entfernen',
-  openGoogle: 'Google Maps ↗',
 };
 export type Key = keyof typeof de;
 
@@ -473,7 +472,6 @@ const en: Record<Key, string> = {
   startPoint: 'Starting point',
   secondPoint: 'Starting point {n}',
   removeStart: '✕ Remove',
-  openGoogle: 'Google Maps ↗',
 };
 
 export const STRINGS: Record<Lang, Record<Key, string>> = { de, en };

@@ -325,10 +325,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     // On the home map the trip runs from the place to home.
     const home = state.special?.kind === 'home' ? state.special.at : null;
     el.innerHTML = tripHtml(m, {
-      starts: home ? [home] : [state.origin, ...state.others],
-      here: pending,
       direction: home ? 'arrive' : state.direction,
-      travel: state.travel,
       now: clockNow(state.when),
       changeNote: deps.changeNote,
     });
