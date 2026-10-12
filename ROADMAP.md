@@ -7,10 +7,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #126. Build in this order, one step per PR:
 
 1. **Next:** Calmer default map, option B with solid, wider, blurred time lines (group 12)
+2. Rename to "Wohin jetzt? · Öffis mit einem Tap" (group 12). Queued, not started: Hendrik confirms when it is built.
 
-Picked by Hendrik on 2026-10-12. After it, Hendrik picks the next step before anything starts.
+Picked by Hendrik on 2026-10-12. After the calmer map, Hendrik picks the next step before anything starts.
 
-**Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the name, the domain and the timetable feed account are settled.
+**Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -673,6 +674,12 @@ Hendrik, 2026-10-12: option B from the clean-map mockups (plan files under web/c
 
 Notes: paint only, URL parameters unchanged; check at 360×740 in German and English and keep the flicker-free first view. Small effort.
 
+### Rename to "Wohin jetzt?"
+
+Hendrik, 2026-10-12: the app is called **"Wohin jetzt?"** with the tagline **"Öffis mit einem Tap"** (English: "Transit in one tap"), replacing "Berlin in Minuten" / "Berlin Transit". The rename covers the title in the app, the installed-app (manifest) name, the About text and the sharepics.
+
+Notes: names only, URL parameters and the address unchanged (the domain is still open in the beta plan). Check at 360×740 in German and English. Small effort. Queued after the calmer default map; not started until Hendrik confirms.
+
 ## 13. Wider area and other regions
 
 ### Potsdam and the commuter belt (C6)
@@ -699,7 +706,7 @@ Hendrik, 2026-10-12: add other regions, the first one Oldenburg / Weser-Ems. **D
 **Split (Hendrik, 2026-10-12: prep only).** The work is built in two parts:
 
 1. **Region-ready code (prep), Done** (PR #126): Berlin is one entry in `packages/routing/src/regions.ts`, read by the app, the timetable build and the workflows; data is served from `data/berlin/`; favourites and recent places are stored per region and existing lists moved over. Nothing visible changed and the first map is as fast as before. Planned as: a region config holding everything that is Berlin-specific today (area box, map start point, names, timetable and walking-path sources, Berlin-only extras such as Ring, Bezirke, landmarks and live status), data loaded from a folder per region, and favourites and recent places stored per region, with existing Berlin favourites kept. Berlin stays the only region and keeps its current address; nothing visible changes and the first map is no slower.
-2. **Region addresses and Oldenburg, held:** the `/berlin/` and `/oldenburg/` addresses, the forward from the root address, the region switch, and the Oldenburg data and build. Not started until the name, the domain and the timetable feed account are settled.
+2. **Region addresses and Oldenburg, held:** the `/berlin/` and `/oldenburg/` addresses, the forward from the root address, the region switch, and the Oldenburg data and build. Not started until the domain and the timetable feed account are settled (the app name is settled: "Wohin jetzt?").
 
 Notes: measure against the snappiness rule and the CI speed budget. The prep is medium effort; part 2 is large and may itself be split (addresses, then Oldenburg data, then the region switch).
 
