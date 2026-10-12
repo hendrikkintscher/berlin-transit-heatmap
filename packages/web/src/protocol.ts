@@ -17,7 +17,16 @@ export type TripLeg =
 
 export type ToWorker =
   | { type: 'init'; dataBase: string }
-  | { type: 'load'; window: Window; quiet?: boolean }
+  | {
+      type: 'load';
+      window: Window;
+      /** A background load (the next hour): failures stay silent. */
+      quiet?: boolean;
+      /** Prepare it as a compute with these settings will need it. */
+      direction?: Direction;
+      stepFree?: boolean;
+      bike?: boolean;
+    }
   | {
       type: 'compute';
       id: number;

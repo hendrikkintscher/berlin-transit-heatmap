@@ -283,7 +283,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       dataBase = msg.dataBase;
     } else if (msg.type === 'load') {
       // A quiet (background) load that fails is retried when the window is actually needed.
-      await (msg.quiet ? ensure(msg.window).catch(() => undefined) : ensure(msg.window));
+      const variant = { stepFree: msg.stepFree, bike: msg.bike };
+      const p = prepared(msg.window, msg.direction ?? 'depart', variant);
+      await (msg.quiet ? p.catch(() => undefined) : p);
     } else if (msg.type === 'stations') {
       const tt = await ensure(msg.window);
       const list = stations(tt, departuresPerHour(tt)).features.map((f) => ({

@@ -1,8 +1,9 @@
 // Service worker: offline app shell + cached timetable files.
 // Bump VERSION to drop old caches after a breaking change.
 const VERSION = 'v2';
-// Hourly timetables are 0.5–0.7 MB gzipped each: keep only the most recently used ones.
-const MAX_DATA = 6;
+// Hourly timetables are 0.5–0.7 MB gzipped each: keep the 12 most recently used ones
+// (a few hours of a few days, about 8 MB). The other data files are few and always kept.
+const MAX_TIMETABLES = 12;
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 
@@ -74,9 +75,28 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+/** A cached timetable's date (YYYYMMDD) or null for a typical day. */
+const dateOf = (url) => /timetable-(\d{8})-\d\d\./.exec(url)?.[1] ?? null;
+
+/** Today in Berlin as YYYYMMDD. */
+function today() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type) => parts.find((p) => p.type === type)?.value ?? '';
+  return get('year') + get('month') + get('day');
+}
+
 async function trim(cache) {
   // Cache keys come back in insertion order; re-putting a file on refresh moves it to the end.
-  // The walking network is needed for every map, so it never counts against the limit.
-  const keys = (await cache.keys()).filter((k) => !k.url.endsWith('/walk.bin'));
-  await Promise.all(keys.slice(0, Math.max(0, keys.length - MAX_DATA)).map((k) => cache.delete(k)));
+  const timetables = (await cache.keys()).filter((k) => /\/timetable-[^/]+$/.test(k.url));
+  // Past days are never shown again: they go first, then the least recently used.
+  const now = today();
+  const past = timetables.filter((k) => (dateOf(k.url) ?? now) < now);
+  const rest = timetables.filter((k) => !past.includes(k));
+  const drop = [...past, ...rest.slice(0, Math.max(0, rest.length - MAX_TIMETABLES))];
+  await Promise.all(drop.map((k) => cache.delete(k)));
 }

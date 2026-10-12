@@ -251,6 +251,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     const s = m.totalMs / 1000;
     setStatus(() => t('computed', { s: formatDecimal(s, 1) }), true);
     showTips();
+    preloadNextHour();
   } else if (m.type === 'image') {
     const r = state.result;
     if (!r || r.id !== m.id || !r.unpainted) return;
@@ -314,7 +315,38 @@ function redoWalks() {
 /** The timetable file the map is computed from (arriving uses the hour before). */
 const computedWindow = () => computeWindow(state.when, state.direction);
 
+/** Wait after a map before preloading the next hour, so taps right after it stay instant. */
+const PRELOAD_DELAY_MS = 1500;
+let preloadTimer = 0;
+
+/**
+ * Loads the hour after the shown one in the background, so stepping to it is instant:
+ * fetched, decoded and prepared in the worker while the map is being looked at. Skipped
+ * with the data saver on or on a slow (2G) connection.
+ */
+function preloadNextHour() {
+  clearTimeout(preloadTimer);
+  const conn = (navigator as { connection?: { saveData?: boolean; effectiveType?: string } })
+    .connection;
+  if (conn?.saveData || /2g/.test(conn?.effectiveType ?? '')) return;
+  if (state.when.hour >= 23) return;
+  const next = computeWindow({ ...state.when, hour: state.when.hour + 1 }, state.direction);
+  preloadTimer = window.setTimeout(
+    () =>
+      send({
+        type: 'load',
+        window: next,
+        quiet: true,
+        direction: state.direction,
+        ...(state.stepFree ? { stepFree: true } : {}),
+        ...(state.travel === 'bike' ? { bike: true } : {}),
+      }),
+    PRELOAD_DELAY_MS,
+  );
+}
+
 function compute() {
+  clearTimeout(preloadTimer);
   if (state.special) return special.compute();
   if (!state.origin) return;
   state.requestId++;
