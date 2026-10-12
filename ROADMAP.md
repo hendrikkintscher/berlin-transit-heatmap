@@ -4,12 +4,13 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #76. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #78. Build in this order, one step per PR:
 
-1. **Next:** What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-2. Outlines view: dashed lines, more labels, clearer gradient, no legend (group 7)
-3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-4. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Outlines view: dashed lines, more labels, clearer gradient, no legend (group 7)
+2. What's different today: notice of affected lines (group 11)
+3. Live disruptions as text (group 11)
+4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+5. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -447,6 +448,9 @@ The map should show what is actually running, not a typical day. Today the build
 
 - **Real days instead of a reference day:** refresh the VBB GTFS feed daily and build the hourly timetables for today and the next 7 days. Planned Ersatzverkehr (rail replacement buses), closures and construction timetables are already normal trips in VBB's feed, so they appear exactly on the days they happen.
 - **"Now" means today:** the map opens at the current day and hour with that day's real service; the time sheet picks a date in the coming week ("Heute", "Morgen", weekday names) instead of only Werktag/Wochenende. "Typischer Werktag" stays as a choice for planning (moving house, favourites), and the compare view can put today against the typical day.
+
+**Done** (PR #78): the two points above. Timetables are built for today and the next 7 days and rebuilt nightly; the time sheet picks Heute, Morgen or a weekday, keeps the typical Werktag/Wochenende for planning, and can compare with a typical day. Still open: the two points below, each its own step.
+
 - **What's different today:** a build-time comparison of each day against the typical pattern lists the affected lines in a small notice ("U2: Ersatzverkehr Pankow–Alexanderplatz, bis 20.10."); tapping it shows the stretch on the map.
 - **Live disruptions, second step:** short-notice changes (cancellations, sudden closures) are not in the static feed. Check whether VBB now offers an open real-time feed (GTFS-RT); if not, show current disruption notices as text from VBB's public journey API, without routing on them.
 
