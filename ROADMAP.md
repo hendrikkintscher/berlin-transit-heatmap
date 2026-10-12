@@ -7,10 +7,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #78. Build in this order, one step per PR:
 
 1. **Next:** Outlines view: dashed lines, more labels, clearer gradient, no legend (group 7)
-2. What's different today: notice of affected lines (group 11)
-3. Live disruptions as text (group 11)
-4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-5. Android app, starting with a TWA (group 14), always the last step
+2. Tap card: leave in X min, arrival time, trip duration (group 6)
+3. What's different today: notice of affected lines (group 11)
+4. Live disruptions as text (group 11)
+5. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+6. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -260,6 +261,16 @@ Three changes to the defaults:
 - **With two or more starts (meeting point), Reisezeit switches to Typisch**, since meeting plans are usually not for right now. You can still pick Nächste or Bestfall there; removing the second start returns to the previous choice.
 
 Notes: Nächste is already the fastest of the three to compute (a single RAPTOR pass), so the new default helps the first map. Earliest arrival is what RAPTOR from the current minute gives; the change is making trip on tap use that pass instead of a fixed departure. Small effort; added from Hendrik's request on 2026-10-12.
+
+### Tap card: leave in X min, arrival time, trip duration
+
+Hendrik, 2026-10-12: the tap card no longer needs the line note "schnellster Weg zu X % der Karte". Instead it says when to go and when you arrive, for the next connection:
+
+- **Which connection:** still the one that gets you there soonest from this moment, waiting included (as since PR #62), not the one with the least time on board.
+- **What it shows:** the trip's own duration and the arrival time as the main line ("18 Min. · an 10:42"), and smaller beneath it when to leave: "los in 5 Min." (or "jetzt los" when it is due now). The route summary stays below.
+- **Keeps up:** the "in X Min." counts down while the card is open, and moves on to the following connection once this one is missed.
+
+The line note goes from the card; tapping a line on the Lines layer still shows its name. Small effort; the routing already finds this connection.
 
 ### "Ankommen bis": travel times to a place
 
