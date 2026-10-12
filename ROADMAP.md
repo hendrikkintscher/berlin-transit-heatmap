@@ -14,17 +14,19 @@ State on 2026-10-12, live through PR #193. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build, after PR #185 and not before 23:18 UTC.
 2. **Next:** Lighter work per tap (B6, group 15)
-3. Smaller Wohnlage-Karte memory (B7, group 15)
-4. Typical timetable when offline (B8, group 15)
-5. Notice, search and favourites polish (C5–C8, group 15)
-6. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-7. Default view readability: two variants to compare (C9, group 15)
-8. Named starts in meeting mode (D2, group 15)
-9. Code health, no change in behaviour (E1, group 15)
+3. Background downloads after the basemap, no timetable fetch without a start (P1 + P2, B4 follow-up, group 15)
+4. Smaller Wohnlage-Karte memory (B7, group 15)
+5. Typical timetable when offline (B8, group 15)
+6. Notice, search and favourites polish (C5–C8, group 15)
+7. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+8. Default view readability: two variants to compare (C9, group 15)
+9. Named starts in meeting mode (D2, group 15)
+10. Code health, no change in behaviour (E1, group 15)
+11. Smaller walking network file (P8, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
-**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel (review running, findings in plan/reviews/) by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
+**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel (reviews done, picks pending with Hendrik) by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
 
 **Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
 
@@ -202,7 +204,7 @@ Hendrik, 2026-10-12: add other regions, the first one Oldenburg / Weser-Ems. **D
 - **One codebase, one deploy:** the build writes one data folder per region; each address loads only its own data, so the first map stays as fast as now.
 - **Timetables:** the Connect GTFS feed (Niedersachsen + Bremen). Its licence and download access still need checking before the build relies on it. Walking paths from the Geofabrik Niedersachsen and Bremen extracts, cut to the region's box.
 - **Area:** Oldenburg plus about 40 km around it, including Bremen. It can grow later.
-- **Name:** "Oldenburg in Minuten".
+- **Name:** to be settled. The older plan said "Oldenburg in Minuten", which predates the rename to "Wohin jetzt?" (PR #134).
 - **Berlin-only extras:** Oldenburg starts without live status and without Ring, Bezirke and landmarks. Water, parks and streets work anywhere. Oldenburg landmarks and VBN real-time can follow as their own items.
 - **Stored on the phone:** favourites and recent places are kept per region, so switching doesn't mix them.
 - **Builds:** each region has its own nightly build and release tag, run at different times so the release rate-limit problem doesn't return.
@@ -275,15 +277,19 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 
 ### Lighter work per tap (B6)
 
-Picked by Hendrik on 2026-10-12 ("Yes, all three", one PR each for B6–B8). With Typisch or Bestfall, each tap currently rasterises the whole grid. Compute only a window of 3–4 km around the tap, reuse scratch buffers for softening and painting instead of allocating about 3×6.5 MB per map, and fold the meeting-point offset into the colour table instead of copying the grid.
+Picked by Hendrik on 2026-10-12 ("Yes, all three", one PR each for B6–B8). With Typisch or Bestfall, each tap currently rasterises the whole grid. Compute only a window of 3–4 km around the tap, reuse scratch buffers for softening and painting instead of allocating about 3×6.5 MB per map, and fold the meeting-point offset into the colour table instead of copying the grid. From the code review (plan/reviews/code-runtime.md), also P4 (Typisch builds one grid instead of two: 297–633 → 127–166 ms in Node), P5 (faster walkFrom, about −25 % walk pass), P6 (simpler outlines) and P7 (row-wise blur).
+
+### Background downloads after the basemap, no timetable fetch without a start (P1 + P2)
+
+From the code review (plan/reviews/code-runtime.md, "build first"), a follow-up to B4 (PR #193). **P2:** opening without `from=` no longer fetches the hour's timetable (275 KB) next to main.js; only a link with a start preloads it, and the tile index is preloaded alongside the style (first frame about 1 s sooner on slow links). **P1:** walk.bin, lines.bin and the next-hour preload start once the map is idle, not at the first result (tiles about 1 s and labels about 1.3 s sooner on a throttled link). The builder checks both against what PR #193 already changed.
 
 ### Smaller Wohnlage-Karte memory (B7)
 
-The Wohnlage-Karte keeps a full-precision grid per favourite for the last two maps. Keep one map and store minutes compactly (16-bit tenths of a minute, or only cells that are reached).
+The Wohnlage-Karte keeps a full-precision grid per favourite for the last two maps. Keep one map and store minutes compactly (16-bit tenths of a minute, or only cells that are reached). From the code review, also P9 (about −30 MB worker memory).
 
 ### Typical timetable when offline (B8)
 
-When a timetable fails to download (network error or offline), fall back to the typical window if one exists and show the existing "typical day" note instead of failing.
+When a timetable fails to download (network error or offline), fall back to the typical window if one exists and show the existing "typical day" note instead of failing. From the code review, also P3: data files get hashed URLs and are served cache-first, so a deploy no longer makes the next start re-download about 3 MB.
 
 ### Notice, search and favourites polish (C5–C8)
 
@@ -298,7 +304,7 @@ Picked by Hendrik on 2026-10-12 ("Yes, all four"), one PR.
 
 Picked by Hendrik on 2026-10-12 ("Yes, both"). CI and workflows only; the app itself does not change.
 
-- **B9:** the CI speed check also times softening, outlines and painting per start, and the cell snapping separately. One browser smoke test against a small fixture opens the app, taps, and checks that minutes and outlines appear. The duplicate test and build in the deploy workflow on pull requests goes away.
+- **B9:** the CI speed check also times softening, outlines and painting per start, and the cell snapping separately. One browser smoke test against a small fixture opens the app, taps, and checks that minutes and outlines appear. The duplicate test and build in the deploy workflow on pull requests goes away. From the code review, also P10: the routing benchmarks and slow tests read the .bin files (they still fetch timetable-day.json, gone since B2), with one shared `cellAt` and `readWithProgress` helper.
 - **B10:** the timetable build fails above a hard size ceiling (about 1.5 times the budget) and only warns below it. It also runs on a schedule of its own, so a failed timetable download no longer stops it; dated files roll forward from the last good feed.
 
 ### Default view readability: two variants to compare (C9)
@@ -326,6 +332,10 @@ Picked by Hendrik on 2026-10-12 ("Yes"), the last item of the third suggestions 
 
 Slotted in whenever no feature step is waiting.
 
+### Smaller walking network file (P8)
+
+From the code review (plan/reviews/code-runtime.md): a format change for walk.bin, about −0.65 MB. Placed last, after E1.
+
 ## 16. App stores and showcase
 
 Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existing travel-time maps and the "why not Google Maps" sharepic were closed. Both are not started and wait until Hendrik picks them.
@@ -335,7 +345,7 @@ Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existi
 
 ## 17. Review track
 
-Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: review running, findings in plan/reviews/ (project files).
+Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P3 into B8, P4–P7 into B6, P9 into B7, P10 into B9, P8 last). The UI, looks and docs picks are pending with Hendrik.
 
 - **UI intuitiveness**: check where the interface is intuitive and where it is not, and what could be handled more smartly or more obviously.
 - **Visual consistency**: check map elements, colours, layout, symbols and text for consistency.
