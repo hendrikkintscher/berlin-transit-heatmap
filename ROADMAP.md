@@ -8,15 +8,16 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 
 1. **Next:** Offline map and faster start in the service worker (B3, group 15)
 2. Redesign of the time sheet and the trip card, including C2 (group 12): designs picked
-3. "Bis N Min." view as an optional switch (D1, group 15)
-4. Faster first load and no stale work (B4 + B5, group 15)
-5. Lighter work per tap (B6, group 15)
-6. Smaller Wohnlage-Karte memory (B7, group 15)
-7. Typical timetable when offline (B8, group 15)
-8. Notice, search and favourites polish (C5–C8, group 15)
-9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-10. Default view readability: two variants to compare (C9, group 15)
-11. Named starts in meeting mode (D2, group 15)
+3. Start point or destination switch (group 6)
+4. "Bis N Min." view as an optional switch (D1, group 15)
+5. Faster first load and no stale work (B4 + B5, group 15)
+6. Lighter work per tap (B6, group 15)
+7. Smaller Wohnlage-Karte memory (B7, group 15)
+8. Typical timetable when offline (B8, group 15)
+9. Notice, search and favourites polish (C5–C8, group 15)
+10. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+11. Default view readability: two variants to compare (C9, group 15)
+12. Named starts in meeting mode (D2, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -388,6 +389,10 @@ Notes: uses the existing arrive-by pass over several hours of timetables (the ho
 **Done** (PR #145): the trip card has no Google Maps link anymore, and the vs-Google sharepic no longer mentions one. Hendrik, 2026-10-12: remove the Google Maps links from the app. The "Google Maps ↗" link on the trip card (since PR #25) and any other link that opens Google Maps go away. Importing favourites from a Google Takeout file stays, since it only reads the user's own file and opens nothing.
 
 Notes: check at 360×740 in German and English that the trip card still looks right without the link. Small effort.
+
+### Start point or destination switch
+
+Hendrik, 2026-10-12: "I want a switch that switches between the first set location to either be start or end point of the connections shown when i tap on other locations". A clearly visible switch decides whether the set place is where trips start ("Von hier") or where they end ("Hierher"). Tapping another place then shows the trip from the set place to it, or from it to the set place, and the map colours follow the same direction. The reverse direction already exists as "Ankommen" (`dir=arr`, PR #24), so this builds on it rather than adding a new kind of map; the builder decides with the redesigned time panel (A) where the switch sits so it isn't a second, competing Losfahren/Ankommen control. Kept in the link. Snappiness rule: switching direction and tapping stay as fast as now.
 
 ## 7. Reading the map
 
