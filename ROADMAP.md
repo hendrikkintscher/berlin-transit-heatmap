@@ -4,7 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #156. Nothing is queued: Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+State on 2026-10-12, live through PR #158. Build in this order, one step per PR:
+
+1. **Next:** Exact minutes and "Jetzt" in the time sheet (group 4)
+
+From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -195,6 +199,10 @@ Notes: with 5–8 favourites this takes several seconds on a phone, so it is com
 Night service in Berlin is very different in the early hours of Saturday and Sunday (U-Bahn runs all night) compared to weekday nights. Instead of the two fixed windows (Day 10–12, Night 2–4 on a weekday), pick any hour of the day plus a Weekday/Weekend switch; choosing 10:00 shows the fastest trips starting between 10:00 and 11:00. A smaller first step would be a weekend variant of the Night window only.
 
 Notes on cost: today each window is one timetable file (day about 0.9 MB gzipped, night less), downloaded only when used. Hourly files would be smaller each (a 1-hour window plus the trips needed to finish journeys), so what a phone downloads per choice stays about the same or drops; switching hours means a new download (cached afterwards). The build would produce 24 x 2 files (Saturday and Sunday nights may need their own days), roughly 15–25 MB gzipped in the release, which GitHub Pages handles. Routing per tap stays about as fast, since a shorter window has fewer departures to scan. The stop-frequency and desert layers would follow the chosen hour automatically.
+
+### Exact minutes and "Jetzt" in the time sheet
+
+Hendrik, 2026-10-12: "Add the possibility to set minutes (it will then be always "nächste" of course) and "now"". In the time sheet a departure (or arrival) can be set to the exact minute, not just the full hour. A time with minutes always means Nächste, the next connection from that minute, never Typisch. A "Jetzt" option sets the current time in one tap, in Nächste mode. Keep the link (shared state) and the flicker-free first view working, and follow PR #158, where Nächste moves on with the current hour when the app is reopened.
 
 ## 5. Everyday use on the phone
 
