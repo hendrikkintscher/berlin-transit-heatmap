@@ -4,12 +4,16 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #88. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #90. Build in this order, one step per PR:
 
-1. **Next:** Live disruptions (group 11), being built as a live check of the tapped trip until Hendrik picks a form
-2. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+1. **Next:** Fairer meeting point suggestions: slowest trip and average count equally (group 3)
+2. Timetable publish uploads only changed files (group 10)
+3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+4. Snappier address search (group 1)
+5. "Heute anders" in the chosen connection (group 11)
+6. Smooth line overlays along the real tracks and roads (group 7)
 
-After the UI overhaul, the list is done for now. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Steps 4–6 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Hendrik's standing go (2026-10-12): the builder keeps going through these steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -42,6 +46,16 @@ Notes: the interface is in English today (`<html lang="en">`). All UI text moves
 Only suggest addresses and places inside the area the map covers. If that's hard, limit them to Berlin addresses and places instead.
 
 Notes: the search (packages/web/src/search.ts) already sends Photon a rectangular bbox around Berlin. A rectangle still includes parts of Brandenburg, so the plan is to also drop results that fall outside the heatmap's covered area (or outside the Berlin state boundary) on the client, before showing them.
+
+### Snappier address search
+
+Hendrik, 2026-10-12: the address search should feel snappier. Today every keystroke waits for Photon (photon.komoot.io), a free public server, before anything shows. Ideas, measured against the snappiness rule:
+
+- Show local matches at once from data the app already has, such as station names from the timetable, favourites and recent searches, and add Photon's addresses as they arrive.
+- Keep the wait between keystrokes short, cancel requests that are out of date, and cache answers for the session.
+- Measure the time from keystroke to first suggestion on a phone, before and after.
+
+Small to medium effort. Added from Hendrik's request on 2026-10-12.
 
 ## 2. New map layers
 
@@ -118,6 +132,15 @@ Notes: the routing already gives times to every point, so per-place times are lo
 Friends often meet in groups of three to five. Generalise the meeting point to up to five starts: the map shows extra minutes over the best slower-of-all time, the suggested meeting points work the same way, and a tap lists everyone's trip. Kept in the link with `with=` repeated.
 
 Notes: one routing pass per start, so five starts take about 2.5 times the two-start time; start with three and measure against the snappiness rule. Medium effort; built in one step with C2. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+### Fairer meeting point suggestions
+
+Hendrik, 2026-10-12 (option C from research/meeting-fairness/meeting-fairness.md): the suggested meeting points rank by **slowest trip + average trip**, counted equally, instead of slowest trip first with the total only breaking ties. One extra minute for the slowest person is then worth it when the group saves at least (people + 1) minutes. With 3+ people this stops picks like Hermannstr. 39/39/31 over Friedrichstr. 40/38/12, and with two people it mostly keeps today's fair picks.
+
+- **Where:** `suggestMeetingPoints` in `packages/web/src/meet.ts`; the 1.5 km spacing and the top 3 stay.
+- **Unchanged:** the map colours keep showing the slowest person's time.
+
+Small effort, no speed cost.
 
 ### "Where can I live?" map from my favourites (C2)
 
@@ -316,6 +339,16 @@ From Hendrik's review of group 6: the tapped route looks too much like the Lines
 
 While a route is shown, the Lines layer steps back (about 30 % opacity, thinner, no labels) and the route comes forward: thicker, with a dark outline instead of the white casing the Lines use, round stop dots where you get on, change and get off (with the stop names), and walking legs as a dark dotted line. Closing the card brings the Lines back. Small.
 
+### Smooth line overlays along the real tracks and roads
+
+Hendrik, 2026-10-12: the lines on the Lines layer (and the drawn route) have corners that are too sharp. U-Bahn, S-Bahn and tram lines should follow where they actually run. Bus lines may stay simpler, but should follow the road.
+
+- **Find the real geometry:** check whether VBB's GTFS feed carries `shapes.txt` for these lines. If not, take the tracks from OpenStreetMap (the route relations for U-Bahn, S-Bahn and tram, or the rail and tram ways), which the build already reads for footpaths.
+- **Buses:** snap the line to the streets between stops if that is cheap at build time. Otherwise smooth the stop-to-stop line so it at least has no sharp corners.
+- **Speed:** the geometry is prepared in the build and simplified per zoom level, so the Lines layer loads no slower than now.
+
+Medium effort; finding the data source comes first. Added from Hendrik's request on 2026-10-12.
+
 ### Orientation: which part of Berlin am I looking at?
 
 **Done** (PR #27): water (rivers, canals, lakes) is drawn over the colours in clear blue; parks and woods get a light green veil; the twelve Bezirke are named at city zoom and the basemap's Ortsteil names are bolder from zoom 11.5; the Ringbahn is a faint frame; seven landmarks are marked from zoom 10.5. District boundaries left out.
@@ -455,6 +488,15 @@ The snappiness rule is checked by hand in each PR today. A CI job fails a PR tha
 
 **Done** (PR #59): URL state lives in `url.ts` with round-trip tests for every link key; the time sheet, menu, tap handling, trip card and map layers are their own modules. main.ts is down to 962 lines.
 
+### Timetable publish uploads only changed files
+
+On 2026-10-12, a timetable build failed partway through publishing: GitHub's hourly API limit for the repo ran out, and because each file is deleted and re-uploaded (`--clobber`), one timetable file was left missing from the release. Each publish re-uploads all of the roughly 250 files, which nearly uses up the hourly budget, so two runs in one hour overflow it.
+
+- Publish a checksums manifest with the release, and upload only the files whose hash changed. A same-day rerun then costs a handful of API calls.
+- A failed run must never leave a file deleted. Upload the new file before the old one is replaced, or check the release against the manifest at the end.
+
+Small effort, workflow only, no change to the app. Suggested by the builder on 2026-10-12 after the failed run.
+
 ## 11. What's running now
 
 ### Today's actual service, construction and Ersatzverkehr included
@@ -472,6 +514,18 @@ The map should show what is actually running, not a typical day. Today the build
 **Done** (PR #88): What's different today. Each day is compared with the typical pattern at build time, and a small notice lists the lines that run differently.
 
 **Finding for live disruptions** (builder, 2026-10-12): VBB's GTFS-RT feed exists but carries no notices, only delays and cancellations of single trips (about 2.4 MB per download), and the journey API has no network-wide notices either, so "disruption notices as text" is not available. Hendrik is choosing between: A) skip it, B) a live check of the tapped trip ("fällt aus" / "+4 Min."), C) a network-wide list of cancellations. B is being built until he decides.
+
+**Done** (PR #90): live disruptions as option B. The tap card shows the live status of the first vehicle of the chosen trip, from VBB's GTFS-RT feed.
+
+### "Heute anders" in the chosen connection
+
+Hendrik, 2026-10-12: what is different today should count in the connection you pick, and if that is too costly, at least the information that matters for that connection should show. Since PR #78 the routing already uses each day's real timetable, so planned changes (Ersatzverkehr, closures) are already in the connections it finds. This step is about what the user sees:
+
+- **On the trip card:** when a line in the chosen connection runs differently today, say so on that leg, for example "U2: Ersatzverkehr Pankow–Alexanderplatz". This uses the same build-time comparison as the notice from PR #88.
+- **The general notice** then only lists the changes that touch the map you are looking at, or steps back, so it no longer shows things that don't matter for your trip.
+- If counting the changes in routing turns out not to be the case somewhere (for example the "Typisch" times, which use the typical day), only the per-connection information shows there.
+
+Small to medium effort. Added from Hendrik's request on 2026-10-12.
 
 Notes: the app still downloads only the hour it shows (about 270 KB with the binary format), so first load and taps stay as fast as now; the release grows to about 8 days × 24 files, which is fine for GitHub Pages. The daily refresh runs in the existing GTFS workflow. Medium effort; reworked from Hendrik's request on 2026-10-12 (previously "Ersatzverkehr and other temporary changes" with only a reference-day fix).
 
