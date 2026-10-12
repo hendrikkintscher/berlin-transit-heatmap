@@ -620,9 +620,25 @@ dialog.menu[open] {
   background: rgba(36, 22, 64, 0.64);
 }
 
-/* Meeting point: the second start marker and the banner that explains the colours. */
-.origin-marker.second {
-  border-color: #0e8a7e;
+/* Meeting point: each start has its colour (marker and the dots in the card), and a
+   banner explains the colours. */
+.p1 {
+  --pc: var(--accent);
+}
+.p2 {
+  --pc: #0e8a7e;
+}
+.p3 {
+  --pc: #d9480f;
+}
+.p4 {
+  --pc: #1c64d6;
+}
+.p5 {
+  --pc: #c2185b;
+}
+.origin-marker[class*=' p'] {
+  border-color: var(--pc);
 }
 .meet {
   position: fixed;
@@ -752,6 +768,29 @@ dialog.menu[open] {
   padding: 8px 12px;
   cursor: pointer;
 }
+/* The where-to-live map: one strong button under the favourites. */
+.fav-living {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.fav-living[hidden] {
+  display: none;
+}
+/* While it is shown, the meeting-point and compare banners step aside. */
+body.living #meet,
+body.living #cmp {
+  display: none;
+}
 .menu-note {
   margin: 6px 0 0;
   font-size: 12px;
@@ -761,18 +800,14 @@ dialog.menu[open] {
 .menu-note:empty {
   display: none;
 }
-#readout i.p1,
-#readout i.p2 {
+#readout i[class^='p'] {
   display: inline-block;
   width: 10px;
   height: 10px;
   margin-right: 4px;
   border-radius: 50%;
-  border: 3px solid var(--accent);
+  border: 3px solid var(--pc);
   vertical-align: 1px;
-}
-#readout i.p2 {
-  border-color: #0e8a7e;
 }
 
 /* Departure time: a pill in the top bar opens a sheet with weekday/weekend and the hour. */

@@ -25,8 +25,8 @@ export type ToWorker =
       window: Window;
       lat: number;
       lon: number;
-      /** Meeting point: a second start; the map then shows the slower of the two trips. */
-      second?: { lat: number; lon: number };
+      /** Meeting point: the other starts (up to four); the map then shows the slowest trip. */
+      others?: { lat: number; lon: number }[];
       /** 'depart': from the point leaving in the hour; 'arrive': to the point arriving in the hour after the file's window. */
       direction: Direction;
       /**
@@ -47,7 +47,24 @@ export type ToWorker =
       travel?: Travel;
     }
   | { type: 'trip'; id: number; lat: number; lon: number }
-  | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number };
+  | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
+  /**
+   * "Where can I live?": one Typisch pass arriving at each favourite place, combined into
+   * the weighted average per cell (see favourites.ts). Answered with progress and a result
+   * marked `living`.
+   */
+  | {
+      type: 'living';
+      id: number;
+      /** Arriving in the chosen hour: the hour before it, as for 'arrive' (see when.ts). */
+      window: Window;
+      places: { lat: number; lon: number; weight: number }[];
+      walkKmh: number;
+      stepFree?: boolean;
+      travel?: Travel;
+    }
+  /** Minutes from a place to each favourite on the "where can I live?" map with id `map`. */
+  | { type: 'livingAt'; id: number; map: number; lat: number; lon: number };
 
 export interface TimetableInfo {
   window: Window;
@@ -84,6 +101,8 @@ export type FromWorker =
   | { type: 'loaded'; info: TimetableInfo }
   /** The footpath network has arrived: maps computed so far used straight-line walks. */
   | { type: 'walk' }
+  | { type: 'livingProgress'; id: number; done: number; total: number }
+  | { type: 'livingAt'; id: number; minutes: (number | null)[] }
   | {
       type: 'result';
       id: number;
@@ -94,15 +113,17 @@ export type FromWorker =
       bbox: [number, number, number, number];
       /** Grid travel times for the tap readout (row 0 = north, rows evenly spaced in latitude). */
       grid: { cols: number; rows: number; seconds: Float32Array<ArrayBuffer> };
-      /** With a second start: each start's own times on the same grid (the map shows their max). */
-      each?: [Float32Array<ArrayBuffer>, Float32Array<ArrayBuffer>];
-      /** With a second start: up to three suggested meeting points, best first. */
+      /** Meeting point: each start's own times on the same grid (the map shows their max). */
+      each?: Float32Array<ArrayBuffer>[];
+      /** Meeting point: up to three suggested meeting points, best first. */
       meet?: MeetSuggestion[];
       /**
-       * With a second start (not comparing): the smallest slower-of-both time on the grid.
+       * Meeting point (not comparing): the smallest slowest-of-all time on the grid.
        * The image and outlines show extra minutes over it; `grid` keeps the actual times.
        */
       extraBase?: number;
+      /** "Where can I live?": `grid` holds the weighted average to the favourites, not trip times. */
+      living?: true;
       /** When comparing: times at the second time on the same grid; the image shows the difference. */
       compare?: Float32Array<ArrayBuffer>;
       /** Network hops the fastest journeys rely on, with share of reachable map. */
@@ -124,7 +145,7 @@ export type FromWorker =
   | {
       type: 'trip';
       id: number;
-      /** One journey per start (two with a meeting point); null where unreachable. */
+      /** One journey per start (more with a meeting point); null where unreachable. */
       journeys: ({
         legs: TripLeg[];
         transfers: number;

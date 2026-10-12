@@ -41,14 +41,16 @@ export interface State {
   measure: Measure;
   /**
    * Adding a second start switched to Typisch; this is the choice before it, back when the
-   * second start goes. Null once a choice is made in between.
+   * last other start goes. Null once a choice is made in between.
    */
   measureBefore: Measure | null;
   /** Compare: a second time; the map then shows how much longer trips take then. */
   compare: When | null;
   origin: Point | null;
-  /** Meeting point: the second person's start. */
-  second: Point | null;
+  /** Meeting point: the other people's starts (up to four). */
+  others: Point[];
+  /** The "where can I live?" map from the favourites is shown instead of the start's map. */
+  living: boolean;
   requestId: number;
   info: Partial<Record<Window, TimetableInfo>>;
   routes: boolean;
@@ -83,7 +85,8 @@ export function createState(): State {
     measureBefore: null,
     compare: null,
     origin: null,
-    second: null,
+    others: [],
+    living: false,
     requestId: 0,
     info: {},
     routes: true,

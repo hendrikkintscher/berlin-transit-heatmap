@@ -32,6 +32,7 @@ import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut } from './colors';
 import { blurSeconds, warpField } from './soften';
 import { contours } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
+import { scoreGrid } from './favourites';
 import { suggestMeetingPoints, type MeetCandidate } from './meet';
 import type {
   Direction,
@@ -243,21 +244,21 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         [desert.image.rgba.buffer, desert.grid.seconds.buffer],
       );
     } else if (msg.type === 'compute') {
+      livingId = 0; // a running "where can I live?" map is no longer wanted
       const t0 = performance.now();
       walkSpeedMps = msg.walkKmh / 3.6;
       const travel = msg.travel ?? 'walk';
       const variant = { stepFree: msg.stepFree, bike: travel === 'bike' };
       const tt = await prepared(msg.window, msg.direction, variant);
-      const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.second ? [msg.second] : [])];
+      const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.others ?? [])];
+      const meeting = starts.length > 1;
       const typical = msg.measure === 'typical';
       // Next connection: plain RAPTOR from one moment (reversed files count backwards).
       const now = (t: PreparedTimetable) =>
         msg.direction === 'depart' ? t.windowStart + (msg.leaveOffset ?? 0) : t.windowEnd;
       const leaveAt = (t: PreparedTimetable) => (msg.measure === 'next' ? now(t) : undefined);
       const runs = starts.map((o) => run(tt, o, typical, travel, true, leaveAt(tt)));
-      const shown = (r: Run) => r.shown;
-      const grid =
-        runs.length === 1 ? runs[0].shown : slowerOf(...(runs.map(shown) as [HeatGrid, HeatGrid]));
+      const grid = slowestOf(runs.map((r) => r.shown));
       const used = runs.flatMap((r) => r.used);
       const routes = usageGeoJSON(tt, used);
       const labels = labelLines(tt, used);
@@ -278,13 +279,13 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       if (msg.compare) {
         const tt2 = await prepared(msg.compare, msg.direction, variant);
         const other = starts.map((o) => run(tt2, o, typical, travel, false, leaveAt(tt2)).shown);
-        const g2 = other.length === 1 ? other[0] : slowerOf(other[0], other[1]);
+        const g2 = slowestOf(other);
         compare = g2.seconds as Float32Array<ArrayBuffer>;
         image = paintDiff(grid, g2);
         outlines = { type: 'FeatureCollection', features: [] };
       } else {
         // Meeting point: colour the extra minutes over the best spot, so it is always green.
-        extraBase = runs.length === 2 ? minFinite(grid.seconds) : 0;
+        extraBase = meeting ? minFinite(grid.seconds) : 0;
         const shownSeconds = extraBase ? grid.seconds.map((v) => v - extraBase!) : grid.seconds;
         image = paint(grid, shownSeconds);
         // Outlines follow a more strongly blurred field, so walk bubbles round off.
@@ -297,22 +298,16 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       }
       // The grids stay here for trip lookups, so the UI gets copies.
       const seconds = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
-      const each =
-        runs.length === 2
-          ? (runs.map((r) => Float32Array.from(r.shown.seconds)) as [
-              Float32Array<ArrayBuffer>,
-              Float32Array<ArrayBuffer>,
-            ])
-          : undefined;
-      // Meeting point: a few stations both reach quickly, from each start's own times.
-      const candidates = runs.length === 2 ? meetCandidates(tt) : [];
-      const meet =
-        runs.length === 2
-          ? suggestMeetingPoints(candidates, (i) => [
-              cellSeconds(runs[0].shown, candidates[i]),
-              cellSeconds(runs[1].shown, candidates[i]),
-            ])
-          : undefined;
+      const each = meeting
+        ? runs.map((r) => Float32Array.from(r.shown.seconds) as Float32Array<ArrayBuffer>)
+        : undefined;
+      // Meeting point: a few stations everyone reaches quickly, from each start's own times.
+      const candidates = meeting ? meetCandidates(tt) : [];
+      const meet = meeting
+        ? suggestMeetingPoints(candidates, (i) =>
+            runs.map((r) => cellSeconds(r.shown, candidates[i])),
+          )
+        : undefined;
       ctx.postMessage(
         {
           type: 'result',
@@ -323,7 +318,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           grid: { cols: grid.cols, rows: grid.rows, seconds },
           each,
           meet,
-          ...(runs.length === 2 && extraBase !== undefined ? { extraBase } : {}),
+          ...(meeting && extraBase !== undefined ? { extraBase } : {}),
           compare,
           routes,
           labels,
@@ -338,6 +333,15 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           ...(compare ? [compare.buffer] : []),
         ],
       );
+    } else if (msg.type === 'living') {
+      await living(msg);
+    } else if (msg.type === 'livingAt') {
+      const l = livings.get(msg.map);
+      const minutes = (l?.seconds ?? []).map((g) => {
+        const v = cellSeconds({ ...l!.layout, seconds: g }, msg);
+        return v < Infinity ? Math.round(v / 60) : null;
+      });
+      post({ type: 'livingAt', id: msg.id, minutes });
     } else if (msg.type === 'trip') {
       const last = lastTrip;
       const journeys = (last?.runs ?? []).map((r) => trip(last!, nowRun(last!, r, msg), msg));
@@ -347,6 +351,77 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
   }
 };
+
+/** The last two "where can I live?" maps by id: each favourite's grid, for the minutes on tap. */
+const livings = new Map<number, { layout: HeatGrid; seconds: Float32Array[] }>();
+/** The newest "where can I live?" request; an older one stops at its next place. */
+let livingId = 0;
+
+async function living(msg: Extract<ToWorker, { type: 'living' }>) {
+  const t0 = performance.now();
+  livingId = msg.id;
+  walkSpeedMps = msg.walkKmh / 3.6;
+  const travel = msg.travel ?? 'walk';
+  const variant = { stepFree: msg.stepFree, bike: travel === 'bike' };
+  const tt = await prepared(msg.window, 'arrive', variant);
+  const w = travelOptions(travel);
+  const seconds: Float32Array[] = [];
+  let layout: HeatGrid | null = null;
+  let computedInMs = 0;
+  for (const [i, p] of msg.places.entries()) {
+    // Typisch, averaged over the hour: the fair measure for a place you go to again and again.
+    let g: HeatGrid;
+    if (travel === 'bikeonly') g = run(tt, p, true, travel, false).shown;
+    else {
+      const r = travelTimes(tt, p, { typical: true, ...w });
+      computedInMs += r.computedInMs;
+      g = heatGrid(tt, { ...r, stopSeconds: r.typicalSeconds! }, { cellSizeM: CELL_M, ...w });
+    }
+    layout ??= g;
+    seconds.push(g.seconds);
+    post({ type: 'livingProgress', id: msg.id, done: i + 1, total: msg.places.length });
+    // Let a newer request (or a tap) in between places.
+    await new Promise((r) => setTimeout(r, 0));
+    if (livingId !== msg.id) return;
+  }
+  if (!layout) return;
+  livings.set(msg.id, { layout, seconds });
+  for (const id of livings.keys()) if (livings.size > 2) livings.delete(id);
+  const grid: HeatGrid = {
+    ...layout,
+    stop: undefined,
+    seconds: scoreGrid(
+      seconds,
+      msg.places.map((p) => p.weight),
+    ),
+  };
+  const image = paint(grid);
+  const outlines = contours(
+    blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
+    grid.cols,
+    grid.rows,
+    grid.bbox,
+  );
+  const empty = { type: 'FeatureCollection' as const, features: [] };
+  const values = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
+  ctx.postMessage(
+    {
+      type: 'result',
+      id: msg.id,
+      window: msg.window,
+      image,
+      bbox: grid.bbox,
+      grid: { cols: grid.cols, rows: grid.rows, seconds: values },
+      living: true,
+      routes: empty,
+      labels: empty,
+      outlines,
+      computedInMs,
+      totalMs: performance.now() - t0,
+    } satisfies FromWorker,
+    [image.rgba.buffer, values.buffer],
+  );
+}
 
 /** Stations with at least this many departures an hour can be suggested as meeting points. */
 const MEET_MIN_PER_HOUR = 6;
@@ -593,11 +668,14 @@ function tripMessage(
   };
 }
 
-/** Meeting point: each cell gets the slower of the two trips ("where can we both be in N min?"). */
-function slowerOf(a: HeatGrid, b: HeatGrid): HeatGrid {
-  const seconds = new Float32Array(a.seconds.length);
-  for (let i = 0; i < seconds.length; i++) seconds[i] = Math.max(a.seconds[i], b.seconds[i]);
-  return { ...a, seconds, stop: undefined };
+/** Meeting point: each cell gets the slowest trip ("where can we all be in N min?"). */
+function slowestOf(grids: HeatGrid[]): HeatGrid {
+  if (grids.length === 1) return grids[0];
+  const seconds = Float32Array.from(grids[0].seconds);
+  for (const g of grids.slice(1))
+    for (let i = 0; i < seconds.length; i++)
+      if (g.seconds[i] > seconds[i]) seconds[i] = g.seconds[i];
+  return { ...grids[0], seconds, stop: undefined };
 }
 
 const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));

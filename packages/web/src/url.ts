@@ -1,4 +1,4 @@
-// What a link carries: ?from=lat,lon&with=…&to=…&t=weekend-02&dir=arr&m=best&cmp=…
+// What a link carries: ?from=lat,lon&with=…[&with=…]&to=…&t=weekend-02&dir=arr&m=best&cmp=…
 // &walk=5&sf=1&go=bike&routes=0&layers=freq,desert,iso&lang=en. Reading a link only
 // changes what it names; the rest keeps the device's own settings.
 
@@ -14,12 +14,15 @@ export const TRAVELS: Travel[] = ['walk', 'bike', 'bikeonly'];
 export const travelOf = (v: string | null): Travel =>
   TRAVELS.includes(v as Travel) ? (v as Travel) : 'walk';
 
+/** A meeting point has up to this many starts: the first and four more. */
+export const MAX_STARTS = 5;
+
 /**
- * The app opens on "Nächste"; a meeting point (two starts) on "Typisch", which is fairer
- * to compare when neither person knows when the other leaves.
+ * The app opens on "Nächste"; a meeting point (two or more starts) on "Typisch", which is
+ * fairer to compare when nobody knows when the others leave.
  */
-export const defaultMeasure = (s: { second: Point | null }): Measure =>
-  s.second ? 'typical' : 'next';
+export const defaultMeasure = (s: { others: Point[] }): Measure =>
+  s.others.length ? 'typical' : 'next';
 
 export interface Point {
   lat: number;
@@ -28,8 +31,8 @@ export interface Point {
 
 export interface LinkState {
   origin: Point | null;
-  /** Meeting point: the second person's start. */
-  second: Point | null;
+  /** Meeting point: the other people's starts (up to four). */
+  others: Point[];
   /** The tapped place, kept through settings changes. */
   to: Point | null;
   when: When;
@@ -61,7 +64,13 @@ export function readLink(search: string, base: LinkState): LinkState {
   s.desert = layers.includes('desert');
   s.iso = layers.includes('iso');
   s.origin = parsePoint(p.get('from'));
-  s.second = s.origin ? parsePoint(p.get('with')) : null;
+  s.others = s.origin
+    ? p
+        .getAll('with')
+        .map(parsePoint)
+        .filter((o): o is Point => o !== null)
+        .slice(0, MAX_STARTS - 1)
+    : [];
   s.to = s.origin ? parsePoint(p.get('to')) : null;
   s.when = whenFromParams(p, base.when);
   if (p.get('dir') === 'arr') s.direction = 'arrive';
@@ -82,7 +91,7 @@ export function readLink(search: string, base: LinkState): LinkState {
 export function linkQuery(s: LinkState, now: When, lang?: string | null): string {
   const p = new URLSearchParams();
   if (s.origin) p.set('from', pointParam(s.origin));
-  if (s.second) p.set('with', pointParam(s.second));
+  for (const o of s.others) p.append('with', pointParam(o));
   if (s.to) p.set('to', pointParam(s.to));
   if (windowName(s.when) !== windowName(now)) p.set('t', windowName(s.when));
   if (s.direction === 'arrive') p.set('dir', 'arr');

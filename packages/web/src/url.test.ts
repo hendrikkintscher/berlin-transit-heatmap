@@ -4,7 +4,7 @@ import { linkQuery, readLink, type LinkState } from './url';
 const NOW = { day: 'weekday', hour: 10 } as const;
 const BASE: LinkState = {
   origin: null,
-  second: null,
+  others: [],
   to: null,
   when: NOW,
   direction: 'depart',
@@ -28,7 +28,10 @@ describe('links', () => {
   it('round-trips every setting', () => {
     const full: LinkState = {
       origin: { lat: 52.5037, lon: 13.4108 },
-      second: { lat: 52.52, lon: 13.3694 },
+      others: [
+        { lat: 52.52, lon: 13.3694 },
+        { lat: 52.48, lon: 13.43 },
+      ],
       to: { lat: 52.43915, lon: 13.47215 },
       when: { day: 'weekend', hour: 2 },
       direction: 'arrive',
@@ -44,7 +47,7 @@ describe('links', () => {
     };
     const q = linkQuery(full, NOW, 'en');
     expect(q).toBe(
-      'from=52.50370%2C13.41080&with=52.52000%2C13.36940&to=52.43915%2C13.47215&t=weekend-02' +
+      'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&to=52.43915%2C13.47215&t=weekend-02' +
         '&dir=arr&m=best&cmp=weekday-10&walk=5&sf=1&go=bike&routes=0&layers=freq%2Cdesert%2Ciso&lang=en',
     );
     expect(readLink(`?${q}`, BASE)).toEqual(full);
@@ -68,7 +71,7 @@ describe('links', () => {
   it('ignores a second start or place without a start, and bad values', () => {
     expect(readLink('?with=52.5,13.4&to=52.5,13.4', BASE)).toMatchObject({
       origin: null,
-      second: null,
+      others: [],
       to: null,
     });
     expect(readLink('?from=x,13.4&walk=9&go=car&m=fast&t=weekday-30', BASE)).toEqual(BASE);
@@ -79,10 +82,15 @@ describe('links', () => {
     expect(readLink(meet, BASE).measure).toBe('typical');
     expect(readLink(`${meet}&m=next`, BASE).measure).toBe('next');
     expect(readLink('?from=52.5,13.4&m=typical', BASE).measure).toBe('typical');
-    const two = { ...BASE, origin: { lat: 52.5, lon: 13.4 }, second: { lat: 52.52, lon: 13.37 } };
+    const two = { ...BASE, origin: { lat: 52.5, lon: 13.4 }, others: [{ lat: 52.52, lon: 13.37 }] };
     expect(linkQuery({ ...two, measure: 'typical' }, NOW)).not.toMatch(/(^|&)m=/);
     expect(linkQuery({ ...two, measure: 'next' }, NOW)).toContain('m=next');
     expect(linkQuery({ ...BASE, measure: 'typical' }, NOW)).toBe('m=typical');
+  });
+
+  it('keeps up to five starts', () => {
+    const q = Array.from({ length: 6 }, (_, i) => `with=52.5${i},13.4`).join('&');
+    expect(readLink(`?from=52.5,13.4&${q}`, BASE).others).toHaveLength(4);
   });
 
   it('reads the old night link', () => {

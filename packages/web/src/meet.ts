@@ -1,4 +1,4 @@
-// Suggested meeting points: with two starts, a few stations both people reach quickly.
+// Suggested meeting points: with two or more starts, a few stations everyone reaches quickly.
 
 export interface MeetCandidate {
   name: string;
@@ -7,37 +7,37 @@ export interface MeetCandidate {
 }
 
 export interface MeetSuggestion extends MeetCandidate {
-  /** Minutes for the first and the second start. */
-  a: number;
-  b: number;
+  /** Minutes from each start, in start order. */
+  mins: number[];
 }
 
 /** Suggestions closer than this to a better one are left out, so they spread out. */
 export const MEET_SPREAD_M = 1500;
 
 /**
- * The best `count` candidates: smallest slower-of-both time (in whole minutes), the sum
- * of both as the tie-breaker so neither person carries the whole trip. After each pick,
- * everything within `spreadM` of it drops out. `seconds(i)` gives candidate i's times.
+ * The best `count` candidates: smallest slowest-of-all time (in whole minutes), the sum
+ * as the tie-breaker so nobody carries the whole trip. After each pick, everything within
+ * `spreadM` of it drops out. `seconds(i)` gives candidate i's times, one per start.
  */
 export function suggestMeetingPoints(
   candidates: MeetCandidate[],
-  seconds: (i: number) => [number, number],
+  seconds: (i: number) => number[],
   count = 3,
   spreadM = MEET_SPREAD_M,
 ): MeetSuggestion[] {
-  const scored: MeetSuggestion[] = [];
+  const scored: (MeetSuggestion & { max: number; sum: number })[] = [];
   candidates.forEach((c, i) => {
-    const [sa, sb] = seconds(i);
-    if (!(sa < Infinity && sb < Infinity)) return;
-    scored.push({ ...c, a: Math.round(sa / 60), b: Math.round(sb / 60) });
+    const s = seconds(i);
+    if (!s.every((v) => v < Infinity)) return;
+    const mins = s.map((v) => Math.round(v / 60));
+    scored.push({ ...c, mins, max: Math.max(...mins), sum: mins.reduce((a, b) => a + b, 0) });
   });
-  scored.sort((x, y) => Math.max(x.a, x.b) - Math.max(y.a, y.b) || x.a + x.b - (y.a + y.b));
+  scored.sort((x, y) => x.max - y.max || x.sum - y.sum);
   const picked: MeetSuggestion[] = [];
   for (const s of scored) {
     if (picked.length >= count) break;
     if (picked.some((p) => distanceM(p, s) < spreadM)) continue;
-    picked.push(s);
+    picked.push({ name: s.name, lat: s.lat, lon: s.lon, mins: s.mins });
   }
   return picked;
 }

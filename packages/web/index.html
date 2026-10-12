@@ -166,6 +166,19 @@
       </button>
     </div>
 
+    <div id="living" class="chip meet" hidden>
+      <span id="living-text"></span>
+      <button
+        id="living-close"
+        class="x"
+        type="button"
+        aria-label="Wohnlage-Karte schließen"
+        data-t-label="livingClose"
+      >
+        ✕
+      </button>
+    </div>
+
     <div id="hint" class="chip" data-t="hint">Tippe auf die Karte oder suche einen Startpunkt</div>
 
     <footer class="bottom">
@@ -189,9 +202,7 @@
         <span id="readout-text"></span>
         <span class="readout-btns">
           <button id="readout-start" type="button" data-t="startHere">Hier starten</button>
-          <button id="readout-second" class="alt" type="button" data-t="secondHere" hidden>
-            2. Start
-          </button>
+          <button id="readout-second" class="alt" type="button" hidden>2. Start</button>
           <button id="readout-fav" class="alt" type="button" data-t="favHere">★ Merken</button>
           <button id="readout-remove" class="alt" type="button" data-t="removeStart" hidden>
             Entfernen
@@ -398,6 +409,10 @@
         <button id="fav-import" type="button" data-t="favImport">Liste importieren</button>
         <button id="fav-export" type="button" data-t="favExport" hidden>Exportieren</button>
       </div>
+      <button id="fav-living" class="fav-living" type="button" data-t="livingMap" hidden>
+        Wohnlage-Karte
+      </button>
+      <p id="fav-living-help" class="menu-note" data-t="livingHelp" hidden></p>
       <input
         id="fav-file"
         type="file"

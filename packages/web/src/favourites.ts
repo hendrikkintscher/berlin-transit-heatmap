@@ -60,6 +60,26 @@ export function newId(): string {
 }
 
 /**
+ * "Where can I live?": per cell, the weighted average of the times to each favourite
+ * (`seconds[i]` is the grid of times to place i), unreachable counting as UNREACHABLE_MIN,
+ * as in `score`.
+ */
+export function scoreGrid(
+  seconds: readonly Float32Array[],
+  weights: readonly number[],
+): Float32Array {
+  const out = new Float32Array(seconds[0]?.length ?? 0);
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (!total) return out.fill(Infinity);
+  seconds.forEach((g, i) => {
+    const w = weights[i] / total;
+    for (let k = 0; k < out.length; k++)
+      out[k] += w * (g[k] < Infinity ? g[k] : UNREACHABLE_MIN * 60);
+  });
+  return out;
+}
+
+/**
  * Minutes from the start point to each favourite (null = unreachable) and their weighted
  * average, unreachable trips counting as UNREACHABLE_MIN. `secondsAt` reads the travel-time grid.
  */
