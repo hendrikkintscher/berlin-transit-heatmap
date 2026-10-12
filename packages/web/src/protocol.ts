@@ -46,7 +46,8 @@ export type ToWorker =
       /** Cycling to and from stations, or all the way (default walking). */
       travel?: Travel;
     }
-  | { type: 'trip'; id: number; lat: number; lon: number }
+  /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
+  | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
   /**
    * "Where can I live?": one Typisch pass arriving at each favourite place, combined into
@@ -179,6 +180,9 @@ export type FromWorker =
          * (arriving: arrives by the end of the hour). Under Nächste the map's own minutes.
          */
         minutes?: number;
+        /** Departing: when to leave the start and when it arrives, seconds of the service day. */
+        leave?: number;
+        arrive?: number;
       } | null)[];
       /** The journeys drawn on the map: rides coloured by mode, walks dashed. */
       lines: FeatureCollection<LineString, { mode: string; walk: boolean }>;

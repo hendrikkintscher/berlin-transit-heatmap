@@ -10,8 +10,9 @@ import { STATIONS_LAYER, TRIP_SOURCE, TRIP_STOPS_SOURCE } from './map-layers';
 import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
-import { tripHtml, type Trip } from './trip-card';
+import { leaveText, tripHtml, type Trip } from './trip-card';
 import { MAX_STARTS, type Point } from './url';
+import { clockNow } from './when';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
 export interface Spot extends Point {
@@ -51,6 +52,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   /** Where "Hier starten", "2. Start" and "Merken" act: the place, or the address it snapped to. */
   let pending: Point | null = null;
   let tripId = 0;
+  /** The place the shown trip goes to, and whether a later one was already asked for. */
+  let tripAt: { lat: number; lon: number; askedLater: boolean } | null = null;
   let removeWhich = 0;
 
   const spotEl = document.createElement('div');
@@ -126,18 +129,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
           parts.push(
             `<small>${t('extraMinutes', { n: Math.max(0, Math.round((secs - r.extraBase) / 60)) })}</small>`,
           );
-      } else if (secs >= 0) parts.push(t('minutes', { n: Math.round(secs / 60) }));
-      if (state.routes && state.origin) {
-        const top = near(['routes-line']).sort(
-          (a, b) => b.properties.share - a.properties.share,
-        )[0];
-        if (top) {
-          const pct = Math.round(100 * (top.properties.share as number));
-          parts.push(
-            `<small>${t('lineShare', { names: escapeHtml(String(top.properties.names)), pct })}</small>`,
-          );
-        }
-      }
+      } else if (secs >= 0)
+        // The next connection's own minutes and arrival take this line's place when they come.
+        parts.push(`<span id="tap-mins">${t('minutes', { n: Math.round(secs / 60) })}</span>`);
       // The connection itself (or, on the where-to-live map, the minutes to each favourite)
       // arrives from the worker a moment later.
       if (secs < Infinity && r) {
@@ -149,6 +143,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
               ? { type: 'homeTrip', id: tripId, map: r.id, lat, lon: lng }
               : { type: 'trip', id: tripId, lat, lon: lng },
         );
+        tripAt = r.living || r.home ? null : { lat, lon: lng, askedLater: false };
         tripSlot = '<span id="trip" class="trip"></span>';
       }
       if (state.desert && data) {
@@ -282,6 +277,28 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     map.setLayoutProperty('routes-label', 'visibility', state.routes && !trip ? 'visible' : 'none');
   }
 
+  // While the card is open, "los in X Min." counts down; once the connection is missed,
+  // the next one is asked for.
+  setInterval(() => {
+    if (readout.hidden || !tripAt) return;
+    const now = clockNow(state.when);
+    if (now === null) return;
+    for (const el of readout.querySelectorAll<HTMLElement>('.trip-leave[data-leave]')) {
+      const leave = Number(el.dataset.leave);
+      el.textContent = leaveText(leave, now);
+      if (leave >= now - 30 || tripAt.askedLater) continue;
+      // The timetable file covers departures within the chosen hour: past it, the card
+      // only says the connection is gone (choosing the new hour shows the next ones).
+      if (now >= (state.when.hour + 1) * 3600) {
+        el.textContent = t('tripMissed');
+        continue;
+      }
+      tripAt.askedLater = true;
+      tripId++;
+      send({ type: 'trip', id: tripId, lat: tripAt.lat, lon: tripAt.lon, leaveAt: now });
+    }
+  }, 15_000);
+
   /** The journey to the tapped spot arrived from the worker. */
   function onTrip(m: Trip) {
     if (m.id !== tripId || readout.hidden) return;
@@ -294,7 +311,12 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       here: pending,
       direction: home ? 'arrive' : state.direction,
       travel: state.travel,
+      now: clockNow(state.when),
     });
+    // With one start, the connection's own minutes and arrival become the card's main line.
+    if (m.journeys.length === 1 && m.journeys[0]?.leave !== undefined)
+      document.getElementById('tap-mins')?.remove();
+    if (tripAt) tripAt.askedLater = false;
     setTrip(m);
   }
 

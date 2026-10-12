@@ -1083,6 +1083,18 @@ dialog.when .seg-wide + .seg-wide {
   display: block;
   font-weight: 600;
 }
+/* The next connection: its minutes and arrival as the card's main line, then when to go. */
+.trip-main {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+}
+.trip-leave {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--accent);
+  font-weight: 600;
+}
 .trip-sep {
   color: var(--muted);
 }

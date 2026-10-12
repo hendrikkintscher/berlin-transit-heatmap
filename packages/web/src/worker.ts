@@ -8,6 +8,7 @@ import {
   gridLayout,
   distanceM,
   heatGrid,
+  departureAt,
   journeyTo,
   NETWORK_WALK_SPEED_MPS,
   walkPath,
@@ -279,6 +280,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         // Trips on tap leave now (or, arriving, arrive by the end of the hour): the map's
         // own pass for "Nächste", a pass of their own for Typisch and Bestfall.
         leaveAt: msg.measure === 'next' ? null : now(tt),
+        from: now(tt),
       };
 
       let image: ReturnType<typeof paint>;
@@ -353,7 +355,17 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       post({ type: 'livingAt', id: msg.id, minutes });
     } else if (msg.type === 'trip') {
       const last = lastTrip;
-      const journeys = (last?.runs ?? []).map((r) => trip(last!, nowRun(last!, r, msg), msg));
+      // A later moment (the shown connection was missed): a pass of its own from then.
+      const later =
+        last &&
+        msg.leaveAt !== undefined &&
+        last.direction === 'depart' &&
+        last.travel !== 'bikeonly'
+          ? { ...last, leaveAt: msg.leaveAt, from: msg.leaveAt }
+          : null;
+      const journeys = (last?.runs ?? []).map((r) =>
+        later ? trip(later, laterRun(later, r, msg), msg) : trip(last!, nowRun(last!, r, msg), msg),
+      );
       post({ type: 'trip', id: msg.id, ...tripMessage(journeys) });
     }
   } catch (err) {
@@ -502,9 +514,9 @@ async function homeTrip(msg: Extract<ToWorker, { type: 'homeTrip' }>) {
   const tt = await prepared(pass.window, 'arrive', h.variant);
   const w = travelOptions(h.travel);
   const result = travelTimes(tt, h.origin, { trackLegs: true, leaveAt: pass.leaveAt, ...w });
-  lastTrip = { tt, runs: [], direction: 'arrive', travel: h.travel, leaveAt: null };
+  lastTrip = { tt, runs: [], direction: 'arrive', travel: h.travel, leaveAt: null, from: 0 };
   // Its minutes would include waiting at home for the deadline, so the card leaves them out.
-  return trip(lastTrip, { ...nearRun(tt, result, msg, w), seconds: undefined }, msg);
+  return trip(lastTrip!, { ...nearRun(tt, result, msg, w), seconds: undefined }, msg);
 }
 
 /** The last two "where can I live?" maps by id: each favourite's grid, for the minutes on tap. */
@@ -680,6 +692,8 @@ let lastTrip: {
   travel: Travel;
   /** When trips on tap leave, if not with the map's own pass. */
   leaveAt: number | null;
+  /** The moment trips on tap leave from (seconds of the service day), departing. */
+  from: number;
 } | null = null;
 
 /** What a trip is rebuilt from; `seconds` is the trip's own time when it leaves now. */
@@ -701,6 +715,21 @@ function nowRun(
   const o = r.result.origin!;
   r.now ??= travelTimes(last.tt, o, { trackLegs: true, leaveAt: last.leaveAt, ...w });
   return nearRun(last.tt, r.now, at, w);
+}
+
+/** As nowRun, leaving at `last.leaveAt` instead of the map's moment; not kept. */
+function laterRun(
+  last: NonNullable<typeof lastTrip> & { leaveAt: number },
+  r: Run,
+  at: { lat: number; lon: number },
+): TripRun {
+  const w = travelOptions(last.travel);
+  const result = travelTimes(last.tt, r.result.origin!, {
+    trackLegs: true,
+    leaveAt: last.leaveAt,
+    ...w,
+  });
+  return nearRun(last.tt, result, at, w);
 }
 
 /** A grid around `at` only (from the stops it can be walked or ridden to), for its trip. */
@@ -738,6 +767,9 @@ function trip(
   start: [number, number];
   end: [number, number];
   seconds?: number;
+  /** Departing: when to leave the start and when the trip arrives (seconds of the day). */
+  leave?: number;
+  arrive?: number;
 } | null {
   const j = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
   if (!j) return null;
@@ -745,7 +777,23 @@ function trip(
   const o = r.result.origin!;
   const here: [number, number] = [at.lon, at.lat];
   const point: [number, number] = [o.lon, o.lat];
-  if (last.direction === 'depart') return { journey: j, start: point, end: here, seconds };
+  if (last.direction === 'depart') {
+    // Leaving from `from`, the trip arrives after the place's time (waiting included);
+    // the walk to the first vehicle starts just in time for it.
+    const total = seconds ?? cellSeconds(r.best, at);
+    const arrive = last.from + total;
+    let leave = last.from;
+    const first = j.legs.findIndex((l) => l.type === 'ride');
+    const ride = j.legs[first];
+    if (ride?.type === 'ride') {
+      const walkTo = j.legs
+        .slice(0, first)
+        .reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
+      const dep = departureAt(last.tt, ride.route, ride.fromPos, last.from + walkTo);
+      if (dep !== null) leave = Math.max(last.from, dep - walkTo);
+    }
+    return { journey: j, start: point, end: here, seconds, leave, arrive };
+  }
   // Arriving: the tree runs backwards in time from the destination, so flip it.
   const legs = [...j.legs]
     .reverse()
@@ -824,6 +872,7 @@ function tripMessage(
       legs,
       transfers: f.journey.transfers,
       ...(f.seconds !== undefined ? { minutes: Math.round(f.seconds / 60) } : {}),
+      ...(f.leave !== undefined ? { leave: f.leave, arrive: f.arrive } : {}),
     };
   });
   return {

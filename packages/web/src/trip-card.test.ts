@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { tripHtml, type Trip, type TripContext } from './trip-card';
+import { leaveText, tripHtml, type Trip, type TripContext } from './trip-card';
 
 const ctx: TripContext = {
   starts: [{ lat: 52.5037, lon: 13.4108 }],
   here: { lat: 52.43915, lon: 13.47215 },
   direction: 'depart',
   travel: 'walk',
+  now: null,
 };
 const ride = (name: string, mode: string, from: string, to: string) =>
   ({ type: 'ride', name, mode, from, to, stops: 3 }) as const;
@@ -67,5 +68,30 @@ describe('trip card', () => {
     );
     expect(html).toContain('origin=52.43915,13.47215&destination=52.50370,13.41080');
     expect(html).toContain('travelmode=bicycling');
+  });
+
+  it('leads with the connection minutes and arrival, then when to leave', () => {
+    const html = tripHtml(
+      {
+        journeys: [
+          {
+            transfers: 0,
+            legs: [ride('M41', 'bus', 'A', 'B')],
+            leave: 10 * 3600 + 5 * 60,
+            arrive: 10 * 3600 + 23 * 60,
+          },
+        ],
+      },
+      { ...ctx, now: 10 * 3600 },
+    );
+    expect(html).toContain('18 Min. · an 10:23 Uhr');
+    expect(html).toContain('los in 5 Min.');
+  });
+
+  it('says jetzt los, counts down, or names the time on another day', () => {
+    expect(leaveText(36000, 35990)).toBe('jetzt los');
+    expect(leaveText(36000, 35000)).toBe('los in 16 Min.');
+    expect(leaveText(36000, null)).toBe('los um 10:00 Uhr');
+    expect(leaveText(36000, 30000)).toBe('los um 10:00 Uhr');
   });
 });
