@@ -4,12 +4,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #103. Build in this order, one step per PR:
-
-1. **Next:** Chip bar rearranged: menu as "Mehr" chip, search and locate below, "Bahn" chip, Barrierefrei, Reisezeit in Zeit (group 12)
-2. Shown connection without a black border (group 7)
-
-Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #108. Nothing is queued: Hendrik picks the next step before anything starts.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -362,6 +357,8 @@ Medium effort; finding the data source comes first. Added from Hendrik's request
 
 ### Shown connection without a black border
 
+**Done** (PR #108): the ride legs keep their line colours and width, with no border.
+
 Hendrik, 2026-10-12: the lines of the connection shown on the map should not have a black border. Draw the ride legs in their line colours without the dark outline from PR #27; keep them apart from the Lines layer by width and the faded Lines (30 %) instead. Walks and stop dots stay as they are. Small effort.
 
 ### Orientation: which part of Berlin am I looking at?
@@ -578,6 +575,8 @@ Many features have been added one by one and are now spread across the top bar, 
 Notes: layout and CSS on the existing controls, no new data, so no cost to taps or first load; the popovers are plain DOM, opened instantly. Check at 360×740 and on an iPhone-sized screen, in German and English (chip labels must fit). Large effort. Added from Hendrik's request on 2026-10-11, filled in from his pick on 2026-10-12.
 
 ### Chip bar rearranged
+
+**Done** (PR #108): the menu is a ≡ chip, placed first in the bar rather than last, because at 360 px the row scrolls and a last chip would be out of view. Search and locate sit under the bar, the transit chip reads "Bahn", Barrierefrei is in its panel, and Reisezeit is in the Zeit panel. First map about 0.5 s.
 
 Hendrik, 2026-10-12: the horizontal chip bar from PR #92 is good, but rearrange it:
 
