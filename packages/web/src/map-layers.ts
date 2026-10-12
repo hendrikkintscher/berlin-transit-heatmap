@@ -323,24 +323,17 @@ export function addMapLayers(
     },
     'routes-label',
   );
-  // The connection to a tapped spot: rides in their line colours, walks dashed, rides
-  // by bike as a thin solid line.
+  // The connection to a tapped spot: rides in their line colours without a border, walks
+  // dashed, rides by bike as a thin solid line.
   map.addSource(TRIP_SOURCE, { type: 'geojson', data: empty });
   const tripLines = ['==', ['get', 'walk'], false] as maplibregl.FilterSpecification;
-  map.addLayer({
-    id: 'trip-casing',
-    type: 'line',
-    source: TRIP_SOURCE,
-    filter: tripLines,
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': '#1d1530', 'line-width': 9.5 },
-  });
   map.addLayer({
     id: 'trip-line',
     type: 'line',
     source: TRIP_SOURCE,
     filter: tripLines,
     layout: { 'line-cap': 'round', 'line-join': 'round' },
+    // No dark border, the line colour alone (Hendrik, 2026-10-12).
     paint: { 'line-color': modeColor, 'line-width': 5.5 },
   });
   map.addLayer({

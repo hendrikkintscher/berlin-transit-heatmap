@@ -60,7 +60,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     const w = state.when;
     const arrive = state.direction === 'arrive';
     const offset = !arrive && state.measure === 'next' ? leaveOffset(w) : 0;
-    // Bike and step-free have their own chips; cycling alone has no timetable time.
+    // Cycling alone has no timetable time.
     whenBtn.querySelector('span')!.textContent =
       state.travel === 'bikeonly'
         ? t('travelBikeOnlyPill')
@@ -68,7 +68,13 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
             w,
             arrive,
             offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour),
-          );
+          ) +
+          // Reisezeit lives in this panel too; the pill names it when it is not the default.
+          (state.measure === 'typical'
+            ? ` · ${t('measureTypical')}`
+            : state.measure === 'best'
+              ? ` · ${t('measureBest')}`
+              : '');
     renderDays();
     $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
     for (const b of dirButtons)

@@ -63,10 +63,11 @@ body {
   }
 }
 
+/* Locate and search: round buttons on the right, under the chip row. */
 .top {
   position: fixed;
   z-index: 4;
-  top: calc(var(--st) + 10px);
+  top: calc(var(--st) + 60px);
   left: calc(var(--sl) + 10px);
   right: calc(var(--sr) + 10px);
   display: flex;
@@ -484,13 +485,13 @@ dialog form button {
   }
 }
 
-/* Menu: a sheet under the top bar on the right; secondary controls live here. */
+/* Menu: a sheet under the chip row on the left, below its ≡ chip; secondary controls. */
 dialog.menu {
   position: fixed;
   margin: 0;
-  top: calc(var(--st) + 64px);
-  right: calc(var(--sr) + 10px);
-  left: auto;
+  top: calc(var(--st) + 58px);
+  left: calc(var(--sl) + 10px);
+  right: auto;
   bottom: auto;
   width: min(340px, calc(100vw - 20px));
   max-width: none;
@@ -844,11 +845,11 @@ body.special #cmp {
   vertical-align: 1px;
 }
 
-/* The chip row under the top bar: what is set, one tap from its panel (chips.ts). */
+/* The chip row at the top: what is set, one tap from its panel (chips.ts). */
 .chips {
   position: fixed;
   z-index: 4;
-  top: calc(var(--st) + 64px);
+  top: calc(var(--st) + 10px);
   left: 0;
   right: 0;
   display: flex;
@@ -894,6 +895,12 @@ body.special #cmp {
   margin-top: 3px;
   transform: rotate(-135deg);
 }
+/* Mehr (the menu): a round chip at the start of the row, always in view. */
+.chip-btn.menu-chip {
+  width: 40px;
+  padding: 0;
+  justify-content: center;
+}
 .chip-btn.on {
   background: var(--accent);
   color: #fff;
@@ -902,7 +909,7 @@ body.special #cmp {
 .pop {
   position: fixed;
   z-index: 5;
-  top: calc(var(--st) + 112px);
+  top: calc(var(--st) + 58px);
   left: calc(var(--sl) + 10px);
   width: min(420px, calc(100vw - 20px));
   max-height: calc(100dvh - var(--st) - var(--sb) - 130px);
@@ -977,22 +984,19 @@ body.special #cmp {
   color: #fff;
 }
 
-/* App title: only where the top bar has room for it. */
+/* App title: first in the chip row, only where there is room for it. */
 .app-title {
   display: none;
 }
 @media (min-width: 720px) {
-  .top {
-    justify-content: flex-end;
-  }
   .app-title {
     display: block;
-    margin-right: auto;
+    flex: none;
     align-self: center;
     background: var(--panel);
     box-shadow: var(--shadow);
     border-radius: 999px;
-    padding: 10px 18px;
+    padding: 8px 18px;
     font-weight: 800;
     font-size: 18px;
     color: var(--accent);
