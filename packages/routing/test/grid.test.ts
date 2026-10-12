@@ -102,3 +102,23 @@ describe('gridToGeoJSON', () => {
     expect(gridToGeoJSON(empty).features).toEqual([]);
   });
 });
+
+describe('heatGrid window', () => {
+  it('matches the whole grid there without a footpath network, clipped at the edges', () => {
+    const tt = loadTimetable(miniTimetable('day'));
+    const result = travelTimes(tt, STOP_POS[A]);
+    const bbox: [number, number, number, number] = [13.38, 52.5, 13.48, 52.56];
+    const full = heatGrid(tt, result, { cellSizeM: 500, bbox });
+    const part = heatGrid(tt, result, {
+      cellSizeM: 500,
+      bbox,
+      window: { c0: -2, r0: 1, cols: 6, rows: 3 },
+    });
+    expect([part.cols, part.rows]).toEqual([4, 3]);
+    for (let y = 0; y < 3; y++)
+      for (let x = 0; x < 4; x++)
+        expect(part.seconds[y * 4 + x]).toBe(full.seconds[(1 + y) * full.cols + x]);
+    expect(part.bbox[0]).toBe(full.bbox[0]);
+    expect(part.bbox[3]).toBeCloseTo(full.bbox[3] - (full.bbox[3] - full.bbox[1]) / full.rows, 9);
+  });
+});

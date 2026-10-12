@@ -43,7 +43,7 @@ import {
   limitLut,
   LIMIT_FEATHER_S,
 } from './colors';
-import { blurSeconds, warpField } from './soften';
+import { BlurScratch, blurSeconds, warpField } from './soften';
 import { outlines as traceOutlines } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
 import { scoreGrid } from './favourites';
@@ -83,7 +83,7 @@ const HOME_LUT = homeLut();
 const LIMIT_LUTS = new Map<number, Uint8Array>();
 /** The colour image of the last map: its travel times, or "Bis N Min." in one colour. */
 function paintShown(shown: NonNullable<typeof lastShown>, limit?: number) {
-  if (!limit) return paint(shown.grid, shown.values);
+  if (!limit) return paint(shown.grid, shown.grid.seconds, LUT, shown.offset);
   let lut = LIMIT_LUTS.get(limit);
   if (!lut) LIMIT_LUTS.set(limit, (lut = limitLut(limit)));
   // A meeting point counts everyone's own minutes (the slowest), not the extra ones. Only
@@ -431,15 +431,23 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       } else {
         // Meeting point: colour the extra minutes over the best spot, so it is always green.
         extraBase = meeting ? minFinite(grid.seconds) : 0;
-        const shownSeconds = extraBase ? grid.seconds.map((v) => v - extraBase!) : grid.seconds;
-        lastShown = { id: msg.id, grid, values: shownSeconds };
+        // (Painted and traced with the offset, so the grid is not copied.)
+        lastShown = { id: msg.id, grid, offset: -extraBase };
         if (msg.noImage && !msg.limit) {
           // Heatmap off: the outlines come first; the colours wait for a 'paint'.
           image = { width: 1, height: 1, rgba: new Uint8ClampedArray(4) };
           unpainted = true;
         } else image = paintShown(lastShown, msg.limit);
         // Outlines follow a more strongly blurred field, so walk bubbles round off.
-        outlines = traceOutlines(shownSeconds, grid.cols, grid.rows, grid.bbox, OUTLINE_BLUR_CELLS);
+        outlines = traceOutlines(
+          grid.seconds,
+          grid.cols,
+          grid.rows,
+          grid.bbox,
+          OUTLINE_BLUR_CELLS,
+          undefined,
+          -extraBase,
+        );
       }
       // The grids stay here for trip lookups, so the UI gets copies.
       const seconds = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
@@ -546,8 +554,11 @@ const eveningSeconds = (window: Window) => {
 };
 
 /** The last home map: what a tap needs to rebuild its last fast connection. */
-/** The last map's grid and the times its colours show, for painting it again ('paint'). */
-let lastShown: { id: number; grid: HeatGrid; values: Float32Array } | null = null;
+/**
+ * The last map's grid, for painting it again ('paint'); `offset` is added to its times for
+ * the colours (a meeting point shows the minutes over the best spot).
+ */
+let lastShown: { id: number; grid: HeatGrid; offset: number } | null = null;
 
 let lastHome: {
   id: number;
@@ -893,6 +904,9 @@ function laterRun(
   return nearRun(last.tt, result, at, w);
 }
 
+/** Cells computed each way around a tapped place for its trip. */
+const NEAR_CELLS = 2;
+
 /** A grid around `at` only (from the stops it can be walked or ridden to), for its trip. */
 function nearRun(
   tt: PreparedTimetable,
@@ -906,10 +920,21 @@ function nearRun(
   const stops = tt.stops;
   for (let s = 0; s < stopSeconds.length; s++)
     if (distanceM(at.lat, at.lon, stops[s].lat, stops[s].lon) > reachM) stopSeconds[s] = Infinity;
+  // Only the cells around the place: its trip is read from its own cell.
+  const layout = gridLayout({ cellSizeM: CELL_M });
+  const [west, south, east, north] = layout.bbox;
+  const col = Math.floor(((at.lon - west) / (east - west)) * layout.cols);
+  const r0 = Math.floor(((north - at.lat) / (north - south)) * layout.rows);
+  const near = {
+    c0: col - NEAR_CELLS,
+    r0: r0 - NEAR_CELLS,
+    cols: 2 * NEAR_CELLS + 1,
+    rows: 2 * NEAR_CELLS + 1,
+  };
   const best = heatGrid(
     tt,
     { ...result, stopSeconds },
-    { cellSizeM: CELL_M, trackStops: true, ...w },
+    { cellSizeM: CELL_M, trackStops: true, window: near, ...w },
   );
   const [minLon, minLat, maxLon, maxLat] = best.bbox;
   const c = Math.floor(((at.lon - minLon) / (maxLon - minLon)) * best.cols);
@@ -1060,6 +1085,9 @@ function slowestOf(grids: HeatGrid[]): HeatGrid {
   return { ...grids[0], seconds, stop: undefined };
 }
 
+/** The softened times while painting, reused from map to map. */
+const paintScratch = new BlurScratch();
+
 const mercY = (lat: number) => Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
 
 /**
@@ -1087,6 +1115,8 @@ function paint(
     cols,
     rows,
     SOFT.blurCells,
+    2,
+    paintScratch,
   );
   const [west, gridSouth, east, gridNorth] = grid.bbox;
   const dLat = (gridNorth - gridSouth) / grid.rows;

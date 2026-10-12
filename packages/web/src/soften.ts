@@ -4,8 +4,25 @@
 // raw grid, so displayed minutes are unaffected.
 
 /**
+ * Two buffers kept for blurSeconds between calls, so blurring a map allocates nothing; a
+ * blur's result lives in them until the next blur with the same scratch.
+ */
+export class BlurScratch {
+  private out = new Float32Array(0);
+  private tmp = new Float32Array(0);
+  buffers(n: number): [Float32Array, Float32Array] {
+    if (this.out.length < n) {
+      this.out = new Float32Array(n);
+      this.tmp = new Float32Array(n);
+    }
+    return [this.out.subarray(0, n), this.tmp.subarray(0, n)];
+  }
+}
+
+/**
  * Separable box blur over the finite values (two passes approximate a Gaussian).
- * Unreachable cells stay unreachable and do not pull their neighbours up.
+ * Unreachable cells stay unreachable and do not pull their neighbours up. With `scratch`
+ * the result is written into its buffers instead of new arrays.
  */
 export function blurSeconds(
   seconds: Float32Array,
@@ -13,9 +30,10 @@ export function blurSeconds(
   rows: number,
   radius: number,
   passes = 2,
+  scratch?: BlurScratch,
 ): Float32Array {
-  let src = Float32Array.from(seconds);
-  const tmp = new Float32Array(src.length);
+  const n = cols * rows;
+  const [out, tmp] = scratch ? scratch.buffers(n) : [new Float32Array(n), new Float32Array(n)];
   const line = (
     from: Float32Array,
     to: Float32Array,
@@ -53,13 +71,15 @@ export function blurSeconds(
       to[k] = from[k] < Infinity && cnt > 0 ? sum / cnt : Infinity;
     }
   };
+  // Rows into tmp, then columns back into out (each pass reads only what the last wrote).
+  let from = seconds;
+  if (passes < 1) out.set(seconds);
   for (let p = 0; p < passes; p++) {
-    for (let r = 0; r < rows; r++) line(src, tmp, r * cols, 1, cols);
-    const out = new Float32Array(src.length);
+    for (let r = 0; r < rows; r++) line(from, tmp, r * cols, 1, cols);
     for (let c = 0; c < cols; c++) line(tmp, out, c, cols, rows);
-    src = out;
+    from = out;
   }
-  return src;
+  return out;
 }
 
 /** Deterministic hash of a lattice point to [-1, 1]. */
