@@ -4,13 +4,12 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #69. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #71. Build in this order, one step per PR:
 
-1. **Next:** Heatmap colours off by default, outlines on (group 7)
-2. Calmer street level: footpaths next to streets (group 7)
-3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-5. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Calmer street level: footpaths next to streets (group 7)
+2. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+4. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -344,6 +343,8 @@ At the closest zoom levels the basemap also draws footpaths, many of them sidewa
 Notes: this is the basemap style (Positron vector tiles), not the walking data; check which path layers and attributes the tiles carry, and compare the options at zoom 16–18 on the phone. No cost to speed. Small effort; added from Hendrik's request on 2026-10-11.
 
 ### Heatmap colours off by default
+
+**Done** (PR #71): the map opens with the outlines only, each in its legend colour on a white edge and every line labelled with its minutes. The "Farben (Heatmap)" switch in the layers brings the colours back, with the opacity slider under it. Links use `layers=heat` (and `layers=noiso` for no outlines). A comparison always shows its colours.
 
 The map opens without the coloured travel-time fill: the plain base map with the start, and the 5-minute outlines on, each labelled with its minutes, so the travel times still read at a glance while streets and places stay fully visible. A new "Heatmap" switch in the layers (next to Lines, outlines, stop frequency and transit deserts) turns the colours on, with the opacity slider beneath it; the choice is kept in the link (`layers=heat`). Tapping a place still shows its minutes and trip, and the legend stays as the key for the outlines.
 
