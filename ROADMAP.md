@@ -7,13 +7,14 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #57. Build in this order, one step per PR:
 
 1. **Next:** Split main.ts before the UI overhaul (group 10)
-2. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
-3. "Bis wann komme ich heim?": the last connection home (group 6)
-4. Wider area: Potsdam and the commuter belt (group 13)
-5. Calmer street level: footpaths next to streets (group 7)
-6. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-7. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-8. Android app, starting with a TWA (group 14), always the last step
+2. Start on "Nächste", earliest arrival on tap, Typisch for meeting points (group 6)
+3. Meeting point for three or more + "Where can I live?" map from favourites (group 3, one step)
+4. "Bis wann komme ich heim?": the last connection home (group 6)
+5. Wider area: Potsdam and the commuter belt (group 13)
+6. Calmer street level: footpaths next to streets (group 7)
+7. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+8. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+9. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -247,6 +248,16 @@ Notes: range RAPTOR already scans every departure in the hour, so the average co
 Add a third choice under Reisezeit next to Typisch and Bestfall: **Nächste** shows the next possible connection, so each place gets the time it takes if you leave right now, waiting for the next departure included. That suits a quick "how long from here, now?" look, while Typisch stays the planning default.
 
 Notes: one RAPTOR pass from the current minute instead of the range over the hour, so it is as fast as Bestfall or faster. It uses the hour file the map already opens at (the map now opens at the current hour); each hourly file holds the trips running into the next hour, so later departures are covered. In the time sheet it makes most sense for the current hour; for another hour it would mean leaving at the start of that hour. Kept in the link (`m=next`); trip on tap shows the actual next departure. Small effort; added from Hendrik's request on 2026-10-11.
+
+### Start on "Nächste", earliest arrival on tap, Typisch for meeting points
+
+Three changes to the defaults:
+
+- **The app opens on "Nächste"** instead of Typisch: the first map answers "how long from here, if I leave now?". Typisch and Bestfall stay as choices, and a link that carries `m=` keeps its setting.
+- **A tapped place shows the connection that arrives earliest when you leave now**, waiting included. If a later departure gets there sooner than the very next one, the later one is shown. The minutes in the info box and the drawn trip are that same connection.
+- **With two or more starts (meeting point), Reisezeit switches to Typisch**, since meeting plans are usually not for right now. You can still pick Nächste or Bestfall there; removing the second start returns to the previous choice.
+
+Notes: Nächste is already the fastest of the three to compute (a single RAPTOR pass), so the new default helps the first map. Earliest arrival is what RAPTOR from the current minute gives; the change is making trip on tap use that pass instead of a fixed departure. Small effort; added from Hendrik's request on 2026-10-12.
 
 ### "Ankommen bis": travel times to a place
 
