@@ -11,6 +11,8 @@ import {
   fullHour,
   isNow,
   isPastHour,
+  isPastTime,
+  laterWhen,
   leaveOffset,
   upcomingDays,
   whenAt,
@@ -34,8 +36,14 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   const whenBtn = $<HTMLButtonElement>('when-btn');
   const dayGrid = $('day-grid');
   const typicalButtons = [
-    ...document.querySelectorAll<HTMLButtonElement>('#pop-when .seg [data-day]'),
+    ...document.querySelectorAll<HTMLButtonElement>('#pop-when .day-row > [data-day]'),
   ];
+  const laterButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-later]')];
+  /**
+   * The day switching to Ankommen moved on from (in the last hour of the day it moves to
+   * tomorrow 0 Uhr): an exact time set right after that, still ahead on it, stays there.
+   */
+  let arriveMoved: Day | null = null;
   const hourGrid = $('hour-grid');
   const dirButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-dir]')];
   const measureButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-measure]')];
@@ -45,6 +53,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   const nowBtn = $<HTMLButtonElement>('now-btn');
   const timeInput = $<HTMLInputElement>('when-time');
   const timeBox = $('when-time-box');
+  const dayRow = document.querySelector<HTMLElement>('#pop-when .day-row')!;
 
   /** Today and the next days (they move on at midnight), then the typical days to compare. */
   function renderDays() {
@@ -127,6 +136,10 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
       });
     for (const b of [...dayGrid.children, ...typicalButtons])
       b.setAttribute('aria-checked', String((b as HTMLElement).dataset.day === w.day));
+    // Typical days sit at the end of the row, so the chosen one is scrolled into view.
+    const picked = dayRow.querySelector<HTMLElement>('[aria-checked="true"]');
+    if (picked && picked.offsetLeft + picked.offsetWidth > dayRow.scrollLeft + dayRow.clientWidth)
+      dayRow.scrollLeft = picked.offsetLeft + picked.offsetWidth - dayRow.clientWidth;
     // Today's hours that are over are greyed out (the chosen one stays as it is).
     const now = new Date();
     for (const b of hourGrid.children as HTMLCollectionOf<HTMLButtonElement>) {
@@ -155,13 +168,18 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
       b.dataset.hour = String(h);
       b.textContent = String(h);
       b.addEventListener('click', () => {
+        arriveMoved = null;
         setWhen({ day: state.when.day, hour: h });
         closePanel();
       });
       return b;
     }),
   );
-  const pickDay = (day: Day | undefined) => day && setWhen({ ...state.when, day });
+  const pickDay = (day: Day | undefined) => {
+    if (!day) return;
+    arriveMoved = null;
+    setWhen({ ...state.when, day });
+  };
   dayGrid.addEventListener('click', (e) =>
     pickDay((e.target as HTMLElement).closest<HTMLElement>('[data-day]')?.dataset.day),
   );
@@ -173,6 +191,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
         direction === 'arrive' && state.direction !== 'arrive'
           ? arriveWhen(state.when)
           : state.when;
+      arriveMoved = w.day !== state.when.day ? state.when.day : null;
       setWhen(w, { direction });
     });
   for (const b of measureButtons)
@@ -184,14 +203,27 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     });
   nowBtn.addEventListener('click', () => {
     state.measureBefore = null;
+    arriveMoved = null;
     setWhen(whenAt(new Date()), { direction: 'depart', measure: 'next' });
     closePanel();
   });
+  // A bit later: leaving that many minutes from now (an exact time, so Nächste).
+  for (const b of laterButtons)
+    b.addEventListener('click', () => {
+      state.measureBefore = null;
+      arriveMoved = null;
+      setWhen(laterWhen(Number(b.dataset.later)), { direction: 'depart', measure: 'next' });
+      closePanel();
+    });
   timeInput.addEventListener('change', () => {
     const m = /^(\d{2}):(\d{2})/.exec(timeInput.value);
     if (!m) return;
     state.measureBefore = null;
-    setWhen({ day: state.when.day, hour: Number(m[1]), minute: Number(m[2]) }, { measure: 'next' });
+    const time = { hour: Number(m[1]), minute: Number(m[2]) };
+    const back = arriveMoved && { day: arriveMoved, ...time };
+    const w = back && !isPastTime(back, state.direction) ? back : { day: state.when.day, ...time };
+    arriveMoved = null;
+    setWhen(w, { measure: 'next' });
     closePanel();
   });
   const readCompare = (): When | null =>

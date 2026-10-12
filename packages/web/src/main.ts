@@ -67,6 +67,7 @@ import {
   STATIONS_SOURCE,
 } from './map-layers';
 import { initChanges } from './changes';
+import { initBanners } from './banners';
 import { initChips } from './chips';
 import { initMenu } from './menu';
 import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
@@ -1513,6 +1514,7 @@ const tap = initTap(
 );
 
 const chips = initChips({ state, closeSearch });
+initBanners();
 
 const whenSheet = initWhenSheet({
   state,

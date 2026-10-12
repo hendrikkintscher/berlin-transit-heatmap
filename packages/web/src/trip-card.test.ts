@@ -27,7 +27,9 @@ describe('trip card', () => {
       ctx,
     );
     expect(html).toContain('>U8</span><span class="trip-sep">›</span><span');
-    expect(html).toContain('1 Umstieg · 8 Min. Fußweg · Moritzplatz → Hermannplatz → Rudow');
+    expect(html).toContain(
+      '1 Umstieg · 8 Min. Fußweg<span class="stops"> · Moritzplatz → Hermannplatz → Rudow</span>',
+    );
     expect(html).not.toContain('google');
     expect(html).not.toContain('<i class="p1">');
   });
@@ -65,6 +67,18 @@ describe('trip card', () => {
     expect(html).toContain('<i class="p2"></i>');
     expect(html).toContain('12 Min. Rad');
     expect(html).not.toContain('google');
+  });
+
+  it('folds a meeting point\'s other trips behind "N weitere Fahrten"', () => {
+    const j = { transfers: 0, legs: [ride('U2', 'ubahn', 'A', 'B')] };
+    const html = tripHtml({ journeys: [j, j, null] }, ctx);
+    expect(html).toContain(
+      '<details class="trip-more"><summary>2 weitere Fahrten</summary><span class="trip-sum"><i class="p2">',
+    );
+    expect(html.indexOf('<i class="p1">')).toBeLessThan(html.indexOf('<details'));
+    expect(html).toContain('<i class="p3"></i>Keine Verbindung gefunden</span></details>');
+    expect(tripHtml({ journeys: [j, j] }, ctx)).toContain('<summary>1 weitere Fahrt</summary>');
+    expect(tripHtml({ journeys: [j] }, ctx)).not.toContain('details');
   });
 
   it('gives the minutes of a connection leaving now', () => {

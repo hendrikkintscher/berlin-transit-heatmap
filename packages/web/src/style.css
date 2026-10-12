@@ -150,14 +150,20 @@ body {
   pointer-events: auto;
 }
 /* The tap info sits right on top of the legend, so the two read as one bottom panel. */
+/* The card (layout B, picked 2026-10-12): the minutes and lines, then one row of 44 px
+   buttons; the stops open under Details, a meeting point's other trips under a fold. */
 #readout {
   position: relative;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
   box-sizing: border-box;
   width: 100%;
   max-width: 480px;
+  padding-top: 10px;
+}
+#readout-text {
+  padding-right: 40px;
 }
 #readout:not([hidden]) {
   border-radius: 14px;
@@ -172,8 +178,8 @@ body.no-legend .legend {
   flex: none;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -187,21 +193,21 @@ body.no-legend .legend {
 .chip .x::after {
   content: '';
   position: absolute;
-  inset: -5px;
+  inset: -2px;
 }
 #readout-close {
   position: absolute;
-  top: -18px;
-  right: -4px;
-  background: #fff;
-  box-shadow: var(--shadow);
+  top: 2px;
+  right: 2px;
+  background: transparent;
+  color: var(--muted);
 }
 #readout b {
   font-size: 17px;
 }
 #readout small {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--muted);
   margin-top: 2px;
 }
@@ -215,8 +221,8 @@ body.no-legend .legend {
   font-size: 14px;
   font-weight: 600;
   border-radius: 999px;
-  padding: 6px 12px;
-  min-height: 34px;
+  padding: 6px 16px;
+  min-height: 44px;
   cursor: pointer;
 }
 .status {
@@ -703,10 +709,33 @@ dialog.menu[open] {
   padding: 4px 4px 4px 12px;
   border-left: 4px solid #0e8a7e;
 }
+/* Shrunk to a pill (banners.ts): the mode's name and the ✕, tap to read it all again. */
+.meet .banner-pill {
+  display: none;
+}
+.meet.small {
+  left: calc(var(--sl) + 10px);
+  transform: none;
+  padding-left: 4px;
+  border-left-width: 0;
+  border-radius: 999px;
+}
+.meet.small > span {
+  display: none;
+}
+.meet.small .banner-pill {
+  display: block;
+  width: auto;
+  height: 44px;
+  padding: 0 4px 0 10px;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 14px;
+}
 .meet button {
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -715,25 +744,71 @@ dialog.menu[open] {
 }
 .readout-btns {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+}
+.readout-btns:not(:has(> :not([hidden]))) {
+  display: none;
 }
 #readout-start,
 #readout .alt {
   flex: none;
   white-space: nowrap;
 }
+#readout-start {
+  flex: 1 1 auto;
+}
 #readout .alt {
+  display: grid;
+  place-items: center;
   border: 0;
   background: #efe8f6;
   color: var(--accent);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   border-radius: 999px;
-  padding: 4px 10px;
-  min-height: 30px;
+  padding: 4px 14px;
+  min-height: 44px;
   cursor: pointer;
+}
+#readout .alt.icon {
+  width: 48px;
+  padding: 0;
+  font-size: 20px;
+}
+#readout .details-btn {
+  margin-left: auto;
+  white-space: nowrap;
+}
+#readout .details-btn::after {
+  content: ' ▾';
+}
+#readout.details .details-btn::after {
+  content: ' ▴';
+}
+#readout:not(.details) .stops {
+  display: none;
+}
+/* Meeting point: the other starts' trips, folded behind "N weitere Fahrten". */
+#readout .trip-more summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
+}
+#readout .trip-more summary::-webkit-details-marker {
+  display: none;
+}
+#readout .trip-more summary::after {
+  content: '▾';
+  margin-left: 6px;
+}
+#readout .trip-more[open] summary::after {
+  content: '▴';
 }
 
 /* Favourite places: score chip, star markers and the list in the menu. */
@@ -848,7 +923,7 @@ body.special .legend {
 }
 .menu-note {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
   color: var(--muted);
 }
@@ -965,7 +1040,7 @@ body.special .legend {
 }
 .pop h3 {
   margin: 14px 0 8px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -975,92 +1050,115 @@ body.special .legend {
   box-shadow: none;
   background: #f0ecf4;
 }
+.pop .seg button {
+  min-height: 44px;
+}
 .pop .seg-wide + .seg-wide {
   margin-top: 8px;
 }
-#pop-when .day-grid {
-  margin-top: 8px;
-}
-/* Jetzt and an exact time (always Nächste), above the days. */
-.when-now {
-  display: flex;
+/* The time panel (when-sheet.ts): quick times, direction and exact time, days, Reisezeit,
+   then the hours. Every button is a 44 px touch target. */
+.when-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 6px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
-.when-now > * {
-  flex: 1 1 0;
-  min-height: 42px;
+.when-quick button,
+.day-row button {
+  min-height: 44px;
   border: 0;
   border-radius: 10px;
   background: #f0ecf4;
   color: var(--ink);
   font: inherit;
   font-weight: 600;
-}
-#now-btn {
   cursor: pointer;
 }
 #now-btn[aria-pressed='true'],
-.when-time.on {
+.when-time.on,
+.day-row button[aria-checked='true'] {
   background: var(--accent);
   color: #fff;
 }
+.when-dir {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.when-dir .seg {
+  flex: 1;
+}
+.when-dir .seg button {
+  padding: 8px 6px;
+  min-height: 44px;
+}
 .when-time {
-  /* Wider than Jetzt: a 12-hour clock ("11:20 PM") needs the room. */
-  flex-grow: 1.6;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  min-height: 50px;
   padding: 0 8px;
+  border-radius: 999px;
+  background: #f0ecf4;
+  color: var(--ink);
   cursor: pointer;
 }
-.when-time span {
-  font-weight: 400;
-  font-size: 14px;
-}
 .when-time input {
-  flex: 1;
-  min-width: 0;
-  max-width: 7.5em;
+  width: 6.2em;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   color-scheme: light;
 }
 .when-time.on input {
   color-scheme: dark;
 }
-/* Today and the next six days: a row of four, then three. */
-.day-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+/* Today and the next six days, then the typical days: one row that scrolls sideways,
+   fading out at the edge so it reads as more to the right. */
+.day-row {
+  position: relative;
+  display: flex;
   gap: 6px;
-  margin-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 0 16px;
+  mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
 }
-.day-grid button {
-  min-height: 42px;
-  border: 0;
-  border-radius: 10px;
-  background: #f0ecf4;
-  color: var(--ink);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
+.day-row::-webkit-scrollbar {
+  display: none;
 }
-.day-grid button[aria-checked='true'] {
-  background: var(--accent);
-  color: #fff;
+.day-dates {
+  display: contents;
+}
+.day-row button {
+  flex: none;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+.day-row > button:last-child {
+  margin-right: 24px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .hour-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
 }
 .hour-grid button {
-  min-height: 42px;
+  min-height: 44px;
+  padding: 0;
   border: 0;
   border-radius: 10px;
   background: #f0ecf4;
@@ -1242,7 +1340,7 @@ body.special .legend {
 /* The next connection: its minutes and arrival as the card's main line, then when to go. */
 .trip-main {
   display: block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
 }
 .trip-leave {
@@ -1291,7 +1389,7 @@ body.special .legend {
   padding: 0 5px;
   border-radius: 4px;
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-align: center;
 }
@@ -1460,7 +1558,8 @@ body.special .legend {
 .bottom:has(#readout:not([hidden])) .second-btn {
   display: none;
 }
-/* Room for the trip card's close button, which sticks out above it. */
-#changes:not([hidden]) + #readout {
-  margin-top: 12px;
+/* One thing at a time at the bottom: the install tip waits while a card or the
+   "Heute anders" notice shows. */
+.bottom:has(#readout:not([hidden]), #changes:not([hidden])) #tip {
+  display: none;
 }
