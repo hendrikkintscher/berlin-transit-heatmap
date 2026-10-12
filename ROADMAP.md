@@ -7,8 +7,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #129. Build in this order, one step per PR:
 
 1. **Next:** Rename to "Wohin jetzt? · Öffis mit einem Tap" (group 12). Hendrik gave the go on 2026-10-12.
+2. Stronger transit lines, softer minute lines (group 12)
 
-Hendrik picks the next step before anything starts.
+Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -674,6 +675,12 @@ Hendrik, 2026-10-12: option B from the clean-map mockups (plan files under web/c
 - **Solid, soft time lines:** in the outlines-only view the lines are solid, not dashed. The 30/60/90-minute lines get width 4 to 6, blur 2.5 to 3.5, opacity 0.75; the 10/20-minute steps width 2.5 to 4, blur 2 to 3, opacity 0.45. Label spacing 260.
 
 Notes: paint only, URL parameters unchanged; check at 360×740 in German and English and keep the flicker-free first view. Small effort.
+
+### Stronger transit lines, softer minute lines
+
+Hendrik, 2026-10-12, after the calmer default map: the public-transport lines on the map get a bit more opacity, and the minute (time) lines get thicker and more blurred.
+
+Notes: paint only in packages/web/src/map-layers.ts, URL parameters unchanged; check at 360×740 in German and English and keep the flicker-free first view. Small effort.
 
 ### Rename to "Wohin jetzt?"
 
