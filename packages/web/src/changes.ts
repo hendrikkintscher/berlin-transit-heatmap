@@ -53,6 +53,24 @@ export function changedLines(list: Change[]): string[] {
   return [...new Set(list.map((c) => c.line))];
 }
 
+/** A ride of the shown connection: its line name and mode. */
+export interface Ride {
+  name: string;
+  mode: string;
+}
+
+/**
+ * The changes that touch one of the rides: the same line, or the replacement bus named
+ * after it (VBB names Ersatzverkehr buses "M17", "U2", "S41").
+ */
+export function touching(list: Change[], rides: Ride[]): Change[] {
+  return list.filter((c) =>
+    rides.some(
+      (r) => r.name === c.line && (r.mode === c.mode || (c.replacement && r.mode === 'bus')),
+    ),
+  );
+}
+
 /** "Heute" / "today", "Mi 14." / "on Wed 14" for the notice. */
 function noticeDay(day: string, now = new Date()) {
   if (lang() === 'de') return dayLabel(day, now);
@@ -64,9 +82,11 @@ export interface ChangesDeps {
   map: maplibregl.Map;
   state: State;
   dataBase: string;
+  /** The file arrived (after a card may already show a connection). */
+  loaded?: () => void;
 }
 
-export function initChanges({ map, state, dataBase }: ChangesDeps) {
+export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
   const box = $('changes');
   const chip = $<HTMLButtonElement>('changes-chip');
   const panel = $('changes-panel');
@@ -76,8 +96,11 @@ export function initChanges({ map, state, dataBase }: ChangesDeps) {
   let open = false;
   let shown: Change | null = null;
   const closed = new Set<string>();
+  /** While a connection is shown, the notice lists only what touches its lines. */
+  let focus: Ride[] | null = null;
 
-  const today = () => (isDate(state.when.day) ? (file?.days[state.when.day] ?? []) : []);
+  const allToday = () => (isDate(state.when.day) ? (file?.days[state.when.day] ?? []) : []);
+  const today = () => (focus ? touching(allToday(), focus) : allToday());
 
   function load() {
     if (file || loading) return;
@@ -89,6 +112,7 @@ export function initChanges({ map, state, dataBase }: ChangesDeps) {
         .then((f) => {
           if (f?.version === 1) file = f;
           render();
+          loaded?.();
         })
         .catch(() => {});
     if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2000 });
@@ -209,6 +233,20 @@ export function initChanges({ map, state, dataBase }: ChangesDeps) {
   });
 
   return {
+    /**
+     * The note for a ride of the shown connection, "U2: Ersatzverkehr Pankow – Alexanderplatz",
+     * or null when its line runs as usual on the shown date.
+     */
+    noteFor(ride: Ride): string | null {
+      const c = touching(allToday(), [ride])[0];
+      return c ? `${c.line}: ${changeText(c, state.when.day)}` : null;
+    },
+    /** A connection is shown (its rides) or closed (null): the notice follows it. */
+    focus(rides: Ride[] | null) {
+      focus = rides;
+      open = false;
+      render();
+    },
     /** The shown day changed, or the language; loads the file the first time. */
     update() {
       // Not before the first timetable is in: the map comes first.

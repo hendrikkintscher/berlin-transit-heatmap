@@ -1175,6 +1175,16 @@ body.special #cmp {
 #readout .trip-live[hidden] {
   display: none;
 }
+/* "Heute anders" on a line of the connection, in the changes notice's colour. */
+#readout .trip-change {
+  display: block;
+  margin-top: 2px;
+  color: #a61e4d;
+  font-weight: 600;
+}
+#readout .trip-change::before {
+  content: '⚠ ';
+}
 .trip-sep {
   color: var(--muted);
 }

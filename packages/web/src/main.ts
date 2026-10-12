@@ -354,7 +354,12 @@ const map = new maplibregl.Map({
   pitchWithRotate: false,
 });
 map.touchZoomRotate.disableRotation();
-changes = initChanges({ map, state, dataBase: new URL('data/', document.baseURI).href });
+changes = initChanges({
+  map,
+  state,
+  dataBase: new URL('data/', document.baseURI).href,
+  loaded: () => tap.addChangeNotes(),
+});
 
 // Start markers: the first, and up to four more for a meeting point, each in its colour.
 // Dragging one moves that start; tapping it offers to remove it (a drag is not a tap).
@@ -1246,6 +1251,8 @@ const tap = initTap(
       if (tipKey === 'tap') hideTip();
     },
     favouriteLabels: () => favourites.map((f) => f.label),
+    changeNote: (ride) => changes?.noteFor(ride) ?? null,
+    focusChanges: (rides) => changes?.focus(rides),
     showHome: (i) => {
       const at = starts()[i];
       if (at)

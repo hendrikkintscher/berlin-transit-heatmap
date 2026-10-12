@@ -19,6 +19,8 @@ export interface TripContext {
   travel: Travel;
   /** Seconds since midnight now, when the map is for today; null for another day. */
   now: number | null;
+  /** "U2: Ersatzverkehr Pankow – Alexanderplatz" for a ride whose line runs differently. */
+  changeNote?: (ride: { name: string; mode: string }) => string | null;
 }
 
 /** "los in 5 Min.", "jetzt los", or "los um 10:07" when it is not today or over an hour off. */
@@ -77,10 +79,13 @@ export function tripHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string {
               c.travel === 'bikeonly',
             )}" target="_blank" rel="noopener">${t('openGoogle')}</a>`
           : '';
+      // What runs differently today on the lines of this connection.
+      const notes = [...new Set(rides.map((l) => c.changeNote?.(l)).filter(Boolean))];
       return (
         own +
         `<span class="trip-sum">${own ? '' : mark}${badges}${link}</span>` +
-        `<small class="trip-stops">${[sum.join(' · '), stops.join(' → ')].filter(Boolean).join(' · ')}</small>`
+        `<small class="trip-stops">${[sum.join(' · '), stops.join(' → ')].filter(Boolean).join(' · ')}</small>` +
+        notes.map((n) => `<small class="trip-change">${escapeHtml(n!)}</small>`).join('')
       );
     })
     .join('');
