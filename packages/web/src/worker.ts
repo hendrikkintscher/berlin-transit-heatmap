@@ -30,7 +30,7 @@ import {
 import type { FeatureCollection, LineString } from 'geojson';
 import { colorLut, DIFF_MAX_S, DIFF_MIN_S, diffLut, homeLut } from './colors';
 import { blurSeconds, warpField } from './soften';
-import { contours } from './contours';
+import { outlines as traceOutlines } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
 import { scoreGrid } from './favourites';
 import { suggestMeetingPoints, type MeetCandidate } from './meet';
@@ -51,9 +51,12 @@ const CELL_M = 50;
 const MIN_ROUTE_SHARE = 0.01;
 /** Only lines at least this busy get a name label. */
 const MIN_LABEL_SHARE = 0.03;
-/** The image has UPSAMPLE x UPSAMPLE pixels per grid cell (25 m pixels). */
-const UPSAMPLE = 2;
-const UPSAMPLE_SHIFT = 1;
+/**
+ * The image has UPSAMPLE x UPSAMPLE pixels per grid cell. One 50 m pixel per cell looks the
+ * same as 25 m ones once MapLibre resamples it linearly, at a quarter of the painting.
+ */
+const UPSAMPLE = 1;
+const UPSAMPLE_SHIFT = 0;
 /** Blur for the isochrone outlines, in grid cells (50 m). */
 const OUTLINE_BLUR_CELLS = 6;
 /** Softening, in grid cells (50 m) and seconds. Purely visual; the readout uses the raw grid. */
@@ -276,7 +279,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       };
 
       let image: ReturnType<typeof paint>;
-      let outlines: ReturnType<typeof contours>;
+      let outlines: ReturnType<typeof traceOutlines>;
       let compare: Float32Array<ArrayBuffer> | undefined;
       let extraBase: number | undefined;
       if (msg.compare) {
@@ -292,12 +295,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         const shownSeconds = extraBase ? grid.seconds.map((v) => v - extraBase!) : grid.seconds;
         image = paint(grid, shownSeconds);
         // Outlines follow a more strongly blurred field, so walk bubbles round off.
-        outlines = contours(
-          blurSeconds(shownSeconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
-          grid.cols,
-          grid.rows,
-          grid.bbox,
-        );
+        outlines = traceOutlines(shownSeconds, grid.cols, grid.rows, grid.bbox, OUTLINE_BLUR_CELLS);
       }
       // The grids stay here for trip lookups, so the UI gets copies.
       const seconds = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
@@ -461,11 +459,12 @@ async function home(msg: Extract<ToWorker, { type: 'home' }>) {
   const anyGrid = toGrid(any, false);
   lastHome = { id: msg.id, origin, travel, variant, passes, fastPass, grid };
   const image = paint(grid, undefined, HOME_LUT);
-  const outlines = contours(
-    blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
+  const outlines = traceOutlines(
+    grid.seconds,
     grid.cols,
     grid.rows,
     grid.bbox,
+    OUTLINE_BLUR_CELLS,
     HOME_OUTLINE_MINUTES,
   );
   const empty = { type: 'FeatureCollection' as const, features: [] };
@@ -549,12 +548,7 @@ async function living(msg: Extract<ToWorker, { type: 'living' }>) {
     ),
   };
   const image = paint(grid);
-  const outlines = contours(
-    blurSeconds(grid.seconds, grid.cols, grid.rows, OUTLINE_BLUR_CELLS),
-    grid.cols,
-    grid.rows,
-    grid.bbox,
-  );
+  const outlines = traceOutlines(grid.seconds, grid.cols, grid.rows, grid.bbox, OUTLINE_BLUR_CELLS);
   const empty = { type: 'FeatureCollection' as const, features: [] };
   const values = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
   ctx.postMessage(

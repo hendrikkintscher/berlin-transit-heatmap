@@ -5,8 +5,8 @@ export interface BBox {
   maxLat: number;
 }
 
-/** Berlin plus a small margin (Contract 1). */
-export const BERLIN_BBOX: BBox = { minLon: 13.05, minLat: 52.33, maxLon: 13.8, maxLat: 52.7 };
+/** The router's grid area (DEFAULT_BBOX: Berlin and the commuter belt) plus a margin (Contract 1). */
+export const BERLIN_BBOX: BBox = { minLon: 12.87, minLat: 52.25, maxLon: 13.95, maxLat: 52.82 };
 
 export function inBBox(bbox: BBox, lat: number, lon: number): boolean {
   return lat >= bbox.minLat && lat <= bbox.maxLat && lon >= bbox.minLon && lon <= bbox.maxLon;

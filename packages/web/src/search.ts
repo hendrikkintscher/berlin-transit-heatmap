@@ -3,7 +3,7 @@
 import { DEFAULT_BBOX } from '@berlin-transit-heatmap/routing';
 
 const ENDPOINT = 'https://photon.komoot.io/api/';
-/** west, south, east, north: the heatmap grid's area (Berlin and its immediate edge). */
+/** west, south, east, north: the heatmap grid's area (Berlin and the commuter belt). */
 export const SEARCH_BBOX = DEFAULT_BBOX;
 
 export interface Place {

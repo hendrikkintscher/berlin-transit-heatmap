@@ -111,14 +111,15 @@ export function addMapLayers(
     },
     paint: { 'text-color': '#1d1d2b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
   });
+  const [w, s, e, n] = SEARCH_BBOX;
   map.addSource(DESERT_SOURCE, {
     type: 'canvas',
     canvas: o.desertCanvas,
     coordinates: [
-      [13.08, 52.68],
-      [13.77, 52.68],
-      [13.77, 52.33],
-      [13.08, 52.33],
+      [w, n],
+      [e, n],
+      [e, s],
+      [w, s],
     ],
     animate: false,
   });

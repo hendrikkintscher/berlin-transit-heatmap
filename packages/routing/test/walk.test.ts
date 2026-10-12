@@ -56,6 +56,8 @@ const LAT_N = 52.5009;
 const LAT_S = 52.4991;
 const LON0 = 13.4;
 const STEP = 0.001466; // about 100 m of longitude
+/** The grid the expectations below were measured on, so they do not move with DEFAULT_BBOX. */
+const GRID_BBOX: [number, number, number, number] = [13.08, 52.33, 13.77, 52.68];
 const nodes: [number, number][] = [];
 const edges: [number, number, number][] = [];
 for (let i = 0; i <= 20; i++) nodes.push([LON0 + i * STEP, LAT_N]);
@@ -137,6 +139,7 @@ describe('walking network', () => {
       gridValueAt(
         heatGrid(tt, travelTimes(tt, origin, { walk: net, ...o }), {
           cellSizeM: 50,
+          bbox: GRID_BBOX,
           walk: net,
           ...o,
         }),
@@ -152,14 +155,19 @@ describe('walking network', () => {
   it('colours the far bank by the walk over the bridge', () => {
     const o = { walk: net, walkSpeedMps: 4.8 / 3.6 };
     const r = travelTimes(tt, origin, o);
-    const grid = heatGrid(tt, r, { cellSizeM: 50, trackStops: true, ...o });
+    const grid = heatGrid(tt, r, { cellSizeM: 50, bbox: GRID_BBOX, trackStops: true, ...o });
     const north = gridValueAt(grid, LAT_N, LON0 + 6 * STEP);
     const south = gridValueAt(grid, LAT_S, LON0 + 10 * STEP);
     expect(north).toBeLessThan(900);
     expect(south).toBeGreaterThan(north);
     expect(south).toBeLessThan(900); // 950 m to the bridge and 200 m over it
     // 2 km round the bridge: past the 15-minute walk, so only the fallback walk gets there.
-    const capped = heatGrid(tt, r, { cellSizeM: 50, maxFallbackWalkSeconds: 900, ...o });
+    const capped = heatGrid(tt, r, {
+      cellSizeM: 50,
+      bbox: GRID_BBOX,
+      maxFallbackWalkSeconds: 900,
+      ...o,
+    });
     expect(gridValueAt(capped, LAT_S, LON0 + STEP)).toBe(Infinity);
     const far = gridValueAt(grid, LAT_S, LON0 + STEP);
     expect(far).toBeGreaterThan(1500);
@@ -167,7 +175,7 @@ describe('walking network', () => {
     // Where a short walk exists, a longer one never replaces it.
     expect(gridValueAt(capped, LAT_S, LON0 + 10 * STEP)).toBe(south);
     // Straight lines cross the river.
-    const flat = heatGrid(tt, travelTimes(tt, origin), { cellSizeM: 50 });
+    const flat = heatGrid(tt, travelTimes(tt, origin), { cellSizeM: 50, bbox: GRID_BBOX });
     expect(gridValueAt(flat, LAT_S, LON0 + STEP)).toBeLessThan(300);
     // The trip there is one walk, however it is split at the stop on the way.
     const j = journeyTo(
@@ -190,13 +198,18 @@ describe('walking network', () => {
     const fromStop = { stopSeconds: Float32Array.of(Infinity, 0), computedInMs: 0 };
     const at = (egressPenaltySeconds: number) =>
       gridValueAt(
-        heatGrid(tt, fromStop, { cellSizeM: 50, egressPenaltySeconds, ...o }),
+        heatGrid(tt, fromStop, { cellSizeM: 50, bbox: GRID_BBOX, egressPenaltySeconds, ...o }),
         LAT_S,
         LON0 + 3 * STEP,
       );
     expect(at(120)).toBeCloseTo(at(0) + 120, 3);
     // Straight from the origin there is no station to pass.
-    const grid = heatGrid(tt, plain, { cellSizeM: 50, egressPenaltySeconds: 120, ...o });
+    const grid = heatGrid(tt, plain, {
+      cellSizeM: 50,
+      bbox: GRID_BBOX,
+      egressPenaltySeconds: 120,
+      ...o,
+    });
     expect(gridValueAt(grid, LAT_N, LON0 + STEP)).toBeLessThan(120);
   });
 
@@ -204,9 +217,9 @@ describe('walking network', () => {
     // As with a bike: stops then never tie with the way straight from the origin.
     const o = { walk: net, maxFallbackWalkSeconds: 900, egressPenaltySeconds: 120 };
     const r = travelTimes(tt, origin, o);
-    const capped = heatGrid(tt, r, { cellSizeM: 50, ...o });
+    const capped = heatGrid(tt, r, { cellSizeM: 50, bbox: GRID_BBOX, ...o });
     expect(gridValueAt(capped, LAT_S, LON0 + STEP)).toBe(Infinity);
-    const far = heatGrid(tt, r, { cellSizeM: 50, maxOriginSeconds: 3600, ...o });
+    const far = heatGrid(tt, r, { cellSizeM: 50, bbox: GRID_BBOX, maxOriginSeconds: 3600, ...o });
     expect(gridValueAt(far, LAT_S, LON0 + STEP)).toBeGreaterThan(1500);
     expect(gridValueAt(far, LAT_S, LON0 + STEP)).toBeLessThan(2400);
   });

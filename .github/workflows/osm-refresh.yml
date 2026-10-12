@@ -21,7 +21,7 @@ concurrency:
 env:
   OSM_TAG: osm-latest
   # DEFAULT_BBOX of the router plus a margin of more than a 15-minute walk.
-  BBOX: '12.98,52.27,13.87,52.74'
+  BBOX: '12.8,52.2,14.0,52.85'
 
 jobs:
   refresh:

@@ -61,7 +61,14 @@ describe('covered area', () => {
       f({ name: 'Potsdam Hauptbahnhof', city: 'Potsdam' }, 13.067, 52.391),
       f({ name: 'Bernau Bahnhof', city: 'Bernau' }, 13.588, 52.676),
       f({ name: 'Oranienburg', city: 'Oranienburg' }, 13.237, 52.753),
+      f({ name: 'Brandenburg an der Havel', city: 'Brandenburg' }, 12.556, 52.411),
+      f({ name: 'Fürstenwalde', city: 'Fürstenwalde' }, 14.067, 52.36),
     ]);
-    expect(list.map((p) => p.label)).toEqual(['Alexanderplatz', 'Bernau Bahnhof']);
+    expect(list.map((p) => p.label)).toEqual([
+      'Alexanderplatz',
+      'Potsdam Hauptbahnhof',
+      'Bernau Bahnhof',
+      'Oranienburg',
+    ]);
   });
 });
