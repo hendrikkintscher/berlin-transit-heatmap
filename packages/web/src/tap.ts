@@ -30,7 +30,10 @@ export interface TapDeps {
   addStart: (p: Point) => void;
   /** Removes start i (0 = the first). */
   removeStart: (i: number) => void;
-  addFavourite: (at: Point) => void;
+  /** Whether a favourite place lies at the point. */
+  isFavourite: (at: Point) => boolean;
+  /** Adds the point as a favourite place, or removes the one there. */
+  toggleFavourite: (at: Point) => void;
   /** The link changed (the place is part of it). */
   writeUrl: () => void;
   /** A card opened: the "tap the map" hint has done its job. */
@@ -225,6 +228,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     // A search result offers "Neuer Start" next to "2. Start"; the trip shown is the "Ziel".
     $('readout-start').textContent = t(searched ? 'newStart' : 'startHere');
     for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
+    showFav();
     removeBtn.hidden = homeBtn.hidden = !start;
     readout.hidden = false;
   }
@@ -392,11 +396,17 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     hideReadout();
     if (at) deps.addStart(at);
   });
-  $('readout-fav').addEventListener('click', () => {
-    const at = pending;
-    if (!at) return;
-    hideReadout();
-    deps.addFavourite(at);
+  // A toggle: the card stays, a second tap removes the place again.
+  const favBtn = $<HTMLButtonElement>('readout-fav');
+  function showFav() {
+    const on = !!pending && deps.isFavourite(pending);
+    favBtn.textContent = t(on ? 'favOn' : 'favHere');
+    favBtn.setAttribute('aria-pressed', String(on));
+  }
+  favBtn.addEventListener('click', () => {
+    if (!pending) return;
+    deps.toggleFavourite(pending);
+    showFav();
   });
   removeBtn.addEventListener('click', () => deps.removeStart(removeWhich));
   homeBtn.addEventListener('click', () => deps.showHome(removeWhich));

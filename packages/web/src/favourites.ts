@@ -55,6 +55,18 @@ function isFavourite(f: unknown): f is Favourite {
   );
 }
 
+/** A tap this close to a favourite place is that place (the trip card's toggle). */
+const NEAR_M = 30;
+
+/** The favourite place at a point, if one lies within a few metres. */
+export function favouriteAt(
+  list: readonly Favourite[],
+  at: { lat: number; lon: number },
+): Favourite | undefined {
+  const kx = 111_320 * Math.cos((at.lat * Math.PI) / 180);
+  return list.find((f) => Math.hypot((f.lon - at.lon) * kx, (f.lat - at.lat) * 111_320) < NEAR_M);
+}
+
 export function newId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
