@@ -16,6 +16,7 @@ import {
   leaveOffset,
   upcomingDays,
   whenAt,
+  whenParam,
   windowName,
   type Day,
   type Direction,
@@ -184,14 +185,22 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     pickDay((e.target as HTMLElement).closest<HTMLElement>('[data-day]')?.dataset.day),
   );
   for (const b of typicalButtons) b.addEventListener('click', () => pickDay(b.dataset.day));
+  /** Leaving's time before switching to Ankommen, and the time that switch gave it. */
+  let beforeArrive: { depart: When; arrive: When } | null = null;
   for (const b of dirButtons)
     b.addEventListener('click', () => {
       const direction = b.dataset.dir as Direction;
-      const w =
-        direction === 'arrive' && state.direction !== 'arrive'
-          ? arriveWhen(state.when)
-          : state.when;
-      arriveMoved = w.day !== state.when.day ? state.when.day : null;
+      let w = state.when;
+      if (direction === 'arrive' && state.direction !== 'arrive') {
+        w = arriveWhen(state.when);
+        beforeArrive = { depart: state.when, arrive: w };
+      } else if (direction === 'depart' && state.direction === 'arrive') {
+        // Straight back (Ziel back to Start): leaving at the time it was before.
+        if (beforeArrive && whenParam(beforeArrive.arrive) === whenParam(state.when))
+          w = beforeArrive.depart;
+        beforeArrive = null;
+      }
+      arriveMoved = direction === 'arrive' && w.day !== state.when.day ? state.when.day : null;
       setWhen(w, { direction });
     });
   for (const b of measureButtons)
