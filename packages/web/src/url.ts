@@ -1,9 +1,17 @@
 // What a link carries: ?from=lat,lon&with=…[&with=…]&to=…&t=weekend-02&dir=arr&m=best&cmp=…
 // &walk=5&sf=1&go=bike&routes=0&layers=heat,freq,desert,noiso&lang=en. Reading a link only
-// changes what it names; the rest keeps the device's own settings.
+// changes what it names; the rest keeps the device's own settings. An exact time adds its
+// minutes to t (t=20261014-0835).
 
 import type { Measure, Travel } from './protocol';
-import { parseWhen, whenFromParams, windowName, type Direction, type When } from './when';
+import {
+  parseWhen,
+  whenFromParams,
+  whenParam,
+  windowName,
+  type Direction,
+  type When,
+} from './when';
 
 /** Walking speeds offered in the menu, in km/h; 4 is the default. */
 export const WALK_SPEEDS = [3, 4, 5, 6];
@@ -78,6 +86,8 @@ export function readLink(search: string, base: LinkState): LinkState {
   if (p.get('dir') === 'arr') s.direction = 'arrive';
   const m = p.get('m');
   s.measure = m === 'typical' || m === 'best' || m === 'next' ? m : defaultMeasure(s);
+  // An exact time is always "Nächste".
+  if (s.when.minute !== undefined) s.measure = 'next';
   s.compare = parseWhen(p.get('cmp'));
   if (p.has('walk')) s.walkKmh = walkSpeed(Number(p.get('walk')));
   if (p.has('sf')) s.stepFree = p.get('sf') === '1';
@@ -95,7 +105,7 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
   if (s.origin) p.set('from', pointParam(s.origin));
   for (const o of s.others) p.append('with', pointParam(o));
   if (s.to) p.set('to', pointParam(s.to));
-  if (windowName(s.when) !== windowName(now)) p.set('t', windowName(s.when));
+  if (whenParam(s.when) !== windowName(now)) p.set('t', whenParam(s.when));
   if (s.direction === 'arrive') p.set('dir', 'arr');
   if (s.measure !== defaultMeasure(s)) p.set('m', s.measure);
   if (s.compare) p.set('cmp', windowName(s.compare));

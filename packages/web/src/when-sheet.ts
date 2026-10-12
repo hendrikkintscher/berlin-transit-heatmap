@@ -1,5 +1,5 @@
-// The time panels under the chip row: Zeit (today, one of the next days or a typical
-// weekday or weekend, the hour, leaving or arriving), Reisezeit (typical, best case or next
+// The time panels under the chip row: Zeit (Jetzt or an exact time, today, one of the next
+// days or a typical weekday or weekend, the hour, leaving or arriving), Reisezeit (typical, best case or next
 // departure) and Vergleich (a second time to compare with). The Zeit chip shows the choice.
 
 import { clockLabel, dayLabel, hourLabel, pillText } from './format';
@@ -8,9 +8,12 @@ import type { Measure } from './protocol';
 import { $, type State } from './state';
 import {
   arriveWhen,
+  fullHour,
+  isNow,
   isPastHour,
   leaveOffset,
   upcomingDays,
+  whenAt,
   windowName,
   type Day,
   type Direction,
@@ -39,6 +42,9 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   const cmpDay = $<HTMLSelectElement>('cmp-day');
   const cmpHour = $<HTMLSelectElement>('cmp-hour');
   const cmpChip = $('cmp');
+  const nowBtn = $<HTMLButtonElement>('now-btn');
+  const timeInput = $<HTMLInputElement>('when-time');
+  const timeBox = $('when-time-box');
 
   /** Today and the next days (they move on at midnight), then the typical days to compare. */
   function renderDays() {
@@ -69,7 +75,8 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     const w = state.when;
     const arrive = state.direction === 'arrive';
     const offset = !arrive && state.measure === 'next' ? leaveOffset(w) : 0;
-    const hour = offset ? clockLabel(w.hour, Math.floor(offset / 60)) : hourLabel(w.hour);
+    const minute = w.minute ?? Math.floor(offset / 60);
+    const hour = w.minute !== undefined || offset ? clockLabel(w.hour, minute) : hourLabel(w.hour);
     // Today goes without "Heute", so the chips fit a phone's width.
     whenBtn.querySelector('span')!.textContent =
       pillText(w, arrive, hour, true) +
@@ -83,6 +90,10 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
             ? ` · ${t('measureBest')}`
             : '');
     renderDays();
+    // Jetzt: today's current hour, leaving on the clock under Nächste.
+    nowBtn.setAttribute('aria-pressed', String(!arrive && state.measure === 'next' && isNow(w)));
+    timeBox.classList.toggle('on', w.minute !== undefined);
+    timeInput.value = `${String(w.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
     $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
     for (const b of dirButtons)
       b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));
@@ -144,7 +155,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
       b.dataset.hour = String(h);
       b.textContent = String(h);
       b.addEventListener('click', () => {
-        setWhen({ ...state.when, hour: h });
+        setWhen({ day: state.when.day, hour: h });
         closePanel();
       });
       return b;
@@ -167,8 +178,22 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   for (const b of measureButtons)
     b.addEventListener('click', () => {
       state.measureBefore = null;
-      setWhen(state.when, { measure: b.dataset.measure as Measure });
+      const measure = b.dataset.measure as Measure;
+      // An exact time is always Nächste: Typisch and Bestfall go back to the full hour.
+      setWhen(measure === 'next' ? state.when : fullHour(state.when), { measure });
     });
+  nowBtn.addEventListener('click', () => {
+    state.measureBefore = null;
+    setWhen(whenAt(new Date()), { direction: 'depart', measure: 'next' });
+    closePanel();
+  });
+  timeInput.addEventListener('change', () => {
+    const m = /^(\d{2}):(\d{2})/.exec(timeInput.value);
+    if (!m) return;
+    state.measureBefore = null;
+    setWhen({ day: state.when.day, hour: Number(m[1]), minute: Number(m[2]) }, { measure: 'next' });
+    closePanel();
+  });
   const readCompare = (): When | null =>
     cmpDay.value ? { day: cmpDay.value, hour: Number(cmpHour.value) } : null;
   cmpDay.addEventListener('change', () => {

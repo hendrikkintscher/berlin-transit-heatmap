@@ -5,6 +5,7 @@
 import { setLang, t, type Lang } from './i18n';
 import { $, remember, type State } from './state';
 import { TRAVELS, travelOf } from './url';
+import { whenParam } from './when';
 
 export interface MenuDeps {
   state: State;
@@ -140,7 +141,7 @@ export function initMenu(deps: MenuDeps) {
   $('share-btn').addEventListener('click', async () => {
     // A shared map keeps its time, even when that is the current one here.
     const shared = new URL(location.href);
-    shared.searchParams.set('t', state.window);
+    shared.searchParams.set('t', whenParam(state.when));
     const url = shared.href;
     if (navigator.share) {
       try {

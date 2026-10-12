@@ -41,11 +41,13 @@ export type ToWorker =
       /**
        * 'typical' averages over the hour, waiting included; 'best' is the shortest trip in
        * it; 'next' takes the next connection (departing: from leaveOffset seconds into the
-       * hour; arriving: the last one arriving on the hour).
+       * hour; arriving: the last one arriving on the hour, or arriveOffset after it).
        */
       measure: Measure;
       /** Seconds into the hour it is now (0 for another hour); trips on tap leave then. */
       leaveOffset?: number;
+      /** Arriving at an exact time: seconds after the full hour to arrive by. */
+      arriveOffset?: number;
       /** Compare: a second timetable file; the map then shows how much longer trips take there. */
       compare?: Window;
       /** Walking speed in km/h (menu setting). */

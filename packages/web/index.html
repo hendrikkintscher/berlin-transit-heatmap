@@ -118,6 +118,13 @@
         data-t-label="whenTitle"
         hidden
       >
+        <div class="when-now">
+          <button type="button" id="now-btn" aria-pressed="false" data-t="whenNow">Jetzt</button>
+          <label class="when-time" id="when-time-box">
+            <span data-t="whenExact">Uhrzeit</span>
+            <input type="time" id="when-time" step="60" />
+          </label>
+        </div>
         <div
           id="day-grid"
           class="day-grid"

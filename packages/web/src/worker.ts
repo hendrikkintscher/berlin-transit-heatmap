@@ -335,7 +335,10 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const typical = msg.measure === 'typical';
       // Next connection: plain RAPTOR from one moment (reversed files count backwards).
       const now = (t: PreparedTimetable) =>
-        msg.direction === 'depart' ? t.windowStart + (msg.leaveOffset ?? 0) : t.windowEnd;
+        msg.direction === 'depart'
+          ? t.windowStart + (msg.leaveOffset ?? 0)
+          : // Reversed files count backwards: later arrivals are further below windowEnd.
+            t.windowEnd - (msg.arriveOffset ?? 0);
       const leaveAt = (t: PreparedTimetable) => (msg.measure === 'next' ? now(t) : undefined);
       const runs = starts.map((o) => run(tt, o, typical, travel, true, leaveAt(tt)));
       const grid = slowestOf(runs.map((r) => r.shown));

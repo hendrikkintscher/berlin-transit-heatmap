@@ -79,6 +79,7 @@ import {
   isDate,
   isoDay,
   catchUp,
+  fullHour,
   leaveOffset,
   windowName,
 } from './when';
@@ -430,6 +431,9 @@ function compute() {
     direction: state.direction,
     measure: state.measure,
     leaveOffset: leaveOffset(state.when),
+    ...(state.direction === 'arrive' && state.when.minute
+      ? { arriveOffset: state.when.minute * 60 }
+      : {}),
     walkKmh: state.walkKmh,
     ...(state.stepFree ? { stepFree: true } : {}),
     ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
@@ -578,6 +582,8 @@ function addStart(p: Point) {
   if (!state.others.length && state.measure !== 'typical') {
     state.measureBefore = state.measure;
     state.measure = 'typical';
+    // An exact time is only for Nächste: Typisch is on the full hour.
+    state.when = fullHour(state.when);
     whenSheet.renderWhen();
   }
   state.others = [...state.others, p];
