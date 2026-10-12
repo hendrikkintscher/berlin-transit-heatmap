@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toPlaces } from './search';
+import { streetHouses, toPlaces } from './search';
 
 const f = (properties: Record<string, string>, lon = 13.4, lat = 52.5) => ({
   properties,
@@ -70,5 +70,47 @@ describe('covered area', () => {
       'Bernau Bahnhof',
       'Oranienburg',
     ]);
+  });
+});
+
+describe('staged address search', () => {
+  const street = { type: 'street', osm_key: 'highway', district: 'Mitte', city: 'Berlin' };
+  it('marks streets, one row per postcode', () => {
+    const list = toPlaces(
+      [
+        f({ ...street, name: 'Torstraße', postcode: '10119' }),
+        f({ ...street, name: 'Torstraße', postcode: '10119' }),
+        f({ ...street, name: 'Torstraße', postcode: '10115' }),
+      ],
+      'torstr',
+    );
+    expect(list.map((p) => [p.detail, p.street])).toEqual([
+      ['10119 Mitte', { name: 'Torstraße', postcode: '10119' }],
+      ['10115 Mitte', { name: 'Torstraße', postcode: '10115' }],
+    ]);
+  });
+  it("keeps the picked street's houses in its postcode, without shops", () => {
+    const at = { street: 'Torstraße', housenumber: '12', district: 'Mitte' };
+    const list = toPlaces(
+      [
+        f({ ...at, postcode: '10119' }),
+        f({ ...at, postcode: '14542', district: 'Werder (Havel)' }),
+        f({ ...at, postcode: '10119', name: 'Café' }),
+      ],
+      'Torstraße 12, 10119',
+    );
+    expect(streetHouses(list, { name: 'Torstraße', postcode: '10119' })).toEqual([
+      { label: 'Torstraße 12', detail: '10119 Mitte', lat: 52.5, lon: 13.4 },
+    ]);
+  });
+  it('does not take a postcode for a house number', () => {
+    const list = toPlaces(
+      [
+        f({ name: 'Bäckerei', street: 'Hauptstraße', housenumber: '3', postcode: '10317' }),
+        f({ ...street, name: 'Hauptstraße', postcode: '10317' }),
+      ],
+      'Hauptstraße 10317',
+    );
+    expect(list[0]?.label).toBe('Bäckerei');
   });
 });

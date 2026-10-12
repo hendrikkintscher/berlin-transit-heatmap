@@ -90,6 +90,8 @@ const near = (a: Place, b: Place) =>
 export function withoutLocal(remote: Place[], local: Place[]): Place[] {
   return remote.filter(
     (r) =>
+      // A street is not the stop named after it.
+      !!r.street ||
       !local.some(
         (l) => (fold(l.label) === fold(r.label) || core(l.label) === core(r.label)) && near(l, r),
       ),
