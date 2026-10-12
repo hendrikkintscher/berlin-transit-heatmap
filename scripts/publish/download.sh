@@ -6,7 +6,8 @@
 #   scripts/publish/download.sh <tag> <dir> [file…]
 #
 # Without file names it fetches every .json and .bin file of the release (one API call
-# per 100 files to list them).
+# per 100 files to list them), or those whose names match DOWNLOAD_ONLY (an extended
+# regular expression) when it is set.
 set -euo pipefail
 tag=$1
 dir=$2
@@ -21,7 +22,7 @@ if [ $# -eq 0 ]; then
     [ -n "$batch" ] || break
     mapfile -t -O "${#files[@]}" files <<<"$batch"
   done
-  mapfile -t files < <(printf '%s\n' "${files[@]}" | grep -E '\.(json|bin)$')
+  mapfile -t files < <(printf '%s\n' "${files[@]}" | grep -E "${DOWNLOAD_ONLY:-\.(json|bin)\$}")
   set -- "${files[@]}"
 fi
 printf '%s\n' "$@" | xargs -P 8 -I{} curl -fsSL --retry 3 -o "$dir/{}" "$base/{}"

@@ -23,7 +23,11 @@ export interface WindowSpec {
   end: number;
 }
 
-/** Day 10:00–12:00 and night 02:00–04:00 of the following night (26:00–28:00 in GTFS terms). */
+/**
+ * Day 10:00–12:00 and night 02:00–04:00 of the following night (26:00–28:00 in GTFS terms):
+ * the first, two-window build. Only built without the hourly windows (tests, --no-hourly);
+ * the app loads the hourly ones.
+ */
 export const WINDOWS: WindowSpec[] = [
   { name: 'day', day: 'weekday', start: 10 * 3600, end: 12 * 3600 },
   { name: 'night', day: 'weekday', start: 26 * 3600, end: 28 * 3600 },
@@ -234,8 +238,7 @@ export async function buildTimetables(
   const days: Record<string, string> = { weekday: serviceDay, weekend: weekendDay };
   for (const date of options.dates ?? []) days[date] = date;
   const windows = [
-    ...WINDOWS,
-    ...(options.hourly ? HOURLY_WINDOWS : []),
+    ...(options.hourly ? HOURLY_WINDOWS : WINDOWS),
     ...datedWindows(options.dates ?? []),
   ];
   // Trips of the previous and next service day can run inside our windows

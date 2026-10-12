@@ -76,7 +76,7 @@ jobs:
 
       - name: Check size budget
         run: |
-          for path in work/out/timetable-*.json work/out/timetable-*.bin; do
+          for path in work/out/timetable-*.bin; do
             f=$(basename "$path")
             bytes=$(jq ".files[\"$f\"].bytes" work/out/build-info.json)
             gz=$(jq ".files[\"$f\"].gzipBytes" work/out/build-info.json)

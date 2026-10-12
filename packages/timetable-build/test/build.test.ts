@@ -149,8 +149,6 @@ describe('writeOutputs', () => {
   it('writes the data files, binary timetables and build-info.json', () => {
     const info = writeOutputs(result, dir);
     const read = (name: string) => JSON.parse(readFileSync(join(dir, name), 'utf8'));
-    expect(read('timetable-day.json')).toEqual(day);
-    expect(read('timetable-night.json')).toEqual(night);
     expect(read('stops.json')).toEqual({
       version: 1,
       serviceDate: '2026-10-13',
@@ -161,7 +159,7 @@ describe('writeOutputs', () => {
       serviceDate: '2026-10-13',
       stats: result.stats,
     });
-    // The binary file reads back as the JSON one, without stop ids and with the
+    // The binary file reads back as the timetable, without stop ids and with the
     // footpaths in stop order.
     const bin = decodeTimetable(readFileSync(join(dir, 'timetable-day.bin')));
     expect(bin).toEqual({
@@ -175,10 +173,9 @@ describe('writeOutputs', () => {
       'stop-ids.json',
       'stops.json',
       'timetable-day.bin',
-      'timetable-day.json',
       'timetable-night.bin',
-      'timetable-night.json',
     ]);
+    expect(decodeTimetable(readFileSync(join(dir, 'timetable-night.bin'))).window).toBe('night');
   });
 });
 
@@ -194,9 +191,10 @@ describe('hourly windows', () => {
       .flatMap((r) => r.trips.map((trip) => trip[0]))
       .sort((a, b) => a! - b!);
 
-  it('builds 24 weekday and 24 weekend hours next to day and night', () => {
+  it('builds 24 weekday and 24 weekend hours (without the old day and night)', () => {
     const names = Object.keys(hourly.timetables);
-    expect(names).toHaveLength(50);
+    expect(names).toHaveLength(48);
+    expect(names).not.toContain('day');
     expect(names).toContain('weekday-00');
     expect(names).toContain('weekend-23');
     expect(hourly.timetables['weekday-10']).toMatchObject({
@@ -273,6 +271,6 @@ describe('real dates', () => {
     const info = writeOutputs(dated, dir);
     expect(info.files['timetable-20261014-10.bin']).toBeDefined();
     expect(info.files['timetable-20261014-10.json']).toBeUndefined();
-    expect(info.files['timetable-day.json']).toBeDefined();
+    expect(info.files['timetable-day.json']).toBeUndefined();
   });
 });
