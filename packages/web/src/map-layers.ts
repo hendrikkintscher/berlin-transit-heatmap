@@ -579,9 +579,9 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
             ['linear'],
             ['zoom'],
             9,
-            ['case', half, 5.5, 3.5],
+            ['case', half, 4.5, 4],
             14,
-            ['case', half, 8, 5.5],
+            ['case', half, 6.5, 6],
           ]
         : [
             'interpolate',
