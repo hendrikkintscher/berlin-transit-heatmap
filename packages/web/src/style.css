@@ -202,13 +202,12 @@ body.no-legend .legend {
   background: transparent;
   color: var(--muted);
 }
-/* Hinweg / Rückweg: next to the ✕, so the direction reads with the trip; only the first
-   line makes room for it. */
+/* Set place as Start / Ziel: right under the ✕, beside the lines under the headline. */
 #readout-dir {
   float: right;
-  margin: -8px 0 2px 8px;
+  margin: 2px 0 2px 8px;
   min-height: 44px;
-  padding: 0 10px;
+  padding: 0 9px;
   border: 0;
   border-radius: 999px;
   background: #f0ecf4;
@@ -217,6 +216,19 @@ body.no-legend .legend {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+/* On the headline's line (no leave time under it): level with the ✕, clear of the line summary. */
+#readout-dir:first-child {
+  margin: -8px 0 -8px 8px;
+}
+#readout #readout-dir b {
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.6;
+}
+#readout #readout-dir b.on {
+  font-weight: 700;
+  opacity: 1;
 }
 #readout b {
   font-size: 17px;

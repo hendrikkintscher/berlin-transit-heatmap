@@ -195,7 +195,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
         w = arriveWhen(state.when);
         beforeArrive = { depart: state.when, arrive: w };
       } else if (direction === 'depart' && state.direction === 'arrive') {
-        // Straight back (Hinweg ⇄ Rückweg ⇄): leaving at the time it was before.
+        // Straight back (Ziel back to Start): leaving at the time it was before.
         if (beforeArrive && whenParam(beforeArrive.arrive) === whenParam(state.when))
           w = beforeArrive.depart;
         beforeArrive = null;

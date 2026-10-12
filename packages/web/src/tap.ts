@@ -180,7 +180,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     secondBtn.setAttribute('aria-label', second);
     secondBtn.title = second;
     if (!title && map.getZoom() >= 15) void showAddress(pending);
-    // One start and a trip to the place: Hinweg (from the start) or Rückweg (back to it).
+    // One start and a trip to the place: from the start to it, or from it to the start.
     dirBtn.hidden = !(
       state.origin &&
       !state.others.length &&
@@ -189,8 +189,10 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       html.includes('id="trip"')
     );
     if (!dirBtn.hidden) {
-      readoutText.prepend(dirBtn);
-      dirBtn.textContent = `${t(state.direction === 'arrive' ? 'dirBack' : 'dirThere')} ⇄`;
+      placeDir();
+      // The set place's role in the trip: Start or Ziel, the current one marked.
+      const arrive = state.direction === 'arrive';
+      dirBtn.innerHTML = `<b${arrive ? '' : ' class="on"'}>${t('dirThere')}</b> ⇄ <b${arrive ? ' class="on"' : ''}>${t('dirBack')}</b>`;
       dirBtn.setAttribute('aria-label', t('dirSwap'));
       dirBtn.title = t('dirSwap');
     }
@@ -361,10 +363,19 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     // With one start, the connection's own minutes and arrival become the card's main line.
     if (m.journeys.length === 1 && m.journeys[0]?.leave !== undefined)
       document.getElementById('tap-mins')?.remove();
+    placeDir();
     if (tripAt) tripAt.askedLater = false;
     setTrip(m);
     board = (m.journeys.length === 1 && m.journeys[0]?.board) || null;
     checkLive();
+  }
+
+  /** The Start ⇄ Ziel switch sits beside the lines under the trip's main line, so that keeps one line. */
+  function placeDir() {
+    if (dirBtn.hidden) return;
+    const main = readoutText.querySelector('.trip-main');
+    if (main) main.after(dirBtn);
+    else if (dirBtn.parentElement !== readoutText) readoutText.prepend(dirBtn);
   }
 
   /** The notes for the shown connection, when the changes arrived after its card. */
