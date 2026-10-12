@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked Done are live and kept as one line each; their full write-ups are in archive/plan/roadmap-full-2026-10-12.md (project files). Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and other regions, and group 14 the Android app, postponed with no date (Hendrik, 2026-10-12). Items from the second suggestions list (archive/plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked Done are live and kept as one line each; their full write-ups are in archive/plan/roadmap-full-2026-10-12.md (project files). Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and other regions, group 14 the Android app, postponed with no date (Hendrik, 2026-10-12), and group 16 app store releases and showcase material, not started. Items from the second suggestions list (archive/plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
@@ -25,6 +25,8 @@ From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next
 **Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
 
 **On the roadmap, not started** (Hendrik, 2026-10-12: "Only add to roadmap, don't start working on it"): trip drawer with more connections, and a detailed connection view (group 6). They wait until Hendrik picks them.
+
+**Added, not started** (Hendrik, 2026-10-12): Android and iOS app store deployment, and showcase material (group 16). Not in Up next until Hendrik picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -311,3 +313,10 @@ Picked by Hendrik on 2026-10-12 ("Yes"), the last item of the third suggestions 
 - The worker keeps 4–5 timetables loaded instead of 3, so the current and next hour, a comparison and a step-free toggle don't push each other out.
 
 Slotted in whenever no feature step is waiting.
+
+## 16. App stores and showcase
+
+Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existing travel-time maps and the "why not Google Maps" sharepic were closed. Both are not started and wait until Hendrik picks them.
+
+- **Android and iOS app store deployment**: publish the app in Google Play and the Apple App Store. For Android, the options and ways to ship in group 14 apply (TWA first, then Capacitor if needed). For iOS, a wrapper such as Capacitor would be needed. Apple requires a paid developer account (99 USD a year) and app review. Group 14's "postponed" note still stands until Hendrik starts this step.
+- **Showcase material**: material that presents the app, such as screenshots, the sharepics (see the sharepic notes in project memory) and a comparison with existing travel-time maps. Scope is set when Hendrik picks the step.
