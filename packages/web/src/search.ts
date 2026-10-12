@@ -5,12 +5,16 @@ import { DEFAULT_BBOX } from '@berlin-transit-heatmap/routing';
 const ENDPOINT = 'https://photon.komoot.io/api/';
 /** west, south, east, north: the heatmap grid's area (Berlin and the commuter belt). */
 export const SEARCH_BBOX = DEFAULT_BBOX;
+/** A house number in a query ("Torstraße 12a"); a five-digit postcode is not one. */
+const HOUSE_NUMBER = /(^|\s)\d{1,4}[a-z]?(\s|,|$)/i;
 
 export interface Place {
   label: string;
   detail: string;
   lat: number;
   lon: number;
+  /** A street (not one house): picking it goes on to its house numbers. */
+  street?: { name: string; postcode?: string };
 }
 
 interface PhotonProps {
@@ -21,7 +25,9 @@ interface PhotonProps {
   district?: string;
   locality?: string;
   city?: string;
+  osm_key?: string;
   osm_value?: string;
+  type?: string;
 }
 interface PhotonFeature {
   properties: PhotonProps;
@@ -44,7 +50,7 @@ export function toPlaces(features: PhotonFeature[], query = ''): Place[] {
       return lon >= w && lon <= e && lat >= so && lat <= n;
     },
   );
-  if (/\d/.test(query)) {
+  if (HOUSE_NUMBER.test(query)) {
     const plain = (f: PhotonFeature) => !f.properties.name && !!f.properties.housenumber;
     const addr = (f: PhotonFeature) =>
       `${f.properties.street}|${f.properties.housenumber}|${f.properties.postcode}`;
@@ -74,9 +80,30 @@ export function toPlaces(features: PhotonFeature[], query = ''): Place[] {
     if (seen.has(key)) continue;
     seen.add(key);
     const [lon, lat] = f.geometry.coordinates;
-    out.push({ label, detail, lat, lon });
+    const isStreet = p.type === 'street' && p.osm_key === 'highway' && !!p.name;
+    out.push(
+      isStreet
+        ? { label, detail, lat, lon, street: { name: p.name!, postcode: p.postcode } }
+        : { label, detail, lat, lon },
+    );
   }
   return out;
+}
+
+/**
+ * The houses of a picked street that match the typed number, in its postcode: the second
+ * step of the staged address search (street, then house number).
+ */
+export function streetHouses(
+  places: Place[],
+  street: { name: string; postcode?: string },
+): Place[] {
+  return places.filter(
+    (p) =>
+      !p.street &&
+      p.label.startsWith(`${street.name} `) &&
+      (!street.postcode || p.detail.includes(street.postcode)),
+  );
 }
 
 export async function searchPlaces(
@@ -84,6 +111,7 @@ export async function searchPlaces(
   near: { lat: number; lon: number },
   signal: AbortSignal,
   lang: 'de' | 'en' = 'de',
+  layer?: 'house',
 ): Promise<Place[]> {
   const p = new URLSearchParams({
     q: query,
@@ -93,6 +121,7 @@ export async function searchPlaces(
     lang,
     limit: '12',
   });
+  if (layer) p.set('layer', layer);
   const res = await fetch(`${ENDPOINT}?${p}`, { signal });
   if (!res.ok) throw new Error(`search failed (${res.status})`);
   const json = (await res.json()) as { features: PhotonFeature[] };

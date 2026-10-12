@@ -22,7 +22,7 @@ import {
   escapeHtml,
   whenText,
 } from './format';
-import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
+import { reversePlace, searchPlaces, SEARCH_BBOX, streetHouses, type Place } from './search';
 import {
   loadRecent,
   localMatches,
@@ -808,6 +808,17 @@ let searchStations: LocalPlace[] | null = null;
 let stationsAsked = false;
 /** Photon's last answer, kept on screen (filtered) while the next one is on its way. */
 let lastRemote: Place[] = [];
+/**
+ * A street picked from the suggestions: the address search's second step, its house
+ * numbers (in that street's postcode). Ends when the text no longer starts with the street.
+ */
+let streetPick: Place | null = null;
+/** The text after the picked street's name, or null when no street is picked. */
+function houseQuery(): string | null {
+  const v = searchInput.value;
+  if (!streetPick?.street || !v.startsWith(streetPick.street.name)) return null;
+  return v.slice(streetPick.street.name.length).trim();
+}
 
 function openSearch() {
   chips.close();
@@ -840,6 +851,14 @@ function localPool(): LocalPlace[] {
 /** Local matches at once, then Photon's results that still fit the query. */
 function showSuggestions(remote = lastRemote) {
   const q = searchInput.value.trim();
+  const house = houseQuery();
+  if (streetPick?.street && house !== null) {
+    // The street's houses for the typed number, and the street itself to pick as is.
+    const whole = { ...streetPick, street: undefined, detail: streetPick.detail };
+    renderPlaces([...(house ? streetHouses(remote, streetPick.street) : []), whole].slice(0, 8));
+    showMsg(house ? '' : t('houseNumberHint'));
+    return;
+  }
   const local = localMatches(q, localPool(), q.length >= 3 ? 3 : 5);
   const fitting = remote.filter((p) => matchScore(`${p.label} ${p.detail}`, q) > 0);
   const list = [...local, ...withoutLocal(fitting, local)].slice(0, 8);
@@ -865,6 +884,7 @@ function renderPlaces(list: (Place | LocalPlace)[]) {
       const li = document.createElement('li');
       li.id = `place-${i}`;
       if ('kind' in p) li.className = `place-${p.kind}`;
+      else if (p.street) li.className = 'place-street';
       li.setAttribute('role', 'option');
       const b = document.createElement('b');
       b.textContent = p.label;
@@ -895,7 +915,10 @@ function setActive(i: number) {
 }
 
 async function runSearch(q: string) {
-  const key = q.toLowerCase();
+  // After a picked street: its houses, in its postcode ("Torstraße 12, 10119").
+  const street = houseQuery() ? streetPick?.street : undefined;
+  if (street) q = [`${street.name} ${houseQuery()}`, street.postcode].filter(Boolean).join(', ');
+  const key = `${street ? 'house:' : ''}${q.toLowerCase()}`;
   const cached = searchCache.get(key);
   if (cached) {
     lastRemote = cached;
@@ -907,7 +930,13 @@ async function runSearch(q: string) {
   const ctrl = (searchAbort = new AbortController());
   const c = map.getCenter();
   try {
-    const list = await searchPlaces(q, { lat: c.lat, lon: c.lng }, ctrl.signal, lang());
+    const list = await searchPlaces(
+      q,
+      { lat: c.lat, lon: c.lng },
+      ctrl.signal,
+      lang(),
+      street ? 'house' : undefined,
+    );
     searchCache.set(key, list);
     if (ctrl.signal.aborted) return;
     lastRemote = list;
@@ -923,8 +952,17 @@ async function runSearch(q: string) {
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
   const q = searchInput.value.trim();
+  if (streetPick && houseQuery() === null) {
+    streetPick = null;
+    lastRemote = [];
+  }
   // Local suggestions on every keystroke, before any network.
   showSuggestions();
+  if (streetPick) {
+    // A house number typed after the picked street: ask for its houses.
+    if (houseQuery()) searchTimer = window.setTimeout(() => runSearch(q), 150);
+    return;
+  }
   if (q.length < 3) {
     searchAbort?.abort();
     lastRemote = [];
@@ -953,6 +991,16 @@ searchInput.addEventListener('keydown', (e) => {
 /** What a picked search result does: set the start, add a favourite place or one more start. */
 let searchFor: 'start' | 'favourite' | 'another' = 'start';
 function pickPlace(p: Place) {
+  if (p.street) {
+    // A street: on to its house numbers (or pick the whole street, offered first).
+    streetPick = p;
+    lastRemote = [];
+    searchInput.value = `${p.street.name} `;
+    searchInput.focus();
+    showSuggestions();
+    return;
+  }
+  streetPick = null;
   closeSearch();
   rememberRecent(p);
   if (searchFor === 'favourite') {

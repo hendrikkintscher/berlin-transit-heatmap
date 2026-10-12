@@ -433,6 +433,11 @@ dialog form button {
   color: var(--muted);
 }
 /* Suggestions found without the network: recent searches, favourites, stations. */
+/* A street: picking it goes on to its house numbers. */
+.search-results .place-street b::after {
+  content: ' ›';
+  color: var(--accent);
+}
 .search-results .place-recent b::before,
 .search-results .place-favourite b::before,
 .search-results .place-station b::before {
