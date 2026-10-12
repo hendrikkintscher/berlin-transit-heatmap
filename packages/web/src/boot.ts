@@ -1,30 +1,44 @@
-// The app's entry: starts the routing worker and the hour's timetable download straight
-// away, then loads the rest of the app (most of it the map library) next to them.
+// The app's entry: takes over the routing worker that the start page's inline script
+// started (see vite.config.ts; it already asked for the first map's timetable), or starts
+// it here, then loads the rest of the app (most of it the map library) next to them.
 // main.ts takes the worker over.
 // Styles come with the entry, so the page never shows unstyled while main.ts loads.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import type { FromWorker, ToWorker } from './protocol';
 import { dataBase } from './region';
-import { computeWindow, whenAt, whenFromParams } from './when';
+import { earlyLoad } from './early';
 
-export const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+declare global {
+  interface Window {
+    /** Set by the start page: the worker it started and the messages it got so far. */
+    __boot?: { worker: Worker; early: MessageEvent<FromWorker>[] };
+  }
+}
+
+const started = window.__boot;
+export const worker =
+  started?.worker ?? new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
 export const send = (m: ToWorker) => worker.postMessage(m);
 
-send({ type: 'init', dataBase: dataBase() });
-const params = new URLSearchParams(location.search);
-send({
-  type: 'load',
-  // The same hour the app will ask for (see readLink in url.ts).
-  window: computeWindow(
-    whenFromParams(params, whenAt(new Date())),
-    params.get('dir') === 'arr' ? 'arrive' : 'depart',
-  ),
-});
-
 /** Messages that arrive before the app listens, handed over by listen(). */
-const early: MessageEvent<FromWorker>[] = [];
+const early: MessageEvent<FromWorker>[] = started?.early ?? [];
 worker.onmessage = (ev: MessageEvent<FromWorker>) => early.push(ev);
+
+if (!started) {
+  send({ type: 'init', dataBase: dataBase() });
+  let stored = { stepFree: null as string | null, travel: null as string | null };
+  try {
+    stored = {
+      stepFree: localStorage.getItem('step-free'),
+      travel: localStorage.getItem('travel'),
+    };
+  } catch {
+    // Storage blocked: the defaults.
+  }
+  const first = earlyLoad(location.search, stored);
+  send({ type: 'load', ...first });
+}
 
 /** Hands the worker's messages to `handler`, the early ones first, once main.ts has run. */
 export function listen(handler: (ev: MessageEvent<FromWorker>) => void): void {

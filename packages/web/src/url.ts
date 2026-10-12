@@ -5,6 +5,7 @@
 
 import { LIMIT_MINUTES } from './colors';
 import type { Measure, Travel } from './protocol';
+import { travelOf } from './early';
 import {
   parseWhen,
   whenFromParams,
@@ -18,10 +19,7 @@ import {
 export const WALK_SPEEDS = [3, 4, 5, 6];
 export const DEFAULT_WALK_KMH = 5;
 export const walkSpeed = (v: number) => (WALK_SPEEDS.includes(v) ? v : DEFAULT_WALK_KMH);
-/** Ways of getting around, in menu order (stored by index on the device). */
-export const TRAVELS: Travel[] = ['walk', 'bike', 'bikeonly'];
-export const travelOf = (v: string | null): Travel =>
-  TRAVELS.includes(v as Travel) ? (v as Travel) : 'walk';
+export { TRAVELS, travelOf } from './early';
 
 /** A meeting point has up to this many starts: the first and four more. */
 export const MAX_STARTS = 5;
