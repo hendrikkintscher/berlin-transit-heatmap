@@ -4,12 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #73. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #76. Build in this order, one step per PR:
 
-1. **Next:** Fainter default outlines: one colour, 10-minute steps (group 7)
-2. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-4. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+2. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+3. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -353,6 +352,8 @@ The map opens without the coloured travel-time fill: the plain base map with the
 Notes: the routing is unchanged (outlines and taps need it), and drawing no colour raster is, if anything, faster on first load. Special maps (meeting point, Wohnlage-Karte, Bis wann heim?) follow the same switch. Small effort; added from Hendrik's request on 2026-10-12 ("turn heatmap off as a default"). Read as: colours off, outlines on, one tap to bring the colours back.
 
 ### Fainter default outlines: one colour, 10-minute steps
+
+**Done** (PR #76): without the colour fill, outlines come every 10 minutes in a single hue, darkest near the start, thinner and partly transparent, each labelled; the legend shows the same steps. With the fill on nothing changes; the home map keeps its own colours.
 
 Hendrik's feedback on PR #71 (2026-10-12): starting with only the outlines is right, but they should be calmer. In the outlines-only view:
 
