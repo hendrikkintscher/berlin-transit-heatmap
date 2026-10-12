@@ -9,10 +9,11 @@ State on 2026-10-12, live through PR #114. Build in this order, one step per PR:
 1. **Next:** Edge-to-edge top bar and a slim loading bar instead of the "Berechnen" popups (group 12)
 2. "Lieblingsort" toggle instead of "Merken" (group 3)
 3. Addresses in the search suggestions, street first, then house number or postcode (group 1)
+4. Other regions, Oldenburg first, each region at its own address (group 13). Held until the editor has checked with the coordinator that the beta-testing domain and naming questions don't change the `/berlin/` addresses.
 
-All from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
+All from Hendrik on 2026-10-12. After them, Hendrik picks the next step before anything starts.
 
-**Blocked on a decision:** Other regions, Oldenburg / Weser-Ems first (group 13). Not started until Hendrik has picked how regions are offered (separate app, region selector in the link, or both); the options are being worked out in a separate thread. **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+**Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -669,13 +670,18 @@ Notes: a larger area means bigger timetables and walking network and more cells 
 
 ### Other regions, Oldenburg / Weser-Ems first
 
-**Blocked on a decision.** Hendrik, 2026-10-12: add other regions to the app, the first one Oldenburg / Weser-Ems. Before anything is built, Hendrik decides how regions are offered:
+Hendrik, 2026-10-12: add other regions, the first one Oldenburg / Weser-Ems. **Decided (Hendrik, 2026-10-12): both**, one app with each region at its own address. Details and sources in plan/regions.md.
 
-- **Separate app** per region (its own site/install, name and data).
-- **Region selector in the link** (one app, the region chosen in the URL and the menu).
-- **A combination** of both (one codebase, a region in the link, plus a dedicated entry per region).
+- **Addresses:** each region has its own address, `…/berlin/` and `…/oldenburg/`, with its own manifest, name and icon, so each installs as its own app on the phone. A region switch in the menu moves between them. The root address forwards to `/berlin/` with the same parameters, so old links keep working.
+- **One codebase, one deploy:** the build writes one data folder per region; each address loads only its own data, so the first map stays as fast as now.
+- **Timetables:** the Connect GTFS feed (Niedersachsen + Bremen). Its licence and download access still need checking before the build relies on it. Walking paths from the Geofabrik Niedersachsen and Bremen extracts, cut to the region's box.
+- **Area:** Oldenburg plus about 40 km around it, including Bremen. It can grow later.
+- **Name:** "Oldenburg in Minuten".
+- **Berlin-only extras:** Oldenburg starts without live status and without Ring, Bezirke and landmarks. Water, parks and streets work anywhere. Oldenburg landmarks and VBN real-time can follow as their own items.
+- **Stored on the phone:** favourites and recent places are kept per region, so switching doesn't mix them.
+- **Builds:** each region has its own nightly build and release tag, run at different times so the release rate-limit problem doesn't return.
 
-Questions that decision has to settle: timetable source for Weser-Ems (a regional feed such as VBN or Lower Saxony, or the nationwide German GTFS), map area and walking network per region, which features are Berlin-only (Ring, Bezirke, landmarks, live status), language and naming, and keeping first load snappy when more than one region exists (each region's data loaded only when chosen). Options are being drafted in a separate thread; nothing is built until Hendrik picks one.
+Notes: before the builder starts, the editor checks with the coordinator, because the beta-testing domain question and the naming thread may change the `/berlin/` addresses. Measure against the snappiness rule and the CI speed budget. Large effort; may be split into several PRs (region folders and addresses first, then Oldenburg data, then the region switch).
 
 ## 14. Android app
 
