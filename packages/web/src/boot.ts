@@ -14,7 +14,7 @@ send({ type: 'init', dataBase: new URL('data/', document.baseURI).href });
 const params = new URLSearchParams(location.search);
 send({
   type: 'load',
-  // The same hour the app will ask for (see readUrl in main.ts).
+  // The same hour the app will ask for (see readLink in url.ts).
   window: computeWindow(
     whenFromParams(params, whenAt(new Date())),
     params.get('dir') === 'arr' ? 'arrive' : 'depart',
