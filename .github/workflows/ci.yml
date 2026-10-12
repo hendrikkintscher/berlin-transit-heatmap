@@ -28,3 +28,29 @@ jobs:
       - run: pnpm format:check
       - run: pnpm typecheck
       - run: pnpm test
+
+  # Speed budget (roadmap B1): the app may not get bigger or slower than allowed.
+  # See scripts/speed/check.mjs; the job summary shows the numbers.
+  speed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir packages/web build
+      - name: Download real timetable and footpaths
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download timetable-latest --repo "$GITHUB_REPOSITORY" -p timetable-weekday-10.bin -p walk.bin -D work/speed
+      - name: Check out main to compare against
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "$GITHUB_BASE_REF"
+          git worktree add work/base FETCH_HEAD
+      - name: Check speed budget
+        run: node scripts/speed/check.mjs --data work/speed ${{ github.event_name == 'pull_request' && '--base work/base' || '' }}
