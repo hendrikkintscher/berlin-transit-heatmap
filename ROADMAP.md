@@ -8,6 +8,13 @@ State on 2026-10-12, live through PR #103. Nothing is queued: Hendrik picks the 
 
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
+**Not planned** (Hendrik, 2026-10-12): these were offered as next steps and set aside. They stay listed in plan/suggestions-2.md and are not built unless Hendrik brings them back.
+
+- Fare zones: AB/C boundary on the map and a "C-Ticket nötig" note on the trip card (C5)
+- Share a picture of the map instead of a link (C7)
+- Who can I reach: "In 30 Min.: 41 % der Berliner, 210 km²" from the Zensus grid (C4)
+- Dark map in dark mode and app shortcuts on the installed app (C9)
+
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
 ## 1. Interface and usability
