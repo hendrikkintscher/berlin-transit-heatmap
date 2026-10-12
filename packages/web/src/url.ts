@@ -13,9 +13,9 @@ import {
   type When,
 } from './when';
 
-/** Walking speeds offered in the menu, in km/h; 4 is the default. */
+/** Walking speeds offered in the menu, in km/h; 5 is the default (close to BVG and Google). */
 export const WALK_SPEEDS = [3, 4, 5, 6];
-export const DEFAULT_WALK_KMH = 4;
+export const DEFAULT_WALK_KMH = 5;
 export const walkSpeed = (v: number) => (WALK_SPEEDS.includes(v) ? v : DEFAULT_WALK_KMH);
 /** Ways of getting around, in menu order (stored by index on the device). */
 export const TRAVELS: Travel[] = ['walk', 'bike', 'bikeonly'];
