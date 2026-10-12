@@ -4,22 +4,21 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #169. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #174. Build in this order, one step per PR:
 
-1. **Next:** Redesign of the time sheet and the trip card, including C2 (group 12): designs picked
-2. Real arrival times at stops (group 6)
-3. Shorter platform changes (group 6)
-4. Start point or destination switch (group 6)
-5. "Bis N Min." view as an optional switch (D1, group 15)
-6. Faster first load and no stale work (B4 + B5, group 15)
-7. Lighter work per tap (B6, group 15)
-8. Smaller Wohnlage-Karte memory (B7, group 15)
-9. Typical timetable when offline (B8, group 15)
-10. Notice, search and favourites polish (C5–C8, group 15)
-11. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-12. Default view readability: two variants to compare (C9, group 15)
-13. Named starts in meeting mode (D2, group 15)
-14. Code health, no change in behaviour (E1, group 15)
+1. **Next:** Real arrival times at stops (group 6)
+2. Shorter platform changes (group 6)
+3. Start point or destination switch (group 6)
+4. "Bis N Min." view as an optional switch (D1, group 15)
+5. Faster first load and no stale work (B4 + B5, group 15)
+6. Lighter work per tap (B6, group 15)
+7. Smaller Wohnlage-Karte memory (B7, group 15)
+8. Typical timetable when offline (B8, group 15)
+9. Notice, search and favourites polish (C5–C8, group 15)
+10. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+11. Default view readability: two variants to compare (C9, group 15)
+12. Named starts in meeting mode (D2, group 15)
+13. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -177,20 +176,7 @@ Walking is measured today as a straight line at 1.2 m/s, to the first stop and f
 - **Rename to "Wohin jetzt?"**: Done (PR #134): "Wohin jetzt?" is the tab title (with the tagline), the installed-app name, and the menu and About headings, with the tagline under About (English "Transit in one tap").
 - **Permanent search bar at the top**: Done (PR #153): the search field sits permanently at the top.
 
-### Redesign of the time sheet and the trip card
-
-Hendrik, 2026-10-12: "Make a sensible redesign of the whole times and trips card". One step that reworks the time sheet and the trip card (the card shown after a tap) together, so neither is rebuilt twice. It includes C2 (group 15: every button at least 44 px tall, meeting trips after the first folded behind "N weitere Fahrten") and keeps the exact minutes and "Jetzt" from PR #160.
-
-Further inputs from plan/suggestions-3.md, handed to this redesign instead of being asked separately: C3 (one bottom slot with priorities for hint, install tip, "Heute anders", trip card, legend and locate; the iOS install tip once, then only in Mehr), C4 (past hours greyed for Heute, Reisezeit above the fold or a scroll fade, the night tint 0–4 explained), D3 (quick chips Jetzt / +15 / +30 / +60), C11 (Treffpunkt, Vergleich and Wohnlage info chips collapse to an icon pill after a few seconds) and from C10 the 44 px / 13 px minimum sizes and the wording list (Als Startpunkt or Neuer Startpunkt, Losfahren/Ankommen or Abfahrt/Ankunft, Sa+So or Wochenende, "3. Startpunkt").
-
-**Designs picked** by Hendrik on 2026-10-12 (mock-ups in /mnt/project-files/mockups/redesign/):
-
-- **Time panel A:** quick buttons Jetzt / +15 / +30 / +60 at the top, then Losfahren/Ankommen with the exact time, then the days (typical days at the end of the scroll row), then Reisezeit, then the hour grid.
-- **Trip card B, compact:** minutes and lines first, a Details button opens the stops, and the buttons become icons. At a meeting point the first trip shows and "2 weitere Fahrten" folds the rest.
-
-Both include C2, C3, C4, D3, C11, the C10 minimums and the Ankommen-at-23:00 fix.
-
-Mock-ups came first: the builder shows Hendrik screenshots of the redesign at 360×740 and, where a choice matters, 2–4 options via the coordinator. It is built only after his pick. Snappiness stays the rule: tap to trip must stay as fast as now.
+- **Redesign of the time sheet and the trip card**: Done (PR #174): time panel A (Jetzt, +15/+30/+60, Losfahren/Ankommen next to the exact time, days, Reisezeit, hours) and compact trip card B (one icon row, stops under Details, meeting trips folded), with C2, C3, C4, D3, C11 and the C10 minimums; tap 0.46 s live.
 
 ## 13. Wider area and other regions
 
@@ -250,14 +236,7 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 - **Walking network: visible loading, no blocked taps (B1)**: Done (PR #155): the walking network loads after the first map.
 - **Lean deploy: only the files the app uses (B2)**: Done (PR #156): timetables are .bin only, and each deploy copies only the files the app loads (streets.json added to the list for search).
 
-### Tap card: larger buttons, shorter meeting card (C2)
-
-Part of the redesign of the time sheet and trip card (group 12), built together with it. Picked by Hendrik on 2026-10-12 ("Yes, both"). Measured: the secondary buttons are 121×30 px and the close button 36 px; a meeting card for three people is about 1,000 px tall.
-
-- Every button on the tap card is at least 44 px tall, including the secondary row and the close button.
-- In meeting mode, trips after the first fold behind "2 weitere Fahrten" ("N weitere Fahrten"), and a tap unfolds them.
-
-- **Offline map and faster start in the service worker (B3)**: Done (PR #169): the basemap is cached (style, sprites and fonts cache-first, up to 400 tiles stale-while-revalidate), old app bundles are removed, and the start page falls back to the ….
+- **Tap card: larger buttons, shorter meeting card (C2)**: Done (PR #174, as part of the redesign): all buttons at least 44 px, meeting trips folded behind "N weitere Fahrten".
 
 ### "Bis N Min." view (D1)
 
