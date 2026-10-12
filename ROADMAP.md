@@ -7,8 +7,10 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #111. Build in this order, one step per PR:
 
 1. **Next:** Top bar polish: everything in one scrolling bar, "Mehr" as a plain chip, "Heute anders" right above the trip card (group 12)
+2. "Lieblingsort" toggle instead of "Merken" (group 3)
+3. Addresses in the search suggestions, street first, then house number or postcode (group 1)
 
-From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts.
+All from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -62,6 +64,16 @@ Hendrik, 2026-10-12: the address search should feel snappier. Today every keystr
 - Measure the time from keystroke to first suggestion on a phone, before and after.
 
 Small to medium effort. Added from Hendrik's request on 2026-10-12.
+
+### Addresses in the search suggestions
+
+Hendrik, 2026-10-12: addresses should be part of the suggestions, not only stations, favourites and recent searches. A step-by-step way is fine: first the street name; once the street is chosen or typed, either the house number or the postcode.
+
+- **Street first:** typing suggests matching street names (with the district, so "Hauptstraße" can be told apart) alongside the stations.
+- **Then number or postcode:** once a street is picked, the field keeps the street and asks for the house number; a postcode narrows a street that exists in several places.
+- **Speed:** local station matches still show at once (PR #96); street and address suggestions follow as they arrive, without slowing the first suggestion.
+
+Small to medium effort; the builder picks the data source (Photon street/house results, or a street list built from OSM) by what keeps the search snappy.
 
 ## 2. New map layers
 
@@ -138,6 +150,12 @@ Notes: the routing already gives times to every point, so per-place times are lo
 Friends often meet in groups of three to five. Generalise the meeting point to up to five starts: the map shows extra minutes over the best slower-of-all time, the suggested meeting points work the same way, and a tap lists everyone's trip. Kept in the link with `with=` repeated.
 
 Notes: one routing pass per start, so five starts take about 2.5 times the two-start time; start with three and measure against the snappiness rule. Medium effort; built in one step with C2. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+### "Lieblingsort" toggle instead of "Merken"
+
+Hendrik, 2026-10-12: the "★ Merken" button on the trip card is renamed **"Lieblingsort"** (English: "Favourite place") and becomes a toggle: tapping it adds the place to the favourites, tapping it again removes it. It no longer closes the connection view. The button shows whether the place is already a favourite (filled vs. empty star).
+
+Small effort.
 
 ### Fairer meeting point suggestions
 
