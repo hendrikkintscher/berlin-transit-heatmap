@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { coordsFromMapsUrl, csvRows, parseImport, score, type Favourite } from './favourites';
+import {
+  coordsFromMapsUrl,
+  csvRows,
+  parseImport,
+  score,
+  scoreGrid,
+  type Favourite,
+} from './favourites';
 
 const fav = (label: string, weight: 1 | 2 | 3, lat = 52.5, lon = 13.4): Favourite => ({
   id: label,
@@ -85,5 +92,13 @@ describe('imports', () => {
       ['a', 'b\nc'],
       ['d', 'e'],
     ]);
+  });
+
+  it('shades the map by the weighted average, unreachable as 120 min', () => {
+    const g = scoreGrid(
+      [Float32Array.of(600, 600, Infinity), Float32Array.of(1200, Infinity, Infinity)],
+      [3, 1],
+    );
+    expect([...g]).toEqual([750, 0.75 * 600 + 0.25 * 7200, 7200]);
   });
 });

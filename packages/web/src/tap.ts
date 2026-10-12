@@ -11,7 +11,7 @@ import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
 import { tripHtml, type Trip } from './trip-card';
-import type { Point } from './url';
+import { MAX_STARTS, type Point } from './url';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
 export interface Spot extends Point {
@@ -24,13 +24,17 @@ export interface TapDeps {
   state: State;
   send: (m: ToWorker) => void;
   setOrigin: (p: Point) => void;
-  setSecond: (p: Point) => void;
-  removeStart: (which: 1 | 2) => void;
+  /** Meeting point: one more start. */
+  addStart: (p: Point) => void;
+  /** Removes start i (0 = the first). */
+  removeStart: (i: number) => void;
   addFavourite: (at: Point) => void;
   /** The link changed (the place is part of it). */
   writeUrl: () => void;
   /** A card opened: the "tap the map" hint has done its job. */
   onCard: () => void;
+  /** The favourites' names, in list order, for the where-to-live card. */
+  favouriteLabels: () => string[];
 }
 
 export function initTap(deps: TapDeps, initial: Point | null) {
@@ -44,7 +48,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   /** Where "Hier starten", "2. Start" and "Merken" act: the place, or the address it snapped to. */
   let pending: Point | null = null;
   let tripId = 0;
-  let removeWhich: 1 | 2 = 1;
+  let removeWhich = 0;
 
   const spotEl = document.createElement('div');
   spotEl.className = 'spot-marker';
@@ -82,16 +86,20 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       html =
         t('stationFreq', { name: escapeHtml(p.name), n: p.perHour }) +
         (p.lines ? `<small>${escapeHtml(p.lines)}</small>` : '');
-    } else if (!state.origin && !(state.desert && data)) {
+    } else if (!state.origin && !state.living && !(state.desert && data)) {
       setSpot(null);
       deps.setOrigin({ lat, lon: lng });
       return;
     } else {
       const r = state.result;
-      const secs = r && state.origin ? gridSeconds(r, lat, lng) : NaN;
+      const secs = r && (state.origin || state.living) ? gridSeconds(r, lat, lng) : NaN;
       const parts: string[] = [];
       let tripSlot = '';
-      if (secs >= 0 && r?.compare) {
+      if (secs >= 0 && r?.living)
+        parts.push(
+          secs < Infinity ? t('livingScore', { n: Math.round(secs / 60) }) : t('unreachable'),
+        );
+      else if (secs >= 0 && r?.compare) {
         const b = gridSeconds(r, lat, lng, r.compare);
         const fmt = (v: number) => (v < Infinity ? String(Math.round(v / 60)) : '–');
         const d = Math.round(b / 60) - Math.round(secs / 60);
@@ -105,8 +113,11 @@ export function initTap(deps: TapDeps, initial: Point | null) {
         );
       } else if (secs === Infinity) parts.push(t('unreachable'));
       else if (secs >= 0 && r?.each) {
-        const [a, b] = r.each.map((v) => gridSeconds(r, lat, lng, v) / 60);
-        parts.push(t('minutesBoth', { a: Math.round(a), b: Math.round(b) }));
+        const each = r.each.map((v, i) => {
+          const s = gridSeconds(r, lat, lng, v);
+          return `<i class="p${i + 1}"></i>${s < Infinity ? Math.round(s / 60) : '–'}`;
+        });
+        parts.push(`<b>${each.join(' · ')} ${t('min')}</b>`);
         if (r.extraBase !== undefined)
           parts.push(
             `<small>${t('extraMinutes', { n: Math.max(0, Math.round((secs - r.extraBase) / 60)) })}</small>`,
@@ -123,10 +134,15 @@ export function initTap(deps: TapDeps, initial: Point | null) {
           );
         }
       }
-      // The connection itself arrives from the worker a moment later.
+      // The connection itself (or, on the where-to-live map, the minutes to each favourite)
+      // arrives from the worker a moment later.
       if (secs < Infinity && r) {
         tripId++;
-        send({ type: 'trip', id: tripId, lat, lon: lng });
+        send(
+          r.living
+            ? { type: 'livingAt', id: tripId, map: r.id, lat, lon: lng }
+            : { type: 'trip', id: tripId, lat, lon: lng },
+        );
         tripSlot = '<span id="trip" class="trip"></span>';
       }
       if (state.desert && data) {
@@ -141,7 +157,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (title) html = `<b class="spot-name">${escapeHtml(title)}</b>${html}`;
     showCard(html, false, searched);
     pending = { lat, lon: lng };
-    secondBtn.hidden = !state.origin;
+    const count = state.origin ? 1 + state.others.length : 0;
+    secondBtn.hidden = !count || count >= MAX_STARTS || state.living;
+    secondBtn.textContent = t('secondHere', { n: count + 1 });
     if (!title && map.getZoom() >= 15) void showAddress(pending);
     deps.onCard();
   }
@@ -179,11 +197,11 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     readout.hidden = false;
   }
 
-  function showStartCard(which: 1 | 2) {
+  function showStartCard(i: number) {
     hideReadout();
-    removeWhich = which;
-    const mark = state.second ? `<i class="p${which}"></i>` : '';
-    showCard(`${mark}<b>${t(which === 1 ? 'startPoint' : 'secondPoint')}</b>`, true);
+    removeWhich = i;
+    const mark = state.others.length ? `<i class="p${i + 1}"></i>` : '';
+    showCard(`${mark}<b>${i ? t('secondPoint', { n: i + 1 }) : t('startPoint')}</b>`, true);
     deps.onCard();
   }
 
@@ -216,9 +234,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
 
   /** Redraws the place's card now, for a change that needs no new map (language, layers). */
   function redrawSpot() {
-    if (!spot || (!state.origin && !state.desert)) return hideReadout();
+    if (!spot || (!state.origin && !state.living && !state.desert)) return hideReadout();
     // Without a map yet, the coming one redraws it.
-    if (state.result || !state.origin)
+    if (state.result || (!state.origin && !state.living))
       tapAt(spot.lat, spot.lon, undefined, spot.title, spot.searched);
   }
 
@@ -244,12 +262,23 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const el = document.getElementById('trip');
     if (!el) return;
     el.innerHTML = tripHtml(m, {
-      starts: [state.origin, state.second],
+      starts: [state.origin, ...state.others],
       here: pending,
       direction: state.direction,
       travel: state.travel,
     });
     setTrip(m);
+  }
+
+  /** Where-to-live map: the minutes from the tapped place to each favourite. */
+  function onLiving(m: { id: number; minutes: (number | null)[] }) {
+    if (m.id !== tripId || readout.hidden) return;
+    const el = document.getElementById('trip');
+    if (!el) return;
+    const labels = deps.favouriteLabels();
+    el.innerHTML = `<small class="trip-stops">${m.minutes
+      .map((n, i) => `${escapeHtml(labels[i] ?? '')} ${n ?? '–'} ${t('min')}`)
+      .join(' · ')}</small>`;
   }
 
   // The place becomes a start, so it no longer stays as the destination.
@@ -261,7 +290,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   secondBtn.addEventListener('click', () => {
     const at = pending;
     hideReadout();
-    if (at) deps.setSecond(at);
+    if (at) deps.addStart(at);
   });
   $('readout-fav').addEventListener('click', () => {
     const at = pending;
@@ -280,6 +309,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     redrawSpot,
     onResult,
     onTrip,
+    onLiving,
     /** The place kept in the link. */
     spot: (): Point | null => spot,
   };

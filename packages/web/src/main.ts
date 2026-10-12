@@ -5,7 +5,7 @@
 import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import { listen, send } from './boot';
 import { BAND_COLORS, BAND_EDGES_MIN, DIFF_COLORS, DIFF_EDGES_MIN, bandLabel } from './colors';
-import { formatDate, gridSeconds, shortStop, stopName, escapeHtml } from './format';
+import { formatDate, gridSeconds, shortStop, stopName, escapeHtml, whenText } from './format';
 import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import {
   loadFavourites,
@@ -38,7 +38,7 @@ import {
 import { initMenu } from './menu';
 import { $, createState, NOW_WHEN, remember, seen, type Result } from './state';
 import { initTap } from './tap';
-import { linkQuery, readLink, type Point } from './url';
+import { linkQuery, MAX_STARTS, readLink, type Point } from './url';
 import { computeWindow, desertThresholds, leaveOffset, windowName } from './when';
 import { initWhenSheet } from './when-sheet';
 import type { FromWorker } from './protocol';
@@ -64,8 +64,8 @@ const installBtn = $<HTMLButtonElement>('install-btn');
 const state = createState();
 const link = readLink(location.search, { ...state, to: null });
 Object.assign(state, link, { window: windowName(link.when) });
-// A meeting-point link on Typisch goes back to "Nächste" without the second start.
-if (state.second && state.measure === 'typical') state.measureBefore = 'next';
+// A meeting-point link on Typisch goes back to "Nächste" without the other starts.
+if (state.others.length && state.measure === 'typical') state.measureBefore = 'next';
 const urlLang = new URLSearchParams(location.search).get('lang');
 setLang(initialLang(location.search, readStoredLang()), false);
 /** Layer windows already asked of the worker. */
@@ -157,11 +157,20 @@ listen((ev: MessageEvent<FromWorker>) => {
     state.info[m.info.window] = m.info;
     if (m.info.window === computedWindow()) loadbar.hidden = true;
     renderFeedInfo();
+  } else if (m.type === 'livingProgress') {
+    if (m.id !== state.requestId) return;
+    loadbar.classList.remove('indeterminate');
+    (loadbar.firstElementChild as HTMLElement).style.width = `${(100 * m.done) / m.total}%`;
+    const i = Math.min(m.done + 1, m.total);
+    setStatus(() => t('livingProgress', { i, n: m.total }));
+  } else if (m.type === 'livingAt') {
+    tap.onLiving(m);
   } else if (m.type === 'walk') {
     // Footpaths arrived: redo what was computed with straight-line walks.
     redoWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
+    if (m.living) living.done(m);
     state.result = m;
     showResult(m);
     tap.onResult();
@@ -190,10 +199,11 @@ function renderFeedInfo() {
 
 /** Recomputes the map and the walk-based layers, e.g. after a walking-speed change. */
 function redoWalks() {
+  living.forget();
   state.layers = {};
   layersRequested.clear();
   showLayers();
-  if (state.origin) tap.keepSpot();
+  if (state.origin || state.living) tap.keepSpot();
   compute();
 }
 
@@ -201,6 +211,7 @@ function redoWalks() {
 const computedWindow = () => computeWindow(state.when, state.direction);
 
 function compute() {
+  if (state.living) return living.compute();
   if (!state.origin) return;
   state.requestId++;
   loadbar.hidden = false;
@@ -218,7 +229,7 @@ function compute() {
     ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
     ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
-    ...(state.second ? { second: state.second } : {}),
+    ...(state.others.length ? { others: state.others } : {}),
   });
 }
 
@@ -246,71 +257,47 @@ const map = new maplibregl.Map({
 });
 map.touchZoomRotate.disableRotation();
 
-const markerEl = document.createElement('div');
-markerEl.className = 'origin-marker';
-const marker = new maplibregl.Marker({ element: markerEl, draggable: true });
-marker.on('dragend', () => {
-  const { lat, lng } = marker.getLngLat();
-  setOrigin({ lat, lon: lng });
-});
-
-const marker2El = document.createElement('div');
-marker2El.className = 'origin-marker second';
-const marker2 = new maplibregl.Marker({ element: marker2El, draggable: true });
-marker2.on('dragend', () => {
-  const { lat, lng } = marker2.getLngLat();
-  setSecond({ lat, lon: lng });
-});
-
-// Tapping a start marker offers to remove it; a drag must not count as that tap.
+// Start markers: the first, and up to four more for a meeting point, each in its colour.
+// Dragging one moves that start; tapping it offers to remove it (a drag is not a tap).
+const startMarkers: maplibregl.Marker[] = [];
 let draggedAt = 0;
-for (const [m, el, which] of [
-  [marker, markerEl, 1],
-  [marker2, marker2El, 2],
-] as const) {
+function startMarker(i: number): maplibregl.Marker {
+  const have = startMarkers[i];
+  if (have) return have;
+  const el = document.createElement('div');
+  el.className = `origin-marker p${i + 1}`;
+  const m = new maplibregl.Marker({ element: el, draggable: true });
   m.on('dragstart', () => (draggedAt = Date.now()));
-  m.on('dragend', () => (draggedAt = Date.now()));
+  m.on('dragend', () => {
+    draggedAt = Date.now();
+    const { lat, lng } = m.getLngLat();
+    moveStart(i, { lat, lon: lng });
+  });
   el.addEventListener('click', (e) => {
     e.stopPropagation();
     if (Date.now() - draggedAt < 400) return;
-    tap.showStartCard(which);
+    tap.showStartCard(i);
   });
+  return (startMarkers[i] = m);
 }
+
+/** All starts: the first, then the meeting point's others. */
+const starts = (): Point[] => (state.origin ? [state.origin, ...state.others] : []);
 
 function showOrigin() {
-  if (!state.origin) {
-    marker.remove();
-    marker2.remove();
-    meetChip.hidden = true;
-    hint.hidden = !$('search').hidden;
-    return;
-  }
-  marker.setLngLat([state.origin.lon, state.origin.lat]).addTo(map);
-  if (state.second) marker2.setLngLat([state.second.lon, state.second.lat]).addTo(map);
-  else marker2.remove();
-  meetChip.hidden = !state.second;
-  hint.hidden = true;
+  const list = starts();
+  startMarkers.forEach((m, i) => i >= list.length && m.remove());
+  list.forEach((p, i) => startMarker(i).setLngLat([p.lon, p.lat]).addTo(map));
+  meetChip.hidden = list.length < 2;
+  hint.hidden = list.length > 0 || state.living || !$('search').hidden;
 }
 
-function setOrigin(p: Point) {
-  state.origin = p;
-  showOrigin();
-  tap.keepSpot();
-  writeUrl();
-  compute();
-}
-
-/** Removes a start; without the first, the second (if any) becomes the start. */
-function removeStart(which: 1 | 2) {
-  if (which === 1) {
-    state.origin = state.second;
-    state.second = null;
-  } else state.second = null;
-  // Back to the choice before the meeting point, unless one was made since.
-  if (state.measureBefore) {
-    state.measure = state.measureBefore;
-    state.measureBefore = null;
-    whenSheet.renderWhen();
+/** The starts changed: markers, the tapped place, the link and the map follow. */
+function startsChanged() {
+  // Setting a start leaves the where-to-live map for the start's own map.
+  if (state.living) {
+    state.living = false;
+    living.render();
   }
   showOrigin();
   if (state.origin) tap.keepSpot();
@@ -318,6 +305,37 @@ function removeStart(which: 1 | 2) {
   writeUrl();
   if (state.origin) compute();
   else clearResult();
+}
+
+function setOrigin(p: Point) {
+  state.origin = p;
+  startsChanged();
+}
+
+/** Moves start i (0 = the first) to p. */
+function moveStart(i: number, p: Point) {
+  if (i === 0) state.origin = p;
+  else state.others[i - 1] = p;
+  startsChanged();
+}
+
+/** Removes start i; without the first, the next one becomes the start. */
+function removeStart(i: number) {
+  const list = starts();
+  list.splice(i, 1);
+  setStarts(list);
+}
+
+function setStarts(list: Point[]) {
+  state.origin = list[0] ?? null;
+  state.others = list.slice(1);
+  // Back to the choice before the meeting point, unless one was made since.
+  if (!state.others.length && state.measureBefore) {
+    state.measure = state.measureBefore;
+    state.measureBefore = null;
+    whenSheet.renderWhen();
+  }
+  startsChanged();
 }
 
 /** No start: drop the colours, lines and outlines. */
@@ -336,20 +354,20 @@ function clearResult() {
     (map.getSource(id) as GeoJSONSource | undefined)?.setData(empty);
 }
 
-/** Meeting point on (a second start) or off (null). */
-function setSecond(p: { lat: number; lon: number } | null) {
+/** Meeting point: one more start, up to MAX_STARTS. */
+function addStart(p: Point) {
+  if (!state.origin || starts().length >= MAX_STARTS) return;
   // A meeting point compares on Typisch; the choice before comes back without it.
-  if (p && !state.second && state.measure !== 'typical') {
+  if (!state.others.length && state.measure !== 'typical') {
     state.measureBefore = state.measure;
     state.measure = 'typical';
     whenSheet.renderWhen();
   }
-  state.second = p;
-  showOrigin();
-  tap.keepSpot();
-  writeUrl();
-  compute();
+  state.others = [...state.others, p];
+  startsChanged();
 }
+// The banner's ✕ ends the meeting point: only the first start stays.
+$('meet-close').addEventListener('click', () => setStarts(starts().slice(0, 1)));
 
 map.on('load', () => {
   state.mapReady = true;
@@ -413,7 +431,7 @@ function renderLayerLegend() {
 
 // ---------- suggested meeting points ----------
 let meetMarkers: maplibregl.Marker[] = [];
-/** Pins for the suggested meeting points; a tap shows both trips there. */
+/** Pins for the suggested meeting points; a tap shows everyone's trip there. */
 function renderMeet(list: Result['meet']) {
   for (const m of meetMarkers) m.remove();
   meetMarkers = (list ?? []).map((s, i) => {
@@ -421,7 +439,7 @@ function renderMeet(list: Result['meet']) {
     el.type = 'button';
     el.className = 'meet-marker';
     el.innerHTML = `<i>${i + 1}</i><span>${escapeHtml(shortStop(s.name))}</span>`;
-    el.title = t('meetSuggestion', { name: stopName(s.name), a: s.a, b: s.b });
+    el.title = t('meetSuggestion', { name: stopName(s.name), list: s.mins.join(' · ') });
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       tap.tapAt(s.lat, s.lon, undefined, stopName(s.name));
@@ -615,7 +633,7 @@ function openSearch() {
 }
 function closeSearch() {
   searchPanel.hidden = true;
-  hint.hidden = !!state.origin;
+  hint.hidden = !!state.origin || state.living;
   searchAbort?.abort();
   clearTimeout(searchTimer);
   searchInput.blur();
@@ -723,7 +741,7 @@ function pickPlace(p: Place) {
   }
   searchInput.value = p.label;
   map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
-  // With a start set, the place may be a new start, a destination or a second start:
+  // With a start set, the place may be a new start, a destination or another start:
   // show the trip there, with buttons for the other two.
   if (state.origin && state.result) tap.tapAt(p.lat, p.lon, undefined, p.label, true);
   else setOrigin(p);
@@ -757,14 +775,101 @@ function addFavourites(places: { label: string; lat: number; lon: number }[]) {
       weight: 2 as Weight,
     })),
   ];
-  saveFavourites(favourites);
-  renderFavourites();
+  favouritesChanged();
 }
 
 function favouriteTimes() {
   const r = state.result;
-  return r && state.origin ? score(favourites, (lat, lon) => gridSeconds(r, lat, lon)) : null;
+  return r && state.origin && !r.living
+    ? score(favourites, (lat, lon) => gridSeconds(r, lat, lon))
+    : null;
 }
+
+/** The list changed: save it, redraw it, and redo the where-to-live map if it is shown. */
+function favouritesChanged() {
+  saveFavourites(favourites);
+  renderFavourites();
+  if (state.living) compute();
+}
+
+// ---------- "where can I live?" map ----------
+// Shades the whole map by the weighted average to the favourite places, arriving in the
+// chosen hour. It takes a few seconds (one pass per place), so it runs only on request,
+// with progress, and the last one is kept until the places or settings change.
+const living = (() => {
+  const chip = $('living');
+  let last: { key: string; result: Result } | null = null;
+  let pending = '';
+
+  function render() {
+    chip.hidden = !state.living;
+    document.body.classList.toggle('living', state.living);
+    // The "tap the map or search a start" hint would sit on the banner.
+    hint.hidden = state.living || !!state.origin || !$('search').hidden;
+    $('living-text').textContent = t('living', {
+      count: favourites.length,
+      when: whenText(state.when, 'arrive'),
+    });
+  }
+
+  function compute() {
+    if (!favourites.length) return show(false);
+    const req = {
+      window: computeWindow(state.when, 'arrive'),
+      places: favourites.map((f) => ({ lat: f.lat, lon: f.lon, weight: f.weight })),
+      walkKmh: state.walkKmh,
+      ...(state.stepFree ? { stepFree: true } : {}),
+      ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
+    };
+    const key = JSON.stringify(req);
+    render();
+    state.requestId++;
+    if (last?.key === key) {
+      state.result = last.result;
+      showResult(last.result);
+      tap.onResult();
+      loadbar.hidden = true;
+      return;
+    }
+    pending = key;
+    loadbar.hidden = false;
+    loadbar.classList.remove('indeterminate');
+    (loadbar.firstElementChild as HTMLElement).style.width = '0%';
+    setStatus(() => t('livingProgress', { i: 1, n: req.places.length }));
+    send({ type: 'living', id: state.requestId, ...req });
+  }
+
+  /** Turns the map on (computing it) or off (back to the start's map, if any). */
+  function show(on: boolean) {
+    if (on === state.living) return;
+    state.living = on;
+    render();
+    if (on) {
+      tap.hideReadout();
+      compute();
+    } else if (state.origin) {
+      tap.keepSpot();
+      compute();
+    } else {
+      tap.hideReadout();
+      clearResult();
+    }
+  }
+
+  chip.querySelector('button')!.addEventListener('click', () => show(false));
+  $('fav-living').addEventListener('click', () => {
+    menu.close();
+    show(true);
+  });
+  return {
+    compute,
+    show,
+    render,
+    done: (result: Result) => (last = { key: pending, result }),
+    /** The footpaths arrived: the next map is better than the kept one. */
+    forget: () => (last = null),
+  };
+})();
 
 /** Redraws the list in the menu, the star markers on the map and the score chip. */
 function renderFavourites() {
@@ -790,8 +895,7 @@ function renderFavourites() {
       }
       weight.addEventListener('change', () => {
         f.weight = Number(weight.value) as Weight;
-        saveFavourites(favourites);
-        renderFavourites();
+        favouritesChanged();
       });
       const del = document.createElement('button');
       del.type = 'button';
@@ -800,14 +904,14 @@ function renderFavourites() {
       del.setAttribute('aria-label', t('favRemove', { name: f.label }));
       del.addEventListener('click', () => {
         favourites = favourites.filter((x) => x !== f);
-        saveFavourites(favourites);
-        renderFavourites();
+        favouritesChanged();
       });
       li.append(name, min, weight, del);
       return li;
     }),
   );
   $('fav-empty').hidden = favourites.length > 0;
+  $('fav-living').hidden = $('fav-living-help').hidden = favourites.length === 0;
   $('fav-export').hidden = favourites.length === 0;
 
   const keep = new Set(favourites.map((f) => f.id));
@@ -899,7 +1003,7 @@ const tap = initTap(
     state,
     send,
     setOrigin,
-    setSecond,
+    addStart,
     removeStart,
     addFavourite: async (at) => {
       let label = `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`;
@@ -914,6 +1018,7 @@ const tap = initTap(
     onCard: () => {
       if (tipKey === 'tap') hideTip();
     },
+    favouriteLabels: () => favourites.map((f) => f.label),
   },
   link.to,
 );
@@ -922,12 +1027,12 @@ const whenSheet = initWhenSheet({
   state,
   closeSearch,
   changed: () => {
-    if (state.origin) tap.keepSpot();
+    if (state.origin || state.living) tap.keepSpot();
     else tap.hideReadout();
     renderFeedInfo();
     writeUrl();
     showLayers();
-    if (state.origin) compute();
+    if (state.origin || state.living) compute();
     else send({ type: 'load', window: computedWindow() });
   },
 });
@@ -962,6 +1067,7 @@ const menu = initMenu({
     renderFavourites();
     whenSheet.renderWhen();
     renderTip();
+    living.render();
     statusEl.textContent = state.status();
     tap.redrawSpot();
     searchCache.clear();

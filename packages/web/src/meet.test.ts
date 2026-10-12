@@ -10,7 +10,7 @@ const at = (name: string, kmEast: number) => ({
 describe('suggestMeetingPoints', () => {
   it('picks the smallest slower-of-both time, then the smallest sum', () => {
     const c = [at('A', 0), at('B', 5), at('C', 10)];
-    const t: [number, number][] = [
+    const t: number[][] = [
       [600, 1200], // max 20
       [900, 900], // max 15, sum 30
       [600, 900], // max 15, sum 25
@@ -20,7 +20,7 @@ describe('suggestMeetingPoints', () => {
 
   it('spreads suggestions out and skips unreachable places', () => {
     const c = [at('A', 0), at('A2', 0.5), at('B', 3), at('X', 6)];
-    const t: [number, number][] = [
+    const t: number[][] = [
       [600, 600],
       [600, 660],
       [900, 900],
@@ -28,6 +28,15 @@ describe('suggestMeetingPoints', () => {
     ];
     const s = suggestMeetingPoints(c, (i) => t[i]);
     expect(s.map((x) => x.name)).toEqual(['A', 'B']);
-    expect(s[0]).toMatchObject({ a: 10, b: 10 });
+    expect(s[0]).toMatchObject({ mins: [10, 10] });
+  });
+
+  it('weighs everyone with three or more starts', () => {
+    const c = [at('A', 0), at('B', 5)];
+    const t = [
+      [300, 300, 1500], // max 25
+      [900, 900, 900], // max 15
+    ];
+    expect(suggestMeetingPoints(c, (i) => t[i]).map((s) => s.name)).toEqual(['B', 'A']);
   });
 });
