@@ -4,20 +4,19 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #183. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #187. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build, after PR #185 and not before 23:18 UTC.
-2. **Next:** Start point or destination switch (group 6)
-3. "Bis N Min." view as an optional switch (D1, group 15)
-4. Faster first load and no stale work (B4 + B5, group 15)
-5. Lighter work per tap (B6, group 15)
-6. Smaller Wohnlage-Karte memory (B7, group 15)
-7. Typical timetable when offline (B8, group 15)
-8. Notice, search and favourites polish (C5–C8, group 15)
-9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-10. Default view readability: two variants to compare (C9, group 15)
-11. Named starts in meeting mode (D2, group 15)
-12. Code health, no change in behaviour (E1, group 15)
+2. **Next:** "Bis N Min." view as an optional switch (D1, group 15)
+3. Faster first load and no stale work (B4 + B5, group 15)
+4. Lighter work per tap (B6, group 15)
+5. Smaller Wohnlage-Karte memory (B7, group 15)
+6. Typical timetable when offline (B8, group 15)
+7. Notice, search and favourites polish (C5–C8, group 15)
+8. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+9. Default view readability: two variants to compare (C9, group 15)
+10. Named starts in meeting mode (D2, group 15)
+11. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -109,10 +108,7 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 - **"Bis wann komme ich heim?": the last connection home (C3)**: Done (PR #66): from the start card (🌙 Bis wann heim?) or a favourite's 🌙, the map colours every place by the latest departure that still gets you home fast, over the evening and night ….
 - **Remove the Google Maps links**: Done (PR #145): the trip card has no Google Maps link anymore, and the vs-Google sharepic no longer mentions one.
 - **Real arrival times at stops**: Done (PR #183): the timetable file (format v2) stores per-stop dwell, so getting off uses the arrival time and boarding the departure; +0.8 % gzipped, routing speed unchanged; 6 of the 20 connection-test trips arrive 1–5 min earlier; taps 0.39–0.46 s live.
-
-### Start point or destination switch
-
-Hendrik, 2026-10-12: "I want a switch that switches between the first set location to either be start or end point of the connections shown when i tap on other locations". A clearly visible switch decides whether the set place is where trips start ("Von hier") or where they end ("Hierher"). Tapping another place then shows the trip from the set place to it, or from it to the set place, and the map colours follow the same direction. The reverse direction already exists as "Ankommen" (`dir=arr`, PR #24), so this builds on it rather than adding a new kind of map; the builder decides with the redesigned time panel (A) where the switch sits so it isn't a second, competing Losfahren/Ankommen control. Kept in the link. Snappiness rule: switching direction and tapping stay as fast as now.
+- **Start point or destination switch**: Done (PR #187): a "Start ⇄ Ziel" pill on the trip card (EN "Start ⇄ End") with the set place's current role in bold; it drives the same direction as Losfahren/Ankommen (`dir=arr` kept in the link); taps 240–320 ms, switch 0.8–1.2 s live.
 
 ### Shorter platform changes
 
