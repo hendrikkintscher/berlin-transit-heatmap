@@ -333,6 +333,21 @@ dialog form button {
   border: 5px solid var(--accent);
   box-shadow: var(--shadow);
 }
+/* The tapped place: a small dark dot that stays while settings change. */
+.spot-marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1d1530;
+  border: 3px solid #fff;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+/* While a new map is computed, the place's old minutes and trip fade. */
+#readout.stale #readout-text {
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
 /* The (i) attribution floats just above the bottom panel (--bottom-h is set in main.ts). */
 .maplibregl-ctrl-bottom-right,
 .maplibregl-ctrl-bottom-left {
