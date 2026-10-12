@@ -4,12 +4,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #135. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #139. Build in this order, one step per PR:
 
-1. **Next:** Time-line widths closer together (group 12)
-2. Fix: street names in every search box, from a built-in street list (group 1)
+1. **Next:** Fix: street names in every search box, from a built-in street list (group 1)
 
-Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
+From Hendrik on 2026-10-12, to be built now. After it, Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -685,6 +684,8 @@ Hendrik, 2026-10-12: option B from the clean-map mockups (plan files under web/c
 Notes: paint only, URL parameters unchanged; check at 360×740 in German and English and keep the flicker-free first view. Small effort.
 
 ### Time-line widths closer together
+
+**Done** (PR #139): the 30/60/90-minute lines are now 4.5 to 6.5 wide and the 10-minute steps 4 to 6.
 
 Hendrik, 2026-10-12, after PR #135: the 30-minute lines can be a bit thinner and the 10-minute step lines a bit thicker; the difference doesn't need to be that big.
 
