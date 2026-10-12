@@ -1,14 +1,17 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–9 are done. Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–9 are done apart from two fixes added later (groups 6 and 7). Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
 State on 2026-10-11, live through PR #47. Build in this order, one step per PR:
 
 1. **Next:** Smaller, faster first load (group 10)
-2. Android app, starting with a TWA (group 11)
-3. Ersatzverkehr and other temporary changes (group 12)
+2. The tapped place stays when settings change (group 6)
+3. Calmer street level: footpaths next to streets (group 7)
+4. UI overhaul (group 13), once Hendrik has picked one of the three design options
+5. Android app, starting with a TWA (group 11)
+6. Ersatzverkehr and other temporary changes (group 12)
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -247,6 +250,12 @@ Colour each place by how much longer the trip takes at one time than another, fo
 
 Notes: both grids already come from the same router; needs a second time choice in the picker and a diverging colour scale.
 
+### The tapped place stays when settings change
+
+Today a tapped place (the destination whose minutes and trip are shown in the info box) disappears as soon as a setting changes: another hour, Typisch/Bestfall/Nächste, Losfahren/Ankommen, Unterwegs, Stufenlos, Gehtempo, or a moved start. It should stay: the marker remains, and the minutes and the drawn trip recompute for the new setting, so you can compare settings for the same place without tapping it again. Only the ✕ or a new tap removes it. The second start (meeting point) already stays and is kept in the link; the tapped place could be kept in the link too (`to=lat,lon`).
+
+Notes: every settings change calls hideReadout() in main.ts, which drops the tapped place; instead keep the point and re-run the trip request once the new grid is ready. One trip per change, so no cost to speed. Small effort; added from Hendrik's request on 2026-10-11.
+
 ## 7. Reading the map
 
 From Hendrik's review of group 6: the tapped route looks too much like the Lines layer, the colours still hide too much of the base map to tell which part of Berlin you are looking at, and at street level it should be easy to pick an exact street or address. These continue the blending work from group 5. Each is small to medium and helps every visit, so they come before the footpath work. Order: smallest and most visible first.
@@ -290,6 +299,12 @@ Small to medium.
 ### Shorter tap info
 
 **Done** (with group 8): the info window shows just the minutes. The measure and time ("typisch, Werktag 10–11 Uhr") are already in the top bar, so Hendrik had them removed from the tap readout.
+
+### Calmer street level: footpaths next to streets
+
+At the closest zoom levels the basemap also draws footpaths, many of them sidewalks mapped as separate lines right next to each street, so streets look doubled and the map gets busy. Find a calmer look: hide paths that run alongside a street (OSM sidewalks, `footway=sidewalk`) and keep paths that go where streets don't (through parks, across squares, between blocks), or draw all paths much fainter and thinner than streets. A walk shown for a tapped trip stays fully visible either way.
+
+Notes: this is the basemap style (Positron vector tiles), not the walking data; check which path layers and attributes the tiles carry, and compare the options at zoom 16–18 on the phone. No cost to speed. Small effort; added from Hendrik's request on 2026-10-11.
 
 ## 8. Realistic walking on real footpaths
 
@@ -374,3 +389,11 @@ Today the build picks one reference weekday and one Saturday from the monthly VB
 - **"Diese Woche" as a second timetable:** offer the current week's actual service as an extra time option next to the typical one. Reuses the hourly files and the compare view; downloads only when chosen.
 
 Notes: VBB's static GTFS already contains planned Ersatzverkehr as normal trips; there is no open real-time feed, so live disruptions are out of scope. All options keep the work in the build, in line with the ground rule above.
+
+## 13. UI overhaul
+
+### Bring all the features together in one clear interface
+
+Many features have been added one by one (time sheet, Unterwegs, Stufenlos, layers, meeting point, favourites, compare, outlines, share), and they are now spread across the top bar, the menu and the time sheet. Rework the interface so they are organised meaningfully: the everyday controls at hand, the rest easy to find, and the map kept as clear as possible on a phone.
+
+Status: three design options are being made and rendered for Hendrik to choose from (thread "UI overhaul options"). This item is built once he has picked one; the details here will be filled in from his choice. Large effort; the snappiness rule applies to every option. Added from Hendrik's request on 2026-10-11.
