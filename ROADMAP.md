@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked Done are live and kept as one line each; their full write-ups are in archive/plan/roadmap-full-2026-10-12.md (project files). Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and other regions, group 14 the Android app, postponed with no date (Hendrik, 2026-10-12), and group 16 app store releases and showcase material, not started. Items from the second suggestions list (archive/plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked Done are live and kept as one line each; their full write-ups are in archive/plan/roadmap-full-2026-10-12.md (project files). Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and other regions, group 14 the Android app, postponed with no date (Hendrik, 2026-10-12), group 16 app store releases and showcase material, not started, and group 17 the review track. Items from the second suggestions list (archive/plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
@@ -19,6 +19,8 @@ State on 2026-10-12, live through PR #187. Build in this order, one step per PR:
 11. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+
+**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
 
 **Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
 
@@ -333,3 +335,12 @@ Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existi
 
 - **Android and iOS app store deployment**: publish the app in Google Play and the Apple App Store. For Android, the options and ways to ship in group 14 apply (TWA first, then Capacitor if needed). For iOS, a wrapper such as Capacitor would be needed. Apple requires a paid developer account (99 USD a year) and app review. Group 14's "postponed" note still stands until Hendrik starts this step.
 - **Showcase material**: material that presents the app, such as screenshots, the sharepics (see the sharepic notes in project memory) and a comparison with existing travel-time maps. Scope is set when Hendrik picks the step.
+
+## 17. Review track
+
+Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Not started.
+
+- **UI intuitiveness**: check where the interface is intuitive and where it is not, and what could be handled more smartly or more obviously.
+- **Visual consistency**: check map elements, colours, layout, symbols and text for consistency.
+- **Code and runtime optimisations**: look for code and runtime improvements (the snappiness rule applies).
+- **Docs and chats cleanup**: check documents and chats, archive resolved issues and implemented features, and remove redundancies. Goal: a smaller context window.
