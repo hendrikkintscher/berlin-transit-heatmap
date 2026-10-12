@@ -4,14 +4,13 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #78. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #81. Build in this order, one step per PR:
 
-1. **Next:** Outlines view: dashed lines, more labels, clearer gradient, no legend (group 7)
-2. Tap card: leave in X min, arrival time, trip duration (group 6)
-3. What's different today: notice of affected lines (group 11)
-4. Live disruptions as text (group 11)
-5. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-6. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Tap card: leave in X min, arrival time, trip duration (group 6)
+2. What's different today: notice of affected lines (group 11)
+3. Live disruptions as text (group 11)
+4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+5. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -377,6 +376,8 @@ Hendrik's feedback on PR #71 (2026-10-12): starting with only the outlines is ri
 With "Farben (Heatmap)" on, the colours and their outlines stay as they are. The legend in the outlines-only view shows the same single-hue 10-minute steps. Small effort; no routing change.
 
 ### Outlines view: dashed lines, more labels, clearer gradient, no legend
+
+**Done** (PR #81): with the colour fill off, the 10-minute outlines are dashed, their minutes repeat about twice as often, the single hue runs from near-black purple to pale lilac, and the colour legend is hidden. With the fill on, and on the home map, nothing changes.
 
 Hendrik's second round of feedback on the outlines-only view (PR #76, 2026-10-12):
 
