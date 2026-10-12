@@ -91,18 +91,22 @@ export function toPlaces(features: PhotonFeature[], query = ''): Place[] {
 }
 
 /**
- * The houses of a picked street that match the typed number, in its postcode: the second
- * step of the staged address search (street, then house number).
+ * The houses of a picked street that match the typed number, in its postcode (or, without
+ * one, near the street's point `at`): the second step of the staged address search (street,
+ * then house number).
  */
 export function streetHouses(
   places: Place[],
   street: { name: string; postcode?: string },
+  at?: { lat: number; lon: number },
 ): Place[] {
   return places.filter(
     (p) =>
       !p.street &&
       p.label.startsWith(`${street.name} `) &&
-      (!street.postcode || p.detail.includes(street.postcode)),
+      (street.postcode
+        ? p.detail.includes(street.postcode)
+        : !at || (Math.abs(p.lat - at.lat) < 0.02 && Math.abs(p.lon - at.lon) < 0.03)),
   );
 }
 
