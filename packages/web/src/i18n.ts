@@ -29,7 +29,7 @@ const de = {
   legendExtra: 'Legende: Minuten mehr als am besten Treffpunkt',
   close: 'Schließen',
   aboutHow:
-    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen, gemessen auf echten Straßen und Wegen mit 4 km/h (im Menü einstellbar): 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin. Tippe auf einen Startpunkt, um ihn zu entfernen.',
+    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Farben zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen, gemessen auf echten Straßen und Wegen mit 5 km/h (im Menü einstellbar): 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin. Tippe auf einen Startpunkt, um ihn zu entfernen.',
   aboutLines:
     '<b>Linien</b> zeigt die Abschnitte von S-Bahn, U-Bahn, Tram und Bus, auf die die schnellsten Fahrten von deinem Startpunkt angewiesen sind. Je dicker die Linie, desto mehr der Karte erreichst du darüber. Tippe auf eine Linie, um ihren Namen zu sehen.',
   aboutWindows:
@@ -272,7 +272,7 @@ const en: Record<Key, string> = {
   legendExtra: 'Legend: minutes more than at the best meeting spot',
   close: 'Close',
   aboutHow:
-    'Tap anywhere or search for an address to set a starting point. Colours show the public-transport travel time to each spot, including walking to and from stops, measured along real streets and paths at 4 km/h (adjustable in the menu): 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there. Tap a starting point to remove it.',
+    'Tap anywhere or search for an address to set a starting point. Colours show the public-transport travel time to each spot, including walking to and from stops, measured along real streets and paths at 5 km/h (adjustable in the menu): 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there. Tap a starting point to remove it.',
   aboutLines:
     '<b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from your starting point rely on. The thicker the line, the more of the map is reached over it. Tap a line to see its name.',
   aboutWindows:

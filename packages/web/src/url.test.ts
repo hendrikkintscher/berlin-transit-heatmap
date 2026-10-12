@@ -10,7 +10,7 @@ const BASE: LinkState = {
   direction: 'depart',
   measure: 'next',
   compare: null,
-  walkKmh: 4,
+  walkKmh: 5,
   stepFree: false,
   travel: 'walk',
   routes: true,
@@ -38,7 +38,7 @@ describe('links', () => {
       direction: 'arrive',
       measure: 'best',
       compare: { day: 'weekday', hour: 10 },
-      walkKmh: 5,
+      walkKmh: 4,
       stepFree: true,
       travel: 'bike',
       routes: false,
@@ -50,7 +50,7 @@ describe('links', () => {
     const q = linkQuery(full, NOW, 'en');
     expect(q).toBe(
       'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&to=52.43915%2C13.47215&t=weekend-02' +
-        '&dir=arr&m=best&cmp=weekday-10&walk=5&sf=1&go=bike&routes=0&layers=heat%2Cfreq%2Cdesert%2Cnoiso&lang=en',
+        '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=heat%2Cfreq%2Cdesert%2Cnoiso&lang=en',
     );
     expect(readLink(`?${q}`, BASE)).toEqual(full);
   });
