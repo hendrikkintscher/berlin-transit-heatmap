@@ -7,10 +7,11 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #66. Build in this order, one step per PR:
 
 1. **Next:** Wider area: Potsdam and the commuter belt (group 13)
-2. Calmer street level: footpaths next to streets (group 7)
-3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-5. Android app, starting with a TWA (group 14), always the last step
+2. Heatmap colours off by default, outlines on (group 7)
+3. Calmer street level: footpaths next to streets (group 7)
+4. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+5. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+6. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -342,6 +343,12 @@ Small to medium.
 At the closest zoom levels the basemap also draws footpaths, many of them sidewalks mapped as separate lines right next to each street, so streets look doubled and the map gets busy. Find a calmer look: hide paths that run alongside a street (OSM sidewalks, `footway=sidewalk`) and keep paths that go where streets don't (through parks, across squares, between blocks), or draw all paths much fainter and thinner than streets. A walk shown for a tapped trip stays fully visible either way.
 
 Notes: this is the basemap style (Positron vector tiles), not the walking data; check which path layers and attributes the tiles carry, and compare the options at zoom 16–18 on the phone. No cost to speed. Small effort; added from Hendrik's request on 2026-10-11.
+
+### Heatmap colours off by default
+
+The map opens without the coloured travel-time fill: the plain base map with the start, and the 5-minute outlines on, each labelled with its minutes, so the travel times still read at a glance while streets and places stay fully visible. A new "Heatmap" switch in the layers (next to Lines, outlines, stop frequency and transit deserts) turns the colours on, with the opacity slider beneath it; the choice is kept in the link (`layers=heat`). Tapping a place still shows its minutes and trip, and the legend stays as the key for the outlines.
+
+Notes: the routing is unchanged (outlines and taps need it), and drawing no colour raster is, if anything, faster on first load. Special maps (meeting point, Wohnlage-Karte, Bis wann heim?) follow the same switch. Small effort; added from Hendrik's request on 2026-10-12 ("turn heatmap off as a default"). Read as: colours off, outlines on, one tap to bring the colours back.
 
 ## 8. Realistic walking on real footpaths
 
