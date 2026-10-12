@@ -4,21 +4,20 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #174. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #183. Build in this order, one step per PR:
 
-1. **Next:** Real arrival times at stops (group 6)
-2. Shorter platform changes (group 6)
-3. Start point or destination switch (group 6)
-4. "Bis N Min." view as an optional switch (D1, group 15)
-5. Faster first load and no stale work (B4 + B5, group 15)
-6. Lighter work per tap (B6, group 15)
-7. Smaller Wohnlage-Karte memory (B7, group 15)
-8. Typical timetable when offline (B8, group 15)
-9. Notice, search and favourites polish (C5–C8, group 15)
-10. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-11. Default view readability: two variants to compare (C9, group 15)
-12. Named starts in meeting mode (D2, group 15)
-13. Code health, no change in behaviour (E1, group 15)
+1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build, after PR #185 and not before 23:18 UTC.
+2. **Next:** Start point or destination switch (group 6)
+3. "Bis N Min." view as an optional switch (D1, group 15)
+4. Faster first load and no stale work (B4 + B5, group 15)
+5. Lighter work per tap (B6, group 15)
+6. Smaller Wohnlage-Karte memory (B7, group 15)
+7. Typical timetable when offline (B8, group 15)
+8. Notice, search and favourites polish (C5–C8, group 15)
+9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+10. Default view readability: two variants to compare (C9, group 15)
+11. Named starts in meeting mode (D2, group 15)
+12. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -109,18 +108,15 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 - **The tapped place stays when settings change**: Done (PR #55): the tapped place stays through a change of hour, measure, direction, travel mode, step-free, walking speed, language, layers or a moved start.
 - **"Bis wann komme ich heim?": the last connection home (C3)**: Done (PR #66): from the start card (🌙 Bis wann heim?) or a favourite's 🌙, the map colours every place by the latest departure that still gets you home fast, over the evening and night ….
 - **Remove the Google Maps links**: Done (PR #145): the trip card has no Google Maps link anymore, and the vs-Google sharepic no longer mentions one.
+- **Real arrival times at stops**: Done (PR #183): the timetable file (format v2) stores per-stop dwell, so getting off uses the arrival time and boarding the departure; +0.8 % gzipped, routing speed unchanged; 6 of the 20 connection-test trips arrive 1–5 min earlier; taps 0.39–0.46 s live.
 
 ### Start point or destination switch
 
 Hendrik, 2026-10-12: "I want a switch that switches between the first set location to either be start or end point of the connections shown when i tap on other locations". A clearly visible switch decides whether the set place is where trips start ("Von hier") or where they end ("Hierher"). Tapping another place then shows the trip from the set place to it, or from it to the set place, and the map colours follow the same direction. The reverse direction already exists as "Ankommen" (`dir=arr`, PR #24), so this builds on it rather than adding a new kind of map; the builder decides with the redesigned time panel (A) where the switch sits so it isn't a second, competing Losfahren/Ankommen control. Kept in the link. Snappiness rule: switching direction and tapping stay as fast as now.
 
-### Real arrival times at stops
-
-Picked by Hendrik on 2026-10-12 ("Both fixes"), built before the platform changes. From the connection test (research/connection-test/comparison.md, finding 3). The timetable stores one time per stop, the departure, so getting off uses the departure time. About 85 % of S-Bahn stop times have a 24–60 s dwell (regional 60–120 s), so each S-Bahn ride ends about a minute late and tight changes break (for example, the M5 at Landsberger Allee is missed). Store arrival times in the timetable file too (a small size increase and a format change). Keep the routing speed.
-
 ### Shorter platform changes
 
-Picked by Hendrik on 2026-10-12 ("Both fixes"). From the connection test, finding 4. Platforms of one station get 120 s when the footpaths don't connect them, which is common for S-Bahn platforms, while BVG plans some changes in 1 minute (S8 → S25 at Bornholmer Str.). Use realistic platform transfer times and honour the timetable feed's transfer rules that are tied to routes (6,760 rows) and timed transfers (2,489 rows).
+Built and merged (PR #184), live with the next timetable build: island platforms get 60 s, timed transfers count as 0 s, and route-tied rows apply where no general row exists (533 transfers shorter). Picked by Hendrik on 2026-10-12 ("Both fixes"). From the connection test, finding 4. Platforms of one station get 120 s when the footpaths don't connect them, which is common for S-Bahn platforms, while BVG plans some changes in 1 minute (S8 → S25 at Bornholmer Str.). Use realistic platform transfer times and honour the timetable feed's transfer rules that are tied to routes (6,760 rows) and timed transfers (2,489 rows).
 
 ### Less walking on equal arrival (low priority)
 
