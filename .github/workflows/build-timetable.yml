@@ -54,7 +54,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p work
-          gh release download "$GTFS_TAG" -p GTFS.zip -p manifest.json -D work --clobber
+          scripts/publish/download.sh "$GTFS_TAG" work GTFS.zip manifest.json
           cat work/manifest.json
 
       - name: Download OSM footpaths
@@ -62,7 +62,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # Optional: without it the build falls back to straight-line walking.
-          gh release download "$OSM_TAG" -p walkways.opl.gz -D work --clobber || echo "::warning::No $OSM_TAG release; building without the walking network."
+          scripts/publish/download.sh "$OSM_TAG" work walkways.opl.gz || echo "::warning::No $OSM_TAG release; building without the walking network."
 
       - name: Build timetable files
         run: |
