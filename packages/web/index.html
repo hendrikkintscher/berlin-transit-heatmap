@@ -182,6 +182,29 @@
     <div id="hint" class="chip" data-t="hint">Tippe auf die Karte oder suche einen Startpunkt</div>
 
     <footer class="bottom">
+      <div id="changes" class="chip changes" hidden>
+        <button
+          id="changes-chip"
+          class="changes-chip"
+          type="button"
+          aria-expanded="false"
+          aria-controls="changes-panel"
+        ></button>
+        <div id="changes-panel" class="changes-panel" hidden>
+          <b id="changes-title"></b>
+          <ul id="changes-list" class="changes-list"></ul>
+          <p id="changes-note" class="menu-note"></p>
+        </div>
+        <button
+          id="changes-close"
+          class="x"
+          type="button"
+          aria-label="Hinweis schließen"
+          data-t-label="changesClose"
+        >
+          ✕
+        </button>
+      </div>
       <div id="tip" class="chip tip" role="note" hidden>
         <span id="tip-text"></span>
         <button id="tip-action" type="button" hidden></button>
