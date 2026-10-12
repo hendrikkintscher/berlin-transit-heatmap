@@ -4,14 +4,13 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #93. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #95. Build in this order, one step per PR:
 
-1. **Next:** Timetable publish uploads only changed files (group 10)
-2. Snappier address search (group 1)
-3. "Heute anders" in the chosen connection (group 11)
-4. Smooth line overlays along the real tracks and roads (group 7)
+1. **Next:** Snappier address search (group 1)
+2. "Heute anders" in the chosen connection (group 11)
+3. Smooth line overlays along the real tracks and roads (group 7)
 
-Steps 2–4 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Steps 1–3 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Hendrik's standing go (2026-10-12): the builder keeps going through the steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -489,6 +488,8 @@ The snappiness rule is checked by hand in each PR today. A CI job fails a PR tha
 **Done** (PR #59): URL state lives in `url.ts` with round-trip tests for every link key; the time sheet, menu, tap handling, trip card and map layers are their own modules. main.ts is down to 962 lines.
 
 ### Timetable publish uploads only changed files
+
+**Done** (PR #95): a checksum manifest is published and only changed files are uploaded. A same-day rerun takes 17 API calls instead of about 300, no file is ever missing during a publish, and the script stops before changing anything if the API budget is too low.
 
 On 2026-10-12, a timetable build failed partway through publishing: GitHub's hourly API limit for the repo ran out, and because each file is deleted and re-uploaded (`--clobber`), one timetable file was left missing from the release. Each publish re-uploads all of the roughly 250 files, which nearly uses up the hourly budget, so two runs in one hour overflow it.
 
