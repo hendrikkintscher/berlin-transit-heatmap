@@ -4,17 +4,16 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #88. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #90. Build in this order, one step per PR:
 
-1. **Next:** Live disruptions (group 11), being built as a live check of the tapped trip until Hendrik picks a form
-2. Fairer meeting point suggestions: slowest trip and average count equally (group 3)
-3. Timetable publish uploads only changed files (group 10)
-4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-5. Snappier address search (group 1)
-6. "Heute anders" in the chosen connection (group 11)
-7. Smooth line overlays along the real tracks and roads (group 7)
+1. **Next:** Fairer meeting point suggestions: slowest trip and average count equally (group 3)
+2. Timetable publish uploads only changed files (group 10)
+3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+4. Snappier address search (group 1)
+5. "Heute anders" in the chosen connection (group 11)
+6. Smooth line overlays along the real tracks and roads (group 7)
 
-Steps 5–7 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Steps 4–6 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Hendrik's standing go (2026-10-12): the builder keeps going through these steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -515,6 +514,8 @@ The map should show what is actually running, not a typical day. Today the build
 **Done** (PR #88): What's different today. Each day is compared with the typical pattern at build time, and a small notice lists the lines that run differently.
 
 **Finding for live disruptions** (builder, 2026-10-12): VBB's GTFS-RT feed exists but carries no notices, only delays and cancellations of single trips (about 2.4 MB per download), and the journey API has no network-wide notices either, so "disruption notices as text" is not available. Hendrik is choosing between: A) skip it, B) a live check of the tapped trip ("fällt aus" / "+4 Min."), C) a network-wide list of cancellations. B is being built until he decides.
+
+**Done** (PR #90): live disruptions as option B. The tap card shows the live status of the first vehicle of the chosen trip, from VBB's GTFS-RT feed.
 
 ### "Heute anders" in the chosen connection
 
