@@ -14,7 +14,7 @@ State on 2026-10-12, live through PR #88. Build in this order, one step per PR:
 6. "Heute anders" in the chosen connection (group 11)
 7. Smooth line overlays along the real tracks and roads (group 7)
 
-After the UI overhaul, the list is done for now. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Steps 5–7 were added by Hendrik on 2026-10-12, after the UI overhaul. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Hendrik's standing go (2026-10-12): the builder keeps going through these steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
