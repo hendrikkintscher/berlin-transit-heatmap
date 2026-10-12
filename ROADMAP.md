@@ -4,12 +4,10 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #114. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #120. Build in this order, one step per PR:
 
-1. **Next:** Edge-to-edge top bar and a slim loading bar instead of the "Berechnen" popups (group 12)
-2. "Lieblingsort" toggle instead of "Merken" (group 3)
-3. Addresses in the search suggestions, street first, then house number or postcode (group 1)
-4. Other regions, Oldenburg first, each region at its own address (group 13). Held until the editor has checked with the coordinator that the beta-testing domain and naming questions don't change the `/berlin/` addresses.
+1. **Next:** Addresses in the search suggestions, street first, then house number or postcode (group 1)
+2. Other regions, Oldenburg first, each region at its own address (group 13). Held until the editor has checked with the coordinator that the beta-testing domain and naming questions don't change the `/berlin/` addresses.
 
 All from Hendrik on 2026-10-12. After them, Hendrik picks the next step before anything starts.
 
@@ -153,6 +151,8 @@ Friends often meet in groups of three to five. Generalise the meeting point to u
 Notes: one routing pass per start, so five starts take about 2.5 times the two-start time; start with three and measure against the snappiness rule. Medium effort; built in one step with C2. From suggestions-2, picked by Hendrik on 2026-10-12.
 
 ### "Lieblingsort" toggle instead of "Merken"
+
+**Done** (PR #118): the trip card shows ☆/★ "Lieblingsort" ("Favourite place" in English); a tap adds or removes the place and the card stays open.
 
 Hendrik, 2026-10-12: the "★ Merken" button on the trip card is renamed **"Lieblingsort"** (English: "Favourite place") and becomes a toggle: tapping it adds the place to the favourites, tapping it again removes it. It no longer closes the connection view. The button shows whether the place is already a favourite (filled vs. empty star).
 
@@ -650,6 +650,8 @@ Hendrik, 2026-10-12, two minor fixes after PR #111:
 Notes: layout only, URL parameters unchanged; check at 360×740 in German and English, and keep the flicker-free first view from PR #111. Small effort.
 
 ### Edge-to-edge top bar and slim loading bar
+
+**Done** (PR #120): the top bar runs edge to edge; the "Berechnen" / "Berechnet in" texts are gone and a 2 px loading bar at the bottom edge disappears when done. Checked at 360×740 in German and English; the first view stays flicker-free.
 
 Hendrik, 2026-10-12, two minor fixes before anything else:
 
