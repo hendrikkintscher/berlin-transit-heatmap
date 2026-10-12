@@ -142,7 +142,10 @@ interface TripRows {
   shape: string;
   seq: number[];
   stop: number[];
+  /** Departure times (the arrival where a row has no departure). */
   time: number[];
+  /** Seconds the vehicle waits at each stop: departure minus arrival (0 when unknown). */
+  dwell: number[];
 }
 
 interface CandidateTrip {
@@ -151,6 +154,17 @@ interface CandidateTrip {
   stepFree?: boolean;
   stops: number[]; // raw stop indices
   times: number[];
+  /** Seconds waited at each stop (absent: none). */
+  dwells?: number[];
+}
+
+/** A route of one window: trips with the same stops, and their dwells (see Route). */
+export interface WindowRoute {
+  routeId: string;
+  stops: number[];
+  trips: number[][];
+  dwells?: number[][];
+  stepFree?: boolean;
 }
 
 export function modeOf(routeType: number): Mode {
@@ -289,6 +303,7 @@ export async function buildTimetables(
       seq: [],
       stop: [],
       time: [],
+      dwell: [],
     });
   });
   log(`trips active around the reference day: ${trips.size}`);
@@ -307,11 +322,12 @@ export async function buildTimetables(
     }
     if (!trip) return;
     if (get('pickup_type') === '1' && get('drop_off_type') === '1') return;
-    let t = parseTime(get('departure_time'));
-    if (Number.isNaN(t)) t = parseTime(get('arrival_time'));
+    const dep = parseTime(get('departure_time'));
+    const arr = parseTime(get('arrival_time'));
     trip.seq.push(Number(get('stop_sequence')));
     trip.stop.push(s);
-    trip.time.push(t);
+    trip.time.push(Number.isNaN(dep) ? arr : dep);
+    trip.dwell.push(dep > arr ? dep - arr : 0);
   });
   log(`stop_times.txt: ${stopTimeRows} rows`);
 
@@ -323,15 +339,16 @@ export async function buildTimetables(
   for (const trip of trips.values()) {
     if (trip.stop.length < 2) continue;
     sortTripRows(trip);
-    if (fillTimes(trip.time)) ordered.push(trip);
+    if (!fillTimes(trip.time)) continue;
+    // A dwell never reaches back before the departure at the previous stop.
+    for (let i = 1; i < trip.dwell.length; i++)
+      trip.dwell[i] = Math.min(trip.dwell[i]!, trip.time[i]! - trip.time[i - 1]!);
+    ordered.push(trip);
   }
   trips.clear();
 
   // --- per-window routes -------------------------------------------------
-  const windowRoutes = new Map<
-    string,
-    { routeId: string; stops: number[]; trips: number[][]; stepFree?: boolean }[]
-  >();
+  const windowRoutes = new Map<string, WindowRoute[]>();
   for (const w of windows) {
     const activeByOffset = activeByDay[w.day]!;
     const candidates: CandidateTrip[] = [];
@@ -352,6 +369,7 @@ export async function buildTimetables(
           routeId: trip.routeId,
           stops: trip.stop,
           times,
+          dwells: trip.dwell,
           stepFree: tripStepFree(trip),
         });
       });
@@ -506,6 +524,7 @@ export async function buildTimetables(
       mode: routes.get(r.routeId)!.mode,
       stops: r.stops.map((s) => newIndex.get(s)!),
       trips: r.trips,
+      ...(r.dwells ? { dwells: r.dwells } : {}),
       ...(r.stepFree === false ? { stepFree: false as const } : {}),
     }));
     timetables[w.name] = {
@@ -556,6 +575,7 @@ function sortTripRows(trip: TripRows): void {
   trip.seq = idx.map((i) => trip.seq[i]!);
   trip.stop = idx.map((i) => trip.stop[i]!);
   trip.time = idx.map((i) => trip.time[i]!);
+  trip.dwell = idx.map((i) => trip.dwell[i]!);
 }
 
 /**
@@ -582,9 +602,7 @@ export function fillTimes(times: number[]): boolean {
  * Groups trips by (GTFS route, identical stop sequence) and splits each group
  * so that no trip overtakes another, as RAPTOR requires.
  */
-export function groupIntoRoutes(
-  candidates: CandidateTrip[],
-): { routeId: string; stops: number[]; trips: number[][]; stepFree?: boolean }[] {
+export function groupIntoRoutes(candidates: CandidateTrip[]): WindowRoute[] {
   const groups = new Map<string, CandidateTrip[]>();
   for (const c of candidates) {
     const key = `${c.routeId}|${c.stops.join(',')}|${c.stepFree === false ? 0 : 1}`;
@@ -592,7 +610,7 @@ export function groupIntoRoutes(
     if (group) group.push(c);
     else groups.set(key, [c]);
   }
-  const result: { routeId: string; stops: number[]; trips: number[][]; stepFree?: boolean }[] = [];
+  const result: WindowRoute[] = [];
   const keys = [...groups.keys()].sort();
   for (const key of keys) {
     const group = groups.get(key)!;
@@ -601,22 +619,26 @@ export function groupIntoRoutes(
         if (a.times[i] !== b.times[i]) return a.times[i]! - b.times[i]!;
       return 0;
     });
-    const subRoutes: number[][][] = [];
+    const subRoutes: CandidateTrip[][] = [];
     for (const trip of group) {
       const target = subRoutes.find((sub) => {
-        const last = sub.at(-1)!;
+        const last = sub.at(-1)!.times;
         return last.every((t, i) => t <= trip.times[i]!);
       });
-      if (target) target.push(trip.times);
-      else subRoutes.push([trip.times]);
+      if (target) target.push(trip);
+      else subRoutes.push([trip]);
     }
-    for (const sub of subRoutes)
+    for (const sub of subRoutes) {
+      // Dwells only where some trip waits somewhere; most buses and trams do not.
+      const dwells = sub.some((t) => t.dwells?.some((d) => d > 0));
       result.push({
         routeId: group[0]!.routeId,
         stops: group[0]!.stops,
-        trips: sub,
+        trips: sub.map((t) => t.times),
+        ...(dwells ? { dwells: sub.map((t) => t.dwells ?? t.times.map(() => 0)) } : {}),
         ...(group[0]!.stepFree === false ? { stepFree: false } : {}),
       });
+    }
   }
   return result;
 }

@@ -2,16 +2,18 @@
  * Contract 4: the timetable as a compact binary file (`timetable-<window>.bin`), the
  * same content as the JSON file (Contract 1) without the GTFS stop ids, at about a
  * third of the gzipped size and much quicker to read. Little-endian:
- * u32 magic "BTHT", u8 version 1, then unsigned LEB128 varints (svar: zig-zag signed):
+ * u32 magic "BTHT", u8 version 2 (1: no dwells), then unsigned LEB128 varints (svar:
+ * zig-zag signed):
  * - the header: byte length, then UTF-8 JSON with version, window, serviceDate,
  *   windowStart, windowEnd and feedVersion;
  * - a string table: count, then per string its UTF-8 byte length and bytes;
  * - stops: count; per stop svar lon and lat in 1e-5 degrees from the previous stop,
  *   the name's string index, flags (bit 0: not step-free) and parent + 1 (0: none);
  * - routes: count; per route the name's string index, mode index (MODES), flags
- *   (bit 0: not step-free), stop count, svar stop index deltas, trip count, then per
- *   trip svar its first time minus the previous trip's, and per hop svar the hop
- *   time minus the previous trip's hop time;
+ *   (bit 0: not step-free, bit 1: has dwells), stop count, svar stop index deltas, trip
+ *   count, then per trip svar its first time minus the previous trip's, per hop svar
+ *   the hop time minus the previous trip's hop time and, with dwells, per stop svar
+ *   the dwell minus the previous trip's dwell there;
  * - transfers: per stop the count, then the targets in ascending order (svar from the
  *   stop for the first, gaps after), then the seconds.
  *
@@ -43,6 +45,7 @@ export interface TimetableData {
     mode: (typeof MODES)[number];
     stops: number[];
     trips: number[][];
+    dwells?: number[][];
     stepFree?: false;
   }[];
   transfers: { from: number; to: number; seconds: number }[];
@@ -64,7 +67,7 @@ export function encodeTimetable(tt: TimetableData): Uint8Array {
     uvar(b.length);
     for (const x of b) out.push(x);
   };
-  out.push(0x42, 0x54, 0x48, 0x54, 1);
+  out.push(0x42, 0x54, 0x48, 0x54, 2);
   const { version, window, serviceDate, windowStart, windowEnd, feedVersion } = tt;
   bytes(
     enc.encode(
@@ -108,7 +111,8 @@ export function encodeTimetable(tt: TimetableData): Uint8Array {
     uvar(str(r.name));
     const m = MODES.indexOf(r.mode);
     uvar(m < 0 ? MODES.length - 1 : m);
-    uvar(r.stepFree === false ? 1 : 0);
+    const dwells = r.dwells?.some((d) => d.some((x) => x !== 0)) ? r.dwells : undefined;
+    uvar((r.stepFree === false ? 1 : 0) | (dwells ? 2 : 0));
     uvar(r.stops.length);
     let prev = 0;
     for (const s of r.stops) {
@@ -117,7 +121,8 @@ export function encodeTimetable(tt: TimetableData): Uint8Array {
     }
     uvar(r.trips.length);
     let last: number[] | null = null;
-    for (const trip of r.trips) {
+    let lastDwell: number[] | null = null;
+    for (const [t, trip] of r.trips.entries()) {
       if (trip.length !== r.stops.length) throw new Error(`Trip length differs on ${r.name}`);
       svar(trip[0]! - (last ? last[0]! : 0));
       for (let i = 1; i < trip.length; i++) {
@@ -125,6 +130,12 @@ export function encodeTimetable(tt: TimetableData): Uint8Array {
         svar(hop - (last ? last[i]! - last[i - 1]! : 0));
       }
       last = trip;
+      if (dwells) {
+        const d = dwells[t]!;
+        if (d.length !== trip.length) throw new Error(`Dwell length differs on ${r.name}`);
+        for (let i = 0; i < d.length; i++) svar(d[i]! - (lastDwell ? lastDwell[i]! : 0));
+        lastDwell = d;
+      }
     }
   }
 
@@ -148,7 +159,7 @@ export function decodeTimetable(data: ArrayBuffer | Uint8Array): TimetableData {
   const buf = data instanceof Uint8Array ? data : new Uint8Array(data);
   const magic = (buf[0]! | (buf[1]! << 8) | (buf[2]! << 16) | (buf[3]! << 24)) >>> 0;
   if (magic !== MAGIC) throw new Error('Not a timetable file');
-  if (buf[4] !== 1) throw new Error(`Unsupported timetable version ${buf[4]}`);
+  if (buf[4] !== 1 && buf[4] !== 2) throw new Error(`Unsupported timetable version ${buf[4]}`);
   let p = 5;
   const n = buf.length;
   const uvar = (): number => {
@@ -212,15 +223,22 @@ export function decodeTimetable(data: ArrayBuffer | Uint8Array): TimetableData {
     let prev = 0;
     for (let i = 0; i < k; i++) rs[i] = prev += svar();
     const trips = new Array<number[]>(uvar());
+    const dwells = flags & 2 ? new Array<number[]>(trips.length) : undefined;
     let last: number[] | null = null;
+    let lastDwell: number[] | null = null;
     for (let t = 0; t < trips.length; t++) {
       const trip = new Array<number>(k);
       trip[0] = svar() + (last ? last[0]! : 0);
       for (let i = 1; i < k; i++)
         trip[i] = trip[i - 1]! + svar() + (last ? last[i]! - last[i - 1]! : 0);
       trips[t] = last = trip;
+      if (dwells) {
+        const d = new Array<number>(k);
+        for (let i = 0; i < k; i++) d[i] = svar() + (lastDwell ? lastDwell[i]! : 0);
+        dwells[t] = lastDwell = d;
+      }
     }
-    routes[r] = { name: routeName, mode, stops: rs, trips };
+    routes[r] = { name: routeName, mode, stops: rs, trips, ...(dwells ? { dwells } : {}) };
     if (flags & 1) routes[r]!.stepFree = false;
   }
 

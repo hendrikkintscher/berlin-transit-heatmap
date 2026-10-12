@@ -22,6 +22,7 @@ export function stepFreeTimetable(tt: Timetable): Timetable {
         ...r,
         stops: keep.map((i) => r.stops[i]),
         trips: r.trips.map((trip) => keep.map((i) => trip[i])),
+        ...(r.dwells ? { dwells: r.dwells.map((d) => keep.map((i) => d[i])) } : {}),
       });
   }
   return { ...tt, routes, transfers: tt.transfers.filter((t) => ok[t.from] && ok[t.to]) };

@@ -214,3 +214,19 @@ describe('typical travel time', () => {
     });
   }
 });
+
+describe('arrival before the vehicle waits at a stop', () => {
+  // U1 waits a minute at C: it arrives at :x3 and leaves at :x4, as before.
+  const raw = miniTimetable('day');
+  const u1 = raw.routes.find((r) => r.name === 'U1')!;
+  u1.dwells = u1.trips.map(() => [0, 0, 60, 0]);
+  const fromA = travelTimes(loadTimetable(raw), STOP_POS[A]);
+
+  it('gets off at the arrival, not the departure', () => {
+    expect(fromA.stopSeconds[C]).toBe(180);
+  });
+
+  it('rides through a stop it waits at on the departure', () => {
+    expect(fromA.stopSeconds[D]).toBe(360);
+  });
+});

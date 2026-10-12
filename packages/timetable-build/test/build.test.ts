@@ -128,6 +128,15 @@ describe('buildTimetables on the mini fixture', () => {
       }
   });
 
+  it('keeps how long a vehicle waits at a stop, only on routes where one does', () => {
+    // t1 arrives at B at 10:04:30 and leaves at 10:05.
+    const u9 = routeNamed(day, 'U9').find((r) => r.trips.some((x) => x[0] === t('10:00')))!;
+    const k = u9.trips.findIndex((x) => x[0] === t('10:00'));
+    expect(u9.trips[k]![1]).toBe(t('10:05'));
+    expect(u9.dwells![k]).toEqual(stopIds(day, u9.stops).map((id) => (id === 'B' ? 30 : 0)));
+    expect(routeNamed(day, '100').every((r) => r.dwells === undefined)).toBe(true);
+  });
+
   it('reports stats', () => {
     expect(result.stats).toMatchObject({ stops: 5, stations: 1 });
     expect(result.stats.windows.day).toEqual({
