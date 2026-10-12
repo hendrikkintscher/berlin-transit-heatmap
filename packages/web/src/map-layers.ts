@@ -557,7 +557,7 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
     'outlines-line',
     'line-blur',
     steps
-      ? ['interpolate', ['linear'], ['zoom'], 9, ['case', half, 2.5, 2], 14, ['case', half, 3.5, 3]]
+      ? ['interpolate', ['linear'], ['zoom'], 9, ['case', half, 3.5, 3], 14, ['case', half, 5, 4.5]]
       : 0,
   );
   map.setPaintProperty(
@@ -574,7 +574,15 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
           ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
         ]
       : steps
-        ? ['interpolate', ['linear'], ['zoom'], 9, ['case', half, 4, 2.5], 14, ['case', half, 6, 4]]
+        ? [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            9,
+            ['case', half, 5.5, 3.5],
+            14,
+            ['case', half, 8, 5.5],
+          ]
         : [
             'interpolate',
             ['linear'],

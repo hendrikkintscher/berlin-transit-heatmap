@@ -289,8 +289,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
     (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.lines ?? empty);
     (map.getSource(TRIP_STOPS_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.stops ?? empty);
-    map.setPaintProperty('routes-line', 'line-opacity', trip ? 0.3 : 1);
-    map.setPaintProperty('routes-casing', 'line-opacity', trip ? 0.2 : 0.9);
+    map.setPaintProperty('routes-line', 'line-opacity', trip ? 0.5 : 1);
+    map.setPaintProperty('routes-casing', 'line-opacity', trip ? 0.35 : 0.9);
     map.setLayoutProperty('routes-label', 'visibility', state.routes && !trip ? 'visible' : 'none');
   }
 
