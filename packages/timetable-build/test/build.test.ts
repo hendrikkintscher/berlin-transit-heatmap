@@ -108,14 +108,15 @@ describe('buildTimetables on the mini fixture', () => {
   it('builds symmetric footpaths: walking, same station and transfers.txt', () => {
     const byPair = new Map(day.transfers.map((x) => [`${x.from},${x.to}`, x.seconds]));
     const pair = (a: string, b: string) => byPair.get(`${idx(day, a)},${idx(day, b)}`);
-    expect(day.transfers).toHaveLength(6);
+    expect(day.transfers).toHaveLength(8);
     expect(pair('A', 'B')).toBe(75); // ~18 m walk + 60 s
     expect(pair('B', 'A')).toBe(75);
-    expect(pair('C', 'E')).toBe(277); // ~261 m walk + 60 s
-    expect(pair('E', 'C')).toBe(277);
+    expect(pair('C', 'E')).toBe(0); // timed transfer (type 1) in transfers.txt
+    expect(pair('E', 'C')).toBe(277); // ~261 m walk + 60 s
     expect(pair('A', 'C')).toBe(300); // from transfers.txt, mirrored
     expect(pair('C', 'A')).toBe(300);
-    expect(pair('A', 'E')).toBeUndefined(); // route-restricted transfer ignored
+    expect(pair('A', 'E')).toBe(200); // only a route-tied row for this pair, mirrored
+    expect(pair('E', 'A')).toBe(200);
     expect(night.transfers).toEqual(day.transfers);
   });
 
@@ -143,7 +144,7 @@ describe('buildTimetables on the mini fixture', () => {
       routes: 5,
       trips: 6,
       stopTimes: 16,
-      transfers: 6,
+      transfers: 8,
     });
   });
 });
