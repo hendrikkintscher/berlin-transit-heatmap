@@ -263,7 +263,7 @@ body {
   opacity: 0.85;
 }
 /* Mark the finely banded 20–50 min range. */
-#legend-bar span:nth-child(n + 5):nth-child(-n + 16) {
+#legend-bar:not(.steps) span:nth-child(n + 5):nth-child(-n + 16) {
   box-shadow: inset 0 -2px rgba(0, 0, 0, 0.18);
 }
 .legend-ticks {

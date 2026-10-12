@@ -3,14 +3,13 @@
 
 import type maplibregl from 'maplibre-gl';
 import {
-  bandColor,
-  bandOf,
   HOME_COLORS,
   HOME_OUTLINE_MINUTES,
   homeBandOf,
   MODE_COLORS,
+  OUTLINE_STEP_COLORS,
+  OUTLINE_STEP_MINUTES,
 } from './colors';
-import { CONTOUR_MINUTES } from './contours';
 import { bezirke, landmarks, ringLine } from './orientation';
 import { SEARCH_BBOX } from './search';
 
@@ -476,11 +475,14 @@ export function outlineLabel(kind: 'time' | 'extra' | 'home'): maplibregl.Expres
 
 /**
  * Outline look for the kind of map and whether the colour fill is on. With the fill, thin
- * dark lines labelled at 15, 30 and 45 min. Without it, each line takes its band's colour
- * from the legend, on a white edge, and every line carries its minutes.
+ * dark lines labelled at 15, 30 and 45 min. Without it, a faint line every 10 minutes in one
+ * hue, darkest near the start, each labelled; the home map's few outlines take its legend
+ * colours instead.
  */
 export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: boolean): void {
   if (!map.getLayer('outlines-line')) return;
+  const steps = !heat && kind !== 'home';
+  const tens: maplibregl.FilterSpecification = ['==', ['%', ['get', 'min'], 10], 0];
   const major: maplibregl.ExpressionSpecification = [
     'match',
     ['get', 'min'],
@@ -488,11 +490,15 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
     1,
     0,
   ];
-  map.setPaintProperty('outlines-line', 'line-color', heat ? '#1d1530' : outlineColors(kind));
+  map.setPaintProperty(
+    'outlines-line',
+    'line-color',
+    heat ? '#1d1530' : steps ? stepColors() : homeOutlineColors(),
+  );
   map.setPaintProperty(
     'outlines-line',
     'line-opacity',
-    heat ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4] : 1,
+    heat ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4] : steps ? 0.75 : 1,
   );
   map.setPaintProperty(
     'outlines-line',
@@ -507,39 +513,58 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
           14,
           ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
         ]
-      : [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          9,
-          ['+', 1.4, major],
-          14,
-          ['+', 2.6, ['*', 1.4, major]],
-        ],
+      : steps
+        ? ['interpolate', ['linear'], ['zoom'], 9, 1, 14, 1.8]
+        : [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            9,
+            ['+', 1.4, major],
+            14,
+            ['+', 2.6, ['*', 1.4, major]],
+          ],
   );
-  map.setPaintProperty('outlines-casing', 'line-opacity', heat ? 0 : 0.9);
-  map.setPaintProperty('outlines-casing', 'line-width', [
-    'interpolate',
-    ['linear'],
-    ['zoom'],
-    9,
-    ['+', 3, major],
-    14,
-    ['+', 5, ['*', 1.4, major]],
-  ]);
+  map.setPaintProperty('outlines-casing', 'line-opacity', heat ? 0 : steps ? 0.5 : 0.9);
+  map.setPaintProperty(
+    'outlines-casing',
+    'line-width',
+    steps
+      ? ['interpolate', ['linear'], ['zoom'], 9, 2.4, 14, 3.6]
+      : ['interpolate', ['linear'], ['zoom'], 9, ['+', 3, major], 14, ['+', 5, ['*', 1.4, major]]],
+  );
+  map.setFilter('outlines-line', steps ? tens : null);
+  map.setFilter('outlines-casing', steps ? tens : null);
   map.setFilter(
     'outlines-label',
-    heat && kind !== 'home' ? ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]] : null,
+    steps
+      ? tens
+      : heat && kind !== 'home'
+        ? ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]]
+        : null,
   );
   map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind));
 }
 
-/** Each outline in the colour of the band just inside it, as the legend shows it. */
-function outlineColors(kind: OutlineKind): maplibregl.ExpressionSpecification {
-  const levels = kind === 'home' ? HOME_OUTLINE_MINUTES : CONTOUR_MINUTES;
-  const color = (min: number) =>
-    kind === 'home' ? HOME_COLORS[homeBandOf(min * 60 - 1)] : bandColor(bandOf(min * 60 - 1));
-  return ['match', ['get', 'min'], ...levels.flatMap((m) => [m, color(m)]), '#1d1530'] as never;
+/** The 10-minute outlines in one hue, darkest near the start. */
+function stepColors(): maplibregl.ExpressionSpecification {
+  return [
+    'match',
+    ['get', 'min'],
+    ...OUTLINE_STEP_MINUTES.flatMap((m, i) => [m, OUTLINE_STEP_COLORS[i]]),
+    '#1d1530',
+  ] as never;
+}
+
+/** Each home map outline in the colour of the band just inside it, as the legend shows it. */
+function homeOutlineColors(): maplibregl.ExpressionSpecification {
+  const color = (min: number) => HOME_COLORS[homeBandOf(min * 60 - 1)];
+  return [
+    'match',
+    ['get', 'min'],
+    ...HOME_OUTLINE_MINUTES.flatMap((m) => [m, color(m)]),
+    '#1d1530',
+  ] as never;
 }
 
 /**
