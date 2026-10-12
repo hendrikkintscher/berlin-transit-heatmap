@@ -18,6 +18,8 @@ export interface MenuDeps {
   /** Lines or outlines switched: show or hide their map layers. */
   setLayerVisible: (layers: 'routes' | 'outlines', on: boolean) => void;
   opacityChanged: () => void;
+  /** The Heatmap switch changed: show or hide the colours, restyle the outlines. */
+  heatChanged: () => void;
   /** The language changed: everything with text is redrawn. */
   langChanged: () => void;
   setStatus: (render: () => string, fade?: boolean) => void;
@@ -35,6 +37,7 @@ export function initMenu(deps: MenuDeps) {
   const freqToggle = $<HTMLInputElement>('freq-toggle');
   const desertToggle = $<HTMLInputElement>('desert-toggle');
   const isoToggle = $<HTMLInputElement>('iso-toggle');
+  const heatToggle = $<HTMLInputElement>('heat-toggle');
   const stepFreeToggle = $<HTMLInputElement>('stepfree-toggle');
   const opacityInput = $<HTMLInputElement>('opacity');
 
@@ -115,6 +118,14 @@ export function initMenu(deps: MenuDeps) {
   isoToggle.addEventListener('change', () => {
     state.iso = isoToggle.checked;
     deps.setLayerVisible('outlines', state.iso);
+    deps.writeUrl();
+  });
+  heatToggle.checked = state.heat;
+  opacityInput.disabled = !state.heat;
+  heatToggle.addEventListener('change', () => {
+    state.heat = heatToggle.checked;
+    opacityInput.disabled = !state.heat;
+    deps.heatChanged();
     deps.writeUrl();
   });
   opacityInput.value = String(state.opacity);

@@ -326,6 +326,22 @@
       <h3 data-t="menuMap">Karte</h3>
       <label class="toggle">
         <span class="toggle-text">
+          <b data-t="heat">Farben (Heatmap)</b>
+          <small data-t="heatHint"
+            >Die Reisezeit als Farbfläche; ohne sie zeigen die Umrisse die Minuten</small
+          >
+        </span>
+        <input id="heat-toggle" type="checkbox" role="switch" />
+      </label>
+      <label class="slider slider-sub">
+        <span class="toggle-text">
+          <b data-t="opacity">Deckkraft der Farben</b>
+          <small data-t="opacityHint">Weniger, um Straßennamen besser zu sehen</small>
+        </span>
+        <input id="opacity" type="range" min="15" max="95" step="5" value="80" />
+      </label>
+      <label class="toggle">
+        <span class="toggle-text">
           <b data-t="lines">Linien</b>
           <small data-t="linesHint"
             >Die Verbindungen, über die du von deinem Start am schnellsten fährst</small
@@ -338,7 +354,7 @@
           <b data-t="iso">Umrisse alle 5 Min.</b>
           <small data-t="isoHint">Linien alle 5 Minuten, kräftiger bei 15, 30 und 45 Minuten</small>
         </span>
-        <input id="iso-toggle" type="checkbox" role="switch" />
+        <input id="iso-toggle" type="checkbox" role="switch" checked />
       </label>
       <label class="toggle">
         <span class="toggle-text">
@@ -356,14 +372,6 @@
           >
         </span>
         <input id="desert-toggle" type="checkbox" role="switch" />
-      </label>
-
-      <label class="slider">
-        <span class="toggle-text">
-          <b data-t="opacity">Deckkraft der Farben</b>
-          <small data-t="opacityHint">Weniger, um Straßennamen besser zu sehen</small>
-        </span>
-        <input id="opacity" type="range" min="15" max="95" step="5" value="80" />
       </label>
 
       <h3 data-t="travelTitle">Unterwegs</h3>

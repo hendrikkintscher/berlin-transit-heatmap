@@ -177,6 +177,8 @@ export function diffLut(): Uint8Array {
  * Lower band edges in minutes before 4 Uhr: from 2 Uhr (a connection that late means the
  * night network carries on: all night), 1, 0:30, 0, 23:30, 23, earlier.
  */
+/** Home map outlines on the hour: 2, 1, 0 and 23 Uhr (minutes before 4 Uhr). */
+export const HOME_OUTLINE_MINUTES = [120, 180, 240, 300];
 export const HOME_EDGES_MIN = [0, 120, 180, 210, 240, 270, 300];
 export const HOME_COLORS = [
   '#1f8a5b',

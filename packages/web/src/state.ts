@@ -62,8 +62,10 @@ export interface State {
   /** Stop-frequency dots and transit-desert shading. */
   freq: boolean;
   desert: boolean;
-  /** Isochrone outlines at 15/30/45 min. */
+  /** Isochrone outlines every 5 min; on by default, so the minutes read without colours. */
   iso: boolean;
+  /** The coloured travel-time fill; off by default (the outlines carry the minutes). */
+  heat: boolean;
   /** Heatmap opacity in percent; remembered on this device. */
   opacity: number;
   /** Walking speed in km/h; remembered on this device, carried in shared links. */
@@ -97,7 +99,8 @@ export function createState(): State {
     routes: true,
     freq: false,
     desert: false,
-    iso: false,
+    iso: true,
+    heat: false,
     opacity: readNumber('heat-opacity', DEFAULT_OPACITY),
     walkKmh: walkSpeed(readNumber('walk-kmh', DEFAULT_WALK_KMH)),
     stepFree: readNumber('step-free', 0) > 0,

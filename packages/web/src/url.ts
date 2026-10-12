@@ -1,5 +1,5 @@
 // What a link carries: ?from=lat,lon&with=…[&with=…]&to=…&t=weekend-02&dir=arr&m=best&cmp=…
-// &walk=5&sf=1&go=bike&routes=0&layers=freq,desert,iso&lang=en. Reading a link only
+// &walk=5&sf=1&go=bike&routes=0&layers=heat,freq,desert,noiso&lang=en. Reading a link only
 // changes what it names; the rest keeps the device's own settings.
 
 import type { Measure, Travel } from './protocol';
@@ -46,6 +46,7 @@ export interface LinkState {
   freq: boolean;
   desert: boolean;
   iso: boolean;
+  heat: boolean;
 }
 
 export function parsePoint(v: string | null): Point | null {
@@ -62,7 +63,8 @@ export function readLink(search: string, base: LinkState): LinkState {
   const layers = (p.get('layers') ?? '').split(',');
   s.freq = layers.includes('freq');
   s.desert = layers.includes('desert');
-  s.iso = layers.includes('iso');
+  s.iso = !layers.includes('noiso');
+  s.heat = layers.includes('heat');
   s.origin = parsePoint(p.get('from'));
   s.others = s.origin
     ? p
@@ -101,7 +103,9 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
   if (s.stepFree) p.set('sf', '1');
   if (s.travel !== 'walk') p.set('go', s.travel);
   if (!s.routes) p.set('routes', '0');
-  const layers = [s.freq && 'freq', s.desert && 'desert', s.iso && 'iso'].filter(Boolean).join(',');
+  const layers = [s.heat && 'heat', s.freq && 'freq', s.desert && 'desert', !s.iso && 'noiso']
+    .filter(Boolean)
+    .join(',');
   if (layers) p.set('layers', layers);
   if (lang) p.set('lang', lang);
   return p.toString();

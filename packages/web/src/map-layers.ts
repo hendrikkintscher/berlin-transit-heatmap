@@ -2,7 +2,15 @@
 // layers on top of the basemap. The heatmap image itself is added with the first result.
 
 import type maplibregl from 'maplibre-gl';
-import { MODE_COLORS } from './colors';
+import {
+  bandColor,
+  bandOf,
+  HOME_COLORS,
+  HOME_OUTLINE_MINUTES,
+  homeBandOf,
+  MODE_COLORS,
+} from './colors';
+import { CONTOUR_MINUTES } from './contours';
 import { bezirke, landmarks, ringLine } from './orientation';
 import { SEARCH_BBOX } from './search';
 
@@ -19,7 +27,8 @@ export const DESERT_LAYER = 'desert-raster';
 export const FREQ_STEPS = [4, 12, 30, 60];
 export const FREQ_COLORS = ['#c6dbef', '#6baed6', '#2171b5', '#08519c', '#08306b'];
 export const OUTLINES_SOURCE = 'outlines';
-export const OUTLINE_LAYERS = ['outlines-line', 'outlines-label'];
+export const OUTLINE_LAYERS = ['outlines-casing', 'outlines-line', 'outlines-label'];
+export type OutlineKind = 'time' | 'extra' | 'home';
 /** Labelled, bolder outlines; the other 5-minute steps are drawn thin. */
 const MAJOR_OUTLINES = [15, 30, 45];
 const AREA_SOURCE = 'area';
@@ -184,6 +193,17 @@ export function addMapLayers(
   );
   map.addSource(OUTLINES_SOURCE, { type: 'geojson', data: empty });
   const isoVisibility = o.iso ? 'visible' : 'none';
+  // Without the colour fill, a white edge keeps the coloured outlines readable on the map.
+  map.addLayer(
+    {
+      id: 'outlines-casing',
+      type: 'line',
+      source: OUTLINES_SOURCE,
+      layout: { 'line-join': 'round', visibility: isoVisibility },
+      paint: { 'line-color': '#ffffff', 'line-opacity': 0, 'line-width': 1 },
+    },
+    ROUTE_LAYERS[0],
+  );
   map.addLayer(
     {
       id: 'outlines-line',
@@ -443,7 +463,6 @@ export function heatOpacity(percent: number): maplibregl.ExpressionSpecification
   return ['interpolate', ['linear'], ['zoom'], 13, o, 16, o * 0.45];
 }
 
-/** Outline labels: "15 min", or "+15 min" (extra minutes) at a meeting point. */
 /**
  * Outline labels: minutes ("15 min"), extra minutes at a meeting point ("+15 min"), or on
  * the home map the clock time, its levels being minutes before 4 Uhr ("1:00").
@@ -452,6 +471,74 @@ export function outlineLabel(kind: 'time' | 'extra' | 'home'): maplibregl.Expres
   if (kind === 'home')
     return ['concat', ['to-string', ['%', ['-', 28, ['/', ['get', 'min'], 60]], 24]], ':00'];
   return ['concat', kind === 'extra' ? '+' : '', ['to-string', ['get', 'min']], ' min'];
+}
+
+/**
+ * Outline look for the kind of map and whether the colour fill is on. With the fill, thin
+ * dark lines labelled at 15, 30 and 45 min. Without it, each line takes its band's colour
+ * from the legend, on a white edge, and every line carries its minutes.
+ */
+export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: boolean): void {
+  if (!map.getLayer('outlines-line')) return;
+  const major: maplibregl.ExpressionSpecification = [
+    'match',
+    ['get', 'min'],
+    [...MAJOR_OUTLINES],
+    1,
+    0,
+  ];
+  map.setPaintProperty('outlines-line', 'line-color', heat ? '#1d1530' : outlineColors(kind));
+  map.setPaintProperty(
+    'outlines-line',
+    'line-opacity',
+    heat ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4] : 1,
+  );
+  map.setPaintProperty(
+    'outlines-line',
+    'line-width',
+    heat
+      ? [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          ['match', ['get', 'min'], 15, 2, 30, 1.5, 45, 1.1, 0.5],
+          14,
+          ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
+        ]
+      : [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          ['+', 1.4, major],
+          14,
+          ['+', 2.6, ['*', 1.4, major]],
+        ],
+  );
+  map.setPaintProperty('outlines-casing', 'line-opacity', heat ? 0 : 0.9);
+  map.setPaintProperty('outlines-casing', 'line-width', [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    9,
+    ['+', 3, major],
+    14,
+    ['+', 5, ['*', 1.4, major]],
+  ]);
+  map.setFilter(
+    'outlines-label',
+    heat && kind !== 'home' ? ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]] : null,
+  );
+  map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind));
+}
+
+/** Each outline in the colour of the band just inside it, as the legend shows it. */
+function outlineColors(kind: OutlineKind): maplibregl.ExpressionSpecification {
+  const levels = kind === 'home' ? HOME_OUTLINE_MINUTES : CONTOUR_MINUTES;
+  const color = (min: number) =>
+    kind === 'home' ? HOME_COLORS[homeBandOf(min * 60 - 1)] : bandColor(bandOf(min * 60 - 1));
+  return ['match', ['get', 'min'], ...levels.flatMap((m) => [m, color(m)]), '#1d1530'] as never;
 }
 
 /** [west, south, east, north] as the corners a canvas source wants. */
