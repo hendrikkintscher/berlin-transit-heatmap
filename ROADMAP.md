@@ -4,14 +4,13 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #66. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #69. Build in this order, one step per PR:
 
-1. **Next:** Wider area: Potsdam and the commuter belt (group 13)
-2. Heatmap colours off by default, outlines on (group 7)
-3. Calmer street level: footpaths next to streets (group 7)
-4. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
-5. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-6. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** Heatmap colours off by default, outlines on (group 7)
+2. Calmer street level: footpaths next to streets (group 7)
+3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+5. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -445,6 +444,8 @@ Notes: layout and CSS on the existing controls, no new data, so no cost to taps 
 ## 13. Wider area
 
 ### Potsdam and the commuter belt (C6)
+
+**Done** (PR #69): the map covers 12.90–13.92 E, 52.27–52.80 N, so Potsdam, Bernau, Oranienburg, Königs Wusterhausen and Erkner are inside. Footpaths and timetables for the wider area come from a fresh OSM and timetable rebuild after the merge. The heatmap image is now one 50 m pixel per cell (it looks the same), and the outlines are traced at half resolution.
 
 The covered rectangle is 13.05–13.80 E, 52.33–52.70 N (timetable-build/src/geo.ts). Potsdam's centre sits right on the western edge, and Bernau, Oranienburg, Königs Wusterhausen and Erkner are outside, though many people commute from there. Widen the area to include them.
 
