@@ -1,6 +1,6 @@
 {
-  "name": "Berlin Transit Heatmap",
-  "short_name": "Berlin Transit",
+  "name": "Wohin jetzt? · Öffis mit einem Tap",
+  "short_name": "Wohin jetzt?",
   "description": "How long does public transport take from any point in Berlin to everywhere else?",
   "start_url": "./",
   "scope": "./",

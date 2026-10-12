@@ -8,6 +8,7 @@ export const LANGS: readonly Lang[] = ['de', 'en'];
 
 const de = {
   title: region.title.de,
+  tagline: region.tagline.de,
   description: 'Wie lange brauchst du mit Bus und Bahn von einem Punkt in Berlin überallhin?',
   mapLabel: 'Karte von Berlin',
   lines: 'Linien',
@@ -243,6 +244,7 @@ export type Key = keyof typeof de;
 
 const en: Record<Key, string> = {
   title: region.title.en,
+  tagline: region.tagline.en,
   description: 'How long does public transport take from any point in Berlin to everywhere else?',
   mapLabel: 'Map of Berlin',
   lines: 'Lines',
@@ -520,7 +522,7 @@ export function setLang(l: Lang, remember = true) {
     }
   }
   document.documentElement.lang = l;
-  document.title = t('title');
+  document.title = `${t('title')} · ${t('tagline')}`;
   document.querySelector('meta[name="description"]')?.setAttribute('content', t('description'));
   for (const el of document.querySelectorAll<HTMLElement>('[data-t]'))
     el.textContent = t(el.dataset.t as Key);
