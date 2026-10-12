@@ -216,7 +216,11 @@ if (p.mode === 'inplace') {
     await gh('PATCH', `/releases/${release.id}`, { tag_name: args.tag });
     throw e;
   }
-  await gh('DELETE', `/releases/${release.id}`);
+  // The swap is done: cleaning up the old release must not fail the run (a 502 here once
+  // kept the new files from being deployed). A leftover "-old-" release is harmless.
+  await gh('DELETE', `/releases/${release.id}`).catch((e) =>
+    console.log(`::warning title=Old release left over::${e.message}`),
+  );
   for (const t of [`${args.tag}-old-${stamp}`, `${args.tag}-next-${stamp}`]) {
     await gh('DELETE', `/git/refs/tags/${t}`).catch((e) => console.log(`(tag ${t}: ${e.message})`));
   }
