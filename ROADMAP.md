@@ -22,6 +22,8 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
+**Proposed, waiting for Hendrik's pick** (from the connection test against BVG/VBB, plan in research/connection-test/comparison.md): S-Bahn arrival times, shorter platform changes, and less walking on equal arrival (group 6). Not built until Hendrik picks them.
+
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
 **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
@@ -394,6 +396,18 @@ Notes: check at 360×740 in German and English that the trip card still looks ri
 ### Start point or destination switch
 
 Hendrik, 2026-10-12: "I want a switch that switches between the first set location to either be start or end point of the connections shown when i tap on other locations". A clearly visible switch decides whether the set place is where trips start ("Von hier") or where they end ("Hierher"). Tapping another place then shows the trip from the set place to it, or from it to the set place, and the map colours follow the same direction. The reverse direction already exists as "Ankommen" (`dir=arr`, PR #24), so this builds on it rather than adding a new kind of map; the builder decides with the redesigned time panel (A) where the switch sits so it isn't a second, competing Losfahren/Ankommen control. Kept in the link. Snappiness rule: switching direction and tapping stay as fast as now.
+
+### Real arrival times at stops
+
+From the connection test on 2026-10-12 (research/connection-test/comparison.md, finding 3). The timetable stores one time per stop, the departure, so getting off uses the departure time. About 85 % of S-Bahn stop times have a 24–60 s dwell (regional 60–120 s), so each S-Bahn ride ends about a minute late and tight changes break (for example, the M5 at Landsberger Allee is missed). Store arrival times in the timetable file too (a small size increase and a format change). Keep the routing speed.
+
+### Shorter platform changes
+
+From the connection test, finding 4. Platforms of one station get 120 s when the footpaths don't connect them, which is common for S-Bahn platforms, while BVG plans some changes in 1 minute (S8 → S25 at Bornholmer Str.). Use realistic platform transfer times and honour the timetable feed's transfer rules that are tied to routes (6,760 rows) and timed transfers (2,489 rows).
+
+### Less walking on equal arrival (low priority)
+
+From the connection test, finding 5. When two trips arrive at the same time, prefer the one with less walking or leaving later; today the earliest departure wins, for example an earlier tram from a farther stop. Cosmetic, and a reverse pass would cost time on every tap, so it is only built if it keeps taps as fast as now.
 
 ## 7. Reading the map
 
