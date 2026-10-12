@@ -50,10 +50,16 @@ export function heatGrid(
   const dLon = cellSizeM / mPerLon;
   const cols = Math.max(1, Math.ceil((maxLon0 - minLon) / dLon - 1e-9));
   const rows = Math.max(1, Math.ceil((maxLat - minLat) / dLat - 1e-9));
-  const maxLon = minLon + cols * dLon;
-  const gridMinLat = maxLat - rows * dLat;
-  const seconds = new Float32Array(cols * rows).fill(Infinity);
-  const nearest = opts.trackStops ? new Int32Array(cols * rows).fill(-1) : null;
+  // Only a window of the cells, when asked (its own bbox below); the whole grid otherwise.
+  const win = opts.window;
+  const wc0 = win ? Math.max(0, win.c0) : 0;
+  const wr0 = win ? Math.max(0, win.r0) : 0;
+  const wc1 = win ? Math.min(cols, win.c0 + win.cols) : cols;
+  const wr1 = win ? Math.min(rows, win.r0 + win.rows) : rows;
+  const outCols = Math.max(0, wc1 - wc0);
+  const outRows = Math.max(0, wr1 - wr0);
+  const seconds = new Float32Array(outCols * outRows).fill(Infinity);
+  const nearest = opts.trackStops ? new Int32Array(outCols * outRows).fill(-1) : null;
 
   const speeds = walkSpeeds(opts.walkSpeedMps);
   const radiusM = fallbackWalk * speeds.straight;
@@ -66,10 +72,10 @@ export function heatGrid(
     // Fractional cell coordinates of the source (cell centres sit at k + 0.5).
     const fc = (lon - minLon) / dLon;
     const fr = (maxLat - lat) / dLat;
-    const c0 = Math.max(0, Math.floor(fc) - radCols);
-    const c1 = Math.min(cols - 1, Math.floor(fc) + radCols);
-    const rr0 = Math.max(0, Math.floor(fr) - radCols);
-    const rr1 = Math.min(rows - 1, Math.floor(fr) + radCols);
+    const c0 = Math.max(wc0, Math.floor(fc) - radCols);
+    const c1 = Math.min(wc1 - 1, Math.floor(fc) + radCols);
+    const rr0 = Math.max(wr0, Math.floor(fr) - radCols);
+    const rr1 = Math.min(wr1 - 1, Math.floor(fr) + radCols);
     for (let r = rr0; r <= rr1; r++) {
       const dy = (r + 0.5 - fr) * cellSizeM;
       const dy2 = dy * dy;
@@ -78,7 +84,7 @@ export function heatGrid(
       const half = Math.sqrt(r2 - dy2) / cellSizeM;
       const cs = Math.max(c0, Math.ceil(fc - 0.5 - half));
       const ce = Math.min(c1, Math.floor(fc - 0.5 + half));
-      const rowBase = r * cols;
+      const rowBase = (r - wr0) * outCols - wc0;
       for (let c = cs; c <= ce; c++) {
         const dx = (c + 0.5 - fc) * cellSizeM;
         const v = startSeconds + Math.sqrt(dx * dx + dy2) * invSpeed;
@@ -134,14 +140,21 @@ export function heatGrid(
       pace,
       sharedLabels(net),
     );
-    const cells = snapCells(net, [minLon, gridMinLat, maxLon, maxLat], cols, rows);
+    const cells = snapCells(
+      net,
+      [minLon, maxLat - rows * dLat, minLon + cols * dLon, maxLat],
+      cols,
+      rows,
+    );
     const { cellA, cellB, cellDa, cellDb } = cellEnds(net, cells);
     const { time, walk, source } = labels;
     const cellEdge = cells.edge;
     // Edges with a stop on them, so the map lookup below runs only where it can find one.
     const hasStop = new Uint8Array(net.edgeCount);
     for (const e of edgeStop.keys()) hasStop[e] = 1;
-    for (let k = 0; k < cols * rows; k++) {
+    for (let o = 0; o < outCols * outRows; o++) {
+      // The cell in the whole grid (snaps and ends are the whole grid's).
+      const k = (wr0 + Math.floor(o / outCols)) * cols + wc0 + (o % outCols);
       const a = cellA[k];
       if (a < 0) continue;
       const e = cellEdge[k];
@@ -210,18 +223,23 @@ export function heatGrid(
         v = fv;
         from = ffrom;
       }
-      if (v < seconds[k]) {
-        seconds[k] = v;
-        if (nearest) nearest[k] = from;
+      if (v < seconds[o]) {
+        seconds[o] = v;
+        if (nearest) nearest[o] = from;
       }
     }
   }
 
   const grid: HeatGrid = {
     cellSizeM,
-    bbox: [minLon, gridMinLat, maxLon, maxLat],
-    cols,
-    rows,
+    bbox: [
+      minLon + wc0 * dLon,
+      maxLat - (wr0 + outRows) * dLat,
+      minLon + (wc0 + outCols) * dLon,
+      maxLat - wr0 * dLat,
+    ],
+    cols: outCols,
+    rows: outRows,
     seconds,
   };
   if (nearest) grid.stop = nearest;

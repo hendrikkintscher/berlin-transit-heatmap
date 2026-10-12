@@ -153,6 +153,27 @@ describe('walking network', () => {
     expect(at({ walkSpeedMps: 4.8 / 3.6 })).toBeCloseTo(slow * (4 / 4.8), 0);
   });
 
+  it('computes a window of cells the same as the whole grid there', () => {
+    const o = { walk: net, walkSpeedMps: 4.8 / 3.6 };
+    const r = travelTimes(tt, origin, o);
+    const opts = { cellSizeM: 50, bbox: GRID_BBOX, trackStops: true, ...o };
+    const full = heatGrid(tt, r, opts);
+    const win = { c0: 3, r0: 2, cols: 5, rows: 4 };
+    const part = heatGrid(tt, r, { ...opts, window: win });
+    expect([part.cols, part.rows]).toEqual([5, 4]);
+    for (let y = 0; y < 4; y++)
+      for (let x = 0; x < 5; x++) {
+        const k = (win.r0 + y) * full.cols + win.c0 + x;
+        expect(part.seconds[y * 5 + x]).toBe(full.seconds[k]);
+        expect(part.stop![y * 5 + x]).toBe(full.stop![k]);
+      }
+    // Its bbox is its own cells', so lookups by place still hit the same cell.
+    const [w, , , n] = part.bbox;
+    const lat = n - 0.5 * ((n - part.bbox[1]) / 4);
+    const lon = w + 0.5 * ((part.bbox[2] - w) / 5);
+    expect(gridValueAt(part, lat, lon)).toBe(gridValueAt(full, lat, lon));
+  });
+
   it('colours the far bank by the walk over the bridge', () => {
     const o = { walk: net, walkSpeedMps: 4.8 / 3.6 };
     const r = travelTimes(tt, origin, o);

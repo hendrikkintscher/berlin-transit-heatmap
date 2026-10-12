@@ -191,6 +191,11 @@ export interface HeatGridOptions {
   bbox?: [number, number, number, number];
   /** Also record which stop each cell's time comes from (grid.stop). Default false. (Addition to Contract 2.) */
   trackStops?: boolean;
+  /**
+   * Compute only these cells of the grid (first column and row, and how many of each);
+   * the result is that part of the grid, with its own bbox. (Addition to Contract 2.)
+   */
+  window?: { c0: number; r0: number; cols: number; rows: number };
 }
 
 export interface HeatGrid {

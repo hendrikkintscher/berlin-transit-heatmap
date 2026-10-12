@@ -59,8 +59,11 @@ export function outlines(
   bbox: readonly [number, number, number, number],
   blurCells: number,
   minutes: readonly number[] = CONTOUR_MINUTES,
+  /** Added to every time first (a meeting point traces the minutes over its best spot). */
+  offset = 0,
 ): FeatureCollection<LineString, ContourProps> {
   const half = halve(seconds, cols, rows, bbox);
+  if (offset) for (let i = 0; i < half.seconds.length; i++) half.seconds[i] += offset;
   const blurred = blurSeconds(half.seconds, half.cols, half.rows, Math.round(blurCells / 2));
   return contours(blurred, half.cols, half.rows, half.bbox, minutes, MIN_POINTS / 2);
 }
