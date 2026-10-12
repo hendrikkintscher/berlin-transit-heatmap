@@ -145,3 +145,13 @@ export function leaveOffset(when: When, now = new Date()): number {
   // Berlin is a whole number of hours from UTC, so minutes and seconds match.
   return now.getUTCMinutes() * 60 + now.getUTCSeconds();
 }
+
+/**
+ * Seconds since midnight in Berlin now, when `when` is today (or the typical day of
+ * today's kind), so a trip's times can count down; null for another day.
+ */
+export function clockNow(when: When, now = new Date()): number | null {
+  const w = whenAt(now);
+  if (when.day !== w.day && when.day !== dayType(w.day)) return null;
+  return w.hour * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
+}

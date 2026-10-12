@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { heatGrid, journeyTo, loadTimetable, travelTimes } from '../src';
+import { departureAt, heatGrid, journeyTo, loadTimetable, travelTimes } from '../src';
 import { A, C, G, H, KM_LAT, miniTimetable, STOP_POS } from './fixture';
 
 describe('journeyTo', () => {
@@ -29,5 +29,15 @@ describe('journeyTo', () => {
   it('is null outside the grid or where nothing is reachable', () => {
     expect(journeyTo(tt, r, grid, 0, 0)).toBeNull();
     expect(journeyTo(tt, r, grid, STOP_POS[A].lat + 9 * KM_LAT, STOP_POS[A].lon)).toBeNull();
+  });
+
+  it('finds when the boarded vehicle leaves', () => {
+    const j = journeyTo(tt, r, grid, STOP_POS[H].lat + 0.1 * KM_LAT, STOP_POS[H].lon)!;
+    const u1 = j.legs[0];
+    if (u1.type !== 'ride') throw new Error('expected a ride');
+    // U1 leaves A every 10 minutes from 10:00.
+    expect(departureAt(tt, u1.route, u1.fromPos, 10 * 3600 + 1)).toBe(10 * 3600 + 600);
+    expect(departureAt(tt, u1.route, u1.fromPos, 10 * 3600)).toBe(10 * 3600);
+    expect(departureAt(tt, u1.route, u1.fromPos, 99 * 3600)).toBeNull();
   });
 });

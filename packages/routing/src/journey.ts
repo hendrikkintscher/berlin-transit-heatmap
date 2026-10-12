@@ -14,6 +14,9 @@ export type JourneyLeg =
       to: number;
       /** Stop indices passed, from `from` to `to` inclusive. */
       stops: number[];
+      /** The prepared route ridden and the position on it where the ride starts. */
+      route: number;
+      fromPos: number;
     };
 
 export interface Journey {
@@ -65,6 +68,8 @@ export function journeyTo(
         from: stops[0],
         to: stops[stops.length - 1],
         stops,
+        route: kind,
+        fromPos: legs.from[s],
       });
       s = stops[0];
     } else if (kind === LEG_WALK) {
@@ -94,4 +99,24 @@ function transferSeconds(tt: PreparedTimetable, from: number, to: number): numbe
     if (tt.transferTo[e] === to) return tt.transferSeconds[e];
   }
   return 0;
+}
+
+/**
+ * When the first vehicle on `route` leaves its stop at position `pos` at or after `ready`
+ * (seconds of the service day), as RAPTOR boards it; null if none does.
+ */
+export function departureAt(
+  tt: PreparedTimetable,
+  route: number,
+  pos: number,
+  ready: number,
+): number | null {
+  const n = tt.routeStopOffset[route + 1] - tt.routeStopOffset[route];
+  const base = tt.routeTimeOffset[route];
+  let best: number | null = null;
+  for (let trip = 0; trip < tt.routeTripCount[route]; trip++) {
+    const t = tt.times[base + trip * n + pos];
+    if (t >= ready && (best === null || t < best)) best = t;
+  }
+  return best;
 }
