@@ -4,23 +4,22 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #187. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #189. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build, after PR #185 and not before 23:18 UTC.
-2. **Next:** "Bis N Min." view as an optional switch (D1, group 15)
-3. Faster first load and no stale work (B4 + B5, group 15)
-4. Lighter work per tap (B6, group 15)
-5. Smaller Wohnlage-Karte memory (B7, group 15)
-6. Typical timetable when offline (B8, group 15)
-7. Notice, search and favourites polish (C5–C8, group 15)
-8. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-9. Default view readability: two variants to compare (C9, group 15)
-10. Named starts in meeting mode (D2, group 15)
-11. Code health, no change in behaviour (E1, group 15)
+2. **Next:** Faster first load and no stale work (B4 + B5, group 15)
+3. Lighter work per tap (B6, group 15)
+4. Smaller Wohnlage-Karte memory (B7, group 15)
+5. Typical timetable when offline (B8, group 15)
+6. Notice, search and favourites polish (C5–C8, group 15)
+7. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+8. Default view readability: two variants to compare (C9, group 15)
+9. Named starts in meeting mode (D2, group 15)
+10. Code health, no change in behaviour (E1, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
-**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
+**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel (review running, findings in plan/reviews/) by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
 
 **Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
 
@@ -264,10 +263,7 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 - **Lean deploy: only the files the app uses (B2)**: Done (PR #156): timetables are .bin only, and each deploy copies only the files the app loads (streets.json added to the list for search).
 
 - **Tap card: larger buttons, shorter meeting card (C2)**: Done (PR #174, as part of the redesign): all buttons at least 44 px, meeting trips folded behind "N weitere Fahrten".
-
-### "Bis N Min." view (D1)
-
-Picked by Hendrik on 2026-10-12 ("Yes"). An optional switch in Ebenen, not the default: chips 15 / 30 / 45 / 60 (or a slider) shade everything reachable within N minutes from the start in one colour, and the rest stays plain map. One pass over the existing grid with no extra routing, kept in the link.
+- **"Bis N Min." view (D1)**: Done (PR #189): a switch in Ebenen with chips 15/30/45/60 Min., off by default, kept in the link as `bis=N`; everything within N minutes shaded in one green with no new routing (5–50 ms); meeting points use the slowest trip, comparison maps ignore it; taps 0.25–0.6 s live.
 
 ### Faster first load and no stale work (B4 + B5)
 
@@ -338,7 +334,7 @@ Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existi
 
 ## 17. Review track
 
-Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Not started.
+Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: review running, findings in plan/reviews/ (project files).
 
 - **UI intuitiveness**: check where the interface is intuitive and where it is not, and what could be handled more smartly or more obviously.
 - **Visual consistency**: check map elements, colours, layout, symbols and text for consistency.
