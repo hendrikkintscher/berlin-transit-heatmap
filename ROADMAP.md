@@ -7,7 +7,8 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #88. Build in this order, one step per PR:
 
 1. **Next:** Live disruptions (group 11), being built as a live check of the tapped trip until Hendrik picks a form
-2. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+2. Fairer meeting point suggestions: slowest trip and average count equally (group 3)
+3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
 
 After the UI overhaul, the list is done for now. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
@@ -118,6 +119,15 @@ Notes: the routing already gives times to every point, so per-place times are lo
 Friends often meet in groups of three to five. Generalise the meeting point to up to five starts: the map shows extra minutes over the best slower-of-all time, the suggested meeting points work the same way, and a tap lists everyone's trip. Kept in the link with `with=` repeated.
 
 Notes: one routing pass per start, so five starts take about 2.5 times the two-start time; start with three and measure against the snappiness rule. Medium effort; built in one step with C2. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+### Fairer meeting point suggestions
+
+Hendrik, 2026-10-12 (option C from research/meeting-fairness/meeting-fairness.md): the suggested meeting points rank by **slowest trip + average trip**, counted equally, instead of slowest trip first with the total only breaking ties. One extra minute for the slowest person is then worth it when the group saves at least (people + 1) minutes. With 3+ people this stops picks like Hermannstr. 39/39/31 over Friedrichstr. 40/38/12, and with two people it mostly keeps today's fair picks.
+
+- **Where:** `suggestMeetingPoints` in `packages/web/src/meet.ts`; the 1.5 km spacing and the top 3 stay.
+- **Unchanged:** the map colours keep showing the slowest person's time.
+
+Small effort, no speed cost.
 
 ### "Where can I live?" map from my favourites (C2)
 
