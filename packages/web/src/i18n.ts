@@ -173,6 +173,8 @@ const de = {
   isoHint: 'Linien alle 5 Minuten mit ihren Minuten, kräftiger bei 15, 30 und 45',
   opacity: 'Deckkraft der Farben',
   opacityHint: 'Weniger, um Straßennamen besser zu sehen',
+  limit: 'Bis N Min.',
+  limitHint: 'Alles, was du in dieser Zeit erreichst, in einer Farbe',
   walkTitle: 'Gehtempo',
   walkHelp:
     'Für den Weg zur ersten Haltestelle und vom Ausstieg zum Ziel. Umsteigen rechnet mit 4 km/h.',
@@ -427,6 +429,8 @@ const en: Record<Key, string> = {
   isoHint: 'Lines every 5 minutes with their minutes, bolder at 15, 30 and 45',
   opacity: 'Colour opacity',
   opacityHint: 'Lower it to read street names',
+  limit: 'Within N min',
+  limitHint: 'Everything you reach in that time, in one colour',
   walkTitle: 'Walking speed',
   walkHelp:
     'For the walk to the first stop and from the last stop to the spot. Changing trains assumes 4 km/h.',

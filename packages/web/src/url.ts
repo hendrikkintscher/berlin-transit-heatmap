@@ -1,8 +1,9 @@
 // What a link carries: ?from=lat,lon&with=…[&with=…]&to=…&t=weekend-02&dir=arr&m=best&cmp=…
-// &walk=5&sf=1&go=bike&routes=0&layers=heat,freq,desert,noiso&lang=en. Reading a link only
+// &walk=5&sf=1&go=bike&routes=0&layers=heat,freq,desert,noiso&bis=30&lang=en. Reading a link only
 // changes what it names; the rest keeps the device's own settings. An exact time adds its
 // minutes to t (t=20261014-0835).
 
+import { LIMIT_MINUTES } from './colors';
 import type { Measure, Travel } from './protocol';
 import {
   parseWhen,
@@ -55,6 +56,8 @@ export interface LinkState {
   desert: boolean;
   iso: boolean;
   heat: boolean;
+  /** "Bis N Min." in minutes (one of LIMIT_MINUTES), 0 = off. */
+  limit: number;
 }
 
 export function parsePoint(v: string | null): Point | null {
@@ -73,6 +76,8 @@ export function readLink(search: string, base: LinkState): LinkState {
   s.desert = layers.includes('desert');
   s.iso = !layers.includes('noiso');
   s.heat = layers.includes('heat');
+  const limit = Number(p.get('bis'));
+  s.limit = LIMIT_MINUTES.includes(limit) ? limit : 0;
   s.origin = parsePoint(p.get('from'));
   s.others = s.origin
     ? p
@@ -117,6 +122,7 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
     .filter(Boolean)
     .join(',');
   if (layers) p.set('layers', layers);
+  if (s.limit) p.set('bis', String(s.limit));
   if (lang) p.set('lang', lang);
   return p.toString();
 }

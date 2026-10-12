@@ -93,7 +93,13 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
     set(
       'layers-chip',
       t('layersChip'),
-      state.heat || state.freq || state.desert || !state.routes || !state.iso || !!state.compare,
+      state.heat ||
+        !!state.limit ||
+        state.freq ||
+        state.desert ||
+        !state.routes ||
+        !state.iso ||
+        !!state.compare,
     );
   }
 

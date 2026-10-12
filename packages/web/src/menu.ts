@@ -22,6 +22,8 @@ export interface MenuDeps {
   opacityChanged: () => void;
   /** The Heatmap switch changed: show or hide the colours, restyle the outlines. */
   heatChanged: () => void;
+  /** "Bis N Min." switched (`toggled`) or set to other minutes: the image is painted again. */
+  limitChanged: (toggled: boolean) => void;
   /** The language changed: everything with text is redrawn. */
   langChanged: () => void;
   setStatus: (render: () => string, fade?: boolean) => void;
@@ -42,6 +44,8 @@ export function initMenu(deps: MenuDeps) {
   const heatToggle = $<HTMLInputElement>('heat-toggle');
   const stepFreeToggle = $<HTMLInputElement>('stepfree-toggle');
   const opacityInput = $<HTMLInputElement>('opacity');
+  const limitToggle = $<HTMLInputElement>('limit-toggle');
+  const limitButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-limit]')];
 
   $('menu-btn').addEventListener('click', () => {
     deps.closeSearch();
@@ -123,13 +127,37 @@ export function initMenu(deps: MenuDeps) {
     deps.writeUrl();
   });
   heatToggle.checked = state.heat;
-  opacityInput.disabled = !state.heat;
+  opacityInput.disabled = !state.heat && !state.limit;
   heatToggle.addEventListener('change', () => {
     state.heat = heatToggle.checked;
-    opacityInput.disabled = !state.heat;
+    opacityInput.disabled = !state.heat && !state.limit;
     deps.heatChanged();
     deps.writeUrl();
   });
+
+  // "Bis N Min.": the minutes stay picked while it is off, and picking some turns it on.
+  let limitMinutes = state.limit || 30;
+  function renderLimit() {
+    limitToggle.checked = state.limit > 0;
+    opacityInput.disabled = !state.heat && !state.limit;
+    for (const b of limitButtons) {
+      b.textContent = `${b.dataset.limit} ${t('min')}`;
+      b.setAttribute('aria-checked', String(Number(b.dataset.limit) === limitMinutes));
+    }
+  }
+  function setLimit(minutes: number) {
+    if (minutes === state.limit) return;
+    const toggled = !minutes !== !state.limit;
+    state.limit = minutes;
+    if (minutes) limitMinutes = minutes;
+    renderLimit();
+    deps.limitChanged(toggled);
+    deps.writeUrl();
+  }
+  limitToggle.addEventListener('change', () => setLimit(limitToggle.checked ? limitMinutes : 0));
+  for (const b of limitButtons)
+    b.addEventListener('click', () => setLimit(Number(b.dataset.limit)));
+  renderLimit();
   opacityInput.value = String(state.opacity);
   opacityInput.addEventListener('input', () => {
     state.opacity = Number(opacityInput.value);
@@ -170,6 +198,7 @@ export function initMenu(deps: MenuDeps) {
     setLang(l, remember);
     for (const b of langButtons) b.setAttribute('aria-checked', String(b.dataset.lang === l));
     deps.langChanged();
+    renderLimit();
   }
   for (const b of langButtons)
     b.addEventListener('click', () => {

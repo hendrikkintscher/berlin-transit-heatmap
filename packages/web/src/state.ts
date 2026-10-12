@@ -66,6 +66,8 @@ export interface State {
   iso: boolean;
   /** The coloured travel-time fill; off by default (the outlines carry the minutes). */
   heat: boolean;
+  /** "Bis N Min.": shade what is reachable within this many minutes in one colour; 0 = off. */
+  limit: number;
   /** Heatmap opacity in percent; remembered on this device. */
   opacity: number;
   /** Walking speed in km/h; remembered on this device, carried in shared links. */
@@ -101,6 +103,7 @@ export function createState(): State {
     desert: false,
     iso: true,
     heat: false,
+    limit: 0,
     opacity: readNumber('heat-opacity', DEFAULT_OPACITY),
     walkKmh: walkSpeed(readNumber('walk-kmh', DEFAULT_WALK_KMH)),
     stepFree: readNumber('step-free', 0) > 0,

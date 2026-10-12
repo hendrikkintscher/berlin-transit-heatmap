@@ -253,6 +253,24 @@
         </label>
         <label class="toggle">
           <span class="toggle-text">
+            <b data-t="limit">Bis N Min.</b>
+            <small data-t="limitHint">Alles, was du in dieser Zeit erreichst, in einer Farbe</small>
+          </span>
+          <input id="limit-toggle" type="checkbox" role="switch" />
+        </label>
+        <div
+          class="seg seg-wide limit-row"
+          role="radiogroup"
+          aria-label="Bis N Min."
+          data-t-label="limit"
+        >
+          <button type="button" role="radio" data-limit="15" aria-checked="false">15</button>
+          <button type="button" role="radio" data-limit="30" aria-checked="true">30</button>
+          <button type="button" role="radio" data-limit="45" aria-checked="false">45</button>
+          <button type="button" role="radio" data-limit="60" aria-checked="false">60</button>
+        </div>
+        <label class="toggle">
+          <span class="toggle-text">
             <b data-t="lines">Linien</b>
             <small data-t="linesHint"
               >Die Verbindungen, über die du von deinem Startpunkt am schnellsten fährst</small

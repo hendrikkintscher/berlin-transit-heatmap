@@ -1591,3 +1591,7 @@ body.special .legend {
 .bottom:has(#readout:not([hidden]), #changes:not([hidden])) #tip {
   display: none;
 }
+/* "Bis N Min.": its minutes right under the switch. */
+.pop .limit-row {
+  margin: 0 0 8px;
+}

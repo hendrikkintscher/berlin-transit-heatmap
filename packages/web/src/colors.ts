@@ -129,6 +129,31 @@ export function colorLut(
   return lut;
 }
 
+// "Bis N Min.": everything reachable within N minutes in one colour, the rest left plain.
+
+/** The minutes offered for "Bis N Min.". */
+export const LIMIT_MINUTES = [15, 30, 45, 60];
+export const LIMIT_COLOR = '#0f7a52';
+/** Seconds over which the shading fades out across the N-minute edge. */
+export const LIMIT_FEATHER_S = 60;
+
+/**
+ * RGBA lookup for "Bis N Min.", indexed by whole seconds: the colour, partly see-through so
+ * streets stay readable, up to N minutes, fading to nothing across the edge; the last entry
+ * (all longer times) is transparent.
+ */
+export function limitLut(minutes: number): Uint8Array {
+  const edge = minutes * 60;
+  const n = edge + LIMIT_FEATHER_S / 2 + 2;
+  const lut = new Uint8Array(n * 4);
+  const [r, g, b] = hexToRgb(LIMIT_COLOR);
+  for (let s = 0; s < n; s++) {
+    const t = Math.min(1, Math.max(0, (edge + LIMIT_FEATHER_S / 2 - s) / LIMIT_FEATHER_S));
+    lut.set([r, g, b, Math.round(170 * t)], s * 4);
+  }
+  return lut;
+}
+
 // Difference map (comparing two times): how many minutes longer the trip takes at the
 // second time. Teals = faster, a light neutral around zero, warm to purple = slower.
 

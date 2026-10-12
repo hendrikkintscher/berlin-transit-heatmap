@@ -315,8 +315,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (m.living || m.home) special.done(m);
     state.result = m;
     showResult(m);
-    // The switch went on while it was computing.
-    if (m.unpainted && state.heat) send({ type: 'paint', id: m.id });
+    // A switch changed while it was computing.
+    syncImage();
     tap.onResult();
     // The first map is on screen: now the footpaths, while it is being looked at.
     askWalk();
@@ -326,9 +326,12 @@ listen((ev: MessageEvent<FromWorker>) => {
     preloadNextHour();
   } else if (m.type === 'image') {
     const r = state.result;
-    if (!r || r.id !== m.id || !r.unpainted) return;
+    // Only the image the switches still want (they may have changed while it was painted).
+    if (!r || r.id !== m.id || (m.limit ?? 0) !== state.limit) return;
     r.image = m.image;
     delete r.unpainted;
+    if (m.limit) r.limit = m.limit;
+    else delete r.limit;
     drawHeat(r);
     showHeat();
   } else if (m.type === 'trip') {
@@ -441,7 +444,8 @@ function compute() {
     ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
     ...state.origin,
     ...(state.others.length ? { others: state.others } : {}),
-    ...(state.heat ? {} : { noImage: true as const }),
+    ...(state.heat || state.limit ? {} : { noImage: true as const }),
+    ...(state.limit ? { limit: state.limit } : {}),
   });
 }
 
@@ -715,7 +719,7 @@ function drawHeat(r: Result) {
   heatCanvas.width = width;
   heatCanvas.height = height;
   heatCanvas.getContext('2d')!.putImageData(new ImageData(rgba, width, height), 0, 0);
-  const [w, s, e, n] = r.bbox;
+  const [w, s, e, n] = r.image.bbox ?? r.bbox;
   const coordinates: [[number, number], [number, number], [number, number], [number, number]] = [
     [w, n],
     [e, n],
@@ -753,16 +757,31 @@ function drawHeat(r: Result) {
 }
 
 /**
+ * Asks for the image the switches want when the map has another one: "Bis N Min." (not
+ * when comparing), else the colours with the Heatmap switch on. Painting reuses the grid.
+ */
+function syncImage() {
+  const r = state.result;
+  if (!r || r.compare || r.living || r.home) return;
+  const want = state.limit || (state.heat ? 0 : -1);
+  const have = r.unpainted ? -1 : (r.limit ?? 0);
+  if (want >= 0 && want !== have)
+    send({ type: 'paint', id: r.id, ...(want ? { limit: want } : {}) });
+}
+
+/**
  * The colour fill follows the Heatmap switch, and the outlines change their look with it.
  * A comparison (it has no outlines) and the where-to-live and home maps (their colours are
  * the point) always show it; the switch is left as it was for the start's map.
  */
 function showHeat() {
   const r = state.result;
-  const heat = state.heat || !!r?.compare || !!r?.living || !!r?.home;
+  const own = !r?.compare && !r?.living && !r?.home;
+  const limit = own && state.limit > 0;
+  const heat = state.heat || limit || !own;
   // Outlines alone carry their minutes, so the colour legend steps aside (not the home
-  // map's clock colours).
-  document.body.classList.toggle('no-legend', !heat && !r?.home);
+  // map's clock colours); "Bis N Min." has one colour and needs none either.
+  document.body.classList.toggle('no-legend', (!heat && !r?.home) || limit);
   if (!state.mapReady) return;
   if (map.getLayer(HEAT_LAYER))
     map.setLayoutProperty(HEAT_LAYER, 'visibility', r && heat ? 'visible' : 'none');
@@ -1558,8 +1577,14 @@ const menu = initMenu({
   },
   heatChanged: () => {
     // Computed with the switch off: the colours are drawn now, from the same grid.
-    const r = state.result;
-    if (state.heat && r?.unpainted) send({ type: 'paint', id: r.id });
+    syncImage();
+    showHeat();
+    chips.render();
+  },
+  limitChanged: (toggled) => {
+    syncImage();
+    // Other minutes only change the image; switching restyles the outlines and the legend.
+    if (!toggled) return;
     showHeat();
     chips.render();
   },
