@@ -7,8 +7,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #98. Build in this order, one step per PR:
 
 1. **Next:** Smooth line overlays along the real tracks and roads (group 7)
+2. Instant hour changes: preload the next hour, tidy the offline cache (group 10)
 
-Added by Hendrik on 2026-10-12, after the UI overhaul; after it the list is done until Hendrik adds more. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+Both picked by Hendrik on 2026-10-12. After step 2, Hendrik decides what comes next before anything starts. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Hendrik's standing go (2026-10-12): the builder keeps going through the steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -497,6 +498,15 @@ On 2026-10-12, a timetable build failed partway through publishing: GitHub's hou
 - A failed run must never leave a file deleted. Upload the new file before the old one is replaced, or check the release against the manifest at the end.
 
 Small effort, workflow only, no change to the app. Suggested by the builder on 2026-10-12 after the failed run.
+
+### Instant hour changes: preload the next hour, tidy the offline cache
+
+Hendrik picked this on 2026-10-12 as the next step (B5 + B4 from plan/suggestions-2.md).
+
+- **Preload the next hour:** after the map is shown and the walking network is in, fetch the next hour's timetable (about 270 KB) in the background, so the most common change is instant. Only on Wi-Fi, or when the connection reports no data saver.
+- **Offline cache tidy-up:** `packages/web/public/sw.js` keeps 6 timetable files, sized for the old JSON files, and since the real dates (PR #78) the file names change every day. Raise the limit to about 12, drop past days first, and bump `VERSION` if the file naming changed. This decides whether the app works offline in the morning.
+
+Notes: nothing loads before the first map, so first load stays as fast as now. Measure an hour change before and after. Small effort.
 
 ## 11. What's running now
 
