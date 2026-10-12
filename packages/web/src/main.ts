@@ -78,6 +78,7 @@ import {
   eveningWindow,
   isDate,
   isoDay,
+  catchUp,
   leaveOffset,
   windowName,
 } from './when';
@@ -784,6 +785,9 @@ new ResizeObserver(() =>
 // "Nächste" follows the clock: coming back to the app recomputes from the new "now".
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible' || state.measure !== 'next') return;
+  // A date's hour that is over by now (back after the hour or after midnight) moves on.
+  const w = catchUp(state.when, state.direction);
+  if (w) return whenSheet.setWhen(w);
   whenSheet.renderWhen();
   compute();
 });
