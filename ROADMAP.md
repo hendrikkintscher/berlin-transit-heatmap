@@ -10,8 +10,12 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 2. Offline map and faster start in the service worker (B3, group 15)
 3. "Bis N Min." view as an optional switch (D1, group 15)
 4. Faster first load and no stale work (B4 + B5, group 15)
+5. Lighter work per tap (B6, group 15)
+6. Smaller Wohnlage-Karte memory (B7, group 15)
+7. Typical timetable when offline (B8, group 15)
+8. Notice, search and favourites polish (C5–C8, group 15)
 
-While the redesign waits for Hendrik's pick, the builder goes on with steps 2–4, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+While the redesign waits for Hendrik's pick, the builder goes on with steps 2–8, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -863,3 +867,24 @@ Picked by Hendrik on 2026-10-12 ("Yes, both"). One PR with timings before and af
 
 - **B4:** connect early to the tile server and preload the map style; preload the main and worker code; preload the current hour's timetable from the start page; pass step-free, bike and the current time to the early load so the timetable isn't prepared twice.
 - **B5:** the worker drops requests that are already outdated, before and after loading, for maps and for trips; returning to the app recomputes only when the Berlin minute changed or the app was hidden for more than 60 s.
+
+### Lighter work per tap (B6)
+
+Picked by Hendrik on 2026-10-12 ("Yes, all three", one PR each for B6–B8). With Typisch or Bestfall, each tap currently rasterises the whole grid. Compute only a window of 3–4 km around the tap, reuse scratch buffers for softening and painting instead of allocating about 3×6.5 MB per map, and fold the meeting-point offset into the colour table instead of copying the grid.
+
+### Smaller Wohnlage-Karte memory (B7)
+
+The Wohnlage-Karte keeps a full-precision grid per favourite for the last two maps. Keep one map and store minutes compactly (16-bit tenths of a minute, or only cells that are reached).
+
+### Typical timetable when offline (B8)
+
+When a timetable fails to download (network error or offline), fall back to the typical window if one exists and show the existing "typical day" note instead of failing.
+
+### Notice, search and favourites polish (C5–C8)
+
+Picked by Hendrik on 2026-10-12 ("Yes, all four"), one PR.
+
+- **C5:** show a "N Linien anders" chip whenever the chosen day has changes within the visible map, with the list on tap, not only after a trip on an affected line.
+- **C6:** the search box gets a title and placeholder for its purpose, such as "Lieblingsort hinzufügen" or "2. Startpunkt wählen", at every entry point.
+- **C7:** a ☆ set on a map point is named by street and house number rather than a nearby place, and names can be edited in the favourites list.
+- **C8:** stops rank above other places in the suggestions ("Potsdam Hbf" currently offers an old signal box first), and after picking a result the map fits the 45-minute ring instead of zooming in close.
