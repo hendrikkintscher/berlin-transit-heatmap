@@ -4,14 +4,9 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #98. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #103. Nothing is queued: Hendrik picks the next step before anything starts (candidates are sent to him as a short choice). **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
-1. **Next:** Smooth line overlays along the real tracks and roads (group 7)
-2. Instant hour changes: preload the next hour, tidy the offline cache (group 10)
-
-Both picked by Hendrik on 2026-10-12. After step 2, Hendrik decides what comes next before anything starts. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
-
-Hendrik's standing go (2026-10-12): the builder keeps going through the steps without waiting for "continue", with the editor confirming each next step. Important decisions on the way go to Hendrik as multiple choice.
+Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -341,6 +336,8 @@ While a route is shown, the Lines layer steps back (about 30 % opacity, thinner,
 
 ### Smooth line overlays along the real tracks and roads
 
+**Done** (PR #99, #102): U-Bahn, S-Bahn and tram lines and the drawn trips follow the real tracks from VBB's GTFS shapes (lines.bin, about 0.16 MB gzipped, loaded after the first map). The first map is unchanged at about 0.75 s.
+
 Hendrik, 2026-10-12: the lines on the Lines layer (and the drawn route) have corners that are too sharp. U-Bahn, S-Bahn and tram lines should follow where they actually run. Bus lines may stay simpler, but should follow the road.
 
 - **Find the real geometry:** check whether VBB's GTFS feed carries `shapes.txt` for these lines. If not, take the tracks from OpenStreetMap (the route relations for U-Bahn, S-Bahn and tram, or the rail and tram ways), which the build already reads for footpaths.
@@ -500,6 +497,8 @@ On 2026-10-12, a timetable build failed partway through publishing: GitHub's hou
 Small effort, workflow only, no change to the app. Suggested by the builder on 2026-10-12 after the failed run.
 
 ### Instant hour changes: preload the next hour, tidy the offline cache
+
+**Done** (PR #103): the next hour preloads in the background, and the offline cache keeps 12 timetables, dropping past days first. On a 4G profile with a 4× slower CPU, the map is ready 0.5–0.7 s after an hour step, instead of 0.9–1.4 s.
 
 Hendrik picked this on 2026-10-12 as the next step (B5 + B4 from plan/suggestions-2.md).
 
