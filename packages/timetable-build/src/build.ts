@@ -14,8 +14,8 @@ import type { DayType, Mode, Route, Stop, StopsFile, Timetable, Transfer } from 
 
 export interface WindowSpec {
   name: string;
-  /** Which reference day the window's times count from. */
-  day: DayType;
+  /** Which day the window's times count from: a reference day, or a real date (YYYYMMDD). */
+  day: DayType | string;
   start: number;
   end: number;
 }
@@ -39,9 +39,24 @@ export const HOURLY_WINDOWS: WindowSpec[] = (['weekday', 'weekend'] as const).fl
   })),
 );
 
-export function hourlyName(day: DayType, hour: number): string {
+export function hourlyName(day: DayType | string, hour: number): string {
   return `${day}-${String(hour).padStart(2, '0')}`;
 }
+
+/** One-hour windows for every hour of each real date, named e.g. "20261012-10". */
+export function datedWindows(dates: readonly string[]): WindowSpec[] {
+  return dates.flatMap((day) =>
+    Array.from({ length: 24 }, (_, h) => ({
+      name: hourlyName(day, h),
+      day,
+      start: h * 3600,
+      end: (h + 1) * 3600,
+    })),
+  );
+}
+
+/** Windows of a real date ("20261012-10") rather than a reference day. */
+export const isDatedWindow = (name: string) => /^\d{8}-\d{2}$/.test(name);
 
 /** Trips are kept if they depart within [start, end + TAIL] so trips started in the window can finish. */
 export const WINDOW_TAIL_SECONDS = 2 * 3600;
@@ -60,6 +75,11 @@ export interface BuildOptions {
   serviceDate?: string;
   /** Also build the 48 one-hour windows (weekday and weekend). Default false. */
   hourly?: boolean;
+  /**
+   * Real dates (YYYYMMDD) to build all 24 one-hour windows for, so construction,
+   * Ersatzverkehr and holidays show on the day they happen.
+   */
+  dates?: readonly string[];
   /** Walking network for transfer times; without it transfers use straight lines. */
   walk?: WalkGraph;
   log?: (message: string) => void;
@@ -80,6 +100,8 @@ export interface BuildResult {
     serviceDate: string;
     /** The Saturday used for the weekend windows. */
     weekendDate: string;
+    /** Real dates (YYYY-MM-DD) with their own hourly windows. */
+    dates: string[];
     feedVersion: string;
     stops: number;
     stations: number;
@@ -188,20 +210,24 @@ export async function buildTimetables(
     ? options.serviceDate.replaceAll('-', '')
     : pickReferenceDay(calendar.startDate());
   const weekendDay = pickWeekendDay(serviceDay);
-  const days: Record<DayType, string> = { weekday: serviceDay, weekend: weekendDay };
-  const windows = options.hourly ? [...WINDOWS, ...HOURLY_WINDOWS] : WINDOWS;
+  const days: Record<string, string> = { weekday: serviceDay, weekend: weekendDay };
+  for (const date of options.dates ?? []) days[date] = date;
+  const windows = [
+    ...WINDOWS,
+    ...(options.hourly ? HOURLY_WINDOWS : []),
+    ...datedWindows(options.dates ?? []),
+  ];
   // Trips of the previous and next service day can run inside our windows
   // (e.g. the night window is also served by next-day trips at 02:00–04:00).
   const dayOffsets = [-1, 0, 1];
-  const activeByDay = {
-    weekday: dayOffsets.map((o) => calendar.activeServices(addDays(serviceDay, o))),
-    weekend: dayOffsets.map((o) => calendar.activeServices(addDays(weekendDay, o))),
-  };
   const usedDays = new Set(windows.map((w) => w.day));
+  const activeByDay: Record<string, Set<string>[]> = {};
+  for (const d of usedDays)
+    activeByDay[d] = dayOffsets.map((o) => calendar.activeServices(addDays(days[d]!, o)));
   const anyActive = (serviceId: string) =>
-    [...usedDays].some((d) => activeByDay[d].some((set) => set.has(serviceId)));
+    [...usedDays].some((d) => activeByDay[d]!.some((set) => set.has(serviceId)));
   log(
-    `reference days ${isoDate(serviceDay)} (weekday), ${isoDate(weekendDay)} (weekend); active services ${activeByDay.weekday[1]!.size}`,
+    `reference days ${isoDate(serviceDay)} (weekday), ${isoDate(weekendDay)} (weekend); active services ${activeByDay.weekday![1]!.size}${options.dates?.length ? `; dates ${options.dates.map(isoDate).join(', ')}` : ''}`,
   );
 
   let feedVersion = options.feedVersion ?? '';
@@ -262,7 +288,7 @@ export async function buildTimetables(
     { routeId: string; stops: number[]; trips: number[][]; stepFree?: boolean }[]
   >();
   for (const w of windows) {
-    const activeByOffset = activeByDay[w.day];
+    const activeByOffset = activeByDay[w.day]!;
     const candidates: CandidateTrip[] = [];
     const seen = new Set<string>();
     for (const trip of ordered) {
@@ -351,7 +377,7 @@ export async function buildTimetables(
     timetables[w.name] = {
       version: 1,
       window: w.name,
-      serviceDate: isoDate(days[w.day]),
+      serviceDate: isoDate(days[w.day]!),
       windowStart: w.start,
       windowEnd: w.end,
       feedVersion,
@@ -373,6 +399,7 @@ export async function buildTimetables(
     stats: {
       serviceDate: isoDate(serviceDay),
       weekendDate: isoDate(weekendDay),
+      dates: (options.dates ?? []).map(isoDate),
       feedVersion,
       stops: stops.length,
       stations: stops.length - served.size,

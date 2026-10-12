@@ -24,6 +24,14 @@ export function addDays(yyyymmdd: string, days: number): string {
   return fromDate(d);
 }
 
+/** Today's date in Berlin, YYYYMMDD. */
+export function berlinToday(now = new Date()): string {
+  // Swedish formats dates as YYYY-MM-DD.
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin' })
+    .format(now)
+    .replaceAll('-', '');
+}
+
 export function isoDate(yyyymmdd: string): string {
   return `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`;
 }

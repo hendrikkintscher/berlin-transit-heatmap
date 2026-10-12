@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dateLabel,
+  dayLabel,
   escapeHtml,
   eveningClock,
   googleDirections,
@@ -59,5 +61,16 @@ describe('format', () => {
   it('reads evening seconds past midnight as a clock time', () => {
     expect(eveningClock(25 * 3600 + 5 * 60)).toBe('01:05 Uhr');
     expect(eveningClock(23 * 3600 + 59 * 60 + 30)).toBe('23:59 Uhr');
+  });
+});
+
+describe('day labels', () => {
+  const now = new Date('2026-10-12T08:00:00Z'); // Monday in Berlin
+  it('names today, tomorrow and the days after', () => {
+    expect(dayLabel('20261012', now)).toBe('Heute');
+    expect(dayLabel('20261013', now)).toBe('Morgen');
+    expect(dayLabel('20261014', now)).toBe('Mi 14.');
+    expect(dateLabel('20261101')).toBe('So 1.');
+    expect(dayLabel('weekend', now)).toBe('Wochenende');
   });
 });

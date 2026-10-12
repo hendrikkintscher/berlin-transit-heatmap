@@ -2,12 +2,13 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { buildTimetables } from './build.ts';
+import { addDays, berlinToday } from './calendar.ts';
 import { openGtfs } from './source.ts';
 import { writeOutputs } from './output.ts';
 import { encodeWalkGraph, readOplFile } from './walk.ts';
 import { gzipSync } from 'node:zlib';
 
-const USAGE = `Usage: build-timetable --gtfs <feed.zip|dir> --out <dir> [--feed-version <s>] [--date YYYY-MM-DD] [--no-hourly] [--osm <walkways.opl.gz>]`;
+const USAGE = `Usage: build-timetable --gtfs <feed.zip|dir> --out <dir> [--feed-version <s>] [--date YYYY-MM-DD] [--no-hourly] [--days <n>] [--today YYYY-MM-DD] [--osm <walkways.opl.gz>]`;
 
 const { values } = parseArgs({
   options: {
@@ -16,6 +17,8 @@ const { values } = parseArgs({
     'feed-version': { type: 'string' },
     date: { type: 'string' },
     'no-hourly': { type: 'boolean' },
+    days: { type: 'string' },
+    today: { type: 'string' },
     osm: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
@@ -41,12 +44,18 @@ if (values.osm) {
   );
 }
 
+// Real dates: today in Berlin and the days after it, each with its own 24 hourly windows.
+const dayCount = Number(values.days ?? 0);
+const today = values.today ? values.today.replaceAll('-', '') : berlinToday();
+const dates = Array.from({ length: dayCount }, (_, i) => addDays(today, i));
+
 const source = await openGtfs(resolve(values.gtfs));
 try {
   const result = await buildTimetables(source, {
     feedVersion: values['feed-version'],
     serviceDate: values.date,
     hourly: !values['no-hourly'],
+    dates,
     walk: walk?.graph,
     log,
   });

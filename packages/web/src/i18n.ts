@@ -29,7 +29,7 @@ const de = {
   aboutLines:
     '<b>Linien</b> zeigt die Abschnitte von S-Bahn, U-Bahn, Tram und Bus, auf die die schnellsten Fahrten von deinem Startpunkt angewiesen sind. Je dicker die Linie, desto mehr der Karte erreichst du darüber. Tippe auf eine Linie, um ihren Namen zu sehen.',
   aboutWindows:
-    'Oben wählst du die <b>Zeit</b>: Werktag oder Wochenende, die Stunde und ob du dann losfährst oder ankommst. <b>Typisch</b> ist der Durchschnitt über die Stunde mit Wartezeit, also was dich erwartet, wenn du ohne Blick auf den Fahrplan losgehst; <b>Bestfall</b> ist die schnellste Fahrt, wenn du genau passend zur Abfahrt gehst. Mit <b>Vergleichen</b> färbt die Karte, wie viel länger (rot) oder kürzer (grün) die Fahrt zu einer zweiten Zeit dauert.',
+    'Oben wählst du die <b>Zeit</b>: heute, einen der nächsten Tage oder einen typischen Werktag oder Wochenende, die Stunde und ob du dann losfährst oder ankommst. <b>Typisch</b> ist der Durchschnitt über die Stunde mit Wartezeit, also was dich erwartet, wenn du ohne Blick auf den Fahrplan losgehst; <b>Bestfall</b> ist die schnellste Fahrt, wenn du genau passend zur Abfahrt gehst. Mit <b>Vergleichen</b> färbt die Karte, wie viel länger (rot) oder kürzer (grün) die Fahrt zu einer zweiten Zeit dauert.',
   aboutArea: 'Die Karte deckt Berlin und den nahen Rand ab; die Suche schlägt nur Orte darin vor.',
   credits:
     'Fahrplandaten: <a href="https://www.vbb.de/vbb-services/api-open-data/datensaetze/" target="_blank" rel="noopener">VBB Open Data</a> (CC BY 4.0). Karte und Fußwege: <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>, © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende (ODbL). Adresssuche: <a href="https://photon.komoot.io" target="_blank" rel="noopener">Photon</a> von Komoot.',
@@ -110,10 +110,26 @@ const de = {
   weekend: 'Wochenende',
   weekdayAt: 'Werktag ab {hour}',
   weekendAt: 'Wochenende ab {hour}',
+  today: 'Heute',
+  tomorrow: 'Morgen',
+  dateAt: '{day} ab {hour}',
+  dateArr: '{day} an {hour}',
+  onToday: 'heute',
+  onTomorrow: 'morgen',
+  onDay: 'am {day}',
+  onDateAt: '{day} ab {hour}',
+  onDateArr: '{day}, Ankunft {hour} bis {next}',
+  homeDate: 'in der Nacht {day} auf {next}',
+  whenTypical: 'Typischer Tag, zum Planen',
+  weekdayNames: 'So,Mo,Di,Mi,Do,Fr,Sa',
+  dataNoteDate:
+    'Fahrplan des {date} laut VBB, mit Baustellen und Ersatzverkehr. Kurzfristige Störungen sind nicht enthalten.',
+  dataNoteFallback:
+    'Für diesen Tag gibt es noch keinen eigenen Fahrplan; die Karte zeigt den typischen Fahrplan vom {date}.',
   onWeekdays: 'werktags ab {hour}',
   onWeekends: 'am Wochenende ab {hour}',
   whenNote:
-    'Werktag ist ein Dienstag bis Donnerstag, Wochenende ein Samstag; 0 bis 4 Uhr am Wochenende ist die Nacht von Freitag auf Samstag.',
+    'Heute und die nächsten Tage zeigen den echten Fahrplan des Tages, mit Baustellen und Ersatzverkehr. Der typische Werktag ist ein Dienstag bis Donnerstag, das Wochenende ein Samstag; 0 bis 4 Uhr am Wochenende ist die Nacht von Freitag auf Samstag.',
   locate: 'Mein Standort als Start',
   locating: 'Standort wird gesucht…',
   locateOutside: 'Dein Standort liegt außerhalb der Karte (Berlin, Potsdam und Umland).',
@@ -143,9 +159,10 @@ const de = {
   walkTitle: 'Gehtempo',
   walkHelp:
     'Für den Weg zur ersten Haltestelle und vom Ausstieg zum Ziel. Umsteigen rechnet mit 4 km/h.',
-  dataNote: 'Fahrplan vom {date}. Baustellen und Störungen sind nicht berücksichtigt.',
+  dataNote:
+    'Typischer Tag: Fahrplan vom {date}. Baustellen an anderen Tagen sind nicht berücksichtigt.',
   aboutData:
-    'Die Karte nutzt den regulären Fahrplan eines Werktags (Dienstag bis Donnerstag) und eines Samstags. Baustellen, Ersatzverkehr und Störungen an anderen Tagen sind nicht berücksichtigt.',
+    'Für heute und die nächsten sechs Tage nutzt die Karte den echten Fahrplan jedes Tages aus dem VBB-Datensatz, der täglich neu geladen wird: Baustellen, Ersatzverkehr und Feiertage sind an genau den Tagen drin, an denen sie stattfinden. Kurzfristige Störungen und Ausfälle stehen nicht im Fahrplan und fehlen deshalb. Zum Planen gibt es außerdem einen typischen Werktag (Dienstag bis Donnerstag) und einen typischen Samstag.',
   tipClose: 'Hinweis schließen',
   readoutClose: 'Auswahl schließen',
   tipTap: 'Tippe auf einen Ort für die Minuten. Den Startpunkt kannst du ziehen.',
@@ -221,7 +238,7 @@ const en: Record<Key, string> = {
   aboutLines:
     '<b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from your start point rely on. The thicker the line, the more of the map is reached over it. Tap a line to see its name.',
   aboutWindows:
-    'At the top you choose the <b>time</b>: weekday or weekend, the hour, and whether you leave or arrive then. <b>Typical</b> is the average over the hour including the wait, so what to expect if you head out without checking the timetable; <b>best case</b> is the fastest trip if you time your departure exactly. <b>Compare</b> colours how much longer (red) or shorter (green) the trip takes at a second time.',
+    'At the top you choose the <b>time</b>: today, one of the next days, or a typical weekday or weekend, the hour, and whether you leave or arrive then. <b>Typical</b> is the average over the hour including the wait, so what to expect if you head out without checking the timetable; <b>best case</b> is the fastest trip if you time your departure exactly. <b>Compare</b> colours how much longer (red) or shorter (green) the trip takes at a second time.',
   aboutArea:
     'The map covers Berlin and its immediate surroundings; search only suggests places inside it.',
   credits:
@@ -303,10 +320,26 @@ const en: Record<Key, string> = {
   weekend: 'Weekend',
   weekdayAt: 'Weekday dep {hour}',
   weekendAt: 'Weekend dep {hour}',
+  today: 'Today',
+  tomorrow: 'Tomorrow',
+  dateAt: '{day} dep {hour}',
+  dateArr: '{day} arr {hour}',
+  onToday: 'today',
+  onTomorrow: 'tomorrow',
+  onDay: 'on {day}',
+  onDateAt: '{day} from {hour}',
+  onDateArr: '{day}, arriving {hour}–{next}',
+  homeDate: 'in the night from {day} to {next}',
+  whenTypical: 'Typical day, for planning',
+  weekdayNames: 'Sun,Mon,Tue,Wed,Thu,Fri,Sat',
+  dataNoteDate:
+    "Timetable of {date} from VBB, with engineering works and replacement services. Short-notice disruptions aren't included.",
+  dataNoteFallback:
+    "This day doesn't have its own timetable yet; the map shows the typical timetable of {date}.",
   onWeekdays: 'on weekdays from {hour}',
   onWeekends: 'at weekends from {hour}',
   whenNote:
-    'Weekday means a Tuesday to Thursday, weekend a Saturday; 00:00 to 04:00 at the weekend is the night from Friday to Saturday.',
+    "Today and the next days show that day's real timetable, engineering works and replacement services included. The typical weekday is a Tuesday to Thursday, the weekend a Saturday; 00:00 to 04:00 at the weekend is the night from Friday to Saturday.",
   locate: 'Use my location as start',
   locating: 'Finding your location…',
   locateOutside: 'Your location is outside the map (Berlin, Potsdam and the surrounding area).',
@@ -336,9 +369,9 @@ const en: Record<Key, string> = {
   walkTitle: 'Walking speed',
   walkHelp:
     'For the walk to the first stop and from the last stop to the spot. Changing trains assumes 4 km/h.',
-  dataNote: 'Timetable of {date}. Engineering works and disruptions are not included.',
+  dataNote: 'Typical day: timetable of {date}. Engineering works on other days are not included.',
   aboutData:
-    'The map uses the regular timetable of a weekday (Tuesday to Thursday) and a Saturday. Engineering works, replacement services and disruptions on other days are not included.',
+    "For today and the next six days the map uses each day's real timetable from the VBB feed, which is reloaded daily: engineering works, replacement services and holidays show on exactly the days they happen. Short-notice disruptions and cancellations aren't in the timetable, so they are missing. For planning there is also a typical weekday (Tuesday to Thursday) and a typical Saturday.",
   tipClose: 'Close hint',
   readoutClose: 'Close selection',
   tipTap: 'Tap a place to see the minutes. You can drag the start point.',

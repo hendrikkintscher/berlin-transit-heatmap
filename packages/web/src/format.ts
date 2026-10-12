@@ -3,7 +3,15 @@
 import { lang, t } from './i18n';
 import type { RasterLayer } from './protocol';
 import type { Point } from './url';
-import type { Direction, When } from './when';
+import {
+  addDays,
+  isDate,
+  upcomingDays,
+  weekdayOf,
+  type Day,
+  type Direction,
+  type When,
+} from './when';
 
 export function escapeHtml(t: string): string {
   return t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -26,8 +34,46 @@ export const clockLabel = (h: number, m: number) =>
 export const eveningClock = (s: number) =>
   clockLabel(Math.floor(s / 3600) % 24, Math.floor((s % 3600) / 60));
 
-/** "werktags ab 10 Uhr" / "weekends from 02:00", for the tap readout. */
+/** "Mi 14." / "Wed 14" for a YYYYMMDD date. */
+export function dateLabel(day: string) {
+  const name = t('weekdayNames').split(',')[weekdayOf(day)];
+  return `${name} ${Number(day.slice(6, 8))}${lang() === 'de' ? '.' : ''}`;
+}
+
+/** "Heute", "Morgen", "Mi 14.", or "Werktag" / "Wochenende" for a typical day. */
+export function dayLabel(day: Day, now = new Date()) {
+  if (!isDate(day)) return t(day === 'weekend' ? 'weekend' : 'weekday');
+  const i = upcomingDays(now).indexOf(day);
+  return i === 0 ? t('today') : i === 1 ? t('tomorrow') : dateLabel(day);
+}
+
+/** The pill: "Heute ab 10 Uhr", "Werktag an 9 Uhr". */
+export function pillText(w: When, arrive: boolean, hour: string) {
+  if (isDate(w.day)) return t(arrive ? 'dateArr' : 'dateAt', { day: dayLabel(w.day), hour });
+  const weekday = w.day === 'weekday';
+  return t(weekday ? (arrive ? 'weekdayArr' : 'weekdayAt') : arrive ? 'weekendArr' : 'weekendAt', {
+    hour,
+  });
+}
+
+/** "in der Nacht Mi 14. auf Do 15." / "unter der Woche", for the home map. */
+export function nightText(day: Day) {
+  if (!isDate(day)) return t(day === 'weekday' ? 'homeWeekday' : 'homeWeekend');
+  return t('homeDate', { day: dateLabel(day), next: dateLabel(addDays(day, 1)) });
+}
+
+/** "werktags ab 10 Uhr" / "heute ab 10 Uhr" / "weekends from 02:00", for the tap readout. */
 export function whenText(w: When, direction: Direction) {
+  if (isDate(w.day)) {
+    const i = upcomingDays().indexOf(w.day);
+    const day =
+      i === 0 ? t('onToday') : i === 1 ? t('onTomorrow') : t('onDay', { day: dateLabel(w.day) });
+    return t(direction === 'arrive' ? 'onDateArr' : 'onDateAt', {
+      day,
+      hour: hourLabel(w.hour),
+      next: hourLabel((w.hour + 1) % 24),
+    });
+  }
   if (direction === 'arrive')
     return t(w.day === 'weekday' ? 'onWeekdaysArr' : 'onWeekendsArr', {
       hour: hourLabel(w.hour),

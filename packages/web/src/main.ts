@@ -14,7 +14,15 @@ import {
   bandLabel,
   outlineBandColor,
 } from './colors';
-import { formatDate, gridSeconds, shortStop, stopName, escapeHtml, whenText } from './format';
+import {
+  formatDate,
+  gridSeconds,
+  nightText,
+  shortStop,
+  stopName,
+  escapeHtml,
+  whenText,
+} from './format';
 import { reversePlace, searchPlaces, SEARCH_BBOX, type Place } from './search';
 import {
   loadFavourites,
@@ -48,7 +56,15 @@ import { initMenu } from './menu';
 import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
 import { initTap } from './tap';
 import { linkQuery, MAX_STARTS, readLink, type Point } from './url';
-import { computeWindow, desertThresholds, leaveOffset, windowName } from './when';
+import {
+  computeWindow,
+  desertThresholds,
+  eveningWindow,
+  isDate,
+  isoDay,
+  leaveOffset,
+  windowName,
+} from './when';
 import { initWhenSheet } from './when-sheet';
 import type { FromWorker, ToWorker } from './protocol';
 
@@ -238,7 +254,13 @@ function renderFeedInfo() {
   feedInfo.textContent = i
     ? t('feedInfo', { date: i.serviceDate, version: i.feedVersion, stops: formatNumber(i.stops) })
     : t('feedLoading');
-  $('data-note').textContent = i ? t('dataNote', { date: formatDate(i.serviceDate) }) : '';
+  // A date shows its own timetable, or says when its typical day stood in for it.
+  const date = isDate(state.when.day) ? isoDay(state.when.day) : null;
+  $('data-note').textContent = !i
+    ? ''
+    : t(!date ? 'dataNote' : date === i.serviceDate ? 'dataNoteDate' : 'dataNoteFallback', {
+        date: formatDate(i.serviceDate),
+      });
 }
 
 /** Recomputes the map and the walk-based layers, e.g. after a walking-speed change. */
@@ -876,7 +898,7 @@ const special = (() => {
         ? t('living', { count: favourites.length, when: whenText(state.when, 'arrive') })
         : t('home', {
             name: s.name,
-            night: t(state.when.day === 'weekday' ? 'homeWeekday' : 'homeWeekend'),
+            night: nightText(state.when.day),
           });
   }
 
@@ -903,7 +925,7 @@ const special = (() => {
     if (s?.kind === 'home')
       return {
         type: 'home',
-        windows: HOME_HOURS.map((hour) => windowName({ day: state.when.day, hour })),
+        windows: HOME_HOURS.map((hour) => eveningWindow(state.when.day, hour)),
         lat: s.at.lat,
         lon: s.at.lon,
         ...how,

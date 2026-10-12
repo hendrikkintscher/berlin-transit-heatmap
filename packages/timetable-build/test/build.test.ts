@@ -223,3 +223,49 @@ describe('hourly windows', () => {
       expect(tt.stops).toEqual(hourly.stopsFile.stops);
   });
 });
+
+describe('real dates', () => {
+  let dated: BuildResult;
+  let dir: string;
+  beforeAll(async () => {
+    const source = await openGtfs(FIXTURE);
+    dated = await buildTimetables(source, {
+      feedVersion: 'test-feed',
+      dates: ['20261014', '20261015', '20261017'],
+    });
+    source.close();
+    dir = mkdtempSync(join(tmpdir(), 'tt-dated-'));
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const firstTimes = (tt: Timetable, name: string) =>
+    routeNamed(tt, name)
+      .flatMap((r) => r.trips.map((trip) => trip[0]))
+      .sort((a, b) => a! - b!);
+
+  it('builds 24 hours for each date, counted from that date', () => {
+    expect(dated.stats.dates).toEqual(['2026-10-14', '2026-10-15', '2026-10-17']);
+    expect(Object.keys(dated.timetables).filter((n) => /^\d{8}-\d{2}$/.test(n))).toHaveLength(72);
+    expect(dated.timetables['20261015-10']).toMatchObject({
+      window: '20261015-10',
+      serviceDate: '2026-10-15',
+      windowStart: t('10:00'),
+    });
+  });
+
+  it('carries a one-off trip only on its own date', () => {
+    // t8 runs only on Wed 14 October (calendar_dates), at 02:15.
+    expect(firstTimes(dated.timetables['20261014-02']!, 'N9')).toContain(t('02:15'));
+    expect(firstTimes(dated.timetables['20261015-02']!, 'N9')).not.toContain(t('02:15'));
+  });
+
+  it('runs the weekend service on a Saturday date', () => {
+    expect(firstTimes(dated.timetables['20261017-10']!, '100')).toEqual([t('10:00')]);
+  });
+
+  it('writes only the binary file for a date', () => {
+    const info = writeOutputs(dated, dir);
+    expect(info.files['timetable-20261014-10.bin']).toBeDefined();
+    expect(info.files['timetable-20261014-10.json']).toBeUndefined();
+    expect(info.files['timetable-day.json']).toBeDefined();
+  });
+});
