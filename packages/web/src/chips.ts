@@ -1,23 +1,22 @@
-// The chip row at the top: Mehr (≡) opens the menu; Zeit (with Reisezeit), Bahn (with
-// Barrierefrei), Ebenen and Vergleich show at a glance what is set (a chip that differs
-// from the default is purple). A tap opens that chip's small panel right under the row, with only
-// its own settings; the map stays visible, and a tap outside closes it.
+// The chip row at the top: search first, then Zeit (with Reisezeit), Bahn (with
+// Barrierefrei) and Ebenen (with Vergleich), which show at a glance what is set (a chip
+// that differs from the default is purple), and Mehr (the menu) last. A tap opens that
+// chip's small panel right under the row, with only its own settings; the map stays
+// visible, and a tap outside closes it.
 
 import { t } from './i18n';
 import { $, type State } from './state';
 import { DEFAULT_WALK_KMH } from './url';
 
-export type Pop = 'when' | 'travel' | 'layers' | 'compare';
+export type Pop = 'when' | 'travel' | 'layers';
 
 export interface ChipsDeps {
   state: State;
   /** Opening a panel closes the search. */
   closeSearch: () => void;
-  /** The text of the compared time, e.g. "Mi 14. 2 Uhr". */
-  compareText: () => string;
 }
 
-export function initChips({ state, closeSearch, compareText }: ChipsDeps) {
+export function initChips({ state, closeSearch }: ChipsDeps) {
   const row = $('chips');
   const pops = $('pops');
   let open: Pop | null = null;
@@ -83,12 +82,7 @@ export function initChips({ state, closeSearch, compareText }: ChipsDeps) {
     set(
       'layers-chip',
       t('layersChip'),
-      state.heat || state.freq || state.desert || !state.routes || !state.iso,
-    );
-    set(
-      'compare-chip',
-      state.compare ? t('compareOn', { when: compareText() }) : t('compareChipLabel'),
-      !!state.compare,
+      state.heat || state.freq || state.desert || !state.routes || !state.iso || !!state.compare,
     );
   }
 

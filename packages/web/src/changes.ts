@@ -1,5 +1,5 @@
-// "What's different today": a small notice listing the U-Bahn, S-Bahn and tram lines that
-// run differently on the shown date (changes.json, made by the timetable build). Tapping a
+// "What's different today": a small notice, while a connection is shown, listing its
+// U-Bahn, S-Bahn and tram lines that run differently on the shown date (changes.json, made by the timetable build). Tapping a
 // line shows its stretch on the map. The file is small (about 3 KB gzipped) and fetched only
 // once the first timetable is in, so it never holds up the first map.
 
@@ -96,11 +96,14 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
   let open = false;
   let shown: Change | null = null;
   const closed = new Set<string>();
-  /** While a connection is shown, the notice lists only what touches its lines. */
+  /**
+   * The notice shows only while a connection is shown, listing what touches its lines
+   * (Hendrik, 2026-10-12: not on its own in the first view; the trip card names it).
+   */
   let focus: Ride[] | null = null;
 
   const allToday = () => (isDate(state.when.day) ? (file?.days[state.when.day] ?? []) : []);
-  const today = () => (focus ? touching(allToday(), focus) : allToday());
+  const today = () => (focus ? touching(allToday(), focus) : []);
 
   function load() {
     if (file || loading) return;
