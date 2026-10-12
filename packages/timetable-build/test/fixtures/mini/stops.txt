@@ -4,5 +4,5 @@ A,"Station S, platform A",52.52000,13.40000,0,S
 B,"Station S, platform B",52.52010,13.40020,0,S
 C,"Stop C",52.53000,13.41000,0,
 E,"Stop E",52.53200,13.41200,0,
-D,"Stop D (outside Berlin)",52.80000,13.40000,0,
+D,"Stop D (outside the area)",53.00000,13.40000,0,
 U,"Unused stop",52.50000,13.30000,0,

@@ -114,7 +114,7 @@ export async function readOplFile(
 }
 
 /** The router's grid area (DEFAULT_BBOX) plus a margin of more than a 15-minute walk. */
-export const WALK_BBOX: BBox = { minLon: 13.06, minLat: 52.32, maxLon: 13.79, maxLat: 52.69 };
+export const WALK_BBOX: BBox = { minLon: 12.88, minLat: 52.26, maxLon: 13.94, maxLat: 52.81 };
 
 /** Builds the walking graph from OPL lines (nodes before ways, as osmium writes them). */
 export async function buildWalkGraph(

@@ -10,6 +10,7 @@ import {
   walkSpeeds,
   WalkSources,
 } from './walk';
+import type { Snaps, WalkNetwork } from './walk';
 import type {
   GeoJSONFeature,
   GeoJSONFeatureCollection,
@@ -18,8 +19,11 @@ import type {
   TravelTimeResult,
 } from './types';
 
-/** Berlin with a small margin: [minLon, minLat, maxLon, maxLat]. */
-export const DEFAULT_BBOX: [number, number, number, number] = [13.08, 52.33, 13.77, 52.68];
+/**
+ * Berlin, Potsdam and the commuter belt (Werder, Oranienburg, Bernau, Strausberg, Erkner,
+ * Königs Wusterhausen): [minLon, minLat, maxLon, maxLat].
+ */
+export const DEFAULT_BBOX: [number, number, number, number] = [12.9, 52.27, 13.92, 52.8];
 
 const DEFAULT_CELL_M = 250;
 const DEFAULT_MAX_FINAL_WALK_S = 900;
@@ -133,20 +137,19 @@ export function heatGrid(
       sharedLabels(net),
     );
     const cells = snapCells(net, [minLon, gridMinLat, maxLon, maxLat], cols, rows);
-    const { edgeA, edgeB, edgeMetres } = net;
+    const { cellA, cellB, cellDa, cellDb } = cellEnds(net, cells);
     const { time, walk, source } = labels;
     const cellEdge = cells.edge;
-    const cellAlong = cells.along;
-    const cellOff = cells.metres;
+    // Edges with a stop on them, so the map lookup below runs only where it can find one.
+    const hasStop = new Uint8Array(net.edgeCount);
+    for (const e of edgeStop.keys()) hasStop[e] = 1;
     for (let k = 0; k < cols * rows; k++) {
+      const a = cellA[k];
+      if (a < 0) continue;
       const e = cellEdge[k];
-      if (e < 0) continue;
-      const len = edgeMetres[e];
-      const off = cellOff[k];
-      const da = cellAlong[k] * len + off;
-      const db = len + 2 * off - da;
-      const a = edgeA[e];
-      const b = edgeB[e];
+      const da = cellDa[k];
+      const db = cellDb[k];
+      const b = cellB[k];
       // Walks within maxM win; longer ones up to fallbackM count only where none is.
       let v = Infinity;
       let from = -1;
@@ -177,7 +180,7 @@ export function heatGrid(
         ffrom = source[b];
       }
       // Sources on the cell's own edge walk straight along it.
-      const here = edgeStop.size > 0 ? edgeStop.get(e) : undefined;
+      const here = hasStop[e] ? edgeStop.get(e) : undefined;
       if (here)
         for (const s of here) {
           w = sameEdgeMetres(net, stopSnap, s, cells, k);
@@ -225,6 +228,38 @@ export function heatGrid(
   };
   if (nearest) grid.stop = nearest;
   return grid;
+}
+
+const cellEndCache = new WeakMap<Snaps, ReturnType<typeof computeCellEnds>>();
+
+/**
+ * For each grid cell, the two ends of its snapped edge and the walk to each (along the
+ * edge plus the way onto it), so the per-map loop reads these in order. Cached per snap.
+ */
+function cellEnds(net: WalkNetwork, cells: Snaps) {
+  let ends = cellEndCache.get(cells);
+  if (!ends) cellEndCache.set(cells, (ends = computeCellEnds(net, cells)));
+  return ends;
+}
+
+function computeCellEnds(net: WalkNetwork, cells: Snaps) {
+  const n = cells.edge.length;
+  const cellA = new Int32Array(n).fill(-1);
+  const cellB = new Int32Array(n).fill(-1);
+  const cellDa = new Float32Array(n);
+  const cellDb = new Float32Array(n);
+  for (let k = 0; k < n; k++) {
+    const e = cells.edge[k];
+    if (e < 0) continue;
+    const len = net.edgeMetres[e];
+    const off = cells.metres[k];
+    const da = cells.along[k] * len + off;
+    cellA[k] = net.edgeA[e];
+    cellB[k] = net.edgeB[e];
+    cellDa[k] = da;
+    cellDb[k] = len + 2 * off - da;
+  }
+  return { cellA, cellB, cellDa, cellDb };
 }
 
 /** The bbox (snapped outwards to whole cells), columns and rows heatGrid uses for these options. */

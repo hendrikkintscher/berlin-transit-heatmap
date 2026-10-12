@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contours, traceLevel } from './contours';
+import { contours, halve, outlines, traceLevel, traceLevels } from './contours';
 
 /** Seconds growing with distance from the centre of a size x size grid, 60 s per cell. */
 function cone(size: number) {
@@ -47,5 +47,31 @@ describe('contours', () => {
         expect(lat).toBeGreaterThan(52);
         expect(lat).toBeLessThan(53);
       }
+  });
+});
+
+describe('traceLevels', () => {
+  it('traces each level as traceLevel would', () => {
+    const s = cone(41);
+    const all = traceLevels(s, 41, 41, [300, 600, 900]);
+    expect(all.map((l) => l.length)).toEqual([1, 1, 1]);
+    expect(all[1]).toEqual(traceLevel(s, 41, 41, 600));
+  });
+});
+
+describe('halve', () => {
+  it('averages the reachable cells of each 2x2 block and trims an odd edge', () => {
+    const s = Float32Array.from([10, 20, 1, 30, Infinity, 1, 1, 1, 1]);
+    const h = halve(s, 3, 3, [0, 0, 3, 3]);
+    expect([h.cols, h.rows]).toEqual([1, 1]);
+    expect(h.seconds[0]).toBeCloseTo(20);
+    expect(h.bbox).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe('outlines', () => {
+  it('finds the same rings as the full-resolution trace', () => {
+    const fc = outlines(cone(201), 201, 201, [13, 52, 14, 53], 2, [30, 60]);
+    expect(fc.features.map((f) => f.properties.min)).toEqual([30, 60]);
   });
 });
