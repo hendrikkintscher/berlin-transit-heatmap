@@ -4,13 +4,12 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #81. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #85. Build in this order, one step per PR:
 
-1. **Next:** Tap card: leave in X min, arrival time, trip duration (group 6)
-2. What's different today: notice of affected lines (group 11)
-3. Live disruptions as text (group 11)
-4. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
-5. Android app, starting with a TWA (group 14), always the last step
+1. **Next:** What's different today: notice of affected lines (group 11)
+2. Live disruptions as text (group 11)
+3. UI overhaul: chip row under the search, slim vertical legend (group 12, option B)
+4. Android app, starting with a TWA (group 14), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -270,6 +269,8 @@ Hendrik, 2026-10-12: the tap card no longer needs the line note "schnellster Weg
 - **Keeps up:** the "in X Min." counts down while the card is open, and moves on to the following connection once this one is missed.
 
 The line note goes from the card; tapping a line on the Lines layer still shows its name. Small effort; the routing already finds this connection.
+
+**Done** (PR #85): the card shows the trip's duration and arrival time, with "los in X Min." or "jetzt los" beneath, counting down live and moving to the following connection once this one is missed. The "schnellster Weg zu X % der Karte" note is gone.
 
 ### "Ankommen bis": travel times to a place
 
