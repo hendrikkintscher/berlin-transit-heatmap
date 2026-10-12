@@ -129,6 +129,15 @@ export class ServiceCalendar {
     return min;
   }
 
+  /** Last date any service runs on. */
+  endDate(): string {
+    let max = '00000000';
+    for (const row of this.calendar.values()) if (row.end > max) max = row.end;
+    for (const byDate of this.exceptions.values())
+      for (const [date, type] of byDate) if (type === 1 && date > max) max = date;
+    return max;
+  }
+
   isActive(serviceId: string, date: string): boolean {
     const exception = this.exceptions.get(serviceId)?.get(date);
     if (exception === 1) return true;
