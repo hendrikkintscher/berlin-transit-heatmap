@@ -4,12 +4,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #129. Build in this order, one step per PR:
-
-1. **Next:** Rename to "Wohin jetzt? · Öffis mit einem Tap" (group 12). Hendrik gave the go on 2026-10-12.
-2. Stronger transit lines, softer minute lines (group 12)
-
-Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
+State on 2026-10-12, live through PR #135. Nothing is queued: Hendrik picks the next step before anything starts.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -678,11 +673,15 @@ Notes: paint only, URL parameters unchanged; check at 360×740 in German and Eng
 
 ### Stronger transit lines, softer minute lines
 
+**Done** (PR #135): the minute lines are thicker and more blurred; while a trip is shown the transit lines step back only to 50 % instead of 30 % (without a trip they stay fully opaque).
+
 Hendrik, 2026-10-12, after the calmer default map: the public-transport lines on the map get a bit more opacity, and the minute (time) lines get thicker and more blurred.
 
 Notes: paint only in packages/web/src/map-layers.ts, URL parameters unchanged; check at 360×740 in German and English and keep the flicker-free first view. Small effort.
 
 ### Rename to "Wohin jetzt?"
+
+**Done** (PR #134): "Wohin jetzt?" is the tab title (with the tagline), the installed-app name, and the menu and About headings, with the tagline under About (English "Transit in one tap"); both sharepics re-rendered. Address and URL parameters unchanged.
 
 Hendrik, 2026-10-12: the app is called **"Wohin jetzt?"** with the tagline **"Öffis mit einem Tap"** (English: "Transit in one tap"), replacing "Berlin in Minuten" / "Berlin Transit". The rename covers the title in the app, the installed-app (manifest) name, the About text and the sharepics.
 
