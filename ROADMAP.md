@@ -15,8 +15,9 @@ State on 2026-10-12, live through PR #160. Build in this order, one step per PR:
 7. Typical timetable when offline (B8, group 15)
 8. Notice, search and favourites polish (C5–C8, group 15)
 9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+10. Default view readability: two variants to compare (C9, group 15)
 
-While the redesign waits for Hendrik's pick, the builder goes on with steps 2–9, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+While the redesign waits for Hendrik's pick, the builder goes on with steps 2–10, which don't touch the time sheet or trip card. From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
 **Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
 
@@ -896,3 +897,12 @@ Picked by Hendrik on 2026-10-12 ("Yes, both"). CI and workflows only; the app it
 
 - **B9:** the CI speed check also times softening, outlines and painting per start, and the cell snapping separately. One browser smoke test against a small fixture opens the app, taps, and checks that minutes and outlines appear. The duplicate test and build in the deploy workflow on pull requests goes away.
 - **B10:** the timetable build fails above a hard size ceiling (about 1.5 times the budget) and only warns below it. It also runs on a schedule of its own, so a failed timetable download no longer stops it; dated files roll forward from the last good feed.
+
+### Default view readability: two variants to compare (C9)
+
+Picked by Hendrik on 2026-10-12 ("Try both"). Two variants are built behind link parameters, and the default doesn't change yet:
+
+- **(a) Stronger rings:** the 15/30/45-minute rings are thicker and labelled, transit lines stay thin until a place is tapped, and colours are off.
+- **(b) Faint colours:** the heatmap is on by default at about 40 % opacity, with the rings as today.
+
+The builder posts both links with the same start point so Hendrik can compare them on his phone. He then picks one on a decision card; the pick becomes the default and the other parameter goes. In the same step, from C10: a larger thumb on the heatmap slider (16 px today), and 55–60 % opacity when colours are switched on by hand.
