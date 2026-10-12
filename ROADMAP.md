@@ -4,10 +4,10 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Up next
 
-State on 2026-10-12, live through PR #142. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #145. Build in this order, one step per PR:
 
-1. **Next:** Remove the Google Maps links (group 6)
-2. Bug bundle: ten small defects (A1, group 15)
+1. **Next:** Bug bundle: ten small defects (A1, group 15)
+2. Permanent search bar at the top (group 12)
 
 From Hendrik on 2026-10-12, to be built now. More items from the third suggestions list (plan/suggestions-3.md) are added as Hendrik picks them. After these, Hendrik picks the next step before anything starts.
 
@@ -372,7 +372,7 @@ Notes: uses the existing arrive-by pass over several hours of timetables (the ho
 
 ### Remove the Google Maps links
 
-Hendrik, 2026-10-12: remove the Google Maps links from the app. The "Google Maps ↗" link on the trip card (since PR #25) and any other link that opens Google Maps go away. Importing favourites from a Google Takeout file stays, since it only reads the user's own file and opens nothing.
+**Done** (PR #145): the trip card has no Google Maps link anymore, and the vs-Google sharepic no longer mentions one. Hendrik, 2026-10-12: remove the Google Maps links from the app. The "Google Maps ↗" link on the trip card (since PR #25) and any other link that opens Google Maps go away. Importing favourites from a Google Takeout file stays, since it only reads the user's own file and opens nothing.
 
 Notes: check at 360×740 in German and English that the trip card still looks right without the link. Small effort.
 
@@ -715,6 +715,10 @@ Notes: paint only in packages/web/src/map-layers.ts, URL parameters unchanged; c
 Hendrik, 2026-10-12: the app is called **"Wohin jetzt?"** with the tagline **"Öffis mit einem Tap"** (English: "Transit in one tap"), replacing "Berlin in Minuten" / "Berlin Transit". The rename covers the title in the app, the installed-app (manifest) name, the About text and the sharepics.
 
 Notes: names only, URL parameters and the address unchanged (the domain is still open in the beta plan). Check at 360×740 in German and English. Small effort. Hendrik gave the go on 2026-10-12.
+
+### Permanent search bar at the top
+
+Hendrik, 2026-10-12: "Let's have a permanent search bar on the top, remove the symbol from the scroll bar instead." A search field is always visible in its own row at the top of the screen, above the chip row, and the search chip leaves the scrolling chip row. This frees about 60 px in the chip row, which partly addresses C1 in plan/suggestions-3.md (Ebenen and Mehr off-screen on first load). Measure whether Ebenen then fits on a 393 px phone. Keep the flicker-free first view and the instant suggestions.
 
 ## 13. Wider area and other regions
 
