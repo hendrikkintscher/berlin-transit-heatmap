@@ -1,16 +1,16 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from two fixes added later (groups 6 and 7). Groups 5–10 come from reviews of the live app, group 11 is the Android app and group 12 temporary changes. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from two fixes added later (groups 6 and 7). Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul and group 13 the Android app, which stays the last step. Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
-State on 2026-10-11, live through PR #50. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #50. Build in this order, one step per PR:
 
 1. **Next:** The tapped place stays when settings change (group 6)
 2. Calmer street level: footpaths next to streets (group 7)
-3. UI overhaul (group 13), once Hendrik has picked one of the three design options
-4. Android app, starting with a TWA (group 11)
-5. Ersatzverkehr and other temporary changes (group 12)
+3. What's running now: today's actual service, construction and Ersatzverkehr (group 11)
+4. UI overhaul (group 12), once Hendrik has picked one of the three design options
+5. Android app, starting with a TWA (group 13), always the last step
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No feature may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional.
 
@@ -357,7 +357,28 @@ Notes: the routing change is small; most effort is in the UI and defaults. Uses 
 
 First load is about 1.2 MB (JS about 300 KB gzipped plus one hourly timetable of 0.55–0.7 MB). If it becomes a problem: load the map style and timetable in parallel, move rarely used code (favourites import) into a lazy chunk, and store timetables in a binary format instead of JSON. Low priority now that the hourly files are smaller than the old Day file.
 
-## 11. Android app
+## 11. What's running now
+
+### Today's actual service, construction and Ersatzverkehr included
+
+The map should show what is actually running, not a typical day. Today the build picks one reference weekday and one Saturday from a monthly VBB feed, so construction on those days is baked in for a month and everything else is missed. Instead:
+
+- **Real days instead of a reference day:** refresh the VBB GTFS feed daily and build the hourly timetables for today and the next 7 days. Planned Ersatzverkehr (rail replacement buses), closures and construction timetables are already normal trips in VBB's feed, so they appear exactly on the days they happen.
+- **"Now" means today:** the map opens at the current day and hour with that day's real service; the time sheet picks a date in the coming week ("Heute", "Morgen", weekday names) instead of only Werktag/Wochenende. "Typischer Werktag" stays as a choice for planning (moving house, favourites), and the compare view can put today against the typical day.
+- **What's different today:** a build-time comparison of each day against the typical pattern lists the affected lines in a small notice ("U2: Ersatzverkehr Pankow–Alexanderplatz, bis 20.10."); tapping it shows the stretch on the map.
+- **Live disruptions, second step:** short-notice changes (cancellations, sudden closures) are not in the static feed. Check whether VBB now offers an open real-time feed (GTFS-RT); if not, show current disruption notices as text from VBB's public journey API, without routing on them.
+
+Notes: the app still downloads only the hour it shows (about 270 KB with the binary format), so first load and taps stay as fast as now; the release grows to about 8 days × 24 files, which is fine for GitHub Pages. The daily refresh runs in the existing GTFS workflow. Medium effort; reworked from Hendrik's request on 2026-10-12 (previously "Ersatzverkehr and other temporary changes" with only a reference-day fix).
+
+## 12. UI overhaul
+
+### Bring all the features together in one clear interface
+
+Many features have been added one by one (time sheet, Unterwegs, Stufenlos, layers, meeting point, favourites, compare, outlines, share), and they are now spread across the top bar, the menu and the time sheet. Rework the interface so they are organised meaningfully: the everyday controls at hand, the rest easy to find, and the map kept as clear as possible on a phone.
+
+Status: three design options are being made and rendered for Hendrik to choose from (thread "UI overhaul options"). This item is built once he has picked one; the details here will be filled in from his choice. Large effort; the snappiness rule applies to every option. Added from Hendrik's request on 2026-10-11.
+
+## 13. Android app
 
 ### Native Android app and how to ship it
 
@@ -375,26 +396,4 @@ Ways to ship it:
 - **Direct APK** (from GitHub Releases): free and immediate, but users must allow installs from unknown sources and there are no automatic updates.
 - **F-Droid:** free and open-source store; needs the app built from source with no proprietary dependencies, which suits this project.
 
-Suggested path: start with a TWA, test it with a direct APK on Hendrik's phone, then publish to Google Play; move to Capacitor only when a native feature is needed. This can be done at any point, since it doesn't depend on groups 5 to 10.
-
-## 12. Temporary changes
-
-### Ersatzverkehr and other temporary changes
-
-Find a good, low-effort way to show temporary changes such as Ersatzverkehr (rail replacement buses), closures and construction timetables, without slowing anything down.
-
-Today the build picks one reference weekday and one Saturday from the monthly VBB feed, so whatever construction happens on those days is baked into the whole month, and changes on other days are missing. Options, from least to most work:
-
-- **Pick a clean reference day:** compare several weekdays in the feed and choose one whose service matches the usual pattern, so a one-off closure does not colour the map for a month. Build-only, no app change.
-- **A weekly refresh and a notice:** refresh the feed weekly, and list lines whose service this week differs a lot from the usual pattern ("U2: Ersatzverkehr Pankow–Alexanderplatz") in a small banner. Build-time diff, a few lines of UI.
-- **"Diese Woche" as a second timetable:** offer the current week's actual service as an extra time option next to the typical one. Reuses the hourly files and the compare view; downloads only when chosen.
-
-Notes: VBB's static GTFS already contains planned Ersatzverkehr as normal trips; there is no open real-time feed, so live disruptions are out of scope. All options keep the work in the build, in line with the ground rule above.
-
-## 13. UI overhaul
-
-### Bring all the features together in one clear interface
-
-Many features have been added one by one (time sheet, Unterwegs, Stufenlos, layers, meeting point, favourites, compare, outlines, share), and they are now spread across the top bar, the menu and the time sheet. Rework the interface so they are organised meaningfully: the everyday controls at hand, the rest easy to find, and the map kept as clear as possible on a phone.
-
-Status: three design options are being made and rendered for Hendrik to choose from (thread "UI overhaul options"). This item is built once he has picked one; the details here will be filled in from his choice. Large effort; the snappiness rule applies to every option. Added from Hendrik's request on 2026-10-11.
+Suggested path: start with a TWA, test it with a direct APK on Hendrik's phone, then publish to Google Play; move to Capacitor only when a native feature is needed. Placed last by Hendrik (2026-10-12), so the app ships with the reworked interface and the current-service timetables.
