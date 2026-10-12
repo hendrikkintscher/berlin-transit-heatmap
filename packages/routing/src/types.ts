@@ -117,6 +117,30 @@ export interface TravelLegs {
   kind: Int32Array;
   from: Int32Array;
   to: Int32Array;
+  /**
+   * Leaving at one moment (`leaveAt`), the legs of every round as well, so a journey can
+   * be followed back exactly as it was ridden: a stop's own best leg may come from a later
+   * round than the arrival a vehicle boarded with there. (Addition to Contract 2.)
+   */
+  rounds?: RoundLegs;
+}
+
+/**
+ * Per-round legs, indexed `k * stopCount + stop` for round k. `kind`/`from`/`to` describe
+ * how round k first reached the stop at its round-k time, as in TravelLegs; `ride*` the
+ * vehicle arrival at the stop in round k that its footpaths start from (a ride only).
+ */
+export interface RoundLegs {
+  /** Round of each stop's best leg (the `kind`/`from`/`to` above). */
+  round: Uint8Array;
+  kind: Int32Array;
+  from: Int32Array;
+  to: Int32Array;
+  rideKind: Int32Array;
+  rideFrom: Int32Array;
+  rideTo: Int32Array;
+  /** Per stop: the walk from the origin in seconds (Infinity if out of reach). */
+  access: Float32Array;
 }
 
 export interface TravelTimeResult {

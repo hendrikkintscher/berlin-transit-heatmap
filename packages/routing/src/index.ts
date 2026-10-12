@@ -12,6 +12,7 @@ export type {
   Timetable,
   Transfer,
   TravelLegs,
+  RoundLegs,
   TravelTimeOptions,
   TravelTimeResult,
 } from './types';

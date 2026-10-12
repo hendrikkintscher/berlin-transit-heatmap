@@ -1,5 +1,5 @@
 import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
-import type { Origin, TravelTimeOptions, TravelTimeResult } from './types';
+import type { Origin, RoundLegs, TravelTimeOptions, TravelTimeResult } from './types';
 import {
   sameEdgeMetres,
   snapOrigin,
@@ -159,6 +159,23 @@ export function travelTimes(
       if (best[s] === accessWalk[a]) legKind[s] = LEG_ORIGIN;
     }
   }
+  // Leaving at one moment, every round's legs too (see RoundLegs): a stop's best leg can
+  // come from a later round than the arrival a vehicle was boarded with there, and
+  // following best legs back would then show rides the journey never needed.
+  const R = maxRounds + 1;
+  const rounds: RoundLegs | undefined =
+    track && leaveAt !== undefined
+      ? {
+          round: new Uint8Array(S),
+          kind: new Int32Array(R * S).fill(LEG_NONE),
+          from: new Int32Array(R * S),
+          to: new Int32Array(R * S),
+          rideKind: new Int32Array(R * S).fill(LEG_NONE),
+          rideFrom: new Int32Array(R * S),
+          rideTo: new Int32Array(R * S),
+          access: Float32Array.from(best),
+        }
+      : undefined;
 
   if (departures.length > 0 && maxRounds > 0) {
     const { routeStopOffset, routeStops, routeTripCount, routeTimeOffset, times } = tt;
@@ -204,6 +221,10 @@ export function travelTimes(
           tau[s] = arr;
           tauStar[s] = arr;
           if (track) starKind[s] = LEG_ORIGIN;
+          if (rounds) {
+            rounds.round[s] = 0;
+            rounds.kind[s] = LEG_ORIGIN;
+          }
           marked[markedCount++] = s;
           if (!isTouched[s]) {
             isTouched[s] = 1;
@@ -253,6 +274,11 @@ export function travelTimes(
               const arr = times[tripBase + i];
               if (arr < vehStar[s]) {
                 vehStar[s] = arr;
+                if (rounds) {
+                  rounds.rideKind[curBase + s] = r;
+                  rounds.rideFrom[curBase + s] = boardIdx;
+                  rounds.rideTo[curBase + s] = i;
+                }
                 const rm = isRouteMarked[s];
                 if (rm < 0) {
                   isRouteMarked[s] = routeMarkedCount;
@@ -268,6 +294,12 @@ export function travelTimes(
                     starKind[s] = r;
                     starFrom[s] = boardIdx;
                     starTo[s] = i;
+                  }
+                  if (rounds) {
+                    rounds.round[s] = k;
+                    rounds.kind[curBase + s] = r;
+                    rounds.from[curBase + s] = boardIdx;
+                    rounds.to[curBase + s] = i;
                   }
                   if (!isNextMarked[s]) {
                     isNextMarked[s] = 1;
@@ -315,6 +347,11 @@ export function travelTimes(
               if (track) {
                 starKind[u] = LEG_WALK;
                 starFrom[u] = s;
+              }
+              if (rounds) {
+                rounds.round[u] = k;
+                rounds.kind[curBase + u] = LEG_WALK;
+                rounds.from[curBase + u] = s;
               }
               if (!isNextMarked[u]) {
                 isNextMarked[u] = 1;
@@ -378,7 +415,9 @@ export function travelTimes(
     computedInMs: now() - t0,
     origin: { lat: origin.lat, lon: origin.lon },
     departures: departures.length,
-    ...(track ? { legs: { kind: legKind, from: legFrom, to: legTo } } : {}),
+    ...(track
+      ? { legs: { kind: legKind, from: legFrom, to: legTo, ...(rounds ? { rounds } : {}) } }
+      : {}),
   };
 }
 
