@@ -191,7 +191,9 @@ body.no-legend .legend {
 }
 #readout-close {
   position: absolute;
-  top: -18px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
   right: -4px;
   background: #fff;
   box-shadow: var(--shadow);
@@ -216,7 +218,8 @@ body.no-legend .legend {
   font-weight: 600;
   border-radius: 999px;
   padding: 6px 12px;
-  min-height: 34px;
+  /* Every button on the card is a full 44 px touch target. */
+  min-height: 44px;
   cursor: pointer;
 }
 .status {
@@ -731,8 +734,8 @@ dialog.menu[open] {
   font-size: 13px;
   font-weight: 600;
   border-radius: 999px;
-  padding: 4px 10px;
-  min-height: 30px;
+  padding: 4px 12px;
+  min-height: 44px;
   cursor: pointer;
 }
 
@@ -1223,6 +1226,26 @@ body.special .legend {
 }
 #readout .trip:empty {
   display: none;
+}
+/* Meeting point: the other starts' trips, folded behind "N weitere Fahrten". */
+#readout .trip-more summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+#readout .trip-more summary::-webkit-details-marker {
+  display: none;
+}
+#readout .trip-more summary::after {
+  content: '▾';
+  margin-left: 6px;
+}
+#readout .trip-more[open] summary::after {
+  content: '▴';
 }
 .trip-sum {
   display: flex;

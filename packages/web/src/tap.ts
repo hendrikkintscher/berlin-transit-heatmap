@@ -324,11 +324,14 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (!el) return;
     // On the home map the trip runs from the place to home.
     const home = state.special?.kind === 'home' ? state.special.at : null;
+    // A meeting point's other trips stay unfolded when the card refreshes.
+    const open = el.querySelector('details')?.open;
     el.innerHTML = tripHtml(m, {
       direction: home ? 'arrive' : state.direction,
       now: clockNow(state.when),
       changeNote: deps.changeNote,
     });
+    if (open) el.querySelector('details')!.open = true;
     shownRides = m.journeys.flatMap((j) =>
       (j?.legs ?? []).flatMap((l) => (l.type === 'ride' ? [{ name: l.name, mode: l.mode }] : [])),
     );
