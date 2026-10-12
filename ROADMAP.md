@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and group 14 the Android app, postponed with no date (Hendrik, 2026-10-12). Items from the second suggestions list (plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
+Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-transit-heatmap/). Items marked **Done** are live. Groups 1–10 are done apart from items added later in groups 3, 6, 7 and 10. Groups 5–10 come from reviews of the live app, group 11 is today's actual service, group 12 the UI overhaul, group 13 the wider area and other regions, and group 14 the Android app, postponed with no date (Hendrik, 2026-10-12). Items from the second suggestions list (plan/suggestions-2.md) keep their ids (B1, C1 …). Within a group, items that others depend on come first. The **Up next** list below is the build order; the builder takes the first open entry.
 
 ## Up next
 
@@ -11,7 +11,7 @@ State on 2026-10-12, live through PR #114. Build in this order, one step per PR:
 
 All from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
-**Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+**Blocked on a decision:** Other regions, Oldenburg / Weser-Ems first (group 13). Not started until Hendrik has picked how regions are offered (separate app, region selector in the link, or both); the options are being worked out in a separate thread. **Blocked until Hendrik agrees:** Beta readiness (group 14). Not started until Hendrik has explicitly agreed to the full approach; suggestions are being drafted first. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
 
 Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
 
@@ -647,7 +647,7 @@ Hendrik, 2026-10-12, two minor fixes after PR #111:
 
 Notes: layout only, URL parameters unchanged; check at 360×740 in German and English, and keep the flicker-free first view from PR #111. Small effort.
 
-## 13. Wider area
+## 13. Wider area and other regions
 
 ### Potsdam and the commuter belt (C6)
 
@@ -656,6 +656,16 @@ Notes: layout only, URL parameters unchanged; check at 360×740 in German and En
 The covered rectangle is 13.05–13.80 E, 52.33–52.70 N (timetable-build/src/geo.ts). Potsdam's centre sits right on the western edge, and Bernau, Oranienburg, Königs Wusterhausen and Erkner are outside, though many people commute from there. Widen the area to include them.
 
 Notes: a larger area means bigger timetables and walking network and more cells per tap, so measure first against the snappiness rule (and the CI speed budget from B1); a possible middle way is the wider area at a coarser grid outside Berlin. Medium effort. From suggestions-2, picked by Hendrik on 2026-10-12.
+
+### Other regions, Oldenburg / Weser-Ems first
+
+**Blocked on a decision.** Hendrik, 2026-10-12: add other regions to the app, the first one Oldenburg / Weser-Ems. Before anything is built, Hendrik decides how regions are offered:
+
+- **Separate app** per region (its own site/install, name and data).
+- **Region selector in the link** (one app, the region chosen in the URL and the menu).
+- **A combination** of both (one codebase, a region in the link, plus a dedicated entry per region).
+
+Questions that decision has to settle: timetable source for Weser-Ems (a regional feed such as VBN or Lower Saxony, or the nationwide German GTFS), map area and walking network per region, which features are Berlin-only (Ring, Bezirke, landmarks, live status), language and naming, and keeping first load snappy when more than one region exists (each region's data loaded only when chosen). Options are being drafted in a separate thread; nothing is built until Hendrik picks one.
 
 ## 14. Android app
 
