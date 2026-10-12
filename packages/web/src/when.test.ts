@@ -5,8 +5,10 @@ import {
   dayType,
   desertThresholds,
   eveningWindow,
+  isNow,
   isPastHour,
   catchUp,
+  whenParam,
   leaveOffset,
   parseWhen,
   typicalWindow,
@@ -146,5 +148,32 @@ describe('when', () => {
     expect(arriveWhen({ day: '20261012', hour: 20 }, now)).toEqual({ day: '20261012', hour: 20 });
     const late = new Date('2026-10-12T21:10:00Z'); // 23:10
     expect(arriveWhen({ day: '20261012', hour: 23 }, late)).toEqual({ day: '20261013', hour: 0 });
+  });
+
+  it('keeps an exact time: link, leaving and arriving, catching up', () => {
+    const now = new Date('2026-10-12T16:20:00Z'); // 18:20 in Berlin
+    const w = { day: '20261012', hour: 18, minute: 35 };
+    expect(whenParam(w)).toBe('20261012-1835');
+    expect(whenParam({ day: 'weekend', hour: 2 })).toBe('weekend-02');
+    expect(parseWhen('20261012-1835', now)).toEqual(w);
+    expect(parseWhen('20261012-0805', now)).toEqual({ day: '20261012', hour: 8, minute: 5 });
+    expect(parseWhen('20261012-1860', now)).toBeNull();
+    expect(computeWindow(w, 'depart')).toBe('20261012-18');
+    expect(computeWindow(w, 'arrive')).toBe('20261012-17');
+    // Leaving at 18:35 even though it is 18:20 now; arriving keeps the minute.
+    expect(leaveOffset(w, now)).toBe(35 * 60);
+    expect(leaveOffset({ day: '20261012', hour: 20, minute: 0 }, now)).toBe(0);
+    expect(arriveWhen(w, now)).toBe(w);
+    expect(catchUp(w, 'depart', now)).toBeNull();
+    expect(catchUp({ ...w, minute: 10 }, 'depart', now)).toEqual({ day: '20261012', hour: 18 });
+    expect(catchUp({ ...w, minute: 20 }, 'arrive', now)).toEqual({ day: '20261012', hour: 19 });
+  });
+
+  it('knows Jetzt: today, this hour, on the clock', () => {
+    const now = new Date('2026-10-12T16:20:00Z');
+    expect(isNow({ day: '20261012', hour: 18 }, now)).toBe(true);
+    expect(isNow({ day: '20261012', hour: 18, minute: 20 }, now)).toBe(false);
+    expect(isNow({ day: 'weekday', hour: 18 }, now)).toBe(false);
+    expect(isNow({ day: '20261012', hour: 19 }, now)).toBe(false);
   });
 });

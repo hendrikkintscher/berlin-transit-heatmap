@@ -979,7 +979,59 @@ body.special .legend {
   margin-top: 8px;
 }
 #pop-when .day-grid {
+  margin-top: 8px;
+}
+/* Jetzt and an exact time (always Nächste), above the days. */
+.when-now {
+  display: flex;
+  gap: 6px;
   margin-top: 14px;
+}
+.when-now > * {
+  flex: 1 1 0;
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: #f0ecf4;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+}
+#now-btn {
+  cursor: pointer;
+}
+#now-btn[aria-pressed='true'],
+.when-time.on {
+  background: var(--accent);
+  color: #fff;
+}
+.when-time {
+  /* Wider than Jetzt: a 12-hour clock ("11:20 PM") needs the room. */
+  flex-grow: 1.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+.when-time span {
+  font-weight: 400;
+  font-size: 14px;
+}
+.when-time input {
+  flex: 1;
+  min-width: 0;
+  max-width: 7.5em;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  color-scheme: light;
+}
+.when-time.on input {
+  color-scheme: dark;
 }
 /* Today and the next six days: a row of four, then three. */
 .day-grid {

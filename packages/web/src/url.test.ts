@@ -95,6 +95,15 @@ describe('links', () => {
     expect(readLink(`?from=52.5,13.4&${q}`, BASE).others).toHaveLength(4);
   });
 
+  it('carries an exact time, always on Nächste', () => {
+    const exact: LinkState = { ...BASE, when: { day: 'weekday', hour: 10, minute: 5 } };
+    expect(linkQuery(exact, NOW)).toBe('t=weekday-1005');
+    expect(readLink('?t=weekday-1005&m=typical', BASE)).toEqual({ ...exact, measure: 'next' });
+    const meeting = readLink('?from=52.5,13.4&with=52.4,13.3&t=weekday-1005', BASE);
+    expect(meeting.measure).toBe('next');
+    expect(linkQuery(meeting, NOW)).toContain('m=next');
+  });
+
   it('reads the old night link', () => {
     expect(readLink('?w=night', BASE).when).toEqual({ day: 'weekday', hour: 2 });
   });

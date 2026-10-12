@@ -9,6 +9,8 @@ export type Day = DayType | string;
 export interface When {
   day: Day;
   hour: number;
+  /** An exact time (always "Nächste"): minutes into the hour. Without it, the full hour. */
+  minute?: number;
 }
 
 /** Real dates the app offers: today and the six days after it (the build has eight). */
@@ -51,15 +53,24 @@ export function windowName({ day, hour }: When): string {
   return `${day}-${String(hour).padStart(2, '0')}`;
 }
 
+/** The time in a link: the window name, with the minutes of an exact time ("20261014-0835"). */
+export function whenParam(w: When): string {
+  return windowName(w) + (w.minute !== undefined ? String(w.minute).padStart(2, '0') : '');
+}
+
+/** The same time on the full hour. */
+export const fullHour = ({ day, hour }: When): When => ({ day, hour });
+
 /**
- * "weekend-02" -> { day: 'weekend', hour: 2 }, "20261014-08" -> { day: '20261014', hour: 8 };
- * null if it isn't one. A date outside the coming week (an old link) becomes its typical day.
+ * "weekend-02" -> { day: 'weekend', hour: 2 }, "20261014-08" -> { day: '20261014', hour: 8 },
+ * "20261014-0835" -> the same at 08:35; null if it isn't one. A date outside the coming week
+ * (an old link) becomes its typical day.
  */
 export function parseWhen(v: string | null, now = new Date()): When | null {
-  const m = /^(weekday|weekend|\d{8})-(\d{1,2})$/.exec(v ?? '');
-  if (!m || Number(m[2]) >= 24) return null;
+  const m = /^(weekday|weekend|\d{8})-(\d{1,2})(\d{2})?$/.exec(v ?? '');
+  if (!m || Number(m[2]) >= 24 || Number(m[3] ?? 0) >= 60) return null;
   const day = isDate(m[1]!) && !upcomingDays(now).includes(m[1]!) ? dayType(m[1]!) : m[1]!;
-  return { day, hour: Number(m[2]) };
+  return { day, hour: Number(m[2]), ...(m[3] ? { minute: Number(m[3]) } : {}) };
 }
 
 /** Today's date and the hour in Berlin at `date`. */
@@ -134,11 +145,12 @@ export function desertThresholds(when: When): readonly [number, number] {
 }
 
 /**
- * "Nächste" leaves now when `when` is the current hour in Berlin (today, or the typical
- * day of today's kind), otherwise on the hour:
+ * "Nächste" leaves at the exact time chosen, else now when `when` is the current hour in
+ * Berlin (today, or the typical day of today's kind), otherwise on the hour:
  * seconds into the chosen hour.
  */
 export function leaveOffset(when: When, now = new Date()): number {
+  if (when.minute !== undefined) return when.minute * 60;
   const w = whenAt(now);
   const today = when.day === w.day || when.day === dayType(w.day);
   if (!today || w.hour !== when.hour) return 0;
@@ -162,14 +174,26 @@ export function isPastHour(
 }
 
 /**
- * The current hour when a date's hour chosen earlier is over by now (the app stayed open
- * past the hour or past midnight), so "Nächste" never leaves in the past; null otherwise.
+ * Whether a time of today's date is over: as isPastHour for a full hour; an exact time
+ * once its minute has passed (arriving: once it has come).
+ */
+export function isPastTime(when: When, direction: Direction, now = new Date()): boolean {
+  if (when.minute === undefined) return isPastHour(when.day, when.hour, direction, now);
+  const w = whenAt(now);
+  if (when.day !== w.day) return false;
+  const chosen = when.hour * 60 + when.minute;
+  const current = w.hour * 60 + now.getUTCMinutes();
+  return direction === 'arrive' ? chosen <= current : chosen < current;
+}
+
+/**
+ * The current hour when a date's time chosen earlier is over by now (the app stayed open
+ * past it or past midnight), so "Nächste" never leaves in the past; null otherwise.
  */
 export function catchUp(when: When, direction: Direction, now = new Date()): When | null {
   if (!isDate(when.day)) return null;
   const w = whenAt(now);
-  if (when.day > w.day || (when.day === w.day && !isPastHour(when.day, when.hour, direction, now)))
-    return null;
+  if (when.day > w.day || (when.day === w.day && !isPastTime(when, direction, now))) return null;
   return direction === 'arrive' ? arriveWhen(w, now) : w;
 }
 
@@ -178,11 +202,18 @@ export function catchUp(when: When, direction: Direction, now = new Date()): Whe
  * (18:02 -> an 19 Uhr; 23:10 -> tomorrow 0 Uhr), so the map never starts in the past.
  */
 export function arriveWhen(when: When, now = new Date()): When {
+  if (when.minute !== undefined) return when;
   const w = whenAt(now);
   const today = when.day === w.day || when.day === dayType(w.day);
   if (!today || when.hour !== w.hour) return when;
   if (when.hour < 23) return { ...when, hour: when.hour + 1 };
   return { day: isDate(when.day) ? addDays(when.day, 1) : when.day, hour: 0 };
+}
+
+/** Whether `when` is "Jetzt": today's current hour in Berlin, on the clock (no exact time). */
+export function isNow(when: When, now = new Date()): boolean {
+  const w = whenAt(now);
+  return when.minute === undefined && when.day === w.day && when.hour === w.hour;
 }
 
 /**
