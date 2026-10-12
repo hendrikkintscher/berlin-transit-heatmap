@@ -7,7 +7,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #145. Build in this order, one step per PR:
 
 1. **Next:** Bug bundle: ten small defects (A1, group 15)
-2. Permanent search bar at the top (group 12)
+2. Permanent search bar at the top, chip row fits without scrolling (group 12, with C1)
 3. Walking network: visible loading, no blocked taps (B1, group 15)
 4. Lean deploy: only the files the app uses (B2, group 15)
 
@@ -721,6 +721,8 @@ Notes: names only, URL parameters and the address unchanged (the domain is still
 ### Permanent search bar at the top
 
 Hendrik, 2026-10-12: "Let's have a permanent search bar on the top, remove the symbol from the scroll bar instead." A search field is always visible in its own row at the top of the screen, above the chip row, and the search chip leaves the scrolling chip row. This frees about 60 px in the chip row, which partly addresses C1 in plan/suggestions-3.md (Ebenen and Mehr off-screen on first load). Measure whether Ebenen then fits on a 393 px phone. Keep the flicker-free first view and the instant suggestions.
+
+Built together with C1 from plan/suggestions-3.md, picked by Hendrik on 2026-10-12 ("Shorter labels"): the chip row fits on a 390 px phone with every chip visible without scrolling. The time chip shows only the time for today and adds the day only when it isn't today; Ebenen and Mehr become icon-only chips. Measured before: the row is 541 px on a 393 px Pixel 5 and 582 px on a 390 px iPhone 13.
 
 ## 13. Wider area and other regions
 
