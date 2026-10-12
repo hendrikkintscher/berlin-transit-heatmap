@@ -7,7 +7,7 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 State on 2026-10-12, live through PR #135. Build in this order, one step per PR:
 
 1. **Next:** Time-line widths closer together (group 12)
-2. Fix: street names in the suggestions of every search box (group 1). Waiting on Hendrik's pick: a local street list for instant street suggestions, or not.
+2. Fix: street names in every search box, from a built-in street list (group 1)
 
 Both from Hendrik on 2026-10-12, to be built now. After them, Hendrik picks the next step before anything starts.
 
@@ -70,7 +70,7 @@ Small to medium effort. Added from Hendrik's request on 2026-10-12.
 
 Hendrik, 2026-10-12: street names don't show up in the search suggestions. Suggestions, streets and the house-number/postcode step from PR #122 included, must work in every search box (main search, Startpunkt, meeting-point starts, favourites, comparison and any other).
 
-Finding (builder, 2026-10-12): all search boxes do get street suggestions, but only from the online address search (Photon), 1–4 s after the stations, and Photon misses some streets entirely (for example "Karl-Marx-Straße" in Neukölln returns only Karl-Marx-Allee). Proposed fix: a local list of OSM street names (about 100 KB, loaded only when search opens) for instant street suggestions in every box. Hendrik decides on a card whether to build it; it stays unbuilt until he picks it.
+Finding (builder, 2026-10-12): all search boxes do get street suggestions, but only from the online address search (Photon), 1–4 s after the stations, and Photon misses some streets entirely (for example "Karl-Marx-Straße" in Neukölln returns only Karl-Marx-Allee). Proposed fix: a local list of OSM street names (about 100 KB, loaded only when search opens) for instant street suggestions in every box. Hendrik picked "Built-in list" on 2026-10-12: build it, as its own step after the time-line widths.
 
 Notes: station matches must stay instant; the first map must not get slower (the list loads only with search).
 
