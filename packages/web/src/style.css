@@ -1096,6 +1096,24 @@ dialog.when .seg-wide + .seg-wide {
   color: var(--accent);
   font-weight: 600;
 }
+/* Live status of the first vehicle, from VBB's journey API (live.ts). */
+#readout .trip-live {
+  display: block;
+  margin: -2px 0 2px;
+  color: #2b8a3e;
+  font-weight: 600;
+}
+.trip-live::before {
+  content: '● ';
+  font-size: 9px;
+  vertical-align: 2px;
+}
+#readout .trip-live.bad {
+  color: #c92a2a;
+}
+#readout .trip-live[hidden] {
+  display: none;
+}
 .trip-sep {
   color: var(--muted);
 }

@@ -206,6 +206,9 @@ const de = {
   tripMissed: 'verpasst: wähle die neue Stunde für die nächsten Verbindungen',
   tripLeaveIn: 'los in {n} Min.',
   tripLeaveAt: 'los um {time}',
+  liveCancelled: '{line} fällt aus',
+  liveLate: '{line} +{n} Min.',
+  liveOnTime: '{line} pünktlich',
   changesChip: '{day} anders: {lines}',
   changesTitle: '{day} anders als sonst',
   changesNote:
@@ -430,6 +433,9 @@ const en: Record<Key, string> = {
   tripMissed: 'missed: pick the new hour for the next connections',
   tripLeaveIn: 'leave in {n} min',
   tripLeaveAt: 'leave at {time}',
+  liveCancelled: '{line} cancelled',
+  liveLate: '{line} +{n} min',
+  liveOnTime: '{line} on time',
   changesChip: 'Changes {day}: {lines}',
   changesTitle: 'Changes {day}',
   changesNote:

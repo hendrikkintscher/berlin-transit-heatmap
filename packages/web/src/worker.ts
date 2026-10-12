@@ -770,6 +770,8 @@ function trip(
   /** Departing: when to leave the start and when the trip arrives (seconds of the day). */
   leave?: number;
   arrive?: number;
+  /** Departing: the first vehicle, for its live status. */
+  board?: { stop: number; line: string; at: number };
 } | null {
   const j = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
   if (!j) return null;
@@ -783,6 +785,7 @@ function trip(
     const total = seconds ?? cellSeconds(r.best, at);
     const arrive = last.from + total;
     let leave = last.from;
+    let board: { stop: number; line: string; at: number } | undefined;
     const first = j.legs.findIndex((l) => l.type === 'ride');
     const ride = j.legs[first];
     if (ride?.type === 'ride') {
@@ -790,9 +793,12 @@ function trip(
         .slice(0, first)
         .reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
       const dep = departureAt(last.tt, ride.route, ride.fromPos, last.from + walkTo);
-      if (dep !== null) leave = Math.max(last.from, dep - walkTo);
+      if (dep !== null) {
+        leave = Math.max(last.from, dep - walkTo);
+        board = { stop: ride.from, line: ride.name, at: dep };
+      }
     }
-    return { journey: j, start: point, end: here, seconds, leave, arrive };
+    return { journey: j, start: point, end: here, seconds, leave, arrive, board };
   }
   // Arriving: the tree runs backwards in time from the destination, so flip it.
   const legs = [...j.legs]
@@ -873,6 +879,7 @@ function tripMessage(
       transfers: f.journey.transfers,
       ...(f.seconds !== undefined ? { minutes: Math.round(f.seconds / 60) } : {}),
       ...(f.leave !== undefined ? { leave: f.leave, arrive: f.arrive } : {}),
+      ...(f.board ? { board: f.board } : {}),
     };
   });
   return {

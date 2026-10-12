@@ -23,8 +23,8 @@ export interface BuildInfo {
 /**
  * Writes timetable-<window>.bin (Contract 4, what the app loads) for every window, the
  * same as timetable-<window>.json for the reference-day windows (the real dates only get
- * the binary: there are many of them), stops.json, changes.json (with real dates) and
- * build-info.json.
+ * the binary: there are many of them), stops.json, stop-ids.json, changes.json (with real
+ * dates) and build-info.json.
  */
 export function writeOutputs(result: BuildResult, outDir: string, extra: object = {}): BuildInfo {
   mkdirSync(outDir, { recursive: true });
@@ -39,6 +39,13 @@ export function writeOutputs(result: BuildResult, outDir: string, extra: object 
     save(`timetable-${name}.bin`, encodeTimetable(tt));
   }
   write('stops.json', result.stopsFile);
+  // The binary timetables carry no GTFS ids; the app's live status (web live.ts) looks up
+  // a stop's VBB station number here, by stop index: 900100003 for Alexanderplatz, 0 if none.
+  write('stop-ids.json', {
+    version: 1,
+    feedVersion: result.stats.feedVersion,
+    ids: result.stopsFile.stops.map((s) => Number(/^de:\d+:(\d{9})/.exec(s.id)?.[1] ?? 0)),
+  });
   if (result.changes) {
     const changes: ChangesFile = {
       version: 1,
