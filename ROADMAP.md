@@ -10,7 +10,7 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #243. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
+State on 2026-10-13, live through PR #247. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): Done (PR #184, live with the timetable build of 2026-10-13 00:58)
 2. No flicker when tapping another destination (group 6, Inbox): Done (PR #213)
@@ -25,9 +25,9 @@ State on 2026-10-13, live through PR #243. **Plan for everything noted** (Hendri
 11. Default view readability (C9, group 15): both looks built for trial (PR #238: look=rings and look=faint links, plus a clearer opacity slider thumb and 60 % default opacity, C10); the default changes once Hendrik answers his card (recommended: Rings)
 12. Named starts in meeting mode (D2, group 15): Done (PR #240)
 13. Broader CI checks and a sturdier timetable build (B9 + B10 + P10, group 15): Done (PR #241, PR #243)
-14. **Next:** Code health, no change in behaviour (E1, group 15), in progress
-15. Smaller walking network file (P8, group 15)
-16. Showcase material: screenshots, sharepics and the comparison with existing maps, made once the app has settled (group 16)
+14. Code health, no change in behaviour (E1, group 15): Done (PR #245, plus the home-map time fix PR #246)
+15. Smaller walking network file (P8, group 15): Done (PR #247)
+16. **Next:** Showcase material: screenshots, sharepics and the comparison with existing maps, made once the app has settled (group 16), in progress
 17. Declutter docs and threads: the docs-cleanup findings (K items, including the roadmap slimming K14–K19) and an archive pass over plan files and memory (group 17)
 
 **Not in this plan:** Android app and beta testing (Hendrik, 2026-10-13: "don't do android app and beta testing"); app store deployment (group 16), which needs Hendrik's own developer accounts; the region addresses and Oldenburg data (group 13), held until the domain and the timetable feed account are settled.
@@ -290,21 +290,9 @@ The builder posts both links with the same start point so Hendrik can compare th
 
 - **Named starts in meeting mode (D2)**: Done (PR #240): the link carries names=Anna|Ben|Cem, markers show initials, the trip card reads "Ø Anna 25 · Ben 24 · Cem 25 Min.", and the share text lists the top 3 meeting points with everyone's minutes.
 
-### Code health, no change in behaviour (E1)
+- **Code health, no change in behaviour (E1)**: Done (PR #245): main.ts and worker.ts split into smaller modules, READMEs refreshed. Found on the way and fixed (PR #246): the home map's trip card showed a departure before midnight; it now reads e.g. "an 04:00 Uhr los um 03:46 Uhr".
 
-Picked by Hendrik on 2026-10-12 ("Yes"), the last item of the third suggestions list. One or two PRs, nothing visible changes:
-
-- The READMEs describe today's app (no day/night windows, no JSON timetable examples, no "comes next" notes), the routing types are tidied and a stale comment goes.
-- One shared helper cleans stop names per region, replacing three separate copies.
-- The two largest files are split into smaller modules (pure moves): the app's main file into search, favourites and special maps, and the worker into timetables, painting, trips, home and living maps.
-- The region script runs with plain Node, covered by a test.
-- The worker keeps 4–5 timetables loaded instead of 3, so the current and next hour, a comparison and a step-free toggle don't push each other out.
-
-Slotted in whenever no feature step is waiting.
-
-### Smaller walking network file (P8)
-
-From the code review (plan/reviews/code-runtime.md): a format change for walk.bin, about −0.65 MB. Placed last, after E1.
+- **Smaller walking network file (P8)**: Done (PR #247): walk.bin v2, 2.46 → 1.89 MB gzipped, byte-exact; the app reads v1 and v2; live since the timetable build of 2026-10-13 04:07.
 
 ## 16. App stores and showcase
 
