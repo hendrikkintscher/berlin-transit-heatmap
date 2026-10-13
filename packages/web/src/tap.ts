@@ -79,7 +79,6 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   const readout = $('readout');
   const readoutText = $('readout-text');
   const secondBtn = $<HTMLButtonElement>('readout-second');
-  const detailsBtn = $<HTMLButtonElement>('readout-details');
   const dirBtn = $<HTMLButtonElement>('readout-dir');
   const anchorBtn = $<HTMLButtonElement>('readout-anchor');
   dirBtn.innerHTML = icon('swap', 22);
@@ -331,8 +330,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     readoutText.innerHTML = html;
     dirBtn.hidden = anchorBtn.hidden = true;
     for (const id of ['readout-second', 'readout-fav']) $(id).hidden = start;
-    // Details (the stops) once a trip with stops has come.
-    detailsBtn.hidden = true;
+    // The detailed connection and the drawer, once a trip with stops has come.
+    readout.classList.remove('can-open');
     showFav();
     removeBtn.hidden = homeBtn.hidden = !start;
     readout.hidden = false;
@@ -504,7 +503,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       el.querySelector('.trip-rows')?.classList.add(`flash-${flash}`);
       flash = null;
     }
-    detailsBtn.hidden = !el.querySelector('.stops, .timeline');
+    readout.classList.toggle('can-open', !!el.querySelector('.trip-head.opens'));
+    markExpanded();
     shownRides = m.journeys.flatMap((j) =>
       (j?.legs ?? []).flatMap((l) => (l.type === 'ride' ? [{ name: l.name, mode: l.mode }] : [])),
     );
@@ -519,7 +519,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     checkLive();
   }
 
-  // The drawer (Details, or pulling the card up): the shown connection in detail and the
+  // The drawer (pulling the card up): the shown connection and the
   // ones after it (arriving: before it), asked for only once the drawer is open.
   let connections: Trip[] = [];
   let shownConnection = 0;
@@ -533,7 +533,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const one = j?.length === 1 ? j[0] : null;
     if (
       moreAsked ||
-      !readout.classList.contains('details') ||
+      !readout.classList.contains('drawer') ||
       !tripAt ||
       !one ||
       one.leave === undefined ||
@@ -563,6 +563,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     ];
     moreState = 'done';
     renderMore();
+    showList();
   }
 
   /** The list of connections in the open drawer, the shown one marked. */
@@ -708,37 +709,100 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       )
       ?.click();
   });
-  // Details opens the drawer and it stays open for the next cards, until closed again.
-  function setDrawer(open: boolean) {
-    readout.classList.toggle('details', open);
-    detailsBtn.setAttribute('aria-expanded', String(open));
-    if (open) askMore();
+  // Two steps, each staying for the next cards until closed again: a tap on the trip's
+  // summary opens the detailed connection (#readout.expanded); pulling the card up opens
+  // the drawer with the connections after it (#readout.drawer), or, where there is no such
+  // list (a meeting point, the special maps), the detailed connection.
+  function markExpanded() {
+    const open = String(readout.classList.contains('expanded'));
+    for (const h of readoutText.querySelectorAll('.trip-head.opens'))
+      h.setAttribute('aria-expanded', open);
   }
-  detailsBtn.addEventListener('click', () => setDrawer(!readout.classList.contains('details')));
-  // Pulling the card up opens the drawer, pushing it down closes it.
-  let pull: { y: number; id: number } | null = null;
+  function setExpanded(open: boolean) {
+    readout.classList.toggle('expanded', open);
+    markExpanded();
+  }
+  /** Whether the drawer has a list: one start's connection with its times, a plain map. */
+  function hasList() {
+    const j = connections[0]?.journeys;
+    return !!tripAt && !state.special && j?.length === 1 && j[0]?.leave !== undefined;
+  }
+  function setDrawer(open: boolean) {
+    if (open && !hasList()) return setExpanded(true);
+    readout.classList.toggle('drawer', open);
+    if (!open) return;
+    askMore();
+    // Below an open detailed connection, the list scrolls into view.
+    listInView = readout.classList.contains('expanded');
+    showList();
+  }
+  let listInView = false;
+  function showList() {
+    if (!listInView || moreState === 'loading') return;
+    listInView = false;
+    document.getElementById('trip-more')?.scrollIntoView({ block: 'nearest' });
+  }
+  readoutText.addEventListener('click', (e) => {
+    const head = (e.target as Element).closest('.trip-head.opens');
+    if (!head || justPulled()) return;
+    setExpanded(!readout.classList.contains('expanded'));
+  });
+  readoutText.addEventListener('keydown', (e) => {
+    if ((e.key !== 'Enter' && e.key !== ' ') || !(e.target as Element).matches('.trip-head.opens'))
+      return;
+    e.preventDefault();
+    setExpanded(!readout.classList.contains('expanded'));
+  });
+  // The pull: up, the card grows from the bottom with the finger; down, the open card
+  // follows it. Released past 30 px, the drawer (or the detailed view) opens or closes.
+  let pull: { y: number; id: number; dy: number } | null = null;
   readout.addEventListener('pointerdown', (e) => {
     const target = e.target as Element;
-    if (detailsBtn.hidden || target.closest('button:not(.grip), summary, a, input')) return;
-    // Inside the scrolled drawer, a drag scrolls it until it is back at the top.
+    if (!readout.classList.contains('can-open')) return;
+    if (target.closest('button:not(.grip), summary, a, input')) return;
+    // Inside the scrolled card, a drag scrolls it until it is back at the top.
     if (readoutText.scrollTop > 0) return;
-    pull = { y: e.clientY, id: e.pointerId };
+    pull = { y: e.clientY, id: e.pointerId, dy: 0 };
   });
-  readout.addEventListener('pointerup', (e) => {
+  readout.addEventListener('pointermove', (e) => {
     if (!pull || pull.id !== e.pointerId) return;
     const dy = e.clientY - pull.y;
-    pull = null;
-    const open = readout.classList.contains('details');
-    pulled = Math.abs(dy) > 30;
-    if (dy < -30 && !open) setDrawer(true);
-    else if (dy > 30 && open) setDrawer(false);
+    if (!pull.dy && Math.abs(dy) < 8) return;
+    if (!pull.dy) {
+      readout.setPointerCapture(e.pointerId);
+      readout.classList.add('pulling');
+    }
+    pull.dy = dy || -0.1;
+    const open = readout.classList.contains('drawer') || readout.classList.contains('expanded');
+    if (dy < 0 && !readout.classList.contains('drawer'))
+      readout.style.setProperty('--pull-up', `${Math.min(-dy, 260)}px`);
+    else if (dy > 0 && open) readout.style.transform = `translateY(${dy}px)`;
   });
-  readout.addEventListener('pointercancel', () => (pull = null));
-  /** The grip's click right after a pull is the pull's own. */
-  let pulled = false;
+  function endPull(e: PointerEvent) {
+    if (!pull || pull.id !== e.pointerId) return;
+    const dy = e.type === 'pointerup' ? e.clientY - pull.y : 0;
+    const moved = pull.dy !== 0;
+    pull = null;
+    readout.classList.remove('pulling');
+    readout.style.removeProperty('--pull-up');
+    readout.style.transform = '';
+    if (!moved) return;
+    pulledAt = performance.now();
+    if (dy < -30) setDrawer(true);
+    else if (dy > 30) {
+      if (readout.classList.contains('drawer')) setDrawer(false);
+      else setExpanded(false);
+    }
+  }
+  readout.addEventListener('pointerup', endPull);
+  readout.addEventListener('pointercancel', endPull);
+  /** The click right after a pull is the pull's own. */
+  let pulledAt = -Infinity;
+  const justPulled = () => performance.now() - pulledAt < 400;
   $('readout-grip').addEventListener('click', () => {
-    if (pulled) return void (pulled = false);
-    if (!detailsBtn.hidden) setDrawer(!readout.classList.contains('details'));
+    if (justPulled() || !readout.classList.contains('can-open')) return;
+    if (hasList()) setDrawer(!readout.classList.contains('drawer'));
+    else setExpanded(!readout.classList.contains('expanded'));
   });
 
   /** Puts the tapped place back (or none) before the starts change ("Rückgängig"). */
