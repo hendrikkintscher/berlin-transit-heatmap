@@ -818,8 +818,18 @@ function showHeat() {
   );
 }
 
-// A tap that only closes the search panel should not also set a point.
+// A tap on the map that only closes the search or a chip panel should not also set a
+// point. Decided on each pointerdown, at window capture so it runs before the chip row
+// closes its panel on the same pointerdown.
 let ignoreClick = false;
+window.addEventListener(
+  'pointerdown',
+  (e) => {
+    ignoreClick =
+      map.getContainer().contains(e.target as Node) && (isSearchOpen() || !!chips.isOpen());
+  },
+  true,
+);
 map.on('click', (e: MapMouseEvent) => {
   if (ignoreClick) {
     ignoreClick = false;
@@ -1223,8 +1233,7 @@ searchClose.addEventListener('click', () => {
 });
 for (const ev of ['mousedown', 'touchstart'] as const) {
   map.on(ev, () => {
-    ignoreClick = isSearchOpen();
-    if (ignoreClick) closeSearch();
+    if (isSearchOpen()) closeSearch();
   });
 }
 
