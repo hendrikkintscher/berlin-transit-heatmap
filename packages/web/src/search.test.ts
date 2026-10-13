@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { streetHouses, toPlaces } from './search';
+import { streetHouses, streetLabel, toPlaces } from './search';
 
 const f = (properties: Record<string, string>, lon = 13.4, lat = 52.5) => ({
   properties,
@@ -121,5 +121,20 @@ describe('streetHouses without a postcode', () => {
     expect(
       streetHouses([house(52.4), house(52.6)], { name: 'Hauptstraße' }, { lat: 52.401, lon: 13.1 }),
     ).toEqual([house(52.4)]);
+  });
+});
+
+describe('streetLabel', () => {
+  it('names a point by its address rather than the shop there', () => {
+    expect(
+      streetLabel([
+        f({ name: 'Wolt', street: 'Oranienstraße' }),
+        f({ street: 'Oranienstraße', housenumber: '25' }),
+      ]),
+    ).toBe('Oranienstraße 25');
+    expect(streetLabel([f({ name: 'Görlitzer Park' }), f({ street: 'Wiener Straße' })])).toBe(
+      'Wiener Straße',
+    );
+    expect(streetLabel([f({ name: 'Tempelhofer Feld' })])).toBeNull();
   });
 });

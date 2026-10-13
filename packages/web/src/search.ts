@@ -29,7 +29,7 @@ interface PhotonProps {
   osm_value?: string;
   type?: string;
 }
-interface PhotonFeature {
+export interface PhotonFeature {
   properties: PhotonProps;
   geometry: { coordinates: [number, number] };
 }
@@ -138,6 +138,34 @@ export async function reversePlace(
   lang: 'de' | 'en' = 'de',
 ): Promise<string | null> {
   return (await reverseAddress(at, lang))?.label ?? null;
+}
+
+/**
+ * A name for a point by its address: "Oranienstraße 25" rather than the shop or café
+ * nearest to it (a favourite set on the map, C7); else the nearest named place.
+ */
+export async function reverseStreet(
+  at: { lat: number; lon: number },
+  lang: 'de' | 'en' = 'de',
+): Promise<string | null> {
+  const p = new URLSearchParams({
+    lat: at.lat.toFixed(5),
+    lon: at.lon.toFixed(5),
+    lang,
+    limit: '5',
+  });
+  const res = await fetch(`https://photon.komoot.io/reverse?${p}`);
+  if (!res.ok) throw new Error(`reverse lookup failed (${res.status})`);
+  const json = (await res.json()) as { features: PhotonFeature[] };
+  return streetLabel(json.features) ?? toPlaces(json.features)[0]?.label ?? null;
+}
+
+/** The first feature's street and house number ("Oranienstraße 25"), or a street alone. */
+export function streetLabel(features: PhotonFeature[]): string | null {
+  const props = features.map((f) => f.properties);
+  const house = props.find((p) => p.street && p.housenumber);
+  if (house) return `${house.street} ${house.housenumber}`;
+  return props.find((p) => p.street)?.street ?? null;
 }
 
 /** The nearest address or named place to a point, with its own position. */

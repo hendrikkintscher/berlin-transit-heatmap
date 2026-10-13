@@ -142,3 +142,11 @@ describe('the street list', () => {
     expect(withRemoteDetail([torstr], remote)[0]?.detail).toBe('10119 Mitte');
   });
 });
+
+describe('abbreviations', () => {
+  it('finds a Hauptbahnhof by "Hbf" and a Bhf by "Bahnhof"', () => {
+    expect(matchScore('S Potsdam Hauptbahnhof', 'Potsdam Hbf')).toBe(2);
+    expect(matchScore('S Potsdam Hauptbahnhof', 'Potsdam Haupt')).toBe(2);
+    expect(matchScore('S+U Alexanderplatz Bhf', 'Alexanderplatz Bahnhof')).toBe(2);
+  });
+});

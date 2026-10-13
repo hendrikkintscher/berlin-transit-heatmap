@@ -1,6 +1,7 @@
-// "What's different today": a small notice, while a connection is shown, listing its
-// U-Bahn, S-Bahn and tram lines that run differently on the shown date (changes.json, made by the timetable build). Tapping a
-// line shows its stretch on the map. The file is small (about 3 KB gzipped) and fetched only
+// "What's different today": a small notice listing the U-Bahn, S-Bahn and tram lines that
+// run differently on the shown date (changes.json, made by the timetable build): those of
+// the shown connection, or without one those on the visible map. Tapping a line shows its
+// stretch on the map. The file is small (about 3 KB gzipped) and fetched only
 // once the first timetable is in, so it never holds up the first map.
 
 import type maplibregl from 'maplibre-gl';
@@ -54,6 +55,21 @@ export function changedLines(list: Change[]): string[] {
   return [...new Set(list.map((c) => c.line))];
 }
 
+/** The notice's line list: up to three names, then "+N" for the rest. */
+export function linesText(lines: string[], most = 3): string {
+  return lines.length <= most + 1
+    ? lines.join(', ')
+    : `${lines.slice(0, most).join(', ')} +${lines.length - most}`;
+}
+
+/** [west, south, east, north] */
+export type Bounds = [number, number, number, number];
+
+/** The changes with part of their stretch inside the bounds. */
+export function inBounds(list: Change[], [w, s, e, n]: Bounds): Change[] {
+  return list.filter((c) => c.path.some(([x, y]) => x >= w && x <= e && y >= s && y <= n));
+}
+
 /** A ride of the shown connection: its line name and mode. */
 export interface Ride {
   name: string;
@@ -98,13 +114,22 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
   let shown: Change | null = null;
   const closed = new Set<string>();
   /**
-   * The notice shows only while a connection is shown, listing what touches its lines
-   * (Hendrik, 2026-10-12: not on its own in the first view; the trip card names it).
+   * With a connection shown, the notice lists what touches its lines; without one, what
+   * runs differently on the visible map (C5, Hendrik 2026-10-12: "N Linien anders" whenever
+   * the day has changes in view). The picked stretch stays listed while the map moves.
    */
   let focus: Ride[] | null = null;
+  /** The entries the list shows, for its taps. */
+  let listed: Change[] = [];
 
   const allToday = () => (isDate(state.when.day) ? (file?.days[state.when.day] ?? []) : []);
-  const today = () => (focus ? touching(allToday(), focus) : []);
+  function today(): Change[] {
+    const all = allToday();
+    if (focus) return touching(all, focus);
+    const b = map.getBounds();
+    const view = inBounds(all, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+    return shown && all.includes(shown) && !view.includes(shown) ? [shown, ...view] : view;
+  }
 
   function load() {
     if (file || loading) return;
@@ -190,7 +215,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     // With a stretch on the map the notice names it; tapped, it opens the list again.
     chip.textContent = shown
       ? `${shown.line}: ${changeText(shown, day)}`
-      : t('changesChip', { day: label, lines: changedLines(items).join(', ') });
+      : t('changesChip', { day: label, lines: linesText(changedLines(items)) });
     chip.classList.toggle('picked', !!shown);
     chip.setAttribute('aria-expanded', String(open));
     chip.hidden = open;
@@ -198,6 +223,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     if (!open) return;
     $('changes-title').textContent = t('changesTitle', { day: label });
     $('changes-note').textContent = t('changesNote');
+    listed = items;
     list.innerHTML = items
       .map(
         (c, i) =>
@@ -220,7 +246,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
   list.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-i]');
     if (!b) return;
-    const c = today()[Number(b.dataset.i)] ?? null;
+    const c = listed[Number(b.dataset.i)] ?? null;
     if (c === shown) return;
     // The list closes to one line so the map shows the stretch.
     open = false;
@@ -234,6 +260,11 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     else if (shown) draw(null);
     else closed.add(state.when.day);
     render();
+  });
+
+  // Without a connection the notice follows the visible map.
+  map.on('moveend', () => {
+    if (file && !focus) render();
   });
 
   return {
