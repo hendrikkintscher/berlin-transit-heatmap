@@ -23,7 +23,6 @@ import { MAX_NAME, MAX_STARTS, type Point } from './url';
 import { liveStatus, liveText, type Board } from './live';
 import { dataBase } from './region';
 import { clockNow, isDate } from './when';
-import type { PathLookView } from './path-looks';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
 export interface Spot extends Point {
@@ -59,8 +58,8 @@ export interface TapDeps {
   changeNote: (ride: { name: string; mode: string }) => string | null;
   /** The shown connection's rides (null: none); the changes notice keeps to them. */
   focusChanges: (rides: { name: string; mode: string }[] | null) => void;
-  /** A trial look for the trip (path=a|b|c, roadmap 1.1), once the map is up. */
-  pathLook?: () => PathLookView | null;
+  /** Draws the trip's direction arrows (null: none). */
+  showArrows: (lines: GeoJSON.FeatureCollection | null) => void;
 }
 
 /**
@@ -102,7 +101,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
 
   const spotEl = document.createElement('div');
   spotEl.className = 'spot-marker';
-  // Look c of the trial path looks names the ends (style.css).
+  // The ends are labelled Start and Ziel (style.css).
   spotEl.dataset.start = t('dirThere');
   spotEl.dataset.end = t('dirBack');
   const spotMarker = new maplibregl.Marker({ element: spotEl });
@@ -423,11 +422,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
     (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.lines ?? empty);
     (map.getSource(TRIP_STOPS_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.stops ?? empty);
-    const look = deps.pathLook?.();
-    look?.show(trip?.lines ?? null);
-    const [line, edge] = look?.routes ?? [0.5, 0.35];
-    map.setPaintProperty('routes-line', 'line-opacity', trip ? line : ROUTES_OPACITY);
-    map.setPaintProperty('routes-casing', 'line-opacity', trip ? edge : ROUTES_CASING_OPACITY);
+    deps.showArrows(trip?.lines ?? null);
+    map.setPaintProperty('routes-line', 'line-opacity', trip ? 0.5 : ROUTES_OPACITY);
+    map.setPaintProperty('routes-casing', 'line-opacity', trip ? 0.35 : ROUTES_CASING_OPACITY);
     map.setLayoutProperty('routes-label', 'visibility', state.routes && !trip ? 'visible' : 'none');
   }
 
