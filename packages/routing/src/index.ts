@@ -28,7 +28,7 @@ export { LEG_NONE, LEG_ORIGIN, LEG_WALK } from './raptor';
 export type { RouteUsageOptions, UsedSegment } from './usage';
 export { routeUsage } from './usage';
 export type { Journey, JourneyLeg } from './journey';
-export { departureAt, journeyTo } from './journey';
+export { departureAt, journeyTo, laterStart } from './journey';
 export type { TimetableData } from './ttbin';
 export { decodeTimetable, encodeTimetable } from './ttbin';
 export type { Hop, LineShapes } from './linesbin';
