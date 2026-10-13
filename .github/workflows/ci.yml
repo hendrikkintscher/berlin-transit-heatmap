@@ -29,6 +29,28 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  # Browser smoke test (roadmap B9): the built app on a phone-size screen with a tiny
+  # timetable; see scripts/smoke/smoke.mjs. Uses the runner's Chrome.
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir packages/web build
+      - run: node scripts/smoke/smoke.mjs --shots work/smoke
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screens
+          path: work/smoke
+          if-no-files-found: ignore
+
   # Speed budget (roadmap B1): the app may not get bigger or slower than allowed.
   # See scripts/speed/check.mjs; the job summary shows the numbers.
   speed:

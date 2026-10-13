@@ -5,9 +5,6 @@ on:
     branches: [main]
     # Roadmap, README and other notes change nothing on the site.
     paths-ignore: ['**.md']
-  # Pull requests touching the app only build and test; they never deploy.
-  pull_request:
-    paths: ['packages/web/**', '.github/workflows/deploy-pages.yml']
   workflow_dispatch:
   # Redeploy when a new timetable has been published.
   workflow_run:
@@ -19,9 +16,10 @@ permissions:
   pages: write
   id-token: write
 
+# Pull requests are tested by CI (ci.yml); this only deploys.
 concurrency:
-  group: pages-${{ github.event_name == 'pull_request' && github.ref || 'deploy' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: pages-deploy
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -52,6 +50,9 @@ jobs:
       - name: Build
         run: pnpm --dir packages/web build
 
+      - name: Smoke test
+        run: node scripts/smoke/smoke.mjs
+
       - name: Add latest timetable
         env:
           GH_TOKEN: ${{ github.token }}
@@ -69,13 +70,11 @@ jobs:
             echo "::warning::No timetable-latest release yet; the app will run on demo data."
           fi
 
-      - if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: packages/web/dist
 
   deploy:
-    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     environment:

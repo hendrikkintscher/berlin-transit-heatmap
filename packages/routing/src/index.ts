@@ -22,7 +22,16 @@ export { travelTimes } from './raptor';
 export { reverseTimetable } from './reverse';
 export { stepFreeTimetable } from './stepfree';
 export { REGION, REGIONS, type Box, type Region } from './regions';
-export { DEFAULT_BBOX, gridLayout, gridToGeoJSON, gridValueAt, heatGrid } from './grid';
+export {
+  cellAt,
+  cellColRow,
+  DEFAULT_BBOX,
+  gridLayout,
+  gridToGeoJSON,
+  gridValueAt,
+  heatGrid,
+  type GridShape,
+} from './grid';
 export { distanceM, WALK_SPEED_MPS } from './geo';
 export { LEG_NONE, LEG_ORIGIN, LEG_WALK } from './raptor';
 export type { RouteUsageOptions, UsedSegment } from './usage';

@@ -84,10 +84,6 @@ export function bandOf(seconds: number): number {
   return b;
 }
 
-export function bandColor(band: number): string {
-  return BAND_COLORS[Math.max(0, Math.min(band, MAX_BAND))];
-}
-
 export function bandLabel(band: number): string {
   const lo = BAND_EDGES_MIN[band];
   return band >= MAX_BAND ? `${lo}+` : `${lo}–${BAND_EDGES_MIN[band + 1]}`;
