@@ -29,7 +29,14 @@ import {
 import { ctx, post } from './worker-post';
 import { cellSeconds, meetCandidates, minFinite, run, slowestOf } from './worker-runs';
 import { ensure, prepared, setDataBase } from './worker-timetables';
-import { moreTrips, nearestStopName, setLastTrip, tapTrip, tripMessage } from './worker-trips';
+import {
+  moreTrips,
+  nearestStopName,
+  setLastTrip,
+  tapTrip,
+  tripMessage,
+  warmNextTrip,
+} from './worker-trips';
 
 /**
  * The last map's grid, for painting it again ('paint'); `offset` is added to its times for
@@ -225,6 +232,11 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       );
       // The lines' courses come after the first map and the base map, never before them.
       mapShown(tt);
+      // The first tap's trip needs a pass from now: made ahead, one start at a time, unless
+      // a newer map or a tap (which makes its own) is asked for meanwhile.
+      const trips = latestTrip;
+      do await nextTask();
+      while (msg.id === latestCompute && latestTrip === trips && warmNextTrip());
     } else if (msg.type === 'paint') {
       if (lastShown?.id !== msg.id) return;
       const image = paintShown(lastShown, msg.limit);
