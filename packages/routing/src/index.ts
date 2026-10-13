@@ -40,6 +40,7 @@ export type { Journey, JourneyLeg } from './journey';
 export { departureAt, journeyTo, laterStart } from './journey';
 export type { TimetableData } from './ttbin';
 export { decodeTimetable, encodeTimetable } from './ttbin';
+export { decodeWalkBin, encodeWalkBin, type WalkData } from './walkbin';
 export type { Hop, LineShapes } from './linesbin';
 export { decodeLines, encodeLines, hopCourse } from './linesbin';
 export { BIKE_ONLY_MAX_SECONDS, BIKE_SPEED_MPS, BIKE_STATION_SECONDS, bikeTimetable } from './bike';

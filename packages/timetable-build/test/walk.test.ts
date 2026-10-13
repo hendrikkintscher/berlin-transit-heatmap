@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { decodeWalkBin } from '../../routing/src/walkbin.ts';
 import { buildWalkGraph, encodeWalkGraph, isWalkable, WalkDistances } from '../src/walk.ts';
 
 const tags = (o: Record<string, string>) => new Map(Object.entries(o));
@@ -56,9 +57,13 @@ describe('buildWalkGraph', () => {
   it('encodes to walk.bin', async () => {
     const { graph } = await buildWalkGraph(opl);
     const bin = encodeWalkGraph(graph);
-    expect([...bin.subarray(0, 5)]).toEqual([0x42, 0x54, 0x48, 0x57, 1]);
+    expect([...bin.subarray(0, 5)]).toEqual([0x42, 0x54, 0x48, 0x57, 2]);
     expect(bin[5]).toBe(4); // nodes
     expect(bin[6]).toBe(3); // edges
+    // The app reads back the same nodes and whole metres.
+    const back = decodeWalkBin(bin);
+    expect([...back.edgeM]).toEqual([...graph.edgeM].map((m) => Math.max(1, Math.round(m))));
+    expect([...back.lat]).toEqual([...graph.lat].map((v) => Math.round(v * 1e5) / 1e5));
   });
 
   it('measures walking distances for transfers', async () => {

@@ -67,9 +67,12 @@ All additive; nothing in the contract changed.
 timetables. `loadWalkNetwork(buffer)` decodes it; pass the result as `walk` to `travelTimes` and
 `heatGrid`.
 
-- Format: u32 magic `BTHW`, u8 version 1, then LEB128 varints: node count, edge count, per node
-  the zig-zag delta of lon and lat in 1e-5 degrees, per node the number of edges to higher
-  nodes followed by (index delta, length in metres) for each. About 430k nodes, 2.1 MB gzipped.
+- Format (`src/walkbin.ts`): u32 magic `BTHW`, u8 version 2, then LEB128 varints in columns:
+  node and edge counts, the longitude scale, all lon deltas, all lat deltas (1e-5 degrees),
+  per node its edge count to higher nodes, the index deltas, and each edge's whole metres
+  minus the straight line between its ends (computed exactly from the stored integers, so
+  usually 0 or 1). About 430k nodes, 1.9 MB gzipped (version 1, still read, interleaved
+  everything per node and stored plain metres: 2.5 MB).
 - Points (origin, stops, grid cells) snap to the nearest edge within 300 m and enter the network
   at both of its ends. Cells on the same edge as a source walk straight along it.
 - The final walk is one multi-source Dijkstra (a bucket queue by whole seconds) from all reached
