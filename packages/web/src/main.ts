@@ -1192,6 +1192,7 @@ const tap = initTap(
     favouriteLabels: () => favPlaces.list().map((f) => f.label),
     changeNote: (ride) => changes?.noteFor(ride) ?? null,
     focusChanges: (rides) => changes?.focus(rides),
+    openChanges: (ride) => changes?.openFor(ride),
     showArrows: (lines) => showArrows?.(lines),
     showHome: (i) => {
       const at = starts()[i];
@@ -1294,12 +1295,14 @@ initBack(
     ...dialogs.map((d) => ({ isOpen: () => d.open, close: () => d.close() })),
     { isOpen: search.isOpen, close: search.close },
     { isOpen: () => !!chips.isOpen(), close: chips.close },
+    { isOpen: () => !!changes?.isOpen(), close: () => changes?.close() },
     { isOpen: () => !readout.hidden, close: tap.hideReadout },
   ],
   [
     ...dialogs.map((d) => [d, 'open'] as [Element, string]),
     [search.panel, 'class'],
     ...pops.map((p) => [p, 'hidden'] as [Element, string]),
+    [$('changes'), 'hidden'],
     [readout, 'hidden'],
   ],
 );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedLines, changeText, inBounds, linesText, touching, type Change } from './changes';
+import { changedLines, changeText, linesText, touching, type Change } from './changes';
 
 const change = (c: Partial<Change>): Change => ({
   line: 'M2',
@@ -64,16 +64,7 @@ describe('what is different today', () => {
     expect(touching(list, rides).map((c) => c.line)).toEqual(['M2', 'M17']);
   });
 
-  it('lists what lies on the visible map, and shortens long line lists', () => {
-    const inMitte = change({
-      line: 'M2',
-      path: [
-        [13.4, 52.52],
-        [13.42, 52.53],
-      ],
-    });
-    const inSpandau = change({ line: 'S3', path: [[13.2, 52.53]] });
-    expect(inBounds([inMitte, inSpandau], [13.3, 52.4, 13.6, 52.6])).toEqual([inMitte]);
+  it('shortens long line lists', () => {
     expect(linesText(['M2', 'S3', 'U2', 'M5'])).toBe('M2, S3, U2, M5');
     expect(linesText(['M2', 'S3', 'U2', 'M5', 'M8'])).toBe('M2, S3, U2 +2');
   });

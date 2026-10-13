@@ -130,7 +130,7 @@ describe('trip card', () => {
     );
     expect(html.match(/trip-change/g)).toHaveLength(1);
     expect(html).toContain(
-      '<small class="trip-change">U2: Ersatzverkehr Pankow – Senefelderplatz</small>',
+      '<small class="trip-change" role="button" tabindex="0" data-line="U2" data-mode="ubahn">U2: Ersatzverkehr Pankow – Senefelderplatz</small>',
     );
   });
 

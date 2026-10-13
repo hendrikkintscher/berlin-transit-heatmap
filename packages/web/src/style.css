@@ -838,6 +838,39 @@ dialog.menu::backdrop {
 .seg-wide button {
   flex: 1;
 }
+/* Mehr's "Heute anders" entry, in the changes colour. */
+.menu-changes {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 0;
+  border-left: 4px solid var(--changes);
+  border-radius: var(--r-s);
+  background: var(--surface-soft);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.menu-changes::before {
+  content: '⚠ ';
+  color: var(--changes);
+}
+.menu-changes:disabled {
+  border-left-color: var(--line-strong);
+  color: var(--muted);
+  font-weight: 500;
+  cursor: default;
+}
+.menu-changes:disabled::before {
+  content: '';
+}
+.menu-changes[hidden] {
+  display: none;
+}
 .menu-link {
   display: block;
   width: 100%;
@@ -1754,6 +1787,13 @@ body.special .legend {
 #readout .trip-change::before {
   content: '⚠ ';
 }
+/* Tapped, it opens the day's changes on its line. */
+#readout .trip-change[data-line] {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
 .trip-sep {
   color: var(--muted);
 }
@@ -1840,7 +1880,8 @@ body.special .legend {
   margin-top: 10px;
 }
 
-/* What's different today: one line with the lines that run differently; tapped, the list. */
+/* What's different today, opened from Mehr or a note on the card: the list; while a stretch
+   is on the map, one line naming it. */
 .changes {
   display: flex;
   align-items: flex-start;
@@ -1944,7 +1985,7 @@ body.special .legend {
   display: none;
 }
 /* One thing at a time at the bottom: the install tip waits while a card or the
-   "Heute anders" notice shows. */
+   "Heute anders" box shows. */
 .bottom:has(#readout:not([hidden]), #changes:not([hidden])) #tip {
   display: none;
 }
