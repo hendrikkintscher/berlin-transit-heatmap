@@ -797,6 +797,7 @@ showMeetNames();
 
 function showResult(r: Result) {
   renderMeet(r.meet);
+  frameResult(r);
   renderFavourites();
   showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined);
   if (!state.mapReady) return;
@@ -928,6 +929,49 @@ map.on('click', (e: MapMouseEvent) => {
 
 // The map's (i) attribution sits just above the bottom panel, which changes height.
 const bottomPanel = document.querySelector<HTMLElement>('.bottom')!;
+
+// ---------- framing: what a link, a search pick or the meeting points are about ----------
+/**
+ * Fits the map to these points between the chips and the bottom panel (or the trip card
+ * about to open there), at most to zoom 15. Camera only: nothing is computed again.
+ */
+function frameView(points: Point[], card = false, animate = true) {
+  if (points.length < 2 || !state.mapReady) return;
+  const box = new maplibregl.LngLatBounds();
+  for (const p of points) box.extend([p.lon, p.lat]);
+  const h = map.getContainer().clientHeight;
+  // Below the chips and any mode banner; the stop names sit right of their dots.
+  const top =
+    Math.max(
+      ...['chips', 'meet', 'cmp', 'special'].map((id) => {
+        const el = $(id);
+        return el.hidden ? 0 : el.getBoundingClientRect().bottom;
+      }),
+    ) + 16;
+  const below = Math.max(bottomPanel.offsetHeight, card ? h * 0.34 : 0) + 24;
+  // A very short screen keeps at least a third of it for the points.
+  const room = h - top - below;
+  const bottom = room < h / 3 ? Math.max(24, below - (h / 3 - room)) : below;
+  map.fitBounds(box, {
+    padding: { top, bottom, left: 40, right: 96 },
+    maxZoom: 15,
+    ...(animate ? { essential: true } : { duration: 0 }),
+  });
+}
+/** The first map from a link with a destination or several starts is framed once. */
+let frameLink = !!state.origin && (state.others.length > 0 || !!link.to);
+let hadMeet = false;
+function frameResult(r: Result) {
+  if (!state.mapReady) return;
+  const meet = !!r.meet?.length;
+  const firstMeet = meet && !hadMeet;
+  hadMeet = meet;
+  if (!frameLink && !firstMeet) return;
+  const fromLink = frameLink;
+  frameLink = false;
+  const to = fromLink && link.to ? [link.to] : [];
+  frameView([...starts(), ...to, ...(r.meet ?? [])], to.length > 0, !fromLink);
+}
 new ResizeObserver(() =>
   document.documentElement.style.setProperty('--bottom-h', `${bottomPanel.offsetHeight}px`),
 ).observe(bottomPanel);
@@ -1300,11 +1344,15 @@ function pickPlace(p: Place) {
   }
   // The bar empties again: the place shows on the map and in its card.
   searchInput.value = '';
-  map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
   // With a start set, the place may be a new start, a destination or another start:
-  // show the trip there, with buttons for the other two.
-  if (state.origin && state.result) tap.tapAt(p.lat, p.lon, undefined, p.label, true);
-  else setOrigin(p);
+  // show the trip there, with buttons for the other two, and the starts with it in view.
+  if (state.origin && state.result) {
+    frameView([...starts(), p], true);
+    tap.tapAt(p.lat, p.lon, undefined, p.label, true);
+  } else {
+    map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
+    setOrigin(p);
+  }
 }
 
 // A tap into the bar searches for a start (the other searches open it themselves).
