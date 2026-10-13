@@ -230,6 +230,7 @@ const de = {
     'Die nächste Verbindung, wenn du jetzt losgehst, Warten eingerechnet. Zu einer anderen Zeit: Abfahrt zur vollen Stunde oder zur gewählten Uhrzeit.',
   measureNoteNextArr:
     'Die letzte Verbindung, mit der du zur vollen Stunde oder zur gewählten Uhrzeit ankommst.',
+  layersView: 'Ansicht',
   compareTitle: 'Vergleichen mit',
   compareOff: 'Aus',
   compareDay: 'Vergleichstag',
@@ -516,6 +517,7 @@ const en: Record<Key, string> = {
   measureNoteNext:
     'The next connection if you leave now, waiting included. For another time: leaving on the hour or at the time you set.',
   measureNoteNextArr: 'The last connection that gets you there on the hour or by the time you set.',
+  layersView: 'View',
   compareTitle: 'Compare with',
   compareOff: 'Off',
   compareDay: 'Comparison day',

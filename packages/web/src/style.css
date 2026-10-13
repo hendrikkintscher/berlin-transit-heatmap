@@ -638,6 +638,10 @@ dialog.menu {
 dialog.menu[open] {
   animation: drop 0.16s ease-out;
 }
+/* Like the chip panels, the menu leaves the map undimmed (a tap outside still closes it). */
+dialog.menu::backdrop {
+  background: transparent;
+}
 @keyframes drop {
   from {
     opacity: 0;
@@ -663,8 +667,8 @@ dialog.menu[open] {
   cursor: pointer;
 }
 .menu h3 {
-  margin: 16px 0 8px;
-  font-size: 12px;
+  margin: 14px 0 8px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1223,9 +1227,17 @@ body.special .legend {
 .chip-btn.icon-chip.menu-chip::after {
   content: none;
 }
+/* Open: a tinted chip. Not on the default setting: an accent dot, so the two read apart. */
+.chip-btn[aria-expanded='true'] {
+  background: var(--surface-strong);
+}
 .chip-btn.on {
-  background: var(--accent);
-  color: #fff;
+  color: var(--accent);
+  background-image: radial-gradient(
+    circle at calc(100% - 8px) 8px,
+    var(--accent) 3.5px,
+    transparent 4px
+  );
 }
 /* A chip's panel: right under the row, the map stays visible around it. */
 .pop {
