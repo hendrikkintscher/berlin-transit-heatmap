@@ -29,10 +29,10 @@ async function startPage(workerUrl: string): Promise<string> {
 }
 
 /**
- * A faster first load (roadmap B4): the start page itself starts the routing worker and
- * downloads the first map's timetable for it (start-page.ts, 'boot' in worker.ts), preloads
- * the app's main code and the map style, and connects to the tile server, all while the
- * entry script is still loading. boot.ts takes the worker over.
+ * A faster first load (roadmap B4): the start page itself starts the routing worker, which
+ * draws the first map at once, and asks for that map's timetable (start-page.ts, 'boot' in
+ * worker.ts); it preloads the app's main code and the map style, and connects to the tile
+ * server, all while the entry script is still loading. boot.ts takes the worker over.
  */
 function earlyStart(): Plugin {
   return {

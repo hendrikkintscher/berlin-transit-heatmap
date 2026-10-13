@@ -8,10 +8,10 @@
     "ms": 30
   },
   "bundle": {
-    "index.js": 3207,
     "index.css": 16222,
-    "main.js": 328050,
-    "worker.js": 26676,
-    "index.html": 7335
+    "index.js": 3207,
+    "main.js": 328165,
+    "worker.js": 27917,
+    "index.html": 7265
   }
 }

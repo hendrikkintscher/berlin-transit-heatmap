@@ -32,31 +32,18 @@ export type ToWorker =
   | { type: 'init'; dataBase: string; v?: string }
   /**
    * Sent by the start page's inline script before the app's code has loaded: the page's
-   * address and stored settings, so the worker sets itself up and prepares the first map's
-   * timetable at once (see earlyLoad in early.ts).
+   * address and stored settings, so the worker sets itself up, prepares the first map's
+   * timetable and draws that map at once (earlyLoad in early.ts, mapAhead in worker.ts).
    */
   | {
       type: 'boot';
       baseURI: string;
       v?: string;
       search: string;
-      stepFree: string | null;
-      travel: string | null;
-      /** The first map's timetable, which the page downloads and hands over ('prefetch'). */
-      prefetch?: string;
-    }
-  /**
-   * The start page's download of the boot timetable: the response's body as a stream (or
-   * its bytes, where streams do not transfer), or nothing when it failed.
-   */
-  | {
-      type: 'prefetch';
-      url: string;
-      status?: number;
-      contentType?: string | null;
-      length?: string | null;
-      body?: ReadableStream<Uint8Array>;
-      buf?: ArrayBuffer;
+      /** The device settings the app's state starts from (STATE_KEYS in early.ts). */
+      stored: Record<string, string | null>;
+      /** When the page opened (ms since 1970): the first map leaves then, on Nächste. */
+      at: number;
     }
   | {
       type: 'load';
