@@ -53,6 +53,8 @@ let lastShown: Shown | null = null;
  */
 let latestCompute = 0;
 let latestTrip = 0;
+/** The drawer's last list asked for (see moreTrips). */
+let latestMore = 0;
 /**
  * Lets the messages queued meanwhile in, so their ids are known: a message to itself is
  * queued behind them (a timer can run ahead of them).
@@ -260,8 +262,18 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'loadWalk') {
       startBackground();
     } else if (msg.type === 'moreTrips') {
+      latestMore = msg.id;
       await nextTask();
-      post({ type: 'moreTrips', id: msg.id, trips: moreTrips(msg) });
+      const [trips, compute] = [latestTrip, latestCompute];
+      // Stops as soon as a newer list, a tap or a map is asked for: they go first.
+      await moreTrips(
+        msg,
+        (list) => post({ type: 'moreTrips', id: msg.id, trips: list }),
+        async () => {
+          await nextTask();
+          return msg.id === latestMore && trips === latestTrip && compute === latestCompute;
+        },
+      );
     } else if (msg.type === 'placeName') {
       const tt = lastTimetable;
       post({ type: 'placeName', id: msg.id, name: tt && nearestStopName(tt, msg.lat, msg.lon) });

@@ -264,7 +264,10 @@ export type FromWorker =
       limit?: number;
     }
   | { type: 'stations'; list: SearchStation[] }
-  /** Up to three more connections for the drawer, each drawn as a trip would be. */
+  /**
+   * More connections for the drawer, each drawn as a trip would be; the same `id` may come
+   * again with a longer list (connections on other lines, found one search at a time).
+   */
   | {
       type: 'moreTrips';
       id: number;

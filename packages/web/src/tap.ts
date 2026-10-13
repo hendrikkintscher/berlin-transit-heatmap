@@ -559,10 +559,28 @@ export function initTap(deps: TapDeps, initial: Point | null) {
 
   function onMoreTrips(m: { id: number; trips: Omit<Trip, 'type' | 'id'>[] }) {
     if (m.id !== moreId || !connections.length) return;
+    // The list may come again, longer (other lines found later): the picked row stays picked.
+    const picked = connections[shownConnection];
     connections = [
       connections[0]!,
       ...m.trips.map((x) => ({ ...x, type: 'trip' as const, id: connections[0]!.id })),
     ];
+    const key = (c: Trip | undefined) => {
+      const j = c?.journeys[0];
+      const lines = (j?.legs ?? []).map((l) => (l.type === 'ride' ? l.name : '')).join();
+      return j ? `${j.leave} ${j.arrive} ${lines}` : '';
+    };
+    const k = connections.findIndex((c) => key(c) === key(picked));
+    if (k >= 0) shownConnection = k;
+    else if (shownConnection && picked) {
+      // Beaten by a row found later, it stays in the list while it is on the card.
+      // In the list's order: departing by leaving, arriving by arriving, backwards.
+      const when = (c: Trip) =>
+        state.direction === 'arrive' ? -(c.journeys[0]?.arrive ?? 0) : (c.journeys[0]?.leave ?? 0);
+      const at = connections.findIndex((c, i) => i > 0 && when(c) > when(picked));
+      shownConnection = at < 0 ? connections.length : at;
+      connections.splice(shownConnection, 0, picked);
+    }
     moreState = 'done';
     renderMore();
     showList();

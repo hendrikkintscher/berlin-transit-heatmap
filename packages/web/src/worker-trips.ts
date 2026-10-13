@@ -16,6 +16,7 @@ import {
   type TravelTimeResult,
 } from '@berlin-transit-heatmap/routing';
 import type { Direction, FromWorker, ToWorker, Travel, TripLeg } from './protocol';
+import { bestRows } from './more-rows';
 import { stopName } from './stop-name';
 import { course, walk } from './worker-paths';
 import { CELL_M, cellSeconds, travelOptions, type Run } from './worker-runs';
@@ -75,11 +76,13 @@ function laterRun(
   last: LastTrip & { leaveAt: number },
   r: Run,
   at: { lat: number; lon: number },
+  maxRounds?: number,
 ): TripRun {
   const w = travelOptions(last.travel);
   const result = travelTimes(last.tt, r.result.origin!, {
     trackLegs: true,
     leaveAt: last.leaveAt,
+    maxRounds,
     ...w,
   });
   return nearRun(last.tt, result, at, w);
@@ -293,6 +296,33 @@ function twinRoutes(
 /** The last single connection put on a card, for the drawer's more connections. */
 let lastFound: NonNullable<ReturnType<typeof trip>> | null = null;
 
+/** A drawer row on the timetable's own clock: the start moves on, the end must improve. */
+interface MoreRow {
+  start: number;
+  end: number;
+  found: NonNullable<ReturnType<typeof trip>>;
+}
+
+/** What the drawer's list is built from: the shown connection, on the timetable's clock. */
+interface MoreBase {
+  msg: Extract<ToWorker, { type: 'moreTrips' }>;
+  last: LastTrip;
+  f0: NonNullable<ReturnType<typeof trip>>;
+  reversed: boolean;
+  own: readonly [number, number];
+}
+
+function moreBase(msg: Extract<ToWorker, { type: 'moreTrips' }>): MoreBase | null {
+  const last = lastTrip;
+  const f0 = lastFound;
+  if (!last || !f0 || f0.leave !== msg.leave || f0.arrive !== msg.arrive) return null;
+  if (!f0.journey.legs.some((l) => l.type === 'ride')) return null;
+  // On the timetable's own clock: departing it is real time, arriving it runs backwards.
+  const reversed = last.direction === 'arrive';
+  const own = reversed ? ([-msg.arrive, -msg.leave] as const) : ([msg.leave, msg.arrive] as const);
+  return { msg, last, f0, reversed, own };
+}
+
 /**
  * The next departures of the shown connection (arriving: the ones arriving before it):
  * the same rides, each on the first vehicle a minute after the last one left, for the
@@ -300,51 +330,110 @@ let lastFound: NonNullable<ReturnType<typeof trip>> | null = null;
  * later first ride waiting for the same onward vehicle) stands in for it: same arrival,
  * less waiting. No new search, so it costs next to nothing and never holds up a tap.
  */
-export function moreTrips(
-  msg: Extract<ToWorker, { type: 'moreTrips' }>,
-): Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[] {
-  const last = lastTrip;
-  const f0 = lastFound;
-  if (!last || !f0 || f0.leave !== msg.leave || f0.arrive !== msg.arrive) return [];
+function sameRides(b: MoreBase): MoreRow[] {
+  const { last, f0, reversed, own } = b;
   const legs = f0.journey.legs;
   const first = legs.findIndex((l) => l.type === 'ride');
-  if (first < 0) return [];
   const lastRide = legs.length - 1 - [...legs].reverse().findIndex((l) => l.type === 'ride');
   const walk = (ls: typeof legs) => ls.reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
   const before = walk(legs.slice(0, first));
   const after = walk(legs.slice(lastRide + 1));
-  // On the timetable's own clock: departing it is real time, arriving it runs backwards.
-  const reversed = last.direction === 'arrive';
   const twins = f0.raw.legs.map((l) => (l.type === 'ride' ? twinRoutes(last.tt, l) : []));
-  // Each row as [start, end] on that clock: the start moves on, the end must improve.
-  const own = reversed ? ([-msg.arrive, -msg.leave] as const) : ([msg.leave, msg.arrive] as const);
-  const rows: { start: number; end: number; clocks: (RideClock | null)[] }[] = [];
+  const rows: MoreRow[] = [];
   let from = own[0] + 60;
   for (let k = 0; k < MORE_TRIES; k++) {
     const clocks = rideClocks(last.tt, f0.raw, from, reversed, twins);
     if (reversed) clocks.reverse();
     const a = clocks[first];
-    const b = clocks[lastRide];
-    if (!a || !b) break;
+    const z = clocks[lastRide];
+    if (!a || !z) break;
     const leave = a.dep - before;
-    const arrive = b.arr + after;
+    const arrive = z.arr + after;
     const [start, end] = reversed ? [-arrive, -leave] : [leave, arrive];
     if (start - own[0] > MORE_SPAN_S) break;
     from = start + 60;
+    const found = { ...f0, clocks, leave, arrive, seconds: arrive - leave, board: undefined };
     const prev = rows.at(-1);
     if (end <= (prev?.end ?? own[1])) {
-      if (prev) Object.assign(prev, { start, end, clocks });
+      if (prev) Object.assign(prev, { start, end, found });
       continue;
     }
     if (rows.length === MORE_TRIPS) break;
-    rows.push({ start, end, clocks });
+    rows.push({ start, end, found });
   }
-  return rows.map(({ start, end, clocks }) => {
-    const [leave, arrive] = reversed ? [-end, -start] : [start, end];
-    return tripMessage([
-      { ...f0, clocks, leave, arrive, seconds: arrive - leave, board: undefined },
-    ]);
+  return rows;
+}
+
+/** At most this many searches for connections on other lines, one per row they find. */
+const OTHER_PASSES = 12;
+
+/**
+ * The connections on any line, the drawer's second step: a search leaving a minute after
+ * the last row found (arriving: arriving a minute before it) gives the next connection
+ * that arrives earliest, which may be on another line than the shown one (a faster
+ * S-Bahn). One search per step, so the caller can let a tap or a new map go first.
+ */
+function* otherLines(b: MoreBase): Generator<MoreRow | null, void, void> {
+  const { last, reversed, own, msg } = b;
+  if (last.travel === 'bikeonly') return;
+  const r = last.runs[0];
+  if (!r || last.runs.length !== 1) return;
+  // A change more than the shown connection at most: fewer rounds, a quicker search.
+  const rounds = b.f0.journey.legs.filter((l) => l.type === 'ride').length + 1;
+  let from = own[0] + 60;
+  for (let k = 0; k < OTHER_PASSES; k++) {
+    const at = { ...last, leaveAt: from, from };
+    const f = trip(at, laterRun(at, r, msg, rounds), msg);
+    if (!f || f.leave === undefined || f.arrive === undefined) return;
+    if (!f.journey.legs.some((l) => l.type === 'ride')) return;
+    const [start, end] = reversed ? [-f.arrive, -f.leave] : [f.leave, f.arrive];
+    if (start - own[0] > MORE_SPAN_S || start < from) return;
+    from = start + 60;
+    yield end > own[1] ? { start, end, found: { ...f, board: undefined } } : null;
+  }
+}
+
+const lines = (r: MoreRow) =>
+  r.found.journey.legs.map((l) => (l.type === 'ride' ? l.name : '')).join();
+const sameLines = (a: MoreRow, b: MoreRow) => lines(a) === lines(b);
+
+const rowMessages = (b: MoreBase, rows: MoreRow[]) =>
+  bestRows(rows, MORE_TRIPS).map(({ start, end, found }) => {
+    const [leave, arrive] = b.reversed ? [-end, -start] : [start, end];
+    return tripMessage([{ ...found, leave, arrive, seconds: arrive - leave }]);
   });
+
+/**
+ * The drawer's connections after the shown one (arriving: before it), in steps: first
+ * the shown connection's own rides later on, at once; then, one search at a time, the
+ * ones on other lines that arrive earlier. Each list that changed goes out whole;
+ * `fresh` (awaited before each search) says whether it is still wanted.
+ */
+export async function moreTrips(
+  msg: Extract<ToWorker, { type: 'moreTrips' }>,
+  send: (trips: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[]) => void,
+  fresh: () => Promise<boolean>,
+): Promise<void> {
+  const b = moreBase(msg);
+  if (!b) return send([]);
+  const rows = sameRides(b);
+  send(rowMessages(b, rows));
+  const others = otherLines(b);
+  let seen = bestRows(rows, MORE_TRIPS);
+  while ((await fresh()) && lastFound === b.f0) {
+    const step = others.next();
+    if (step.done) return;
+    const row = step.value;
+    // The shown connection's own rides found again (the walks a few seconds apart).
+    const near = (r: MoreRow) =>
+      Math.abs(r.start - row!.start) < 120 && Math.abs(r.end - row!.end) < 120;
+    if (!row || rows.some((r) => near(r) && sameLines(r, row))) continue;
+    rows.push(row);
+    const best = bestRows(rows, MORE_TRIPS);
+    if (best.length === seen.length && best.every((r, i) => r === seen[i])) continue;
+    seen = best;
+    send(rowMessages(b, rows));
+  }
 }
 
 /** Places further than this from any stop go unnamed. */
