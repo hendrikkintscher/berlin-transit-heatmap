@@ -4,39 +4,38 @@ Ideas queued after the alpha (live at https://hendrikkintscher.github.io/berlin-
 
 ## Inbox
 
-Hendrik's instructions land here, written by the coordinator into plan/roadmap.md (project files): one dated line each, in his words. The roadmap editor and the Review negotiator check this section at the start of every turn and before naming each next step, move each line to its place in the roadmap (review-track items go to the Review negotiator), and remove it from here.
+Hendrik's instructions land here, written by the coordinator into plan/roadmap.md (project files): one dated line each, in his words. The roadmap editor checks this section at the start of every turn and before naming each next step, moves each line to its place in the roadmap, and removes it from here.
 
 _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #205. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
+State on 2026-10-13, live through PR #206. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build (publish fix PR #201 merged).
 2. **Next:** No flicker when tapping another destination (group 6, Inbox)
 3. Small map fixes: the Ringbahn on the map follows the same course as in trips, colour scale green up to 20 min and yellow from 25, "Bis wann heim?" limits of 1 h and 1 h 30 (groups 6 and 7, Inbox; one PR or three)
 4. Trip card round (group 6): the card becomes a drawer with more connections when pulled up; tapping a connection opens the detailed view with the wait at each change; the card names the start and the destination; the destination marker stands out and transfer stops step back; "Hier starten" keeps the old start as the destination. Takes in the review's card findings (V1, U4, U8, U12) so the card is built once.
-5. Smaller Wohnlage-Karte memory (B7 + P9, group 15)
-6. Typical timetable when offline, cache-first data after a deploy (B8 + P3, group 15)
-7. Notice, search and favourites polish (C5–C8, group 15)
-8. Less walking on equal arrival (group 6, from the connection test)
-9. Default view readability: two variants to compare (C9, group 15; builds on the new colour scale; Hendrik picks one on a card)
-10. Named starts in meeting mode (D2, group 15)
-11. Broader CI checks and a sturdier timetable build (B9 + B10 + P10, group 15)
-12. Code health, no change in behaviour (E1, group 15)
-13. Smaller walking network file (P8, group 15)
-14. Showcase material: screenshots, sharepics and the comparison with existing maps, made once the app has settled (group 16)
-15. Declutter docs and threads: the docs-cleanup findings (K items, including the roadmap slimming K14–K19) and an archive pass over plan files and memory (group 17)
-
-The review track keeps running alongside on the items that don't touch the trip card or the main builder's files (U3, U2, V2+U11+V4, V3, U5–U13, V5–V13); the coordinator is consolidating the thread setup.
+5. Review fixes for the rest of the app (group 17): U14 (pairs with V1), then V2 + U11 + V4, U2, V3, then U5–U13 and V5–V13, in the order of plan/reviews/README.md (project files)
+6. Smaller Wohnlage-Karte memory (B7 + P9, group 15)
+7. Typical timetable when offline, cache-first data after a deploy (B8 + P3, group 15)
+8. Notice, search and favourites polish (C5–C8, group 15)
+9. Less walking on equal arrival (group 6, from the connection test)
+10. Default view readability: two variants to compare (C9, group 15; builds on the new colour scale; Hendrik picks one on a card)
+11. Named starts in meeting mode (D2, group 15)
+12. Broader CI checks and a sturdier timetable build (B9 + B10 + P10, group 15)
+13. Code health, no change in behaviour (E1, group 15)
+14. Smaller walking network file (P8, group 15)
+15. Showcase material: screenshots, sharepics and the comparison with existing maps, made once the app has settled (group 16)
+16. Declutter docs and threads: the docs-cleanup findings (K items, including the roadmap slimming K14–K19) and an archive pass over plan files and memory (group 17)
 
 **Not in this plan:** Android app and beta testing (Hendrik, 2026-10-13: "don't do android app and beta testing"); app store deployment (group 16), which needs Hendrik's own developer accounts; the region addresses and Oldenburg data (group 13), held until the domain and the timetable feed account are settled.
 
-**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel (U1 done, U3 in progress) by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
+**Threads** (2026-10-13 00:34): one planner, the "Roadmap editor", and one builder, the "Roadmap builder". The review track's own pair of threads has finished (U1 done in PR #203, U3 in PR #206); its open items are steps 4, 5 and 16 above.
 
 **Not planned (Hendrik, 2026-10-13):** Beta testing readiness (group 14). Its plan stays written down there (packages A, B and C, plus the address choice) but is not built. **Not planned either:** Android app (group 14).
 
-General rule (Hendrik, 2026-10-12): instructions go into the roadmap only, through the Inbox above. The roadmap agents find them there and rearrange the roadmap to fit them in; the editor (or, for group 17, the Review negotiator) hands an item to its builder only when it judges it the next thing to do. Builders take work only from their editor or negotiator.
+General rule (Hendrik, 2026-10-12): instructions go into the roadmap only, through the Inbox above. The roadmap agents find them there and rearrange the roadmap to fit them in; the editor hands an item to the builder only when it judges it the next thing to do. The builder takes work only from the editor.
 
 Working rule (Hendrik, 2026-10-13, replacing the earlier "Hendrik picks each next step"): the roadmap agents take the best decisions themselves and work through everything noted; only a fork that changes his goal or something he will clearly see goes to him as multiple choice, while work continues on the recommended option.
 
@@ -355,7 +354,7 @@ Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existi
 
 ## 17. Review track
 
-Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). Hendrik picked "Tap and Back" first, then the rest in the order of plan/reviews/README.md (2026-10-13). From the Inbox (Hendrik, 2026-10-13 00:24), handed to the Review negotiator: "Hier starten" keeps the old start as the destination (with U12); the trip card names the start and the destination (with U8/U4); the destination marker stands out more and transfer stops less (with the marker item in visual-consistency.md). Done: U1 (PR #203: a tap that closes a panel or the search no longer sets a start or opens a trip card). Order: U3 in progress, then V1+U14, V2+U11+V4, docs cleanup (K items, including the roadmap slimming K14–K19, which the editor applies), U2, U4, V3.
+Hendrik, 2026-10-12: four reviews, first handled by a "Review negotiator" and a "Review builder" thread; since 2026-10-13 00:34 its open items are in the main plan (Up next steps 4, 5 and 16). Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). Hendrik picked "Tap and Back" first, then the rest in the order of plan/reviews/README.md (2026-10-13). From the Inbox (Hendrik, 2026-10-13 00:24), placed in the trip card round: "Hier starten" keeps the old start as the destination (with U12); the trip card names the start and the destination (with U8/U4); the destination marker stands out more and transfer stops less (with the marker item in visual-consistency.md). Done: U1 (PR #203: a tap that closes a panel or the search no longer sets a start or opens a trip card), U3 (PR #206: Back closes the open panel, menu, search or trip card instead of leaving the app). Order: V1+U14, V2+U11+V4, docs cleanup (K items, including the roadmap slimming K14–K19, which the editor applies), U2, U4, V3.
 
 - **UI intuitiveness**: check where the interface is intuitive and where it is not, and what could be handled more smartly or more obviously.
 - **Visual consistency**: check map elements, colours, layout, symbols and text for consistency.
