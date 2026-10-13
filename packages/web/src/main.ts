@@ -73,6 +73,7 @@ import {
 } from './map-layers';
 import { initChanges } from './changes';
 import { initBanners } from './banners';
+import { icon } from './icons';
 import { initChips } from './chips';
 import { initMenu } from './menu';
 import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
@@ -835,11 +836,7 @@ function showResult(r: Result) {
   renderBest(r);
   frameResult(r);
   renderFavourites();
-  showLegend(
-    r.compare ? 'diff' : r.home ? 'home' : 'time',
-    r.extraBase !== undefined,
-    !!r.living,
-  );
+  showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined, !!r.living);
   if (!state.mapReady) return;
   drawHeat(r);
   (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
@@ -1607,7 +1604,7 @@ function renderFavourites() {
       const home = document.createElement('button');
       home.type = 'button';
       home.className = 'fav-home';
-      home.textContent = '🌙';
+      home.innerHTML = icon('moon', 18);
       home.setAttribute('aria-label', t('homeFav', { name: f.label }));
       home.title = t('homeFav', { name: f.label });
       home.addEventListener('click', () => {
