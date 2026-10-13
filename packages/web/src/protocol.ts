@@ -32,8 +32,8 @@ export type ToWorker =
   | { type: 'init'; dataBase: string; v?: string }
   /**
    * Sent by the start page's inline script before the app's code has loaded: the page's
-   * address and stored settings, so the worker sets itself up and starts the first map's
-   * timetable at once (see earlyLoad in url.ts).
+   * address and stored settings, so the worker sets itself up and prepares the first map's
+   * timetable at once (see earlyLoad in early.ts).
    */
   | {
       type: 'boot';
@@ -42,6 +42,21 @@ export type ToWorker =
       search: string;
       stepFree: string | null;
       travel: string | null;
+      /** The first map's timetable, which the page downloads and hands over ('prefetch'). */
+      prefetch?: string;
+    }
+  /**
+   * The start page's download of the boot timetable: the response's body as a stream (or
+   * its bytes, where streams do not transfer), or nothing when it failed.
+   */
+  | {
+      type: 'prefetch';
+      url: string;
+      status?: number;
+      contentType?: string | null;
+      length?: string | null;
+      body?: ReadableStream<Uint8Array>;
+      buf?: ArrayBuffer;
     }
   | {
       type: 'load';

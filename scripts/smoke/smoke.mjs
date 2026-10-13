@@ -110,7 +110,13 @@ try {
       }
     };
   });
+  // The first map's timetable: the start page downloads it for the worker, once.
+  let timetableLoads = 0;
+  ctx.on('request', (r) => {
+    if (r.url().includes('/timetable-weekday-10.bin')) timetableLoads++;
+  });
   for (const lang of ['de', 'en']) {
+    timetableLoads = 0;
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push(`${lang}: ${e.message}`));
     p.on('console', (m) => {
@@ -125,6 +131,8 @@ try {
     });
     const mapMs = Date.now() - t0;
     const shown = await p.evaluate(() => window.__smoke);
+    if (timetableLoads !== 1)
+      failures.push(`${lang}: the first timetable was downloaded ${timetableLoads} times`);
     if (!shown.outlines) failures.push(`${lang}: the map has no outlines`);
     if (!shown.coloured) failures.push(`${lang}: the map has no colours`);
     // A tap a little north-east of the start: the trip card gives its minutes.
@@ -140,7 +148,7 @@ try {
     if (!/\d+\s*min/i.test(card))
       failures.push(`${lang}: the trip card shows no minutes: "${card}"`);
     console.log(
-      `${lang}: map in ${mapMs} ms, ${shown.outlines} outlines, ${shown.coloured} coloured pixels; card: ${card.replace(/\s+/g, ' ').slice(0, 80)}`,
+      `${lang}: map in ${mapMs} ms (timetable downloaded ${timetableLoads}x), ${shown.outlines} outlines, ${shown.coloured} coloured pixels; card: ${card.replace(/\s+/g, ' ').slice(0, 80)}`,
     );
     if (args.shots) {
       mkdirSync(args.shots, { recursive: true });

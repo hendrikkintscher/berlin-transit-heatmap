@@ -28,7 +28,7 @@ import {
 } from './worker-paths';
 import { ctx, post } from './worker-post';
 import { cellSeconds, meetCandidates, minFinite, run, slowestOf } from './worker-runs';
-import { ensure, prepared, setDataBase } from './worker-timetables';
+import { ensure, expectPrefetch, prefetched, prepared, setDataBase } from './worker-timetables';
 import {
   moreTrips,
   nearestStopName,
@@ -75,12 +75,15 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       // map's timetable, prepared as that map will need it (without one boot.ts asks later).
       setDataBase(new URL(`data/${REGION.id}/`, msg.baseURI).href);
       setDataVersions(msg.v);
+      if (msg.prefetch) expectPrefetch(msg.prefetch);
       if (!linkHasStart(msg.search)) return;
       const first = earlyLoad(msg.search, msg);
       await prepared(first.window, first.direction, {
         stepFree: first.stepFree,
         bike: first.bike,
       });
+    } else if (msg.type === 'prefetch') {
+      prefetched(msg);
     } else if (msg.type === 'load') {
       // A quiet (background) load that fails is retried when the window is actually needed.
       const variant = { stepFree: msg.stepFree, bike: msg.bike };
