@@ -6,7 +6,13 @@
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import { escapeHtml, eveningClock, gridSeconds, whenText } from './format';
 import { lang, t } from './i18n';
-import { STATIONS_LAYER, TRIP_SOURCE, TRIP_STOPS_SOURCE } from './map-layers';
+import {
+  ROUTES_CASING_OPACITY,
+  ROUTES_OPACITY,
+  STATIONS_LAYER,
+  TRIP_SOURCE,
+  TRIP_STOPS_SOURCE,
+} from './map-layers';
 import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
@@ -411,8 +417,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
     (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.lines ?? empty);
     (map.getSource(TRIP_STOPS_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.stops ?? empty);
-    map.setPaintProperty('routes-line', 'line-opacity', trip ? 0.5 : 1);
-    map.setPaintProperty('routes-casing', 'line-opacity', trip ? 0.35 : 0.9);
+    map.setPaintProperty('routes-line', 'line-opacity', trip ? 0.5 : ROUTES_OPACITY);
+    map.setPaintProperty('routes-casing', 'line-opacity', trip ? 0.35 : ROUTES_CASING_OPACITY);
     map.setLayoutProperty('routes-label', 'visibility', state.routes && !trip ? 'visible' : 'none');
   }
 

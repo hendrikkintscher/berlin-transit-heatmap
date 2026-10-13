@@ -131,7 +131,7 @@ export function initMenu(deps: MenuDeps) {
     deps.setLayerVisible('outlines', state.iso);
     deps.writeUrl();
   });
-  // The time lines' hint says what is drawn: every 10 minutes alone, every 5 with colours.
+  // The time lines' hint says what is drawn: rings alone, a line every 5 minutes with colours.
   const isoHint = isoToggle.closest('label')!.querySelector('small')!;
   function renderIsoHint() {
     const key = state.heat || state.limit ? 'isoHintHeat' : 'isoHint';

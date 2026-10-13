@@ -11,7 +11,6 @@ import {
   MAP_TEXT,
   MODE_COLORS,
   OUTLINE_STEP_COLORS,
-  OUTLINE_STEP_MINUTES,
 } from './colors';
 import { bezirke, landmarks, ringLine } from './orientation';
 import { region } from './region';
@@ -41,6 +40,9 @@ export const OUTLINE_LAYERS = ['outlines-casing', 'outlines-line', 'outlines-lab
 export type OutlineKind = 'time' | 'extra' | 'living' | 'home';
 /** Labelled, bolder outlines; the other 5-minute steps are drawn thin. */
 const MAJOR_OUTLINES = [15, 30, 45];
+/** The Lines layer's opacity (line and white edge) while no trip is drawn. */
+export const ROUTES_OPACITY = 0.55;
+export const ROUTES_CASING_OPACITY = 0.4;
 const AREA_SOURCE = 'area';
 const WATER = '#a9c7dc';
 export const TRIP_SOURCE = 'trip';
@@ -101,7 +103,12 @@ export function addMapLayers(
       type: 'line',
       source: ROUTES_SOURCE,
       layout: { 'line-cap': 'round', 'line-join': 'round', visibility },
-      paint: { 'line-color': '#ffffff', 'line-width': width(2.5), 'line-opacity': 0.9 },
+      // Lighter than full, so the time rings lead (C9).
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': width(2.5),
+        'line-opacity': ROUTES_CASING_OPACITY,
+      },
     },
     firstSymbol,
   );
@@ -114,6 +121,7 @@ export function addMapLayers(
       paint: {
         'line-color': modeColor,
         'line-width': width(0),
+        'line-opacity': ROUTES_OPACITY,
       },
     },
     firstSymbol,
@@ -564,24 +572,18 @@ export function outlineLabel(kind: OutlineKind, unit: string): maplibregl.Expres
 }
 
 /**
- * Outline look for the kind of map and whether the colour fill is on. With the fill, thin
- * dark lines labelled at 15, 30 and 45 min. Without it, a soft wide line every 10 minutes
- * in one hue, darkest near the start, its minutes repeated along it, and every 30 minutes
- * (30, 60, 90) a stronger one; the home map's few outlines take its legend colours instead.
+ * Outline look for the kind of map and whether the colour fill is on. Without the fill,
+ * crisp labelled rings at 15, 30, 45 and 60 min (styleRings). With it, thin dark lines
+ * labelled at 15, 30 and 45 min; the home map's few outlines take its legend colours.
  */
 export function styleOutlines(
   map: maplibregl.Map,
   kind: OutlineKind,
   heat: boolean,
   unit: string,
-  /** The "look=rings" trial (C9): without the fill, crisp labelled rings at 15/30/45/60. */
-  rings = false,
 ): void {
   if (!map.getLayer('outlines-line')) return;
-  if (rings && !heat && kind !== 'home') return styleRings(map, kind, unit);
-  const steps = !heat && kind !== 'home';
-  const tens: maplibregl.FilterSpecification = ['==', ['%', ['get', 'min'], 10], 0];
-  const half: maplibregl.ExpressionSpecification = ['==', ['%', ['get', 'min'], 30], 0];
+  if (!heat && kind !== 'home') return styleRings(map, kind, unit);
   const major: maplibregl.ExpressionSpecification = [
     'match',
     ['get', 'min'],
@@ -589,28 +591,13 @@ export function styleOutlines(
     1,
     0,
   ];
-  map.setPaintProperty(
-    'outlines-line',
-    'line-color',
-    heat ? INK : steps ? stepColors() : homeOutlineColors(),
-  );
+  map.setPaintProperty('outlines-line', 'line-color', heat ? INK : homeOutlineColors());
   map.setPaintProperty(
     'outlines-line',
     'line-opacity',
-    heat
-      ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4]
-      : steps
-        ? ['case', half, 0.75, 0.45]
-        : 1,
+    heat ? ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4] : 1,
   );
-  // Soft edges: the outlines read as gentle bands under the streets and lines.
-  map.setPaintProperty(
-    'outlines-line',
-    'line-blur',
-    steps
-      ? ['interpolate', ['linear'], ['zoom'], 9, ['case', half, 3.5, 3], 14, ['case', half, 5, 4.5]]
-      : 0,
-  );
+  map.setPaintProperty('outlines-line', 'line-blur', 0);
   map.setPaintProperty(
     'outlines-line',
     'line-width',
@@ -624,51 +611,37 @@ export function styleOutlines(
           14,
           ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
         ]
-      : steps
-        ? [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            9,
-            ['case', half, 4.5, 4],
-            14,
-            ['case', half, 6.5, 6],
-          ]
-        : [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            9,
-            ['+', 1.4, major],
-            14,
-            ['+', 2.6, ['*', 1.4, major]],
-          ],
+      : [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          ['+', 1.4, major],
+          14,
+          ['+', 2.6, ['*', 1.4, major]],
+        ],
   );
-  // The soft lines go without the white edge.
-  map.setPaintProperty('outlines-casing', 'line-opacity', heat || steps ? 0 : 0.9);
-  map.setPaintProperty(
-    'outlines-casing',
-    'line-width',
-    steps
-      ? ['interpolate', ['linear'], ['zoom'], 9, 2.4, 14, 3.6]
-      : ['interpolate', ['linear'], ['zoom'], 9, ['+', 3, major], 14, ['+', 5, ['*', 1.4, major]]],
-  );
-  map.setFilter('outlines-line', steps ? tens : null);
-  map.setFilter('outlines-casing', steps ? tens : null);
+  map.setPaintProperty('outlines-casing', 'line-opacity', heat ? 0 : 0.9);
+  map.setPaintProperty('outlines-casing', 'line-width', [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    9,
+    ['+', 3, major],
+    14,
+    ['+', 5, ['*', 1.4, major]],
+  ]);
+  map.setFilter('outlines-line', null);
+  map.setFilter('outlines-casing', null);
   map.setFilter(
     'outlines-label',
-    steps
-      ? tens
-      : heat && kind !== 'home'
-        ? ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]]
-        : null,
+    heat && kind !== 'home' ? ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]] : null,
   );
   map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind, unit));
-  // Without the fill the labels are the key, so they repeat about every 3 cm on a phone.
-  map.setLayoutProperty('outlines-label', 'symbol-spacing', steps ? 260 : 300);
+  map.setLayoutProperty('outlines-label', 'symbol-spacing', 300);
 }
 
-/** The C9 trial "rings": four crisp rings with a white edge, each labelled. */
+/** Without the colour fill: four crisp rings with a white edge, each labelled (C9). */
 const RING_MINUTES = [15, 30, 45, 60];
 function styleRings(map: maplibregl.Map, kind: OutlineKind, unit: string): void {
   const rings: maplibregl.FilterSpecification = ['in', ['get', 'min'], ['literal', RING_MINUTES]];
@@ -709,23 +682,6 @@ function styleRings(map: maplibregl.Map, kind: OutlineKind, unit: string): void 
   map.setFilter('outlines-label', rings);
   map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind, unit));
   map.setLayoutProperty('outlines-label', 'symbol-spacing', 260);
-}
-
-/** The transit lines thinner (the "look=rings" trial), so the rings lead. */
-export function thinRoutes(map: maplibregl.Map, thin: boolean): void {
-  if (!map.getLayer('routes-line')) return;
-  map.setPaintProperty('routes-line', 'line-opacity', thin ? 0.55 : 1);
-  map.setPaintProperty('routes-casing', 'line-opacity', thin ? 0.4 : 0.9);
-}
-
-/** The 10-minute outlines in one hue, darkest near the start. */
-function stepColors(): maplibregl.ExpressionSpecification {
-  return [
-    'match',
-    ['get', 'min'],
-    ...OUTLINE_STEP_MINUTES.flatMap((m, i) => [m, OUTLINE_STEP_COLORS[i]]),
-    INK,
-  ] as never;
 }
 
 /** Each home map outline in the colour of the band just inside it, as the legend shows it. */
