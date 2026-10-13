@@ -416,10 +416,7 @@ body.arrive .spot-marker {
   opacity: 0.45;
   transition: opacity 0.15s;
 }
-/* The 24 px (i) gets a 44 px tap area. */
-.maplibregl-ctrl-attrib-button {
-  position: relative;
-}
+/* The 24 px (i) gets a 44 px tap area (MapLibre already positions it absolutely). */
 .maplibregl-ctrl-attrib-button::after {
   content: '';
   position: absolute;

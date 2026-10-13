@@ -63,6 +63,9 @@ const de = {
   aboutLayers:
     '<b>Abfahrten pro Stunde</b> zeigt, wie oft im Zeitfenster abgefahren wird. <b>ÖPNV-Wüsten</b> schattiert Orte, an denen der Fußweg zur Haltestelle plus die durchschnittliche Wartezeit (halber Takt) über 10 und 15 Min. liegt, zwischen 0 und 5 Uhr über 20 und 30 Min. Beide findest du unter Ebenen.',
   secondHere: '{n}. Startpunkt',
+  meetUp: 'Treffpunkt',
+  meetUpLabel: 'Treffpunkt: einen zweiten Startpunkt dazunehmen',
+  addPerson: '+ Person',
   newStart: 'Neuer Start',
   goalHere: 'Hier als Ziel',
   newGoal: 'Neues Ziel',
@@ -343,6 +346,9 @@ const en: Record<Key, string> = {
   aboutLayers:
     '<b>Departures per hour</b> shows how often each stop is served in the time window. <b>Transit deserts</b> shades places where the walk to a stop plus the average wait (half the gap between departures) is over 10 and 15 min, or 20 and 30 min between 00:00 and 05:00. Both are under Layers.',
   secondHere: 'Starting point {n}',
+  meetUp: 'Meet up',
+  meetUpLabel: 'Meet up: add a second starting point',
+  addPerson: '+ Person',
   newStart: 'New start',
   goalHere: 'End here',
   newGoal: 'New end',

@@ -560,7 +560,12 @@ function showOrigin() {
   hint.hidden = list.length > 0 || !!state.special || isSearchOpen();
   // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
   secondBtn.hidden = !list.length || list.length >= MAX_STARTS || !!state.special;
-  secondBtn.querySelector('span')!.textContent = t('secondHere', { n: list.length + 1 });
+  // With one start it starts a meeting (Treffpunkt); in one it adds a person.
+  secondBtn.querySelector('span')!.textContent = t(list.length === 1 ? 'meetUp' : 'addPerson');
+  secondBtn.setAttribute(
+    'aria-label',
+    list.length === 1 ? t('meetUpLabel') : t('secondHere', { n: list.length + 1 }),
+  );
 }
 
 /** The starts changed: markers, the tapped place, the link and the map follow. */
@@ -1775,6 +1780,7 @@ const menu = initMenu({
   },
   langChanged: () => {
     renderFeedInfo();
+    showOrigin();
     showHeat();
     renderFavourites();
     whenSheet.renderWhen();

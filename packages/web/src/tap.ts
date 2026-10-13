@@ -209,7 +209,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       showCard(html, false, searched);
       const count = state.origin ? 1 + state.others.length : 0;
       secondBtn.hidden = !count || count >= MAX_STARTS || !!state.special;
-      const second = t('secondHere', { n: count + 1 });
+      const second = count === 1 ? t('meetUpLabel') : t('secondHere', { n: count + 1 });
       secondBtn.setAttribute('aria-label', second);
       secondBtn.title = second;
       if (!title && map.getZoom() >= 15) void showAddress(at0);
