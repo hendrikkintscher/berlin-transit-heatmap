@@ -48,7 +48,7 @@ import { BlurScratch, blurSeconds, warpField } from './soften';
 import { outlines as traceOutlines } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
 import { scoreGrid } from './favourites';
-import { suggestMeetingPoints, type MeetCandidate } from './meet';
+import { bestCells, suggestMeetingPoints, type MeetCandidate } from './meet';
 import { earlyLoad, linkHasStart } from './early';
 import { typicalWindow } from './when';
 import type {
@@ -798,6 +798,9 @@ async function living(msg: Extract<ToWorker, { type: 'living' }>) {
       bbox: grid.bbox,
       grid: { cols: grid.cols, rows: grid.rows, seconds: values },
       living: true,
+      // Its three best spots for the pins (one pass per spot over the grid, here and not
+      // on the main thread).
+      best: bestCells(grid.seconds, grid.cols, grid.rows, grid.bbox),
       routes: empty,
       labels: empty,
       outlines,

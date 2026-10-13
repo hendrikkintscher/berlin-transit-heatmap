@@ -224,6 +224,8 @@ export type FromWorker =
       extraBase?: number;
       /** "Where can I live?": `grid` holds the weighted average to the favourites, not trip times. */
       living?: true;
+      /** The where-to-live map's best spots, best first, at least 1.5 km apart. */
+      best?: { lat: number; lon: number; seconds: number }[];
       /**
        * "Bis wann komme ich heim?": `grid` holds, per place, how long before `end` (seconds
        * after midnight of the evening, past 24 h) the last fast connection home leaves;

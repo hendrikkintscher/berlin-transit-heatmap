@@ -1613,6 +1613,13 @@ body.special .legend {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The where-to-live map's best spots always show their minutes. */
+.best-pin {
+  padding-right: 8px;
+}
+.best-pin span {
+  display: inline;
+}
 .meet-names .meet-marker {
   padding-right: 8px;
 }

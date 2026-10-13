@@ -776,6 +776,27 @@ function limitShown() {
 }
 
 // ---------- suggested meeting points ----------
+// The where-to-live map: pins on its three best spots, with their average minutes.
+let bestMarkers: maplibregl.Marker[] = [];
+function renderBest(r: Result) {
+  for (const m of bestMarkers) m.remove();
+  bestMarkers = (r.best ?? []).map((s, i) => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'meet-marker best-pin';
+    // Above the favourites' stars, which often sit on the best spot; the best one on top.
+    el.style.zIndex = String(5 - i);
+    const label = t('livingBest', { n: Math.round(s.seconds / 60) });
+    el.innerHTML = `<i>${i + 1}</i><span>${label}</span>`;
+    el.title = label;
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      tap.tapAt(s.lat, s.lon);
+    });
+    return new maplibregl.Marker({ element: el }).setLngLat([s.lon, s.lat]).addTo(map);
+  });
+}
+
 let meetMarkers: maplibregl.Marker[] = [];
 /** Pins for the suggested meeting points; a tap shows everyone's trip there. */
 function renderMeet(list: Result['meet']) {
@@ -802,6 +823,7 @@ showMeetNames();
 
 function showResult(r: Result) {
   renderMeet(r.meet);
+  renderBest(r);
   frameResult(r);
   renderFavourites();
   showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined);
