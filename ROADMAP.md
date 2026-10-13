@@ -10,9 +10,7 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #252. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Steps 1–18 are done (PR #184–#252): platform changes, no flicker, map fixes, nightly timetable refresh, the trip card round, all review UI and looks fixes, Wohnlage memory, offline timetable, C5–C8, less walking, named starts, CI checks, code health, smaller walking file, showcase material, the meeting card headline (#252) and the docs and threads declutter (#245, #250, #251, archive pass and memory consolidation). Open:
-
-1. **Next, waiting on Hendrik:** Default view readability (C9): both looks are built for trial (PR #238: `look=rings` and `look=faint`, plus C10's larger slider thumb and 60 % default opacity). The default changes once Hendrik answers his card (recommended: Rings); the other look then goes.
+State on 2026-10-13, live through PR #254. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Every step is done (PR #184–#254): platform changes, no flicker, map fixes, nightly timetable refresh, the trip card round, all review UI and looks fixes, Wohnlage memory, offline timetable, C5–C8, less walking, named starts, CI checks, code health, smaller walking file, showcase material, the meeting card headline (#252), the docs and threads declutter (#245, #250, #251, archive pass and memory consolidation) and the C9 default view: Hendrik picked Rings, so the map without colours shows labelled rings at 15, 30, 45 and 60 min with lighter lines, and the `look` link option is gone (#254). Open: nothing; new instructions come through the Inbox.
 
 **Not in this plan:** Android app and beta testing (Hendrik, 2026-10-13: "don't do android app and beta testing"); app store deployment (group 16), which needs Hendrik's own developer accounts; the region addresses and Oldenburg data (group 13), held until the domain and the timetable feed account are settled.
 
@@ -86,7 +84,7 @@ Done: Potsdam and the commuter belt (C6, #69), region-ready code with Berlin as 
 
 Items keep their ids from archive/plan/suggestions-3.md. Done: bug bundle (A1, #151), walking network loads after the first map (B1, #155), lean deploy (B2, #156), larger tap card buttons (C2, #174), "Bis N Min." (D1, #189), faster first load (B4 + B5, #193), lighter taps (B6, #197), background downloads (P1 + P2, #199), sturdier publish (#201), faster map passes (P4–P7, #205), Wohnlage memory (B7 + P9, #210), offline timetable and cache-first data (B8 + P3, #234), notice, search and favourites polish (C5–C8, #236), named starts (D2, #240), smoke test and broader speed check (B9 + P10, #241), timetable size ceiling and own schedule (B10, #243), code health (E1, #245, with the home-map time fix #246), walk.bin v2 (P8, #247).
 
-Open: **C9 default view**, see Up next step 1.
+Done as well: C9 default view, Rings (#254).
 
 ## 16. App stores and showcase
 
