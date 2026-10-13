@@ -60,7 +60,15 @@ import {
 import { initTap } from './tap';
 import { addTripArrows } from './trip-arrows';
 import { cleanName, linkQuery, MAX_STARTS, type Point } from './url';
-import { computeWindow, desertThresholds, isDate, isoDay, catchUp, fullHour } from './when';
+import {
+  computeWindow,
+  desertThresholds,
+  isDate,
+  isoDay,
+  catchUp,
+  fullHour,
+  type Direction,
+} from './when';
 import { initWhenSheet } from './when-sheet';
 import { initBack, replaceUrl } from './back';
 import type { FromWorker } from './protocol';
@@ -554,6 +562,18 @@ function setOrigin(p: Point, spot = tap.spot()) {
   startsChanged();
 }
 
+/**
+ * The map's place moves to the tapped place and keeps that place's role: a Ziel stays the
+ * Ziel, so the direction turns round and the trip stays as it is (only the map changes).
+ * `text` names it for "Rückgängig".
+ */
+function moveAnchor(p: Point, spot: Point | null, text: string) {
+  offerUndo(spot, text);
+  whenSheet.setDirection(state.direction === 'arrive' ? 'depart' : 'arrive', true);
+  state.origin = p;
+  startsChanged();
+}
+
 /** Moves start i (0 = the first) to p. */
 function moveStart(i: number, p: Point) {
   offerUndo(tap.spot());
@@ -565,13 +585,13 @@ function moveStart(i: number, p: Point) {
 /** How long "Rückgängig" stays after a start moved. */
 const UNDO_MS = 5000;
 const undoEl = $('undo');
-let undoTo: { starts: Point[]; spot: Point | null } | null = null;
+let undoTo: { starts: Point[]; spot: Point | null; direction: Direction } | null = null;
 let undoTimer = 0;
 /** A start is about to move: for a few seconds, one tap brings the starts and place back. */
-function offerUndo(spot: Point | null) {
+function offerUndo(spot: Point | null, text?: string) {
   if (!state.origin) return;
-  undoTo = { starts: starts(), spot };
-  $('undo-text').textContent = t(state.direction === 'arrive' ? 'undoGoal' : 'undoStart');
+  undoTo = { starts: starts(), spot, direction: state.direction };
+  $('undo-text').textContent = text ?? t(state.direction === 'arrive' ? 'undoGoal' : 'undoStart');
   undoEl.hidden = false;
   clearTimeout(undoTimer);
   undoTimer = window.setTimeout(hideUndo, UNDO_MS);
@@ -586,6 +606,7 @@ $('undo-btn').addEventListener('click', () => {
   hideUndo();
   if (!to) return;
   tap.placeSpot(to.spot);
+  if (to.direction !== state.direction) whenSheet.setDirection(to.direction, true);
   setStarts(to.starts);
 });
 
@@ -1157,6 +1178,7 @@ const tap = initTap(
     state,
     send,
     setOrigin,
+    moveAnchor,
     addStart,
     removeStart,
     nameStart,

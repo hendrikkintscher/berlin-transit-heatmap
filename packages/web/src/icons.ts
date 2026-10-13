@@ -12,6 +12,11 @@ const PATHS = {
     '<circle cx="11" cy="4.5" r="1.6"/><path d="M11 8v6h6l2.5 5"/><path d="M8 11a5.5 5.5 0 1 0 7.5 6.5"/>',
   // Two bars side by side: this map against another time.
   compare: '<path d="M4 20h16M8 20V9M16 20V4"/>',
+  // Which way: Start and Ziel change places.
+  swap: '<path d="M8 4v16M8 4L4.5 7.5M8 4l3.5 3.5M16 20V4M16 20l-3.5-3.5M16 20l3.5-3.5"/>',
+  // The map's rings around the place it is computed from.
+  rings:
+    '<circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="10.5" opacity=".55"/>',
   star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/>',
   starFilled:
     '<path fill="currentColor" d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/>',

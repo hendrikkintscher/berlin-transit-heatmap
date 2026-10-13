@@ -5,6 +5,7 @@ import { MODE_COLORS } from './colors';
 import { escapeHtml, eveningClock, shortStop } from './format';
 import { stopName } from './stop-name';
 import { t } from './i18n';
+import { icon } from './icons';
 import type { FromWorker } from './protocol';
 import type { Direction } from './when';
 
@@ -22,6 +23,12 @@ export interface TripContext {
   avg?: number;
   /** A meeting point's start names, by start ("" for none). */
   names?: readonly string[];
+  /**
+   * One start: the ends as two rows, Start and Ziel, the map's own place (the one it is
+   * computed from or to) marked with the rings; the other row holds the slot for the
+   * button that moves the map there.
+   */
+  rows?: { anchorTitle: string };
 }
 
 /**
@@ -96,7 +103,9 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
     if (c.place) ends[c.direction === 'depart' ? 1 : 0] = c.place;
     const named =
       !two && ends[0] && ends[1] && ends[0] !== ends[1]
-        ? `<small class="trip-ends">${escapeHtml(ends[0])} → ${escapeHtml(ends[1]!)}</small>`
+        ? c.rows
+          ? endRows(ends[0], ends[1]!, c.direction, c.rows.anchorTitle)
+          : `<small class="trip-ends">${escapeHtml(ends[0])} → ${escapeHtml(ends[1]!)}</small>`
         : '';
     const timeline = timelineHtml(j.legs);
     // Stops where you get on, change and get off (the timeline has them with times).
@@ -119,6 +128,21 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
       timeline
     );
   });
+}
+
+/**
+ * The trip's ends as two rows. Departing, the map's place is the Start; arriving, the Ziel.
+ * That row shows the rings; the other has the `.anchor-slot` for the button moving them.
+ */
+function endRows(start: string, end: string, direction: Direction, anchorTitle: string): string {
+  const row = (role: 'start' | 'end', name: string) => {
+    const anchor = (direction === 'depart') === (role === 'start');
+    const mark = anchor
+      ? `<i class="rings" title="${escapeHtml(anchorTitle)}">${icon('rings', 22)}</i>`
+      : '<span class="anchor-slot"></span>';
+    return `<span class="trip-row ${role}${anchor ? ' anchor' : ''}"><i class="dot"></i><small class="role">${t(role === 'start' ? 'dirThere' : 'dirBack')}</small><span class="name">${escapeHtml(name)}</span>${mark}</span>`;
+  };
+  return `<span class="trip-rows">${row('start', start)}${row('end', end)}</span>`;
 }
 
 /** "10:02" (seconds of the day, past midnight too). */
