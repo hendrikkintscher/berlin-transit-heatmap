@@ -1488,6 +1488,12 @@ body.special .legend {
   color: var(--accent);
   font-weight: 600;
 }
+/* Under Typisch: the hour's average the map shows, when it differs from the trip. */
+.trip-avg {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+}
 /* Live status of the first vehicle, from VBB's journey API (live.ts). */
 #readout .trip-live {
   display: block;

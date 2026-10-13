@@ -72,6 +72,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   /** Where "Hier starten", "2. Start" and "Merken" act: the place, or the address it snapped to. */
   let pending: Point | null = null;
   let tripId = 0;
+  /** Under Typisch, the map's average minutes at the tapped place (one start). */
+  let shownAvg: number | undefined;
   /** The place the shown trip goes to, and whether a later one was already asked for. */
   let tripAt: { lat: number; lon: number; askedLater: boolean } | null = null;
   let removeWhich = 0;
@@ -132,6 +134,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       const r = state.result;
       const secs = r && (state.origin || state.special) ? gridSeconds(r, lat, lng) : NaN;
       const parts: string[] = [];
+      shownAvg = undefined;
       let tripSlot = '';
       if (secs >= 0 && r?.home) parts.push(homeText(r, lat, lng));
       else if (secs >= 0 && r?.living)
@@ -156,14 +159,17 @@ export function initTap(deps: TapDeps, initial: Point | null) {
           const s = gridSeconds(r, lat, lng, v);
           return `<i class="p${i + 1}"></i>${s < Infinity ? Math.round(s / 60) : '–'}`;
         });
-        parts.push(`<b>${each.join(' · ')} ${t('min')}</b>`);
-        if (r.extraBase !== undefined)
-          parts.push(
-            `<small>${t('extraMinutes', { n: Math.max(0, Math.round((secs - r.extraBase) / 60)) })}</small>`,
-          );
-      } else if (secs >= 0)
+        // Under Typisch these are the hour's averages, not the trips shown below them.
+        const avgMark = state.measure === 'typical' ? 'Ø ' : '';
+        parts.push(`<b>${avgMark}${each.join(' · ')} ${t('min')}</b>`);
+        // How much worse than the best spot, left out when it hardly is.
+        const extra = r.extraBase !== undefined ? Math.round((secs - r.extraBase) / 60) : 0;
+        if (extra > 2) parts.push(`<small>${t('extraMinutes', { n: extra })}</small>`);
+      } else if (secs >= 0) {
         // The next connection's own minutes and arrival take this line's place when they come.
         parts.push(`<span id="tap-mins">${t('minutes', { n: Math.round(secs / 60) })}</span>`);
+        if (state.measure === 'typical') shownAvg = Math.round(secs / 60);
+      }
       // The connection itself (or, on the where-to-live map, the minutes to each favourite)
       // arrives from the worker a moment later.
       if (secs < Infinity && r) {
@@ -451,6 +457,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       now: clockNow(state.when),
       place: spot?.title || undefined,
       changeNote: deps.changeNote,
+      avg: shownAvg,
     });
     if (open) el.querySelector<HTMLDetailsElement>('.trip-more')!.open = true;
     detailsBtn.hidden = !el.querySelector('.stops, .timeline');
