@@ -1,6 +1,6 @@
-# Roadmap V1.2
+# Roadmap V1.3
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.0** (through PR #272). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.1** (through PR #274). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
 **How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal.
 
@@ -16,6 +16,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.
 - Versions below are guesses. If Hendrik reorders steps, they are renumbered in the next roadmap version.
 - **1.0.0** is the finished Berlin app: every V1 milestone live and the showcase refreshed. Other regions would start after it (1.x or 2.0).
 - Bug fixes between steps bump the patch of the milestone that is live.
+- **Tags** are automatic: when a merge to main changes the version in packages/web/package.json, the workflow "Tag version" (.github/workflows/tag-version.yml) tags that merge `vX.Y.Z` if the tag does not exist yet. Nobody tags by hand; run the workflow by hand only to catch up a missing tag.
 
 **The roadmap** is versioned on its own: `V1.0`, `V1.1`, … Every edit that adds, removes, reorders or finishes a step bumps the second number. A full reorganisation makes `V2.0`. Each version gets a line in the changelog at the bottom.
 
@@ -31,7 +32,8 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.
 | 0.6     | 10-13     | Review track: first open, lighter maps, looks, data versions, smoke test, Rings as default look | #199–#254 |
 | 0.7     | 10-13     | Faster first trip and first map                                                                 | #257–#261 |
 | 0.8.0   | 10-13     | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                           | #266–#270 |
-| 0.9.0   | 10-13 now | App shows its version in the Mehr menu; git tag per step                                        | #272      |
+| 0.9.0   | 10-13     | App shows its version in the Mehr menu; git tag per step                                        | #272      |
+| 0.9.1   | 10-13 now | Automatic tag `vX.Y.Z` for each merge that bumps the version                                    | #274      |
 
 ## Inbox
 
@@ -41,12 +43,8 @@ _Empty._
 
 ## 0.9 App version (follow-ups)
 
-Two notes from step 0.9.0, placed first because every later step ships a version and a tag.
+One note from step 0.9.0 left, placed first.
 
-- **0.9.1 Automatic tag per version** (from step 0.9.0, 2026-10-13 12:47: "threads cannot push git tags, so tagging every step needs Hendrik by hand; idea: a small workflow that tags each merge to main whenever the version in package.json changes").
-  - a. A GitHub Actions workflow on push to main reads the version in package.json and creates the tag `vX.Y.Z` when it does not exist yet.
-  - b. Nothing happens when the version is unchanged; the deploy is not slowed.
-  - c. Hendrik's manual tagging step is dropped from the step routine.
 - **0.9.2 Version line in German and English** (from step 0.9.0, 2026-10-13 12:47: "the version line is the same in German and English; the short commit shows only as a tooltip, which can't be seen on a phone").
   - a. The version line in Mehr gets German and English wording.
   - b. The short commit is shown in visible text instead of only as a tooltip.
@@ -118,6 +116,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.3** (2026-10-13): 0.9.1 Automatic tag per version done (#274, tag `v0.9.1` set by the new workflow); Hendrik no longer tags by hand.
 - **V1.2** (2026-10-13): the two Inbox notes from step 0.9.0 placed as 0.9.1 Automatic tag per version and 0.9.2 Version line in German and English; milestone 0.9 reopened for them, next in order.
 - **V1.1** (2026-10-13): 0.9.0 App shows its version done (#272, tag `v0.9.0`); milestone 0.9 closed. From here every step's PR bumps the version in package.json and tags its merge.
 - **V1.0** (2026-10-13): versioning introduced for the app and the roadmap; milestones renamed to app versions 0.9–1.0 with steps and substeps; the four Inbox notes of 2026-10-13 placed (0.10.0, 0.12, 0.13.1, 0.13.2); Clear trips (old milestone 1) done as 0.8.0.
