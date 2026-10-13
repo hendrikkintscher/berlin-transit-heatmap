@@ -2,7 +2,7 @@
 // days or a typical weekday or weekend, the hour, leaving or arriving), Reisezeit (typical, best case or next
 // departure) and Vergleich (a second time to compare with). The Zeit chip shows the choice.
 
-import { clockLabel, dayLabel, hourLabel, pillText } from './format';
+import { clockLabel, dayLabel, hourLabel, pillText, whenChipText } from './format';
 import { t } from './i18n';
 import type { Measure } from './protocol';
 import { $, type State } from './state';
@@ -86,19 +86,15 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     const arrive = state.direction === 'arrive';
     const offset = !arrive && state.measure === 'next' ? leaveOffset(w) : 0;
     const minute = w.minute ?? Math.floor(offset / 60);
-    const hour = w.minute !== undefined || offset ? clockLabel(w.hour, minute) : hourLabel(w.hour);
+    const exact = w.minute !== undefined || offset ? minute : undefined;
+    const hour = exact !== undefined ? clockLabel(w.hour, exact) : hourLabel(w.hour);
     // Today goes without "Heute", so the chips fit a phone's width.
-    whenBtn.querySelector('span')!.textContent =
-      pillText(w, arrive, hour, true) +
-      // Cycling alone has no timetable, so no Reisezeit: the bike stands in for it.
-      (state.travel === 'bikeonly'
-        ? ' · 🚲'
-        : // Reisezeit lives in this panel too; the pill names it when it is not the default.
-          state.measure === 'typical'
-          ? ` · ${t('measureTypical')}`
-          : state.measure === 'best'
-            ? ` · ${t('measureBest')}`
-            : '');
+    const measure = state.travel === 'bikeonly' ? 'next' : state.measure;
+    whenBtn.querySelector('span')!.textContent = whenChipText(w, arrive, exact, measure);
+    whenBtn.setAttribute(
+      'aria-label',
+      `${t('whenOpen')}: ${whenChipText(w, arrive, exact, measure, true)}`,
+    );
     renderDays();
     // Jetzt: today's current hour, leaving on the clock under Nächste.
     nowBtn.setAttribute('aria-pressed', String(!arrive && state.measure === 'next' && isNow(w)));

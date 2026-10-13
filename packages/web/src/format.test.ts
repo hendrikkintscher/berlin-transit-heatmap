@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   dateLabel,
   dayLabel,
@@ -8,11 +8,39 @@ import {
   pillText,
   shortStop,
   stopName,
+  whenChipText,
   whenText,
 } from './format';
 import { leaveOffset, upcomingDays } from './when';
+import { setLang } from './i18n';
 
 describe('format', () => {
+  it('keeps the Zeit chip short: no "Uhr" after a clock time, the measure as one mark', () => {
+    // The longest: a date, arriving, an exact minute and Typisch (about 190 px; Mehr stays
+    // on screen beside the scrolling chips whatever their width).
+    const day = upcomingDays()[3]!;
+    // setLang rewrites the page's texts: an empty page will do.
+    vi.stubGlobal('document', {
+      documentElement: {},
+      querySelector: () => null,
+      querySelectorAll: () => [],
+    });
+    try {
+      for (const l of ['de', 'en'] as const) {
+        setLang(l, false);
+        const text = whenChipText({ day, hour: 18, minute: 15 }, true, 15, 'typical');
+        expect(text).not.toMatch(/Uhr/);
+        expect(text.length).toBeLessThanOrEqual(20);
+        expect(whenChipText({ day, hour: 18 }, true, 15, 'typical', true)).toMatch(
+          l === 'de' ? /18:15 Uhr · Typisch$/ : /18:15 · Typical$/,
+        );
+      }
+    } finally {
+      setLang('de', false);
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('shortens VBB stop names', () => {
     expect(stopName('U Hermannplatz (Berlin)')).toBe('U Hermannplatz');
     expect(stopName('Berlin, Greifswalder Str.')).toBe('Greifswalder Str.');
