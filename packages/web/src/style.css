@@ -1146,6 +1146,9 @@ body.special .legend {
 .menu-note:empty {
   display: none;
 }
+#readout .each {
+  white-space: nowrap;
+}
 #readout i[class^='p'] {
   display: inline-block;
   width: 10px;
