@@ -163,7 +163,8 @@ export async function homeTrip(msg: Extract<ToWorker, { type: 'homeTrip' }>) {
     direction: 'arrive' as const,
     travel: h.travel,
     leaveAt: null,
-    from: 0,
+    // The pass's deadline on the reversed clock: the trip's times count from it.
+    from: pass.leaveAt,
   };
   setLastTrip(last);
   // Its minutes would include waiting at home for the deadline, so the card leaves them out.
