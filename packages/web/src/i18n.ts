@@ -96,8 +96,9 @@ const de = {
   favRemove: '{name} entfernen',
   favScore: '★ Ø {n} Min. zu {count} Lieblingsorten',
   livingMap: 'Wohnlage-Karte',
+  livingBest: 'Ø {n} Min.',
   livingHelp:
-    'Die Wohnlage-Karte färbt ganz Berlin nach dem gewichteten Schnitt zu deinen Lieblingsorten (Typisch, Ankunft in der gewählten Stunde): Grün ist, wo alles nah ist.',
+    'Die Wohnlage-Karte färbt ganz Berlin nach dem gewichteten Schnitt zu deinen Lieblingsorten (Typisch, Ankunft in der gewählten Stunde): je grüner, desto kürzer der Schnitt; die Pins 1–3 zeigen die besten Lagen.',
   living: 'Wohnlage: Ø zu {count} Lieblingsorten, {when}',
   specialClose: 'Zurück zur Karte',
   homeHere: '🌙 Bis wann heim?',
@@ -382,8 +383,9 @@ const en: Record<Key, string> = {
   favRemove: 'Remove {name}',
   favScore: '★ avg {n} min to {count} favourite places',
   livingMap: 'Where-to-live map',
+  livingBest: 'avg {n} min',
   livingHelp:
-    'The where-to-live map colours all of Berlin by the weighted average to your favourite places (Typical, arriving in the chosen hour): green is where everything is close.',
+    'The where-to-live map colours all of Berlin by the weighted average to your favourite places (Typical, arriving in the chosen hour): the greener, the shorter the average; pins 1–3 mark the best areas.',
   living: 'Where to live: avg to {count} favourite places, {when}',
   specialClose: 'Back to the map',
   homeHere: '🌙 Last way home',

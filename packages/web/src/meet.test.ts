@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { suggestMeetingPoints } from './meet';
+import { bestCells, suggestMeetingPoints } from './meet';
 
 const at = (name: string, kmEast: number) => ({
   name,
@@ -56,5 +56,22 @@ describe('suggestMeetingPoints', () => {
       [900, 900, 900], // max 15
     ];
     expect(suggestMeetingPoints(c, (i) => t[i]).map((s) => s.name)).toEqual(['B', 'A']);
+  });
+});
+
+describe('best spots on the where-to-live map', () => {
+  it('picks the lowest cells, spread apart', () => {
+    // 1 km cells: 10 x 10 over about 0.147° of longitude and 0.09° of latitude.
+    const cols = 10;
+    const rows = 10;
+    const values = new Float32Array(cols * rows).fill(3000);
+    values[0] = 600;
+    values[1] = 610; // right next to the best: left out
+    values[55] = 900;
+    values[99] = 1200;
+    values[98] = Infinity;
+    const spots = bestCells(values, cols, rows, [13.0, 52.0, 13.147, 52.09]);
+    expect(spots.map((s) => s.seconds)).toEqual([600, 900, 1200]);
+    expect(spots[0].lat).toBeGreaterThan(spots[2].lat);
   });
 });
