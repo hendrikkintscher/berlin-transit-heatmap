@@ -16,7 +16,6 @@ import {
   bandLabel,
 } from './colors';
 import { formatDate, shortStop, escapeHtml } from './format';
-import { SEARCH_BBOX } from './search';
 import { stopName } from './stop-name';
 import { initSearch } from './search-bar';
 import { initFavouritePlaces } from './fav-places';
@@ -48,19 +47,19 @@ import { initChanges } from './changes';
 import { initBanners } from './banners';
 import { initChips } from './chips';
 import { initMenu } from './menu';
-import { $, createState, NOW_WHEN, remember, seen, type Result } from './state';
-import { initTap } from './tap';
-import { cleanName, linkQuery, MAX_STARTS, readLink, type Point } from './url';
 import {
-  computeWindow,
-  desertThresholds,
-  isDate,
-  isoDay,
-  catchUp,
-  fullHour,
-  leaveOffset,
-  windowName,
-} from './when';
+  $,
+  computeRequest,
+  inArea,
+  linkState,
+  NOW_WHEN,
+  remember,
+  seen,
+  type Result,
+} from './state';
+import { initTap } from './tap';
+import { cleanName, linkQuery, MAX_STARTS, type Point } from './url';
+import { computeWindow, desertThresholds, isDate, isoDay, catchUp, fullHour } from './when';
 import { initWhenSheet } from './when-sheet';
 import { initBack, replaceUrl } from './back';
 import type { FromWorker } from './protocol';
@@ -83,26 +82,7 @@ const secondBtn = $<HTMLButtonElement>('second-btn');
 secondBtn.addEventListener('click', () => search.open('another'));
 
 // ---------- state, from the link (see url.ts) ----------
-const state = createState();
-const link = readLink(location.search, { ...state, to: null });
-Object.assign(state, link, { window: windowName(link.when) });
-/** A point on the map's area (Berlin, Potsdam and the commuter belt). */
-function inArea({ lat, lon }: Point) {
-  const [w, s, e, n] = SEARCH_BBOX;
-  return lon >= w && lon <= e && lat >= s && lat <= n;
-}
-// A link's starts outside the area would compute an empty map: they are dropped (and a
-// note says why, once the page is up).
-const linkStarts = state.origin ? [state.origin, ...state.others] : [];
-const linkOutside = linkStarts.some((o) => !inArea(o));
-if (linkOutside) {
-  const kept = linkStarts.filter(inArea);
-  state.origin = kept[0] ?? null;
-  state.others = kept.slice(1);
-}
-if (link.to && (!state.origin || !inArea(link.to))) link.to = null;
-// A meeting-point link on Typisch goes back to "Nächste" without the other starts.
-if (state.others.length && state.measure === 'typical') state.measureBefore = 'next';
+const { state, link, outside: linkOutside } = linkState(location.search);
 const urlLang = new URLSearchParams(location.search).get('lang');
 setLang(initialLang(location.search, readStoredLang()), false);
 /** The "what's different today" notice, once the map exists. */
@@ -454,31 +434,14 @@ function compute() {
     state.direction === 'arrive' && !state.others.length && !state.special,
   );
   if (state.special) return special.compute();
-  if (!state.origin) return;
+  const origin = state.origin;
+  if (!origin) return;
   state.requestId++;
   computedMinute = Math.floor(Date.now() / 60_000);
   loadbar.hidden = false;
   loadbar.classList.add('indeterminate');
   setStatus(() => '');
-  send({
-    type: 'compute',
-    id: state.requestId,
-    window: computedWindow(),
-    direction: state.direction,
-    measure: state.measure,
-    leaveOffset: leaveOffset(state.when),
-    ...(state.direction === 'arrive' && state.when.minute
-      ? { arriveOffset: state.when.minute * 60 }
-      : {}),
-    walkKmh: state.walkKmh,
-    ...(state.stepFree ? { stepFree: true } : {}),
-    ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
-    ...(state.compare ? { compare: computeWindow(state.compare, state.direction) } : {}),
-    ...state.origin,
-    ...(state.others.length ? { others: state.others } : {}),
-    ...(state.heat || state.limit ? {} : { noImage: true as const }),
-    ...(state.limit ? { limit: state.limit } : {}),
-  });
+  send({ type: 'compute', id: state.requestId, ...computeRequest({ ...state, origin }) });
 }
 
 function writeUrl() {

@@ -10,7 +10,7 @@ import {
   type Timetable,
 } from '@berlin-transit-heatmap/routing';
 import { dataUrl } from './data-url';
-import type { Direction, ToWorker, Window } from './protocol';
+import type { Direction, Window } from './protocol';
 import { typicalWindow } from './when';
 import { post } from './worker-post';
 
@@ -39,7 +39,7 @@ async function downloadTimetable(
   typical: string | null,
 ): Promise<Timetable> {
   const url = dataUrl(dataBase, `timetable-${file}.bin`);
-  const res = (await takePrefetch(url.href)) ?? (await fetch(url));
+  const res = await fetch(url);
   // (Some servers answer a missing file with the app's own page.)
   const binary = res.ok && res.body !== null && !res.headers.get('content-type')?.includes('html');
   // A date has only the binary file; without one (the evening before today, or a day the
@@ -50,47 +50,6 @@ async function downloadTimetable(
     post({ type: 'progress', window, loaded, total }),
   );
   return decodeTimetable(buf) as Timetable;
-}
-
-/**
- * Downloads the start page began (the first map's timetable, see start-page.ts), by
- * address: the response once the page hands it over, or null when its download failed.
- */
-const prefetches = new Map<string, Prefetch>();
-interface Prefetch {
-  response: Promise<Response | null>;
-  done: (r: Response | null) => void;
-  taken?: boolean;
-}
-
-/** The start page is downloading `url` and will hand it over. */
-export function expectPrefetch(url: string) {
-  let done: Prefetch['done'] = () => {};
-  const response = new Promise<Response | null>((r) => (done = r));
-  prefetches.set(url, { response, done });
-}
-
-/** The start page's download arrived (or failed: no status). */
-export function prefetched(msg: Extract<ToWorker, { type: 'prefetch' }>) {
-  const headers: Record<string, string> = {};
-  if (msg.contentType) headers['content-type'] = msg.contentType;
-  if (msg.length) headers['content-length'] = msg.length;
-  let res: Response | null = null;
-  try {
-    if (msg.status)
-      res = new Response(msg.body ?? msg.buf ?? null, { status: msg.status, headers });
-  } catch {
-    // A status a response cannot be made with: the worker fetches the file itself.
-  }
-  prefetches.get(msg.url)?.done(res);
-}
-
-/** The start page's download of `url`, used once; undefined when there is none. */
-export async function takePrefetch(url: string): Promise<Response | null | undefined> {
-  const pre = prefetches.get(url);
-  if (!pre || pre.taken) return undefined;
-  pre.taken = true;
-  return pre.response;
 }
 
 /**
