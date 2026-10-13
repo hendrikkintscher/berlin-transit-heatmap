@@ -10,10 +10,10 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-12, live through PR #197. Build in this order, one step per PR:
+State on 2026-10-12, live through PR #199. Build in this order, one step per PR:
 
-1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build, after PR #185 and not before 23:18 UTC.
-2. **Next:** Background downloads after the basemap, no timetable fetch without a start (P1 + P2, B4 follow-up, group 15)
+1. Shorter platform changes (group 6): built and merged (PR #184); not live yet, because the 23:19 timetable build failed while uploading (see the next step).
+2. **Next:** Sturdier timetable publish: retry uploads, clean up after a failed run (group 15, B10 follow-up)
 3. Faster map passes (P4–P7, group 15)
 4. Smaller Wohnlage-Karte memory (B7, group 15)
 5. Typical timetable when offline (B8, group 15)
@@ -275,10 +275,11 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 - **"Bis N Min." view (D1)**: Done (PR #189): a switch in Ebenen with chips 15/30/45/60 Min., off by default, kept in the link as `bis=N`; everything within N minutes shaded in one green with no new routing (5–50 ms); meeting points use the slowest trip, comparison maps ignore it; taps 0.25–0.6 s live.
 - **Faster first load and no stale work (B4 + B5)**: Done (PR #193): the start page starts the routing worker with the link and stored settings and preloads main.js, the map style and the tile connection; the worker drops superseded map and trip requests, and returning to the app recomputes only on a new minute or after 60 s hidden. Live, cold at 6 Mbit/150 ms: first map 1.73 s (was ~1.99 s), worker start 0.25 s (was 0.57 s).
 - **Lighter work per tap (B6)**: Done (PR #197): the tap grid is a 5×5-cell window (60–110 → 8–13 ms), scratch buffers are reused, and the meeting offset lives in the colour table; tap round trip 132 → 111 ms locally, live taps median 125 ms.
+- **Background downloads after the basemap, no timetable fetch without a start (P1 + P2)**: Done (PR #199): opening without a start no longer fetches the timetable, the tile index loads with the style, and walk.bin and lines.bin wait for the tiles. Throttled (1.6 Mbit/s): main.js 3.5 → 2.1 s on an open without a start, tile index 3.9 → 0.7 s, tiles on shared links 10.5 → 7.9 s.
 
-### Background downloads after the basemap, no timetable fetch without a start (P1 + P2)
+### Sturdier timetable publish
 
-From the code review (plan/reviews/code-runtime.md, "build first"), a follow-up to B4 (PR #193). **P2:** opening without `from=` no longer fetches the hour's timetable (275 KB) next to main.js; only a link with a start preloads it, and the tile index is preloaded alongside the style (first frame about 1 s sooner on slow links). **P1:** walk.bin, lines.bin and the next-hour preload start once the map is idle, not at the first result (tiles about 1 s and labels about 1.3 s sooner on a throttled link). The builder checks both against what PR #193 already changed (the timetable fetch now sits in the inline script in index.html and gets gated on `from=`).
+The 23:19 timetable build failed in publish when an asset upload broke off after 39 MB ("fetch failed / other side closed", scripts/publish/publish.mjs), so the shorter platform changes are not live yet. publish.mjs retries an upload up to 3 times on network errors and 5xx, deleting a half-uploaded asset first, and deletes the fresh "-next-" release when a run fails before the swap. Then one timetable build goes out (never two within an hour).
 
 ### Faster map passes (P4–P7)
 
