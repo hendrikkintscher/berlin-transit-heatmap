@@ -5,7 +5,8 @@ on:
     # Every night at 00:17 UTC (01:17 or 02:17 in Berlin, already the new day). VBB
     # updates the feed when construction timetables change; an unchanged feed is not
     # published again, but "Build timetable" still runs after this to move the real
-    # dates on by a day.
+    # dates on by a day. This schedule never fired at first, so "Keep timetable fresh"
+    # (data-watch.yml) starts this workflow when the published timetable gets old.
     - cron: '17 0 * * *'
   workflow_dispatch:
     inputs:

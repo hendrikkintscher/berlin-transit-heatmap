@@ -1,0 +1,64 @@
+name: Keep timetable fresh
+
+# GitHub's nightly schedule for "Refresh VBB GTFS" never fired after the repository was
+# set up (every build until 2026-10-13 was started by hand), and the published files
+# only cover today plus seven days. This watch starts the refresh itself (which then runs
+# "Build timetable") once the published timetable no longer begins today in Berlin. It
+# runs on its own schedules and after every push to main, and never starts a refresh
+# while one runs or when one started within the last hour (the build's API budget).
+
+on:
+  schedule:
+    - cron: '43 1 * * *'
+    - cron: '43 4 * * *'
+    - cron: '43 10 * * *'
+    - cron: '43 16 * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: data-watch
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Start the refresh when the timetable is out of date
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          today=$(TZ=Europe/Berlin date +%F)
+          hour=$(TZ=Europe/Berlin date +%-H)
+          first=$(curl -fsSL --retry 3 \
+            "https://github.com/$REPO/releases/download/timetable-latest/build-info.json" \
+            | jq -r '.serviceDate // empty' || true)
+          echo "The published timetable starts on '$first'; in Berlin it is $today, $hour h."
+          if [[ -n "$first" && ! "$first" < "$today" ]]; then
+            echo "Up to date."
+            exit 0
+          fi
+          # The nightly feed check runs around 02:00 Berlin time; give it until 03:00.
+          if (( hour < 3 )); then
+            echo "Too early in the night, the regular refresh may still come."
+            exit 0
+          fi
+          since=$(date -u -d '-60 min' +%FT%TZ)
+          busy=$(gh api -X GET "repos/$REPO/actions/runs" -f per_page=50 --jq "
+            [.workflow_runs[]
+              | select(.name == \"Refresh VBB GTFS\" or .name == \"Build timetable\")
+              | select(.status != \"completed\" or .created_at > \"$since\")]
+            | length")
+          if (( busy > 0 )); then
+            echo "A refresh or build is running or started within the last hour."
+            exit 0
+          fi
+          echo "Starting Refresh VBB GTFS (Build timetable follows it)."
+          gh workflow run gtfs-refresh.yml --repo "$REPO"
