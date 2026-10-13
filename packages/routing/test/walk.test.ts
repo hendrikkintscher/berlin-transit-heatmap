@@ -6,6 +6,7 @@ import {
   loadTimetable,
   loadWalkNetwork,
   NETWORK_WALK_SPEED_MPS,
+  nodeLonLat,
   snapCells,
   snapCellsInSteps,
   snapPoint,
@@ -91,8 +92,8 @@ describe('walking network', () => {
   it('decodes nodes and edges', () => {
     expect(net.nodeCount).toBe(42);
     expect(net.edgeCount).toBe(41);
-    expect(net.lat[0]).toBeCloseTo(LAT_N, 5);
-    expect(net.lon[20]).toBeCloseTo(LON0 + 20 * STEP, 5);
+    expect(nodeLonLat(net, 0)[1]).toBeCloseTo(LAT_N, 5);
+    expect(nodeLonLat(net, 20)[0]).toBeCloseTo(LON0 + 20 * STEP, 5);
     expect(net.edgeMetres[0]).toBe(100);
     expect(NETWORK_WALK_SPEED_MPS).toBeCloseTo(4 / 3.6, 6);
   });
@@ -265,7 +266,10 @@ describe('walking network', () => {
         bbox[0] + ((c + 0.5) * (bbox[2] - bbox[0])) / cols,
         one,
       );
-      expect(cells.metres[k]).toBeCloseTo(one.metres[0], 1);
+      // The way onto the edge, from the walks to its two ends.
+      const e = cells.edge[k];
+      const off = e < 0 ? Infinity : (cells.da[k] + cells.db[k] - net.edgeMetres[e]) / 2;
+      expect(off).toBeCloseTo(one.metres[0], 1);
     }
   });
 });
@@ -280,8 +284,8 @@ describe('walkPath', () => {
     const path = walkPath(net, from, to)!;
     expect(path[0]).toEqual([from.lon, from.lat]);
     expect(path[path.length - 1]).toEqual([to.lon, to.lat]);
-    const bridgeN = path.findIndex((p) => near(p, net.lon[10], net.lat[10]));
-    const bridgeS = path.findIndex((p) => near(p, net.lon[31], net.lat[31]));
+    const bridgeN = path.findIndex((p) => near(p, ...nodeLonLat(net, 10)));
+    const bridgeS = path.findIndex((p) => near(p, ...nodeLonLat(net, 31)));
     expect(bridgeN).toBeGreaterThan(0);
     expect(bridgeS).toBe(bridgeN + 1);
     // Along the north street east to the bridge: nodes 3 to 10, then 31 back to 23.
