@@ -9,6 +9,7 @@ import { MODE_COLORS } from './colors';
 import { dateLabel, dayLabel, escapeHtml, formatDate, shortStop } from './format';
 import { lang, t } from './i18n';
 import { CHANGES_SOURCE } from './map-layers';
+import { dataUrl } from './data-url';
 import { $, type State } from './state';
 import { isDate, isoDay, upcomingDays } from './when';
 
@@ -110,7 +111,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     loading = true;
     // When the browser is idle; the routing runs in the worker meanwhile.
     const go = () =>
-      fetch(new URL('changes.json', dataBase))
+      fetch(dataUrl(dataBase, 'changes.json'))
         .then((r) => (r.ok ? (r.json() as Promise<ChangesFile>) : null))
         .then((f) => {
           if (f?.version === 1) file = f;

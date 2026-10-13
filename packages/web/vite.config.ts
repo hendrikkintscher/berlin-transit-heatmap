@@ -28,7 +28,7 @@ function earlyStart(): Plugin {
           `<link rel="preload" href="${TILES_URL}" as="fetch" crossorigin>`,
           `<link rel="modulepreload" href="./${main}">`,
           // Without module workers or storage the entry starts the worker as before.
-          `<script>try{var q=[],s=null,g=null;try{s=localStorage.getItem('step-free');g=localStorage.getItem('travel')}catch(e){}var w=new Worker('./${worker}',{type:'module'});w.onmessage=function(e){q.push(e)};w.postMessage({type:'boot',baseURI:document.baseURI,search:location.search,stepFree:s,travel:g});window.__boot={worker:w,early:q}}catch(e){}</script>`,
+          `<script>try{var q=[],s=null,g=null;try{s=localStorage.getItem('step-free');g=localStorage.getItem('travel')}catch(e){}var w=new Worker('./${worker}',{type:'module'});w.onmessage=function(e){q.push(e)};w.postMessage({type:'boot',v:(document.querySelector('meta[name="data-v"]')||{}).content,baseURI:document.baseURI,search:location.search,stepFree:s,travel:g});window.__boot={worker:w,early:q}}catch(e){}</script>`,
         ];
         // Right after the charset, ahead of the stylesheet: a script after it would wait for it.
         const charset = /<meta charset="UTF-8" \/>\n/;

@@ -11,6 +11,9 @@ const DATA = `data-${VERSION}`;
 const MAP = 'map-v1';
 const MAP_HOST = 'tiles.openfreemap.org';
 const MAX_TILES = 400;
+// Listing the tile cache costs time: trim it once every so many stored tiles.
+const TRIM_EVERY = 50;
+let tilePuts = 0;
 // Waiting longer than this for the start page serves the cached one (refreshed behind it).
 const NAV_TIMEOUT_MS = 2500;
 
@@ -86,20 +89,8 @@ self.addEventListener('fetch', (event) => {
       }),
     );
   } else if (url.pathname.includes('/data/')) {
-    // Timetables change monthly: serve the cached copy instantly, refresh it in the background.
     event.respondWith(
-      caches.open(DATA).then(async (c) => {
-        const cached = await c.match(req);
-        const fresh = fetch(req).then((res) => {
-          if (res.ok) c.put(req, res.clone()).then(() => trim(c));
-          return res;
-        });
-        if (cached) {
-          event.waitUntil(fresh.catch(() => {}));
-          return cached;
-        }
-        return fresh;
-      }),
+      url.searchParams.has('v') ? versionedData(event, req, url) : refreshedData(event, req),
     );
   } else {
     // Hashed build assets and icons never change under the same URL.
@@ -118,6 +109,56 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+/**
+ * A data file named with its version (`walk.bin?v=1a2b3c4d`, see data-url.ts): the same
+ * address always has the same content, so a cached copy is used without asking the network.
+ * Storing a new version drops the old ones; offline, an older copy stands in.
+ */
+async function versionedData(event, req, url) {
+  const c = await caches.open(DATA);
+  const hit = await c.match(req);
+  if (hit) return hit;
+  let res;
+  try {
+    res = await fetch(req);
+  } catch (err) {
+    const older = await c.match(req, { ignoreSearch: true });
+    if (older) return older;
+    throw err;
+  }
+  if (res.ok) {
+    const copy = res.clone();
+    event.waitUntil(
+      c.put(req, copy).then(async () => {
+        const old = (await c.keys()).filter(
+          (k) => k.url !== req.url && new URL(k.url).pathname === url.pathname,
+        );
+        await Promise.all(old.map((k) => c.delete(k)));
+        await trim(c);
+      }),
+    );
+  }
+  return res;
+}
+
+/**
+ * A data file without a version (an app from before versions, or a local run): the cached
+ * copy at once, refreshed in the background.
+ */
+async function refreshedData(event, req) {
+  const c = await caches.open(DATA);
+  const cached = await c.match(req);
+  const fresh = fetch(req).then((res) => {
+    if (res.ok) c.put(req, res.clone()).then(() => trim(c));
+    return res;
+  });
+  if (cached) {
+    event.waitUntil(fresh.catch(() => {}));
+    return cached;
+  }
+  return fresh;
+}
 
 /** A cached timetable's date (YYYYMMDD) or null for a typical day. */
 const dateOf = (url) => /timetable-(\d{8})-\d\d\./.exec(url)?.[1] ?? null;
@@ -146,16 +187,17 @@ async function trim(cache) {
 }
 
 /**
- * The basemap: sprites and fonts never change under their URL (cache first); the style,
- * the tile index and the tiles are served from the cache at once and refreshed behind it.
+ * The basemap: sprites, fonts and the tiles of a dated tile set (".../20261004_113936_pt/")
+ * never change under their URL (cache first); the style and the tile index are served from
+ * the cache at once and refreshed behind it.
  */
 async function mapResponse(event, req, url) {
   const c = await caches.open(MAP);
   const cached = await c.match(req);
-  const immutable = /\/(sprites|fonts)\//.test(url.pathname);
+  const immutable = /\/(sprites|fonts)\/|\/\d{8}_\d{6}_\w+\//.test(url.pathname);
   if (cached && immutable) return cached;
   const fresh = fetch(req).then((res) => {
-    if (res.ok) c.put(req, res.clone()).then(() => trimTiles(c));
+    if (res.ok) c.put(req, res.clone()).then(() => ++tilePuts % TRIM_EVERY || trimTiles(c));
     return res;
   });
   if (cached) {

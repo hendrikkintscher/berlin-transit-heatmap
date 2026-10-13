@@ -28,7 +28,8 @@ export type TripLeg =
     };
 
 export type ToWorker =
-  | { type: 'init'; dataBase: string }
+  /** v: the data files' versions from the start page (data-url.ts). */
+  | { type: 'init'; dataBase: string; v?: string }
   /**
    * Sent by the start page's inline script before the app's code has loaded: the page's
    * address and stored settings, so the worker sets itself up and starts the first map's
@@ -37,6 +38,7 @@ export type ToWorker =
   | {
       type: 'boot';
       baseURI: string;
+      v?: string;
       search: string;
       stepFree: string | null;
       travel: string | null;

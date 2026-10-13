@@ -115,3 +115,75 @@ describe('offline app cache', () => {
     expect(left.filter((n) => n === '5.pbf')).toHaveLength(400);
   });
 });
+
+describe('versioned data files', () => {
+  // A cache of url -> body, and a network that answers from `net` (or is offline).
+  function setup(stored: string[], net: Record<string, string> | null) {
+    const entries = stored.map((url) => ({ url, body: 'old' }));
+    const cache = {
+      match: async (req: { url: string }, opts?: { ignoreSearch?: boolean }) => {
+        const strip = (u: string) => (opts?.ignoreSearch ? u.split('?')[0] : u);
+        const hit = entries.find((e) => strip(e.url) === strip(req.url));
+        return hit && { ok: true, body: hit.body };
+      },
+      put: async (req: { url: string }, res: { body: string }) => {
+        entries.push({ url: req.url, body: res.body });
+      },
+      keys: async () => entries.map((e) => ({ url: e.url })),
+      delete: async (k: { url: string }) => {
+        entries.splice(
+          entries.findIndex((e) => e.url === k.url),
+          1,
+        );
+      },
+    };
+    let fetched = 0;
+    const src = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
+    const sandbox = {
+      self: { addEventListener() {} },
+      Intl,
+      Date,
+      Promise,
+      URL,
+      caches: { open: async () => cache },
+      fetch: async (req: { url: string }) => {
+        fetched++;
+        if (!net) throw new TypeError('offline');
+        const body = net[req.url];
+        const res = { ok: body !== undefined, body, clone: () => res };
+        return res;
+      },
+    } as Record<string, unknown>;
+    vm.createContext(sandbox);
+    vm.runInContext(`${src}\nthis.versionedData = versionedData;`, sandbox);
+    const waits: Promise<unknown>[] = [];
+    const get = async (url: string) => {
+      const res = await (
+        sandbox.versionedData as (e: unknown, r: unknown, u: URL) => Promise<{ body: string }>
+      )({ waitUntil: (p: Promise<unknown>) => waits.push(p) }, { url }, new URL(url));
+      await Promise.all(waits);
+      return res.body;
+    };
+    return { get, urls: () => entries.map((e) => e.url), fetched: () => fetched };
+  }
+  const walk = 'https://x/data/berlin/walk.bin';
+
+  it('uses the stored copy of the same version without the network', async () => {
+    const s = setup([`${walk}?v=aaaa`], {});
+    expect(await s.get(`${walk}?v=aaaa`)).toBe('old');
+    expect(s.fetched()).toBe(0);
+  });
+
+  it('fetches a new version once and drops the old one', async () => {
+    const s = setup([`${walk}?v=aaaa`, 'https://x/data/berlin/lines.bin?v=cccc'], {
+      [`${walk}?v=bbbb`]: 'new',
+    });
+    expect(await s.get(`${walk}?v=bbbb`)).toBe('new');
+    expect(s.urls()).toEqual(['https://x/data/berlin/lines.bin?v=cccc', `${walk}?v=bbbb`]);
+  });
+
+  it('offline, an older version stands in', async () => {
+    const s = setup([`${walk}?v=aaaa`], null);
+    expect(await s.get(`${walk}?v=bbbb`)).toBe('old');
+  });
+});

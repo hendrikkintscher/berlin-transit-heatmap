@@ -51,6 +51,7 @@ import { scoreGrid } from './favourites';
 import { bestCells, suggestMeetingPoints, type MeetCandidate } from './meet';
 import { earlyLoad, linkHasStart } from './early';
 import { typicalWindow } from './when';
+import { dataUrl, setDataVersions } from './data-url';
 import type {
   Direction,
   FromWorker,
@@ -102,14 +103,29 @@ const loading = new Map<Window, Promise<PreparedTimetable>>();
 let dataBase = '';
 
 async function fetchTimetable(window: Window, file: string = window): Promise<Timetable> {
-  const url = new URL(`timetable-${file}.bin`, dataBase);
+  const typical = typicalWindow(file);
+  try {
+    return await downloadTimetable(window, file, typical);
+  } catch (err) {
+    // Offline, or the download broke off: a date's typical day (often kept by the service
+    // worker) stands in, and the map says so as for a day without its own file.
+    if (typical) return fetchTimetable(window, typical);
+    throw err;
+  }
+}
+
+async function downloadTimetable(
+  window: Window,
+  file: string,
+  typical: string | null,
+): Promise<Timetable> {
+  const url = dataUrl(dataBase, `timetable-${file}.bin`);
   const res = await fetch(url);
   // (Some servers answer a missing file with the app's own page.)
   const binary = res.ok && res.body !== null && !res.headers.get('content-type')?.includes('html');
   // A date has only the binary file; without one (the evening before today, or a day the
   // build has not reached yet) its typical day stands in, and says so by its serviceDate.
-  const typical = typicalWindow(file);
-  if (!binary && typical) return fetchTimetable(window, typical);
+  if (!binary && typical) return downloadTimetable(window, typical, null);
   if (!binary) throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
   // Content-Length is the compressed size when the server gzips, so progress is approximate.
   const total = Number(res.headers.get('content-length')) || 0;
@@ -148,7 +164,7 @@ async function loadWalk(): Promise<void> {
   if (walkStarted) return;
   walkStarted = true;
   try {
-    const res = await fetch(new URL('walk.bin', dataBase));
+    const res = await fetch(dataUrl(dataBase, 'walk.bin'));
     if (!res.ok || !res.body) throw new Error(`walk.bin: ${res.status}`);
     const total = Number(res.headers.get('content-length')) || 0;
     const reader = res.body.getReader();
@@ -204,7 +220,7 @@ async function loadLines(tt: PreparedTimetable): Promise<void> {
   if (linesStarted) return;
   linesStarted = true;
   try {
-    const res = await fetch(new URL('lines.bin', dataBase));
+    const res = await fetch(dataUrl(dataBase, 'lines.bin'));
     if (res.ok)
       lineShapes = decodeLines(await res.arrayBuffer(), tt.stopCount, (s) => [
         tt.stopLon[s]!,
@@ -355,10 +371,12 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
   try {
     if (msg.type === 'init') {
       dataBase = msg.dataBase;
+      setDataVersions(msg.v);
     } else if (msg.type === 'boot') {
       // From the start page, before the app's code is in: with a start in the link, the first
       // map's timetable, prepared as that map will need it (without one boot.ts asks later).
       dataBase = new URL(`data/${REGION.id}/`, msg.baseURI).href;
+      setDataVersions(msg.v);
       if (!linkHasStart(msg.search)) return;
       const first = earlyLoad(msg.search, msg);
       await prepared(first.window, first.direction, {
