@@ -13,14 +13,15 @@ _Empty._
 State on 2026-10-12, live through PR #205. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); not live yet; the 23:19 timetable build failed while uploading. The publish fix (PR #201) is merged, and the data goes live with the next timetable build.
-2. **Next:** Smaller Wohnlage-Karte memory (B7, group 15)
-3. Typical timetable when offline (B8, group 15)
-4. Notice, search and favourites polish (C5–C8, group 15)
-5. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-6. Default view readability: two variants to compare (C9, group 15)
-7. Named starts in meeting mode (D2, group 15)
-8. Code health, no change in behaviour (E1, group 15)
-9. Smaller walking network file (P8, group 15)
+2. **Next:** No flicker when tapping another destination (group 6, from the Inbox)
+3. Smaller Wohnlage-Karte memory (B7, group 15)
+4. Typical timetable when offline (B8, group 15)
+5. Notice, search and favourites polish (C5–C8, group 15)
+6. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+7. Default view readability: two variants to compare (C9, group 15)
+8. Named starts in meeting mode (D2, group 15)
+9. Code health, no change in behaviour (E1, group 15)
+10. Smaller walking network file (P8, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -117,6 +118,10 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 - **Remove the Google Maps links**: Done (PR #145): the trip card has no Google Maps link anymore, and the vs-Google sharepic no longer mentions one.
 - **Real arrival times at stops**: Done (PR #183): the timetable file (format v2) stores per-stop dwell, so getting off uses the arrival time and boarding the departure; +0.8 % gzipped, routing speed unchanged; 6 of the 20 connection-test trips arrive 1–5 min earlier; taps 0.39–0.46 s live.
 - **Start point or destination switch**: Done (PR #187): a "Start ⇄ Ziel" pill on the trip card (EN "Start ⇄ End") with the set place's current role in bold; it drives the same direction as Losfahren/Ankommen (`dir=arr` kept in the link); taps 240–320 ms, switch 0.8–1.2 s live.
+
+### No flicker when tapping another destination
+
+Hendrik, 2026-10-13 00:24 (Inbox): "Tapping on another Ziel should not cause flickering of the connection display." When a trip card is open and another place is tapped, the card keeps its frame and swaps in the new trip once it is ready, instead of blanking or jumping in between. Placed first as a small, visible fix (snappiness rule).
 
 ### Shorter platform changes
 
