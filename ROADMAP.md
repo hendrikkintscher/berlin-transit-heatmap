@@ -12,10 +12,10 @@ _Empty._
 
 State on 2026-10-13, live through PR #214. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
-1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build (publish fix PR #201 merged).
+1. Shorter platform changes (group 6): Done (PR #184, live with the timetable build of 2026-10-13 00:58)
 2. No flicker when tapping another destination (group 6, Inbox): Done (PR #213)
 3. Small map fixes: Ringbahn course, colour scale, "Bis wann heim?" limits (groups 6 and 7, Inbox): Done (PR #214)
-4. **Next:** Nightly timetable refresh that actually runs: the scheduled Build timetable run has never fired (every build so far was started by hand, the builder dispatched one at 00:57 on 2026-10-13), and the data only covers today plus 7 days. Make the schedule fire reliably, or add a fallback that starts a build when the published data gets old.
+4. **Next:** Nightly timetable refresh that actually runs: the scheduled Build timetable run has never fired (every build so far was started by hand, the builder dispatched one at 00:57 on 2026-10-13, which published fine), and the data only covers today plus 7 days. Make the schedule fire reliably, or add a fallback that starts a build when the published data gets old.
 5. Trip card round (group 6): the card becomes a drawer with more connections when pulled up; tapping a connection opens the detailed view with the wait at each change; the card names the start and the destination; the destination marker stands out and transfer stops step back; "Hier starten" keeps the old start as the destination. Takes in the review's card and marker findings so the card is built once: Hier starten with U12, markers with V6, V1 + U14 (card and time field fit at 360 px), names with U7 + U8, then U4.
 6. Review fixes for the rest of the app (group 17): V2 + U11 + V4 (the colour scale it waits for is done), U2, V3, then U5–U13 and V5–V13, in the order of plan/reviews/README.md (project files)
 7. Smaller Wohnlage-Karte memory (B7 + P9, group 15): Done (PR #210)
@@ -120,9 +120,7 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 
 - **No flicker when tapping another destination**: Done (PR #213): the trip card keeps its frame and swaps in the new trip; checked live at 1× and 6× CPU with no empty-card frames.
 
-### Shorter platform changes
-
-Built and merged (PR #184), live with the next timetable build: island platforms get 60 s, timed transfers count as 0 s, and route-tied rows apply where no general row exists (533 transfers shorter). Picked by Hendrik on 2026-10-12 ("Both fixes"). From the connection test, finding 4. Platforms of one station get 120 s when the footpaths don't connect them, which is common for S-Bahn platforms, while BVG plans some changes in 1 minute (S8 → S25 at Bornholmer Str.). Use realistic platform transfer times and honour the timetable feed's transfer rules that are tied to routes (6,760 rows) and timed transfers (2,489 rows).
+- **Shorter platform changes**: Done (PR #184, live since the timetable build of 2026-10-13 00:58): island platforms get 60 s, timed transfers count as 0 s, and route-tied transfer rows apply where no general row exists (533 transfers shorter).
 
 ### Less walking on equal arrival (low priority)
 
