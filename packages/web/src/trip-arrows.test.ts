@@ -22,20 +22,13 @@ describe('trip arrows', () => {
     expect(east!.bearing).toBeCloseTo(90);
   });
 
-  it('puts the arrow near the end of each piece, at most 400 m before it', () => {
-    // About 220 m north: 15 % before the end.
-    const short = arrowAt([
-      [13.4, 52.5],
-      [13.4, 52.502],
-    ]);
-    expect(short!.at[1]).toBeCloseTo(52.5017, 4);
-    // About 11 km south: 400 m before the end.
-    const long = arrowAt([
+  it('puts a ride’s arrow halfway along it', () => {
+    const p = arrowAt([
       [13.4, 52.6],
       [13.4, 52.5],
     ]);
-    expect(long!.bearing).toBeCloseTo(180);
-    expect((long!.at[1] - 52.5) * 111_320).toBeCloseTo(400, -1);
+    expect(p!.at[1]).toBeCloseTo(52.55);
+    expect(p!.bearing).toBeCloseTo(180);
     expect(arrowAt([[13.4, 52.5]])).toBeNull();
   });
 });
