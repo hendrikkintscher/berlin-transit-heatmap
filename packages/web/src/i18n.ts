@@ -95,6 +95,7 @@ const de = {
   weight1: 'Ab und zu',
   favRemove: '{name} entfernen',
   favScore: '★ Ø {n} Min. zu {count} Lieblingsorten',
+  favScore1: '★ {n} Min. zum Lieblingsort',
   livingMap: 'Wohnlage-Karte',
   livingBest: 'Ø {n} Min.',
   livingHelp:
@@ -382,6 +383,7 @@ const en: Record<Key, string> = {
   weight1: 'Now and then',
   favRemove: 'Remove {name}',
   favScore: '★ avg {n} min to {count} favourite places',
+  favScore1: '★ {n} min to your favourite place',
   livingMap: 'Where-to-live map',
   livingBest: 'avg {n} min',
   livingHelp:

@@ -598,7 +598,7 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
 }
 .search-results .place-favourite b::before {
   content: '★';
-  color: #7b2cbf;
+  color: var(--fav);
 }
 .search-results .place-station b::before {
   content: '◉';
@@ -1006,6 +1006,10 @@ body.arrive .origin-marker.p1.numbered {
   color: var(--ink);
   padding: 6px 12px;
   cursor: pointer;
+}
+/* One favourite colour: the gold of the map's stars, also on the card's filled ★. */
+#readout-fav[aria-pressed='true'] {
+  color: var(--fav);
 }
 .fav-marker {
   background: var(--surface);

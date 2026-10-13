@@ -264,7 +264,7 @@ export const MODE_COLORS: Record<string, string> = {
   sbahn: '#00843d',
   ubahn: '#0a5ea8',
   tram: '#c8102e',
-  bus: '#7b2d8e',
+  bus: '#95276e',
   regional: '#8a1c1c',
   ferry: '#0090c8',
 };

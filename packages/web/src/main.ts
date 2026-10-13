@@ -1641,7 +1641,10 @@ function renderFavourites() {
 
   favChip.hidden = !(times && times.average !== null);
   if (times?.average != null) {
-    favChip.textContent = t('favScore', { n: times.average, count: favourites.length });
+    favChip.textContent = t(favourites.length > 1 ? 'favScore' : 'favScore1', {
+      n: times.average,
+      count: favourites.length,
+    });
   }
 }
 
