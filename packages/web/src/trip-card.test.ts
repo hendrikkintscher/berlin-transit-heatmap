@@ -9,6 +9,23 @@ const ride = (name: string, mode: string, from: string, to: string) =>
   ({ type: 'ride', name, mode, from, to, stops: 3 }) as const;
 
 describe('trip card', () => {
+  it('names where the trip starts and ends, the place by its own name', () => {
+    const journey = {
+      transfers: 0,
+      legs: [
+        ride('S7', 'sbahn', 'S Ostkreuz Bhf (Berlin)', 'S+U Zoologischer Garten Bhf (Berlin)'),
+      ],
+      ends: ['S Ostkreuz Bhf', 'S+U Zoologischer Garten Bhf'] as [string, string],
+    };
+    expect(tripHtml({ journeys: [journey] }, ctx)).toContain(
+      '<small class="trip-ends">Ostkreuz → Zoologischer Garten</small>',
+    );
+    // Arriving, the tapped place is where the trip starts.
+    expect(
+      tripHtml({ journeys: [journey] }, { ...ctx, direction: 'arrive', place: 'Kino' }),
+    ).toContain('<small class="trip-ends">Kino → Zoologischer Garten</small>');
+  });
+
   it('lists the lines, changes, walking and stops', () => {
     const html = tripHtml(
       {

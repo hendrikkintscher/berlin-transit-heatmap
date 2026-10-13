@@ -83,6 +83,8 @@ export type ToWorker =
   | { type: 'paint'; id: number; limit?: number }
   /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
   | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
+  /** The nearest stop's name, to name a place ("bei S Südkreuz"). */
+  | { type: 'placeName'; id: number; lat: number; lon: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
   /** Station names and places for search suggestions, from the loaded timetable. */
   | { type: 'stations'; window: Window }
@@ -239,6 +241,8 @@ export type FromWorker =
       limit?: number;
     }
   | { type: 'stations'; list: SearchStation[] }
+  /** The nearest stop's name (null: none close or no timetable yet). */
+  | { type: 'placeName'; id: number; name: string | null }
   /** The map `id`'s lines again, now along the real tracks and roads (lines.bin arrived). */
   | {
       type: 'routes';
@@ -265,15 +269,16 @@ export type FromWorker =
          * (arriving: arrives by the end of the hour). Under Nächste the map's own minutes.
          */
         minutes?: number;
-        /** Departing: when to leave the start and when it arrives, seconds of the service day. */
+        /** When to leave the start and when it arrives, seconds of the service day. */
         leave?: number;
         arrive?: number;
         /** Departing: the first vehicle (stop index, line, planned departure in seconds of the day). */
         board?: { stop: number; line: string; at: number };
+        /** The stops nearest the journey's start and end, to name them. */
+        ends?: [string | null, string | null];
       } | null)[];
       /** The journeys drawn on the map: rides coloured by mode, walks dashed. */
       lines: FeatureCollection<LineString, { mode: string; walk: boolean }>;
-      /** Where the journeys get on, change and get off. */
       /** Where rides start and end; `end` marks getting on first and off last (not a change). */
       stops: FeatureCollection<Point, { name: string; mode: string; end: boolean }>;
     }

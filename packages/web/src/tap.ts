@@ -286,8 +286,12 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   function showCard(html: string, start: boolean, searched = false) {
     readoutText.innerHTML = html;
     dirBtn.hidden = true;
-    // A search result offers "Neuer Start" next to "2. Start"; the trip shown is the "Ziel".
-    $('readout-start').textContent = t(searched ? 'newStart' : 'startHere');
+    // A search result offers "Neuer Start" next to "2. Start". Arriving, the set place is
+    // where trips end, so the button makes the place the new destination.
+    const arrive = state.direction === 'arrive' && !state.others.length;
+    $('readout-start').textContent = t(
+      searched ? (arrive ? 'newGoal' : 'newStart') : arrive ? 'goalHere' : 'startHere',
+    );
     for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
     // Details (the stops) once a trip with stops has come.
     detailsBtn.hidden = true;
@@ -300,8 +304,29 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     hideReadout();
     removeWhich = i;
     const mark = state.others.length ? `<i class="p${i + 1}"></i>` : '';
-    showCard(`${mark}<b>${i ? t('secondPoint', { n: i + 1 }) : t('startPoint')}</b>`, true);
+    const goal = state.direction === 'arrive' && !state.others.length;
+    showCard(
+      `${mark}<b>${i ? t('secondPoint', { n: i + 1 }) : t(goal ? 'goalPoint' : 'startPoint')}</b>`,
+      true,
+    );
     deps.onCard();
+    // Its name (the nearest stop) follows from the worker.
+    const p = i ? state.others[i - 1] : state.origin;
+    if (!p) return;
+    nameId++;
+    send({ type: 'placeName', id: nameId, lat: p.lat, lon: p.lon });
+  }
+
+  let nameId = 0;
+  /** The start card's place name arrived: "Startpunkt · bei S Südkreuz". */
+  function onPlaceName(m: { id: number; name: string | null }) {
+    if (m.id !== nameId || !m.name || readout.hidden || removeBtn.hidden) return;
+    const b = readoutText.querySelector('b');
+    if (!b || readoutText.querySelector('.place-name')) return;
+    const s = document.createElement('small');
+    s.className = 'place-name';
+    s.textContent = t('pointNear', { name: m.name });
+    b.after(s);
   }
 
   function hideReadout() {
@@ -378,7 +403,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     for (const el of readout.querySelectorAll<HTMLElement>('.trip-leave[data-leave]')) {
       const leave = Number(el.dataset.leave);
       el.textContent = leaveText(leave, now);
-      if (leave >= now - 30 || tripAt.askedLater) continue;
+      // Arriving, the connection is the last one by the time: no later one to ask for.
+      if (leave >= now - 30 || tripAt.askedLater || state.direction === 'arrive') continue;
       // The timetable file covers departures within the chosen hour: past it, the card
       // only says the connection is gone (choosing the new hour shows the next ones).
       if (now >= (state.when.hour + 1) * 3600) {
@@ -407,6 +433,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     el.innerHTML = tripHtml(m, {
       direction: home ? 'arrive' : state.direction,
       now: clockNow(state.when),
+      place: spot?.title || undefined,
       changeNote: deps.changeNote,
     });
     if (open) el.querySelector('details')!.open = true;
@@ -530,6 +557,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   return {
     tapAt,
     placeSpot,
+    onPlaceName,
     /** The map's layers are in: a trip that came before them is drawn now. */
     onMapReady: () => drawn && setTrip(drawn),
     showStartCard,
