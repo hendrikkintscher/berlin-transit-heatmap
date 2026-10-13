@@ -22,7 +22,7 @@ import { icon } from './icons';
 import { MAX_NAME, MAX_STARTS, type Point } from './url';
 import { liveStatus, liveText, type Board } from './live';
 import { dataBase } from './region';
-import { clockNow, isDate } from './when';
+import { clockNow, isDate, rollsOn } from './when';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
 export interface Spot extends Point {
@@ -452,9 +452,9 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       el.textContent = leaveText(leave, now);
       // Arriving, the connection is the last one by the time: no later one to ask for.
       if (leave >= now - 30 || tripAt.askedLater || state.direction === 'arrive') continue;
-      // The timetable file covers departures within the chosen hour: past it, the card
-      // only says the connection is gone (choosing the new hour shows the next ones).
-      if (now >= (state.when.hour + 1) * 3600) {
+      // The next one comes from the loaded file, past the full hour too; once the file
+      // no longer covers it, the card only says the connection is gone.
+      if (!rollsOn(state.when, now)) {
         el.textContent = t('tripMissed');
         continue;
       }

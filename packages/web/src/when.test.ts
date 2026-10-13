@@ -7,6 +7,7 @@ import {
   eveningWindow,
   isNow,
   laterWhen,
+  rollsOn,
   isPastHour,
   catchUp,
   whenParam,
@@ -191,5 +192,17 @@ describe('laterWhen', () => {
       hour: 0,
       minute: 15,
     });
+  });
+});
+
+describe('rollsOn', () => {
+  const when = { day: '20261013', hour: 17 };
+  it('rolls on within the chosen hour and the one after it', () => {
+    expect(rollsOn(when, 17 * 3600 + 59 * 60)).toBe(true);
+    expect(rollsOn(when, 18 * 3600)).toBe(true);
+    expect(rollsOn(when, 18 * 3600 + 59 * 60)).toBe(true);
+  });
+  it('stops once the loaded file no longer covers the ride', () => {
+    expect(rollsOn(when, 19 * 3600)).toBe(false);
   });
 });

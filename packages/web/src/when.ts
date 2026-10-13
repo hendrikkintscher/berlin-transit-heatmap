@@ -226,6 +226,13 @@ export function clockNow(when: When, now = new Date()): number | null {
   return w.hour * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
 }
 
+/**
+ * An hour's timetable file also holds the trips of the next two hours. A missed connection
+ * rolls on to the next one from it while the clock is within the hour after the chosen one
+ * (the second leaves room for the ride itself); past that, the hour has to be chosen anew.
+ */
+export const rollsOn = (when: When, now: number) => now < (when.hour + 2) * 3600;
+
 /** "+15", "+30", "+60" in the time panel: that many minutes from now in Berlin, exact. */
 export function laterWhen(minutes: number, now = new Date()): When {
   const at = new Date(now.getTime() + minutes * 60_000);
