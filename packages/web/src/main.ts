@@ -35,7 +35,6 @@ import {
   OUTLINE_LAYERS,
   OUTLINES_SOURCE,
   styleOutlines,
-  thinRoutes,
   ROUTE_LAYERS,
   ROUTES_SOURCE,
   STATIONS_LAYER,
@@ -87,18 +86,6 @@ secondBtn.addEventListener('click', () => search.open('another'));
 const state = createState();
 const link = readLink(location.search, { ...state, to: null });
 Object.assign(state, link, { window: windowName(link.when) });
-/**
- * Two looks for the default view, to compare on a phone before one becomes the default
- * (C9): "rings", crisp labelled 15/30/45/60 rings over thinner lines; "faint", the colours
- * on at 40 % unless the link says which layers.
- */
-const look = ((v) => (v === 'rings' || v === 'faint' ? v : null))(
-  new URLSearchParams(location.search).get('look'),
-);
-if (look === 'faint' && !new URLSearchParams(location.search).has('layers')) {
-  state.heat = true;
-  state.opacity = 40;
-}
 /** A point on the map's area (Berlin, Potsdam and the commuter belt). */
 function inArea({ lat, lon }: Point) {
   const [w, s, e, n] = SEARCH_BBOX;
@@ -484,8 +471,7 @@ function writeUrl() {
     // Keep an explicit ?lang= so a shared English link stays English.
     urlLang && urlLang === lang() ? urlLang : null,
   );
-  const full = look ? [q, `look=${look}`].filter(Boolean).join('&') : q;
-  replaceUrl(full ? `?${full}` : location.pathname);
+  replaceUrl(q ? `?${q}` : location.pathname);
 }
 
 // ---------- map ----------
@@ -956,9 +942,7 @@ function showHeat() {
     r?.home ? 'home' : r?.living ? 'living' : r?.extraBase !== undefined ? 'extra' : 'time',
     heat,
     t('min'),
-    look === 'rings',
   );
-  if (look === 'rings') thinRoutes(map, true);
 }
 
 // A tap on the map that only closes the search or a chip panel should not also set a

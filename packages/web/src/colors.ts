@@ -242,8 +242,9 @@ export function homeLut(): Uint8Array {
 }
 
 /**
- * Outlines without the colour fill: one every 10 minutes, soft and solid, in a single hue from
- * near-black purple at the start to a pale lilac far out, so the order reads at a glance.
+ * The time scale without the colour fill, in a single hue from near-black purple at the start
+ * to a pale lilac far out, so the order reads at a glance; the rings at 15, 30, 45 and 60 min
+ * take their colours from it (map-layers.ts).
  */
 export const OUTLINE_STEP_MINUTES = [10, 20, 30, 40, 50, 60];
 export const OUTLINE_STEP_COLORS = [

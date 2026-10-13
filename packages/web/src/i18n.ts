@@ -190,7 +190,7 @@ const de = {
   stepFree: 'Barrierefrei',
   stepFreeHint:
     'Für Rollstuhl, Kinderwagen und Koffer: nur Bahnsteige mit Aufzug oder Rampe und Fahrzeuge, die als barrierefrei markiert sind',
-  isoHint: 'Eine Linie alle 10 Minuten, kräftiger bei 30 und 60',
+  isoHint: 'Ringe bei 15, 30, 45 und 60 Minuten',
   isoHintHeat: 'Mit Farben: eine Linie alle 5 Minuten, beschriftet bei 15, 30 und 45',
   opacity: 'Deckkraft der Farben',
   opacityHint: 'Weniger, um Straßennamen besser zu sehen',
@@ -489,7 +489,7 @@ const en: Record<Key, string> = {
   stepFree: 'Accessible',
   stepFreeHint:
     'For wheelchairs, prams and suitcases: only platforms with a lift or ramp, and vehicles marked accessible',
-  isoHint: 'A line every 10 minutes, bolder at 30 and 60',
+  isoHint: 'Rings at 15, 30, 45 and 60 minutes',
   isoHintHeat: 'With colours: a line every 5 minutes, labelled at 15, 30 and 45',
   opacity: 'Colour opacity',
   opacityHint: 'Lower it to read street names',
