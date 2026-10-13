@@ -39,7 +39,34 @@ if (!repo || !token) throw new Error('GITHUB_REPOSITORY and GH_TOKEN must be set
 const API = `https://api.github.com/repos/${repo}`;
 let calls = 0;
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+/** A dropped connection or a server error (5xx): worth trying again. */
+const transient = (e) => !(e instanceof HttpError) || e.status >= 500;
+class HttpError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/**
+ * One API call. Calls that can safely be repeated (GET, PATCH, DELETE) are tried up to
+ * three times on a dropped connection or a server error; POSTs are not (they would create
+ * twice), uploads retry on their own (see upload).
+ */
 async function gh(method, url, body, headers = {}) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await ghOnce(method, url, body, headers);
+    } catch (e) {
+      if (method === 'POST' || attempt >= 3 || !transient(e)) throw e;
+      console.log(`${method} ${url} failed (${e.message.slice(0, 120)}), trying again`);
+      await sleep(2000 * attempt);
+    }
+  }
+}
+
+async function ghOnce(method, url, body, headers) {
   calls++;
   const res = await fetch(url.startsWith('http') ? url : API + url, {
     method,
@@ -53,7 +80,8 @@ async function gh(method, url, body, headers = {}) {
     body: body instanceof Uint8Array ? body : body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 404 && method === 'GET') return null;
-  if (!res.ok) throw new Error(`${method} ${url}: ${res.status} ${await res.text()}`);
+  if (!res.ok)
+    throw new HttpError(`${method} ${url}: ${res.status} ${await res.text()}`, res.status);
   return res.status === 204 ? null : res.json();
 }
 
@@ -75,13 +103,31 @@ async function assetsOf(release) {
   }
 }
 
-const upload = (release, name, data) =>
-  gh(
-    'POST',
-    `https://uploads.github.com/repos/${repo}/releases/${release.id}/assets?name=${encodeURIComponent(name)}`,
-    data,
-    { 'content-type': 'application/octet-stream' },
-  );
+/**
+ * Uploads a file as an asset, up to three tries: a connection that drops mid-upload (it
+ * happened at 39 MB in) can leave a half-uploaded asset under the name, which is deleted
+ * before the next try.
+ */
+async function upload(release, name, data) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await ghOnce(
+        'POST',
+        `https://uploads.github.com/repos/${repo}/releases/${release.id}/assets?name=${encodeURIComponent(name)}`,
+        data,
+        { 'content-type': 'application/octet-stream' },
+      );
+    } catch (e) {
+      // 422: the name is taken, by a half-uploaded asset from the failed try.
+      const retry = transient(e) || (attempt > 1 && e.status === 422);
+      if (attempt >= 3 || !retry) throw e;
+      console.log(`Upload of ${name} failed (${e.message.slice(0, 120)}), trying again`);
+      await sleep(3000 * attempt);
+      const half = (await assetsOf(release)).find((a) => a.name === name);
+      if (half) await drop(half);
+    }
+  }
+}
 /** An asset's bytes (the API answers with a redirect to the file). */
 async function download(asset) {
   calls++;
@@ -103,6 +149,8 @@ const local = new Map(files.map((f) => [f, sha(readFileSync(join(args.dir, f)))]
 
 // ---------- what is published ----------
 let release = await gh('GET', `/releases/tags/${args.tag}`);
+// Without the tag's release an "-old-" one may hold the last files: then nothing is removed.
+const tagged = Boolean(release);
 if (!release) {
   release = await gh('POST', '/releases', {
     tag_name: args.tag,
@@ -111,16 +159,29 @@ if (!release) {
     make_latest: 'false',
   });
 }
+// Fresh or old releases an earlier broken run left behind (best effort; they are unused).
+const leftovers = tagged
+  ? ((await gh('GET', '/releases?per_page=100')) ?? []).filter((r) =>
+      new RegExp(`^${args.tag}-(next|old)-\\d+$`).test(r.tag_name),
+    )
+  : [];
+for (const r of leftovers) {
+  if (args['dry-run']) break;
+  console.log(`Removing leftover release ${r.tag_name}`);
+  await gh('DELETE', `/releases/${r.id}`).catch((e) => console.log(`(${e.message})`));
+  await gh('DELETE', `/git/refs/tags/${r.tag_name}`).catch(() => undefined);
+}
 let assets = await assetsOf(release);
 // A broken earlier run: put X back from X.next (or X.old) first.
-for (const r of repairs(assets.map((a) => a.name))) {
+const repaired = repairs(assets.map((a) => a.name));
+for (const r of repaired) {
   console.log(`Repairing ${r.to} from ${r.from}`);
   await rename(
     assets.find((a) => a.name === r.from),
     r.to,
   );
 }
-if (calls > 2) assets = await assetsOf(release);
+if (repaired.length) assets = await assetsOf(release);
 const byName = new Map(assets.map((a) => [a.name, a]));
 let published = new Map();
 if (byName.has(MANIFEST)) {
@@ -198,15 +259,22 @@ if (p.mode === 'inplace') {
     body: args.notes,
     make_latest: 'false',
   });
-  for (const name of local.keys()) {
-    if (keptOnly.has(name)) {
-      // Not rebuilt: copy the published file over.
-      await upload(fresh, name, await download(byName.get(name)));
-    } else {
-      await upload(fresh, name, data(name));
+  try {
+    for (const name of local.keys()) {
+      if (keptOnly.has(name)) {
+        // Not rebuilt: copy the published file over.
+        await upload(fresh, name, await download(byName.get(name)));
+      } else {
+        await upload(fresh, name, data(name));
+      }
     }
+    await upload(fresh, MANIFEST, manifest);
+  } catch (e) {
+    // The published release is untouched: the half-filled fresh one goes, with its tag.
+    await gh('DELETE', `/releases/${fresh.id}`).catch(() => undefined);
+    await gh('DELETE', `/git/refs/tags/${args.tag}-next-${stamp}`).catch(() => undefined);
+    throw e;
   }
-  await upload(fresh, MANIFEST, manifest);
   console.log(`Swapping ${args.tag} to the fresh release`);
   await gh('PATCH', `/releases/${release.id}`, { tag_name: `${args.tag}-old-${stamp}` });
   try {
