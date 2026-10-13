@@ -1,4 +1,4 @@
-# Roadmap V1.1
+# Roadmap V1.2
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.0** (through PR #272). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
@@ -38,6 +38,18 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.
 Hendrik's wishes given without a pick land here: one dated line each, in his words. They are moved to their milestone in the next roadmap version.
 
 _Empty._
+
+## 0.9 App version (follow-ups)
+
+Two notes from step 0.9.0, placed first because every later step ships a version and a tag.
+
+- **0.9.1 Automatic tag per version** (from step 0.9.0, 2026-10-13 12:47: "threads cannot push git tags, so tagging every step needs Hendrik by hand; idea: a small workflow that tags each merge to main whenever the version in package.json changes").
+  - a. A GitHub Actions workflow on push to main reads the version in package.json and creates the tag `vX.Y.Z` when it does not exist yet.
+  - b. Nothing happens when the version is unchanged; the deploy is not slowed.
+  - c. Hendrik's manual tagging step is dropped from the step routine.
+- **0.9.2 Version line in German and English** (from step 0.9.0, 2026-10-13 12:47: "the version line is the same in German and English; the short commit shows only as a tooltip, which can't be seen on a phone").
+  - a. The version line in Mehr gets German and English wording.
+  - b. The short commit is shown in visible text instead of only as a tooltip.
 
 ## 0.10 Trip card and changes
 
@@ -106,5 +118,6 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.2** (2026-10-13): the two Inbox notes from step 0.9.0 placed as 0.9.1 Automatic tag per version and 0.9.2 Version line in German and English; milestone 0.9 reopened for them, next in order.
 - **V1.1** (2026-10-13): 0.9.0 App shows its version done (#272, tag `v0.9.0`); milestone 0.9 closed. From here every step's PR bumps the version in package.json and tags its merge.
 - **V1.0** (2026-10-13): versioning introduced for the app and the roadmap; milestones renamed to app versions 0.9–1.0 with steps and substeps; the four Inbox notes of 2026-10-13 placed (0.10.0, 0.12, 0.13.1, 0.13.2); Clear trips (old milestone 1) done as 0.8.0.
