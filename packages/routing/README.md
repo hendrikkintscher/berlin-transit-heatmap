@@ -29,7 +29,8 @@ consume it directly with no build step.
   stop's value is the minimum over departures of `arrival - departure`, i.e. the shortest trip
   that starts in the window without waiting at the origin.
 - **Walking** follows the footpath network when one is passed (`walk` option, see below) at
-  4.8 km/h: from the origin to stops within `maxInitialWalkSeconds` (default 900), and from stops
+  4 km/h unless the caller sets another speed (the app uses the walking speed setting, 5 km/h
+  by default): from the origin to stops within `maxInitialWalkSeconds` (default 900), and from stops
   to cell centres within `maxFinalWalkSeconds` (default 900). Without a network, or for points
   more than 300 m from it, walking is a straight line at 1.2 m/s. Transfers between vehicles use
   the timetable's footpaths (never two in a row), which timetable-build also measures on the

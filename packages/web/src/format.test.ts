@@ -7,11 +7,11 @@ import {
   gridSeconds,
   pillText,
   shortStop,
-  stopName,
   whenChipText,
   whenText,
 } from './format';
 import { leaveOffset, upcomingDays } from './when';
+import { stopName } from './stop-name';
 import { setLang } from './i18n';
 
 describe('format', () => {

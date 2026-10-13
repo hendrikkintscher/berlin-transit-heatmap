@@ -9,6 +9,7 @@ import {
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, Point } from 'geojson';
 import type { StationProps } from './protocol';
+import { stationName } from './stop-name';
 
 /** Desert grid cell size; coarser than the heatmap, the shading is a broad-brush view. */
 export const DESERT_CELL_M = 100;
@@ -40,17 +41,6 @@ export function departuresPerHour(tt: PreparedTimetable): Float32Array {
   const hours = (tt.windowEnd - tt.windowStart) / 3600;
   for (let s = 0; s < counts.length; s++) counts[s] /= hours;
   return counts;
-}
-
-/** "S+U Alexanderplatz Bhf (Berlin)" -> "S+U Alexanderplatz Bhf"; drops "[...]" notes too. */
-export function stationName(name: string): string {
-  return (
-    name
-      .replace(/\s*\[[^\]]*\]/g, '')
-      .replace(/\s*\(Berlin\)$/, '')
-      .replace(/^Berlin,\s*/, '')
-      .trim() || name
-  );
 }
 
 /**

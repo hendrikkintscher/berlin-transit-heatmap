@@ -2,7 +2,8 @@
 // and walking minutes and the stops along the way.
 
 import { MODE_COLORS } from './colors';
-import { escapeHtml, eveningClock, shortStop, stopName } from './format';
+import { escapeHtml, eveningClock, shortStop } from './format';
+import { stopName } from './stop-name';
 import { t } from './i18n';
 import type { FromWorker } from './protocol';
 import type { Direction } from './when';

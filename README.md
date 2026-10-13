@@ -1,17 +1,15 @@
 # Berlin transit heatmap
 
-How long does it take to get from one point in Berlin to everywhere else by public transport? Pick a start point and the map colours the city by travel time, with the finest bands between 20 and 50 minutes, and shows which lines the fastest trips rely on.
+How long does it take to get from one point in Berlin to everywhere else by public transport? Pick a start point and the map shows the travel time to every spot, with time lines and optional colour bands, and a tap anywhere gives the minutes and the connection there. The app is live as "Wohin jetzt? · Öffis mit einem Tap" at https://hendrikkintscher.github.io/berlin-transit-heatmap/.
 
-There are two modes:
+Times are for leaving now or at a chosen hour of today, the coming week or a typical weekday or weekend, or for arriving by an hour. Travel times include walking to the first stop and from the last stop along real streets and paths. Everything runs in the browser, with no server to maintain.
 
-- **Day:** the fastest trip departing between 10:00 and 12:00.
-- **Night:** the fastest trip departing between 02:00 and 04:00.
+## Packages
 
-Travel times include walking to the first stop and from the last stop. Everything runs in the browser, with no server to maintain, so the routing core can later be reused in a mobile app.
-
-## Status
-
-Working towards an alpha. Done so far: the GTFS refresh and the timetable build (`packages/timetable-build`). The routing core (`packages/routing`) and the web app (`packages/web`) come next.
+- [`packages/timetable-build`](packages/timetable-build/README.md): turns the GTFS feed and OpenStreetMap footpaths into the binary hourly timetables and the walking network.
+- [`packages/routing`](packages/routing/README.md): the travel-time engine (range-RAPTOR, footpath walking, heatmap grid). Pure TypeScript, runs in a Web Worker and in Node.
+- [`packages/web`](packages/web/README.md): the app (Vite, MapLibre, installable as a PWA).
+- Region settings (area, names, data sources) live in [`packages/routing/src/regions.ts`](packages/routing/src/regions.ts).
 
 ## Development
 

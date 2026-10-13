@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { loadTimetable, type Timetable } from '@berlin-transit-heatmap/routing';
 import { desertThresholds } from './when';
-import { accessGrid, departuresPerHour, desertLevel, stationName, stations } from './layers';
+import { accessGrid, departuresPerHour, desertLevel, stations } from './layers';
+import { stationName } from './stop-name';
 
 // Two platforms of one station (A1, A2 under parent A) and a stop B 1 km east.
 const tt = loadTimetable({

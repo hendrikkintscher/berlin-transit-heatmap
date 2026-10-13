@@ -1,6 +1,7 @@
 # web
 
-The Berlin Transit Heatmap app: Vite + TypeScript + MapLibre GL JS, installable as a PWA.
+The app, "Wohin jetzt? · Öffis mit einem Tap": Vite + TypeScript + MapLibre GL JS,
+installable as a PWA.
 
 ```sh
 pnpm --dir packages/web dev       # http://localhost:5173
@@ -8,28 +9,28 @@ pnpm --dir packages/web test
 pnpm --dir packages/web build     # -> packages/web/dist
 ```
 
-- Timetables are fetched from `./data/timetable-{weekday,weekend}-HH.json` (one file per departure hour, chosen with the clock button) (copied in by `deploy-pages.yml`
-  from the `timetable-latest` release). For local testing, drop the release files into
-  `packages/web/public/data/`.
-- Routing runs in a Web Worker (`src/worker.ts`) using `@berlin-transit-heatmap/routing`.
-- The worker computes a 50 m grid, then paints it into an RGBA image at 25 m pixels (travel
-  times interpolated between cells before colouring, rows resampled to Web Mercator). For looks
-  the image is softened (`src/soften.ts`): a light blur, a gentle noise wobble that breaks up the
-  walking circles around stops, and feathered band edges. Tap minutes use the raw grid. The page
-  shows it through a MapLibre canvas source, and reads tap minutes from the grid.
-- Colour bands (`src/colors.ts`): 5 min up to 20, 2.5 min from 20 to 50, then 50–55, 55–60,
-  60–75, 75–90, 90–120, 120+. Hues run green, yellow, red, purple, navy.
-- The "Lines" overlay shows the transit hops the fastest trips rely on (`routeUsage`), line width
-  by the share of the reachable map behind each hop, coloured by mode.
-- `?from=lat,lon&w=night&routes=0&lang=en` in the URL restores a start point, window, the Lines
-  toggle and the language.
-- Interface text lives in `src/i18n.ts`, German by default with English. Static text in
+- **Data.** The region's files come from `./data/<region>/` (copied in by `deploy-pages.yml` from
+  the `timetable-latest` release): one binary timetable per hour (`timetable-weekday-HH.bin`,
+  `timetable-weekend-HH.bin`, and `timetable-YYYYMMDD-HH.bin` for the coming week), `walk.bin`
+  (footpaths), `lines.bin` (the lines' courses), `streets.json` (search), `changes.json` and
+  `stop-ids.json`. URLs carry a `?v=` hash from the deploy (`data-url.ts`), so the service
+  worker (`sw.js`) can keep them. For local testing, drop the release files into
+  `packages/web/public/data/berlin/`.
+- **Start.** `boot.ts` starts the worker and, with a start in the link, its first timetable
+  before the app's code has loaded; then it loads `main.ts`.
+- **Worker** (`worker.ts` and `worker-*.ts`): timetables, the routing pass per start on a 50 m
+  grid, the colour image (`paint.ts`, `soften.ts`) and the time lines (`contours.ts`), trips on
+  tap, and the home and where-to-live maps. The footpaths and the lines' courses load in the
+  background once the first map is on screen.
+- **App** (`main.ts`): the map, start markers and results. In their own modules: the search
+  bar (`search-bar.ts`, `search.ts`, `search-local.ts`), favourite places (`fav-places.ts`,
+  `favourites.ts`), the home and where-to-live maps (`special-maps.ts`), the time panel
+  (`when-sheet.ts`, `when.ts`), the top chips (`chips.ts`), the menu (`menu.ts`), taps and the
+  trip card (`tap.ts`, `trip-card.ts`), meeting points (`meet.ts`), today's changes
+  (`changes.ts`) and live delays (`live.ts`).
+- **Link.** `url.ts` reads and writes every link parameter (start, more starts, destination,
+  time, measure, direction, comparison, travel mode, layers, language); its tests list them.
+- **Text.** Interface text lives in `i18n.ts`, German by default with English. Static text in
   `index.html` names its string with `data-t`, `data-t-html`, `data-t-label` or
-  `data-t-placeholder`. The menu (burger button) holds Lines, the language switch and About.
-- Map layers (`src/layers.ts`, in the menu, `?layers=freq,desert`): stop frequency (departures per
-  hour per station) and transit deserts (walk to a platform + half its gap between departures, on a
-  100 m grid; thresholds in `DESERT_THRESHOLDS`). The worker computes both per window on first use.
-- Meeting point: `?with=lat,lon` adds a second start; the worker routes both and the map shows
-  the slower trip per cell. Favourite places (`src/favourites.ts`) live in localStorage, with
-  Takeout/CSV/JSON import and a weighted-average score.
-- Address search (`src/search.ts`) only suggests places inside the heatmap area (`DEFAULT_BBOX`).
+  `data-t-placeholder`.
+- **Region.** Area, names and data sources come from `packages/routing/src/regions.ts`.
