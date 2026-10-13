@@ -247,6 +247,13 @@ body.no-legend .legend {
   color: var(--muted);
   margin-top: 2px;
 }
+/* "Südkreuz → Gesundbrunnen" on one line, clear of the ✕. */
+#readout .trip-ends {
+  margin: 0 36px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 #readout-start {
   flex: none;
   white-space: nowrap;

@@ -373,6 +373,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       backgroundOk = true;
       void loadWalk();
       if (lastTimetable) void loadLines(lastTimetable);
+    } else if (msg.type === 'placeName') {
+      const tt = lastTimetable;
+      post({ type: 'placeName', id: msg.id, name: tt && nearestStopName(tt, msg.lat, msg.lon) });
     } else if (msg.type === 'stations') {
       const tt = await ensure(msg.window);
       const list = stations(tt, departuresPerHour(tt)).features.map((f) => ({
@@ -1002,7 +1005,7 @@ function trip(
   start: [number, number];
   end: [number, number];
   seconds?: number;
-  /** Departing: when to leave the start and when the trip arrives (seconds of the day). */
+  /** When to leave the start and when the trip arrives (seconds of the day). */
   leave?: number;
   arrive?: number;
   /** Departing: the first vehicle, for its live status. */
@@ -1014,34 +1017,68 @@ function trip(
   const o = r.result.origin!;
   const here: [number, number] = [at.lon, at.lat];
   const point: [number, number] = [o.lon, o.lat];
-  if (last.direction === 'depart') {
-    // Leaving from `from`, the trip arrives after the place's time (waiting included);
-    // the walk to the first vehicle starts just in time for it.
-    const total = seconds ?? cellSeconds(r.best, at);
-    const arrive = last.from + total;
-    let leave = last.from;
-    let board: { stop: number; line: string; at: number } | undefined;
-    const first = j.legs.findIndex((l) => l.type === 'ride');
-    const ride = j.legs[first];
-    if (ride?.type === 'ride') {
-      const walkTo = j.legs
-        .slice(0, first)
-        .reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
-      const dep = departureAt(last.tt, ride.route, ride.fromPos, last.from + walkTo);
-      if (dep !== null) {
-        leave = Math.max(last.from, dep - walkTo);
-        board = { stop: ride.from, line: ride.name, at: dep };
-      }
+  // Leaving from `from`, the trip arrives after the place's time (waiting included); the
+  // walk to the first vehicle starts just in time for it. Arriving, the same holds on the
+  // reversed timetable (its times are the real ones negated), from the destination back.
+  const total = seconds ?? cellSeconds(r.best, at);
+  let leave = last.from;
+  let board: { stop: number; line: string; at: number } | undefined;
+  const first = j.legs.findIndex((l) => l.type === 'ride');
+  const ride = j.legs[first];
+  if (ride?.type === 'ride') {
+    const walkTo = j.legs
+      .slice(0, first)
+      .reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
+    const dep = departureAt(last.tt, ride.route, ride.fromPos, last.from + walkTo);
+    if (dep !== null) {
+      leave = Math.max(last.from, dep - walkTo);
+      board = { stop: ride.from, line: ride.name, at: dep };
     }
-    return { journey: j, start: point, end: here, seconds, leave, arrive, board };
   }
+  if (last.direction === 'depart')
+    return {
+      journey: j,
+      start: point,
+      end: here,
+      seconds,
+      leave,
+      arrive: last.from + total,
+      board,
+    };
   // Arriving: the tree runs backwards in time from the destination, so flip it.
   const legs = [...j.legs]
     .reverse()
     .map((l) =>
       l.type === 'ride' ? { ...l, from: l.to, to: l.from, stops: [...l.stops].reverse() } : l,
     );
-  return { journey: { ...j, legs }, start: here, end: point, seconds };
+  return {
+    journey: { ...j, legs },
+    start: here,
+    end: point,
+    seconds,
+    leave: -(last.from + total),
+    arrive: -leave,
+  };
+}
+
+/** Places further than this from any stop go unnamed. */
+const NAME_REACH_M = 800;
+/** The nearest stop's name, as the card shows it ("S Südkreuz"), or null. */
+function nearestStopName(tt: PreparedTimetable, lat: number, lon: number): string | null {
+  let best = -1;
+  let bestM = NAME_REACH_M;
+  for (let s = 0; s < tt.stopCount; s++) {
+    // A cheap box first: about 800 m each way.
+    if (Math.abs(tt.stopLat[s]! - lat) > 0.0075 || Math.abs(tt.stopLon[s]! - lon) > 0.012) continue;
+    const m = distanceM(lat, lon, tt.stopLat[s]!, tt.stopLon[s]!);
+    if (m < bestM) {
+      bestM = m;
+      best = s;
+    }
+  }
+  return best < 0
+    ? null
+    : tt.stops[best]!.name.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, '');
 }
 
 function tripMessage(
@@ -1124,6 +1161,10 @@ function tripMessage(
       ...(f.seconds !== undefined ? { minutes: Math.round(f.seconds / 60) } : {}),
       ...(f.leave !== undefined ? { leave: f.leave, arrive: f.arrive } : {}),
       ...(f.board ? { board: f.board } : {}),
+      ends: [
+        nearestStopName(tt, f.start[1], f.start[0]),
+        nearestStopName(tt, f.end[1], f.end[0]),
+      ] as [string | null, string | null],
     };
   });
   return {

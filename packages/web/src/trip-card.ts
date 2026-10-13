@@ -13,6 +13,8 @@ export interface TripContext {
   direction: Direction;
   /** Seconds since midnight now, when the map is for today; null for another day. */
   now: number | null;
+  /** The tapped place's own name (a search result), used for its end of the trip. */
+  place?: string;
   /** "U2: Ersatzverkehr Pankow – Alexanderplatz" for a ride whose line runs differently. */
   changeNote?: (ride: { name: string; mode: string }) => string | null;
 }
@@ -74,6 +76,13 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
         : j.minutes !== undefined
           ? `<span class="trip-now">${mark}${t(c.direction === 'depart' ? 'tripNext' : 'tripLast', { n: j.minutes })}</span>`
           : '';
+    // Where from and where to: the nearest stops (the place's own name when it has one).
+    const ends = (j.ends ?? [null, null]).map((n) => n && shortStop(n));
+    if (c.place) ends[c.direction === 'depart' ? 1 : 0] = c.place;
+    const named =
+      !two && ends[0] && ends[1] && ends[0] !== ends[1]
+        ? `<small class="trip-ends">${escapeHtml(ends[0])} → ${escapeHtml(ends[1]!)}</small>`
+        : '';
     // Stops where you get on, change and get off.
     const stops = rides.length
       ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
@@ -81,6 +90,7 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
     // What runs differently today on the lines of this connection.
     const notes = [...new Set(rides.map((l) => c.changeNote?.(l)).filter(Boolean))];
     return (
+      named +
       own +
       `<span class="trip-sum">${own ? '' : mark}${badges}</span>` +
       // Changes and walking always show; the stops only under Details (#readout.details).
