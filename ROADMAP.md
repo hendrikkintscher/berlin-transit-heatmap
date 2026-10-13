@@ -10,39 +10,35 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-12, live through PR #205. Build in this order, one step per PR:
+State on 2026-10-13, live through PR #205. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
-1. Shorter platform changes (group 6): built and merged (PR #184); not live yet; the 23:19 timetable build failed while uploading. The publish fix (PR #201) is merged, and the data goes live with the next timetable build.
-2. **Next:** No flicker when tapping another destination (group 6, from the Inbox)
-3. Ringbahn on the map follows the same course as in trips (group 7, from the Inbox)
-4. Colour scale: green up to 20 min, yellow from 25 (group 7, from the Inbox)
-5. "Bis wann heim?" limits of 1 h and 1 h 30 (group 6, from the Inbox)
-6. Smaller Wohnlage-Karte memory (B7, group 15)
-7. Typical timetable when offline (B8, group 15)
-8. Notice, search and favourites polish (C5–C8, group 15)
-9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-10. Default view readability: two variants to compare (C9, group 15)
-11. Named starts in meeting mode (D2, group 15)
+1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build (publish fix PR #201 merged).
+2. **Next:** No flicker when tapping another destination (group 6, Inbox)
+3. Small map fixes: the Ringbahn on the map follows the same course as in trips, colour scale green up to 20 min and yellow from 25, "Bis wann heim?" limits of 1 h and 1 h 30 (groups 6 and 7, Inbox; one PR or three)
+4. Trip card round (group 6): the card becomes a drawer with more connections when pulled up; tapping a connection opens the detailed view with the wait at each change; the card names the start and the destination; the destination marker stands out and transfer stops step back; "Hier starten" keeps the old start as the destination. Takes in the review's card findings (V1, U4, U8, U12) so the card is built once.
+5. Smaller Wohnlage-Karte memory (B7 + P9, group 15)
+6. Typical timetable when offline, cache-first data after a deploy (B8 + P3, group 15)
+7. Notice, search and favourites polish (C5–C8, group 15)
+8. Less walking on equal arrival (group 6, from the connection test)
+9. Default view readability: two variants to compare (C9, group 15; builds on the new colour scale; Hendrik picks one on a card)
+10. Named starts in meeting mode (D2, group 15)
+11. Broader CI checks and a sturdier timetable build (B9 + B10 + P10, group 15)
 12. Code health, no change in behaviour (E1, group 15)
 13. Smaller walking network file (P8, group 15)
+14. Showcase material: screenshots, sharepics and the comparison with existing maps, made once the app has settled (group 16)
+15. Declutter docs and threads: the docs-cleanup findings (K items, including the roadmap slimming K14–K19) and an archive pass over plan files and memory (group 17)
 
-From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
+The review track keeps running alongside on the items that don't touch the trip card or the main builder's files (U3, U2, V2+U11+V4, V3, U5–U13, V5–V13); the coordinator is consolidating the thread setup.
+
+**Not in this plan:** Android app and beta testing (Hendrik, 2026-10-13: "don't do android app and beta testing"); app store deployment (group 16), which needs Hendrik's own developer accounts; the region addresses and Oldenburg data (group 13), held until the domain and the timetable feed account are settled.
 
 **Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel (U1 done, U3 in progress) by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
 
-**Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
-
-**On the roadmap, not started** (Hendrik, 2026-10-12: "Only add to roadmap, don't start working on it"): trip drawer with more connections, and a detailed connection view (group 6). They wait until Hendrik picks them.
-
-**Added, not started** (Hendrik, 2026-10-12): Android and iOS app store deployment, and showcase material (group 16). Not in Up next until Hendrik picks them.
-
-**Held:** the region addresses (`/berlin/`, `/oldenburg/`) and the Oldenburg data (group 13), until the domain and the timetable feed account are settled.
-
-**Blocked until Hendrik agrees:** Beta testing readiness (group 14). The plan is written down there (packages A, B and C, plus the address choice); nothing starts until Hendrik explicitly agrees to a package and an address. **Postponed:** Android app (group 14). Hendrik, 2026-10-12: not starting it yet or any time soon; it stays unstarted until he picks it up again.
+**Not planned (Hendrik, 2026-10-13):** Beta testing readiness (group 14). Its plan stays written down there (packages A, B and C, plus the address choice) but is not built. **Not planned either:** Android app (group 14).
 
 General rule (Hendrik, 2026-10-12): instructions go into the roadmap only, through the Inbox above. The roadmap agents find them there and rearrange the roadmap to fit them in; the editor (or, for group 17, the Review negotiator) hands an item to its builder only when it judges it the next thing to do. Builders take work only from their editor or negotiator.
 
-Working rule (Hendrik, 2026-10-12): once the queued steps are done, he picks each next step himself; the editor confirms the pick to the builder. Important decisions on the way go to Hendrik as multiple choice.
+Working rule (Hendrik, 2026-10-13, replacing the earlier "Hendrik picks each next step"): the roadmap agents take the best decisions themselves and work through everything noted; only a fork that changes his goal or something he will clearly see goes to him as multiple choice, while work continues on the recommended option.
 
 **Not planned** (Hendrik, 2026-10-12): these were offered as next steps and set aside. They stay listed in archive/plan/suggestions-2.md and are not built unless Hendrik brings them back.
 
@@ -136,11 +132,11 @@ Parked by Hendrik on 2026-10-12. From the connection test, finding 5. When two t
 
 ### Trip drawer with more connections
 
-Hendrik, 2026-10-12 (roadmap only, not to be started until he picks it): "instead of the box showing the connection, we have a drawer instead, when drawn upwards we see more connections, rearrange the buttons on the connection box/drawer". The trip card becomes a drawer at the bottom: collapsed it shows the connection as today, pulled up it lists further connections (later departures or alternatives), and its buttons are rearranged for the drawer. Builds on trip card B (PR #174).
+Hendrik, 2026-10-12 (queued in the trip card round since his 2026-10-13 plan instruction): "instead of the box showing the connection, we have a drawer instead, when drawn upwards we see more connections, rearrange the buttons on the connection box/drawer". The trip card becomes a drawer at the bottom: collapsed it shows the connection as today, pulled up it lists further connections (later departures or alternatives), and its buttons are rearranged for the drawer. Builds on trip card B (PR #174).
 
 ### Detailed connection view
 
-Hendrik, 2026-10-12 (roadmap only, not to be started until he picks it): "when tapping on a connection, we get a more detailed description of the connection: wait time at stops in between etc." Tapping a connection opens a detailed view: each leg with its stops, times, the wait at each change, and walking minutes. Pairs with the trip drawer and with real arrival times at stops.
+Hendrik, 2026-10-12 (queued in the trip card round since his 2026-10-13 plan instruction): "when tapping on a connection, we get a more detailed description of the connection: wait time at stops in between etc." Tapping a connection opens a detailed view: each leg with its stops, times, the wait at each change, and walking minutes. Pairs with the trip drawer and with real arrival times at stops.
 
 ### "Bis wann heim?" limits of 1 h and 1 h 30
 
@@ -355,7 +351,7 @@ From the code review (plan/reviews/code-runtime.md): a format change for walk.bi
 Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existing travel-time maps and the "why not Google Maps" sharepic were closed. Both are not started and wait until Hendrik picks them.
 
 - **Android and iOS app store deployment**: publish the app in Google Play and the Apple App Store. For Android, the options and ways to ship in group 14 apply (TWA first, then Capacitor if needed). For iOS, a wrapper such as Capacitor would be needed. Apple requires a paid developer account (99 USD a year) and app review. Group 14's "postponed" note still stands until Hendrik starts this step.
-- **Showcase material**: material that presents the app, such as screenshots, the sharepics (see the sharepic notes in project memory) and a comparison with existing travel-time maps. Scope is set when Hendrik picks the step.
+- **Showcase material**: material that presents the app, such as screenshots, the sharepics (see the sharepic notes in project memory) and a comparison with existing travel-time maps. Queued last before the declutter (2026-10-13), so screenshots match the finished app.
 
 ## 17. Review track
 
