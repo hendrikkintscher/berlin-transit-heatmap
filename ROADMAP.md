@@ -10,13 +10,13 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #218. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
+State on 2026-10-13, live through PR #220. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): Done (PR #184, live with the timetable build of 2026-10-13 00:58)
 2. No flicker when tapping another destination (group 6, Inbox): Done (PR #213)
 3. Small map fixes: Ringbahn course, colour scale, "Bis wann heim?" limits (groups 6 and 7, Inbox): Done (PR #214)
 4. **Next:** Nightly timetable refresh that actually runs: the scheduled Build timetable run has never fired (every build so far was started by hand, the builder dispatched one at 00:57 on 2026-10-13, which published fine), and the data only covers today plus 7 days. Make the schedule fire reliably, or add a fallback that starts a build when the published data gets old.
-5. Trip card round (group 6), part 3 of 3: the card becomes a drawer with more connections when pulled up; tapping a connection opens the detailed view with the wait at each change. Parts 1 and 2 are done: PR #217 ("Hier starten" keeps the old start as the destination with 5 s Rückgängig, U12; card and time field fit at 360 px, V1 + U14; larger destination dot, stops ringed in their line colour, smaller changes, flag on the set place when arriving, V6) and PR #218 (the card names both ends and "bei" plus the nearest stop, U7; Ankommen says Ziel and "Hier als Ziel", U8; the arrive-by card shows "an" and "los um" times, U4).
+5. Trip card round (group 6): Done (PR #217 Hier starten, 360 px, markers; PR #218 names both ends, Ziel wording, arrive-by times; PR #220 drawer with later connections and the detailed view)
 6. Review fixes for the rest of the app (group 17): V2 + U11 + V4 (the colour scale it waits for is done), U2, V3, then U5–U13 and V5–V13, in the order of plan/reviews/README.md (project files)
 7. Smaller Wohnlage-Karte memory (B7 + P9, group 15): Done (PR #210)
 8. Typical timetable when offline, cache-first data after a deploy (B8 + P3, group 15)
@@ -126,13 +126,9 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 
 Parked by Hendrik on 2026-10-12. From the connection test, finding 5. When two trips arrive at the same time, prefer the one with less walking or leaving later; today the earliest departure wins, for example an earlier tram from a farther stop. Cosmetic, and a reverse pass would cost time on every tap, so it is only built if it keeps taps as fast as now.
 
-### Trip drawer with more connections
+- **Trip drawer with more connections**: Done (PR #220): pulling the card up by its grip (or Details) opens the drawer; "Spätere Verbindungen" (arriving: "Frühere Verbindungen") lists the next 3 departures of the same connection, and tapping one switches card and map. These re-ride the same lines on later vehicles without a new search, so taps stay at about 105 ms (a full search would take about 3 s on a phone); alternatives on other lines are not listed.
 
-Hendrik, 2026-10-12 (queued in the trip card round since his 2026-10-13 plan instruction): "instead of the box showing the connection, we have a drawer instead, when drawn upwards we see more connections, rearrange the buttons on the connection box/drawer". The trip card becomes a drawer at the bottom: collapsed it shows the connection as today, pulled up it lists further connections (later departures or alternatives), and its buttons are rearranged for the drawer. Builds on trip card B (PR #174).
-
-### Detailed connection view
-
-Hendrik, 2026-10-12 (queued in the trip card round since his 2026-10-13 plan instruction): "when tapping on a connection, we get a more detailed description of the connection: wait time at stops in between etc." Tapping a connection opens a detailed view: each leg with its stops, times, the wait at each change, and walking minutes. Pairs with the trip drawer and with real arrival times at stops.
+- **Detailed connection view**: Done (PR #220): each ride with departure and arrival, the stops in between folded with their times, and "Umstieg · 3 Min. Fußweg · 5 Min. warten" at each change.
 
 - **"Bis wann heim?" limits of 1 h and 1 h 30**: Done (PR #214): colours and the main line use under 1 h, the second line under 1 h 30, with a text for places reachable only under 1 h 30; no new control.
 
