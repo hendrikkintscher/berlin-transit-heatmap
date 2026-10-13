@@ -463,6 +463,83 @@ body.arrive .spot-marker {
   background: var(--surface);
   border: 4px solid var(--accent);
 }
+/* Trial looks for the trip (path=a|b|c, roadmap 1.1, path-looks.ts). In each the end is as
+   big as the start. Departing the tapped place is the end; arriving, the set place is. */
+body[class*='path-'] .spot-marker {
+  width: 22px;
+  height: 22px;
+}
+/* a: the end is a dark pin whose tip sits on the place. */
+body.path-a:not(.arrive) .spot-marker,
+body.path-a.arrive .origin-marker.p1 {
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+body.path-a:not(.arrive) .spot-marker::before,
+body.path-a.arrive .origin-marker.p1::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: -18px;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--ink);
+  border: 3px solid #fff;
+  box-shadow: var(--shadow);
+}
+body.path-a:not(.arrive) .spot-marker::after,
+body.path-a.arrive .origin-marker.p1::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: -10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+/* b: the end is a target. */
+body.path-b:not(.arrive) .spot-marker,
+body.path-b.arrive .origin-marker.p1 {
+  background: radial-gradient(circle, var(--ink) 0 3.5px, #fff 4px);
+  border: 4px solid var(--ink);
+}
+/* c: the end in its own colour, both ends labelled. */
+body.path-c {
+  --path-end: #e8590c;
+}
+body.path-c:not(.arrive) .spot-marker,
+body.path-c.arrive .origin-marker.p1 {
+  background: var(--path-end);
+  border: 4px solid #fff;
+}
+body.path-c .origin-marker::after,
+body.path-c .spot-marker::after {
+  content: attr(data-start);
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--pc, var(--accent));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+body.path-c:not(.arrive) .spot-marker::after,
+body.path-c.arrive .origin-marker.p1::after {
+  content: attr(data-end);
+  background: var(--path-end);
+}
 /* While a new map is computed, the place's old minutes and trip fade. */
 #readout.stale #readout-text {
   opacity: 0.45;
