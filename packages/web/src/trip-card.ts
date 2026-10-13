@@ -17,6 +17,8 @@ export interface TripContext {
   place?: string;
   /** "U2: Ersatzverkehr Pankow – Alexanderplatz" for a ride whose line runs differently. */
   changeNote?: (ride: { name: string; mode: string }) => string | null;
+  /** Under Typisch, the hour's average minutes the map shows for the place (one start). */
+  avg?: number;
 }
 
 /**
@@ -67,12 +69,21 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
     ].filter(Boolean);
     // Leaving: the next connection's own minutes, its arrival, and when to set off.
     // Arriving (Typisch, Bestfall): the last connection by the hour, with its minutes.
+    const n =
+      j.leave !== undefined && j.arrive !== undefined
+        ? Math.max(1, Math.round((j.arrive - j.leave) / 60))
+        : 0;
+    // The map's average for the hour, named as such, when it differs from this connection.
+    const avg =
+      n && !two && c.avg !== undefined && Math.abs(c.avg - n) > 1
+        ? `<small class="trip-avg">${t('tripAvg', { n: c.avg })}</small>`
+        : '';
     const own =
       j.leave !== undefined && j.arrive !== undefined
         ? `<span class="trip-main">${mark}${t('tripMain', {
-            n: Math.max(1, Math.round((j.arrive - j.leave) / 60)),
+            n,
             time: eveningClock(j.arrive),
-          })}</span><small class="trip-leave" data-leave="${j.leave}">${leaveText(j.leave, c.now)}</small>${j.board ? '<small class="trip-live" hidden></small>' : ''}`
+          })}</span><small class="trip-leave" data-leave="${j.leave}">${leaveText(j.leave, c.now)}</small>${j.board ? '<small class="trip-live" hidden></small>' : ''}${avg}`
         : j.minutes !== undefined
           ? `<span class="trip-now">${mark}${t(c.direction === 'depart' ? 'tripNext' : 'tripLast', { n: j.minutes })}</span>`
           : '';

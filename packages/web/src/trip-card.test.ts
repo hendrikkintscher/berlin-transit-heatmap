@@ -49,6 +49,25 @@ describe('trip card', () => {
     expect(html).not.toContain('class="stops"');
   });
 
+  it('names the hour average under Typisch only when it differs from the trip', () => {
+    const trip = (avg: number) =>
+      tripHtml(
+        {
+          journeys: [
+            {
+              transfers: 0,
+              leave: 36_000,
+              arrive: 36_000 + 17 * 60,
+              legs: [ride('U8', 'ubahn', 'U Alexanderplatz', 'U Hermannplatz')],
+            },
+          ],
+        },
+        { ...ctx, avg },
+      );
+    expect(trip(19)).toContain('Ø 19 Min.');
+    expect(trip(18)).not.toContain('trip-avg');
+  });
+
   it('names where the trip starts and ends, the place by its own name', () => {
     const journey = {
       transfers: 0,
