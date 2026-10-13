@@ -26,7 +26,7 @@ State on 2026-10-12, live through PR #199. Build in this order, one step per PR:
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
-**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel (reviews done, picks pending with Hendrik) by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
+**Review track** (Hendrik, 2026-10-12): four reviews in group 17, run in parallel (U1 in progress) by their own pair of threads, a "Review negotiator" and a "Review builder", not by the builder queue above. Their status changes are marked here as that pair reports them.
 
 **Proposed, not picked:** less walking on equal arrival (group 6, from the connection test). Hendrik picked the other two fixes ("Both fixes", 2026-10-12) and parked this one.
 
@@ -347,7 +347,7 @@ Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existi
 
 ## 17. Review track
 
-Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). The UI, looks and docs picks are pending with Hendrik.
+Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). Hendrik picked "Tap and Back" first, then the rest in the order of plan/reviews/README.md (2026-10-13). Order: U1 in progress, then U3, V1+U14, V2+U11+V4, docs cleanup (K items, including the roadmap slimming K14–K19, which the editor applies), U2, U4, V3.
 
 - **UI intuitiveness**: check where the interface is intuitive and where it is not, and what could be handled more smartly or more obviously.
 - **Visual consistency**: check map elements, colours, layout, symbols and text for consistency.
