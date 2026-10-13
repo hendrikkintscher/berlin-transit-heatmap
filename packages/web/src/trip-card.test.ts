@@ -149,12 +149,28 @@ describe('trip card', () => {
     const j = { transfers: 0, legs: [ride('U2', 'ubahn', 'A', 'B')] };
     const html = tripHtml({ journeys: [j, j, null] }, ctx);
     expect(html).toContain(
-      '<details class="trip-more"><summary>2 weitere Fahrten</summary><span class="trip-sum"><i class="p2">',
+      '<details class="trip-more"><summary>2 weitere Fahrten</summary><span class="trip-head',
     );
+    expect(html).toContain('<span class="trip-sum"><i class="p2">');
     expect(html.indexOf('<i class="p1">')).toBeLessThan(html.indexOf('<details'));
     expect(html).toContain('<i class="p3"></i>Keine Verbindung gefunden</span></details>');
     expect(tripHtml({ journeys: [j, j] }, ctx)).toContain('<summary>1 weitere Fahrt</summary>');
     expect(tripHtml({ journeys: [j] }, ctx)).not.toContain('details');
+  });
+
+  it('makes the summary the button that opens the detailed connection', () => {
+    const j = { transfers: 0, legs: [ride('U2', 'ubahn', 'A', 'B')] };
+    const html = tripHtml({ journeys: [j] }, ctx);
+    expect(html).toMatch(
+      /^<span class="trip-head opens" role="button" tabindex="0" aria-expanded="false"/,
+    );
+    // The summary ends before the stops list it opens.
+    expect(html.indexOf('</small></span>')).toBeGreaterThan(html.indexOf('trip-stops'));
+    const walkOnly = tripHtml(
+      { journeys: [{ transfers: 0, legs: [{ type: 'walk', minutes: 9 }] }] },
+      ctx,
+    );
+    expect(walkOnly).toContain('<span class="trip-head">');
   });
 
   it('gives the minutes of a connection leaving now', () => {

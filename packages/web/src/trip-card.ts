@@ -114,17 +114,25 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
       : [];
     // What runs differently today on the lines of this connection.
     const notes = [...new Set(rides.map((l) => c.changeNote?.(l)).filter(Boolean))];
+    // The summary (minutes, times, lines, changes and walking): a tap on it opens the
+    // detailed connection below it (#readout.expanded), when there is one.
+    const opens = !!timeline || stops.length > 0;
+    const head = opens
+      ? `<span class="trip-head opens" role="button" tabindex="0" aria-expanded="false" title="${t('details')}">`
+      : '<span class="trip-head">';
     return (
       named +
+      head +
       own +
       `<span class="trip-sum">${own ? '' : mark}${badges}</span>` +
-      // Changes and walking always show; the stops only under Details (#readout.details).
+      // Changes and walking always show; the stops only when opened.
       `<small class="trip-stops">${sum.join(' · ')}${
         stops.length && !timeline
           ? `<span class="stops">${sum.length ? ' · ' : ''}${stops.join(' → ')}</span>`
           : ''
       }</small>` +
       notes.map((n) => `<small class="trip-change">${escapeHtml(n!)}</small>`).join('') +
+      '</span>' +
       timeline
     );
   });
@@ -154,7 +162,7 @@ export const hhmm = (s: number) => {
 type Legs = NonNullable<Trip['journeys'][number]>['legs'];
 
 /**
- * The detailed view (under Details): each ride with its times, the stops in between
+ * The detailed view (a tap on the summary): each ride with its times, the stops in between
  * folded, and at each change the walk and the wait. Empty without the rides' times.
  */
 export function timelineHtml(legs: Legs): string {

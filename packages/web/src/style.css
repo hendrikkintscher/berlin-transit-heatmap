@@ -222,8 +222,22 @@ body {
 #readout > .readout-btns {
   grid-column: 1 / -1;
 }
+/* It sits on the screen's bottom edge, the full width (Hendrik, 2026-10-13): a sheet
+   with round top corners, over the home bar's safe area. While pulled up it grows from
+   the bottom with the finger (--pull-up, tap.ts); pulled down, an open card follows. */
 #readout:not([hidden]) {
-  border-radius: var(--r-m);
+  width: calc(100% + 20px);
+  max-width: 500px;
+  margin: 0 -10px calc(-6px - var(--sb));
+  padding-bottom: calc(12px + var(--sb) + var(--pull-up, 0px));
+  border-radius: var(--r-m) var(--r-m) 0 0;
+  box-shadow: 0 -2px 14px rgba(30, 20, 50, 0.16);
+  transition:
+    transform 0.18s ease-out,
+    padding-bottom 0.18s ease-out;
+}
+#readout.pulling {
+  transition: none;
 }
 /* Outlines alone carry their minutes: no colour legend. */
 body.no-legend .legend {
@@ -1022,21 +1036,24 @@ body.arrive .origin-marker.p1.numbered {
   padding: 0;
   font-size: 20px;
 }
-/* "Details ▾": the arrow stays on the word's line. */
-#readout .details-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  white-space: nowrap;
+/* The trip's summary opens the detailed connection: the whole summary is the tap
+   area, a ▾ after the changes and walking says so. */
+#readout .trip-head {
+  display: block;
 }
-#readout .details-btn::after {
-  content: '▾';
+#readout .trip-head.opens {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-#readout.details .details-btn::after {
-  content: '▴';
+#readout .trip-head.opens .trip-stops::after {
+  content: ' ▾';
+  color: var(--accent);
+  font-weight: 700;
 }
-#readout:not(.details) .stops {
+#readout.expanded .trip-head.opens .trip-stops::after {
+  content: ' ▴';
+}
+#readout:not(.expanded) .stops {
   display: none;
 }
 /* Meeting point: the other starts' trips, folded behind "N weitere Fahrten". */
@@ -1938,8 +1955,8 @@ body.special .legend {
 
 /* The detailed view under Details: each ride with its times, the stops in between folded,
    the walk and wait at each change. The ride's line runs down the left in its colour. */
-#readout:not(.details) .timeline,
-#readout:not(.details) .more {
+#readout:not(.expanded) .timeline,
+#readout:not(.drawer) .more {
   display: none;
 }
 .timeline,
@@ -2012,13 +2029,25 @@ body.special .legend {
 .tl-change {
   font-weight: 600;
 }
-/* With Details open the card may grow; its text scrolls, the buttons stay. */
-#readout.details #readout-text {
+/* Opened, the card may grow; its text scrolls, the buttons stay. The drawer is taller. */
+#readout.expanded #readout-text,
+#readout.drawer #readout-text {
   max-height: 58vh;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* The drawer's grip: pull the card up for the details and more connections. */
+#readout.drawer #readout-text {
+  max-height: 70vh;
+}
+/* Drags on the card are the pull's; only the scrolling text keeps its own. */
+#readout.can-open {
+  touch-action: none;
+}
+#readout.expanded #readout-text,
+#readout.drawer #readout-text {
+  touch-action: pan-y;
+}
+/* The drawer's grip: pull the card up for the connections after this one. */
 #readout .grip {
   position: absolute;
   top: 0;
@@ -2041,7 +2070,7 @@ body.special .legend {
   border-radius: 2px;
   background: var(--line-strong);
 }
-#readout:has(#readout-details[hidden]) .grip {
+#readout:not(.can-open) .grip {
   display: none;
 }
 /* The drawer's list of connections: the shown one marked. */
