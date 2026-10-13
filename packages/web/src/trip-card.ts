@@ -2,7 +2,7 @@
 // and walking minutes and the stops along the way.
 
 import { MODE_COLORS } from './colors';
-import { escapeHtml, eveningClock, shortStop } from './format';
+import { escapeHtml, eveningClock, shortStop, stopName } from './format';
 import { t } from './i18n';
 import type { FromWorker } from './protocol';
 import type { Direction } from './when';
@@ -83,7 +83,8 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
       !two && ends[0] && ends[1] && ends[0] !== ends[1]
         ? `<small class="trip-ends">${escapeHtml(ends[0])} → ${escapeHtml(ends[1]!)}</small>`
         : '';
-    // Stops where you get on, change and get off.
+    const timeline = timelineHtml(j.legs);
+    // Stops where you get on, change and get off (the timeline has them with times).
     const stops = rides.length
       ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
       : [];
@@ -95,11 +96,69 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
       `<span class="trip-sum">${own ? '' : mark}${badges}</span>` +
       // Changes and walking always show; the stops only under Details (#readout.details).
       `<small class="trip-stops">${sum.join(' · ')}${
-        stops.length
+        stops.length && !timeline
           ? `<span class="stops">${sum.length ? ' · ' : ''}${stops.join(' → ')}</span>`
           : ''
       }</small>` +
-      notes.map((n) => `<small class="trip-change">${escapeHtml(n!)}</small>`).join('')
+      notes.map((n) => `<small class="trip-change">${escapeHtml(n!)}</small>`).join('') +
+      timeline
     );
   });
+}
+
+/** "10:02" (seconds of the day, past midnight too). */
+export const hhmm = (s: number) => {
+  const m = Math.floor(s / 60);
+  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+};
+
+type Legs = NonNullable<Trip['journeys'][number]>['legs'];
+
+/**
+ * The detailed view (under Details): each ride with its times, the stops in between
+ * folded, and at each change the walk and the wait. Empty without the rides' times.
+ */
+export function timelineHtml(legs: Legs): string {
+  const rides = legs.filter((l) => l.type === 'ride');
+  if (!rides.length || rides.some((l) => l.dep === undefined || l.arr === undefined)) return '';
+  const row = (time: number, name: string) =>
+    `<li class="tl-stop"><time>${hhmm(time)}</time><span>${escapeHtml(stopName(name))}</span></li>`;
+  const walkText = (l: Extract<Legs[number], { type: 'walk' }>) =>
+    t(l.bike ? 'tripBike' : 'tripWalk', { n: l.minutes });
+  const out: string[] = [];
+  let prev: Extract<Legs[number], { type: 'ride' }> | null = null;
+  let walked = 0;
+  let walks: string[] = [];
+  for (const l of legs) {
+    if (l.type === 'walk') {
+      walked += l.minutes;
+      walks.push(walkText(l));
+      continue;
+    }
+    if (prev) {
+      // The change: the walk (if any) and the time left over at the next stop.
+      const wait = Math.max(0, Math.round((l.dep! - prev.arr!) / 60) - walked);
+      const parts = [t('tlChange'), ...walks, wait ? t('tlWait', { n: wait }) : ''];
+      out.push(`<li class="tl-change">${parts.filter(Boolean).join(' · ')}</li>`);
+    } else if (walks.length) out.push(`<li class="tl-walk">${walks.join(' · ')}</li>`);
+    walked = 0;
+    walks = [];
+    const color = MODE_COLORS[l.mode] ?? '#444';
+    const minutes = Math.max(1, Math.round((l.arr! - l.dep!) / 60));
+    const passed = l.passed ?? [];
+    const summary = passed.length
+      ? t(passed.length === 1 ? 'tlPassedOne' : 'tlPassed', { n: passed.length, m: minutes })
+      : t('tlDirect', { m: minutes });
+    const inner = passed.length
+      ? `<details class="tl-passed"><summary>${summary}</summary><ol>${passed
+          .map((p) => row(p.at, p.name))
+          .join('')}</ol></details>`
+      : `<small>${summary}</small>`;
+    out.push(
+      `<li class="tl-ride" style="--line:${color}"><ol>${row(l.dep!, l.from)}<li class="tl-mid"><span class="line-badge" style="background:${color}">${escapeHtml(l.name)}</span>${inner}</li>${row(l.arr!, l.to)}</ol></li>`,
+    );
+    prev = l;
+  }
+  if (walks.length) out.push(`<li class="tl-walk">${walks.join(' · ')}</li>`);
+  return `<ol class="timeline">${out.join('')}</ol>`;
 }

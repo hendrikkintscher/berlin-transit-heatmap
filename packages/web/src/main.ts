@@ -364,6 +364,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     r.labels = m.labels;
     (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
     (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
+  } else if (m.type === 'moreTrips') {
+    tap.onMoreTrips(m);
   } else if (m.type === 'placeName') {
     tap.onPlaceName(m);
   } else if (m.type === 'stations') {
