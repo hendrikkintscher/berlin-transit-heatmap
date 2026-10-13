@@ -10,7 +10,7 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #240. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
+State on 2026-10-13, live through PR #243. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): Done (PR #184, live with the timetable build of 2026-10-13 00:58)
 2. No flicker when tapping another destination (group 6, Inbox): Done (PR #213)
@@ -24,8 +24,8 @@ State on 2026-10-13, live through PR #240. **Plan for everything noted** (Hendri
 10. Less walking on equal arrival (group 6): Done (PR #237)
 11. Default view readability (C9, group 15): both looks built for trial (PR #238: look=rings and look=faint links, plus a clearer opacity slider thumb and 60 % default opacity, C10); the default changes once Hendrik answers his card (recommended: Rings)
 12. Named starts in meeting mode (D2, group 15): Done (PR #240)
-13. **Next:** Broader CI checks and a sturdier timetable build (B9 + B10 + P10, group 15) (in progress: B9 + P10 in PR #241, B10 as its own PR)
-14. Code health, no change in behaviour (E1, group 15)
+13. Broader CI checks and a sturdier timetable build (B9 + B10 + P10, group 15): Done (PR #241, PR #243)
+14. **Next:** Code health, no change in behaviour (E1, group 15), in progress
 15. Smaller walking network file (P8, group 15)
 16. Showcase material: screenshots, sharepics and the comparison with existing maps, made once the app has settled (group 16)
 17. Declutter docs and threads: the docs-cleanup findings (K items, including the roadmap slimming K14–K19) and an archive pass over plan files and memory (group 17)
@@ -277,12 +277,7 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 
 - **Notice, search and favourites polish (C5–C8)**: Done (PR #236).
 
-### Broader CI checks and a sturdier timetable build (B9 + B10)
-
-Picked by Hendrik on 2026-10-12 ("Yes, both"). CI and workflows only; the app itself does not change.
-
-- **B9:** the CI speed check also times softening, outlines and painting per start, and the cell snapping separately. One browser smoke test against a small fixture opens the app, taps, and checks that minutes and outlines appear. The duplicate test and build in the deploy workflow on pull requests goes away. From the code review, also P10: the routing benchmarks and slow tests read the .bin files (they still fetch timetable-day.json, gone since B2), with one shared `cellAt` and `readWithProgress` helper.
-- **B10:** the timetable build fails above a hard size ceiling (about 1.5 times the budget) and only warns below it. It also runs on a schedule of its own, so a failed timetable download no longer stops it; dated files roll forward from the last good feed.
+- **Broader CI checks and a sturdier timetable build (B9 + B10 + P10)**: Done (PR #241: a browser smoke test at phone size in CI and before each deploy, drawing and snapping times in the speed check, benches read .bin again; PR #243: the timetable build fails above 150 % of its size budget, has its own nightly schedule at 02:37 behind a guard, and the data watch restarts a build after a failed refresh).
 
 ### Default view readability: two variants to compare (C9)
 
