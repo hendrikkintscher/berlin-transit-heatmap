@@ -10,11 +10,9 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #249. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Steps 1–16 are done (PR #184–#249): platform changes, no flicker, map fixes, nightly timetable refresh, the trip card round, all review UI and looks fixes, Wohnlage memory, offline timetable, C5–C8, less walking, named starts, CI checks, code health, smaller walking file and showcase material. Open:
+State on 2026-10-13, live through PR #252. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Steps 1–18 are done (PR #184–#252): platform changes, no flicker, map fixes, nightly timetable refresh, the trip card round, all review UI and looks fixes, Wohnlage memory, offline timetable, C5–C8, less walking, named starts, CI checks, code health, smaller walking file, showcase material, the meeting card headline (#252) and the docs and threads declutter (#245, #250, #251, archive pass and memory consolidation). Open:
 
-1. Default view readability (C9): both looks are built for trial (PR #238: `look=rings` and `look=faint`, plus C10's larger slider thumb and 60 % default opacity). The default changes once Hendrik answers his card (recommended: Rings); the other look then goes.
-2. **Next:** Meeting card headline fits at 390 px: "Ø Anna 25 · Ben 24 · Cem 25 Min." wraps and leaves "Min." alone on a second line (found while taking the showcase screenshots, showcase/screens/07-treffpunkt-karte.png).
-3. Declutter docs and threads (group 17, K items): the roadmap slimming K14–K19 is done (this version); the archive pass over plan files and the memory consolidation (K1–K10) are in progress; K21–K23 done (PR #245, PR #250).
+1. **Next, waiting on Hendrik:** Default view readability (C9): both looks are built for trial (PR #238: `look=rings` and `look=faint`, plus C10's larger slider thumb and 60 % default opacity). The default changes once Hendrik answers his card (recommended: Rings); the other look then goes.
 
 **Not in this plan:** Android app and beta testing (Hendrik, 2026-10-13: "don't do android app and beta testing"); app store deployment (group 16), which needs Hendrik's own developer accounts; the region addresses and Oldenburg data (group 13), held until the domain and the timetable feed account are settled.
 
@@ -36,7 +34,7 @@ Done: stop-frequency and transit-desert layers (#16).
 
 ## 3. Comparing places
 
-Done: meeting point for two starts and favourite places with a location score (#17), suggested meeting points and search result actions (#35), meeting scale in extra minutes (#37), three to five starts (C1) and the Wohnlage-Karte (C2) (#64), fairer suggestions by slowest plus average trip (#93), "Lieblingsort" toggle (#118).
+Done: meeting point for two starts and favourite places with a location score (#17), suggested meeting points and search result actions (#35), meeting scale in extra minutes (#37), three to five starts (C1) and the Wohnlage-Karte (C2) (#64), fairer suggestions by slowest plus average trip (#93), "Lieblingsort" toggle (#118), meeting headline wraps between people (#252).
 
 ## 4. Time of day and weekends
 
@@ -97,4 +95,4 @@ Open: **C9 default view**, see Up next step 1.
 
 ## 17. Review track
 
-Four reviews (Hendrik, 2026-10-12): UI intuitiveness, visual consistency, code and runtime, docs and chats cleanup. Findings are in plan/reviews/ (project files, README.md is the index). Done: all UI and looks findings U1–U14 and V1–V13 (PR #203–#233), all code findings P1–P10 (in group 15), and the roadmap slimming K14–K19. Open: the rest of the docs cleanup (Up next step 3).
+Four reviews (Hendrik, 2026-10-12): UI intuitiveness, visual consistency, code and runtime, docs and chats cleanup. Findings are in plan/reviews/ (project files, README.md is the index). Done: all UI and looks findings U1–U14 and V1–V13 (PR #203–#233), all code findings P1–P10 (in group 15), and the whole docs and chats cleanup K1–K23 (#245, #250, #251, archive pass, memory consolidation). Open: nothing.
