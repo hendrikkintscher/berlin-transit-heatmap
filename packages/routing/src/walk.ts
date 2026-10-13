@@ -23,7 +23,8 @@ export const DETOUR_FACTOR = 1.25;
 export const MAX_SNAP_M = 300;
 /** Grid cells snap further, so fields, woods and lakeshores get the walk across them. */
 export const MAX_CELL_SNAP_M = 1000;
-const BUCKET_M = 50;
+/** Edge buckets for snapping points (100 m: a fourth of the memory of 50 m, as fast). */
+const BUCKET_M = 100;
 
 /**
  * Walking speeds for a chosen network speed: on the network, and in a straight line
@@ -38,9 +39,7 @@ export function walkSpeeds(networkMps?: number): { network: number; straight: nu
 
 export interface WalkNetwork {
   readonly nodeCount: number;
-  readonly lat: Float64Array;
-  readonly lon: Float64Array;
-  /** Node position in metres from (lat0, lon0). */
+  /** Node position in metres from (lat0, lon0); nodeLonLat gives it in degrees. */
   readonly x: Float32Array;
   readonly y: Float32Array;
   readonly lat0: number;
@@ -167,8 +166,6 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
 
   return {
     nodeCount: n,
-    lat,
-    lon,
     x,
     y,
     lat0,
@@ -186,6 +183,11 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
     bucketOffset,
     bucketEdges,
   };
+}
+
+/** Node v's position as [lon, lat] (from its metres, to a few millimetres). */
+export function nodeLonLat(net: WalkNetwork, v: number): [number, number] {
+  return [net.lon0 + net.x[v]! / net.mPerLon, net.lat0 + net.y[v]! / M_PER_DEG_LAT];
 }
 
 /** Where points meet the network: the nearest edge (-1 if none within MAX_SNAP_M),
@@ -273,6 +275,55 @@ export function sameEdgeMetres(net: WalkNetwork, a: Snaps, i: number, b: Snaps, 
   const e = a.edge[i];
   if (e < 0 || e !== b.edge[j]) return Infinity;
   return Math.abs(a.along[i] - b.along[j]) * net.edgeMetres[e] + a.metres[i] + b.metres[j];
+}
+
+/**
+ * Grid cells on the network, kept per layout: each cell's edge (-1: none), the edge's two
+ * ends and the walk from the cell to each (along the edge plus the way onto it). Where on
+ * the edge a cell sits follows from those (see sameEdgeCellMetres), so it is not kept.
+ */
+export interface CellSnaps {
+  edge: Int32Array;
+  a: Int32Array;
+  b: Int32Array;
+  da: Float32Array;
+  db: Float32Array;
+}
+
+function cellEnds(net: WalkNetwork, cells: Snaps): CellSnaps {
+  const n = cells.edge.length;
+  const a = new Int32Array(n).fill(-1);
+  const b = new Int32Array(n).fill(-1);
+  const da = new Float32Array(n);
+  const db = new Float32Array(n);
+  for (let k = 0; k < n; k++) {
+    const e = cells.edge[k];
+    if (e < 0) continue;
+    const len = net.edgeMetres[e];
+    const off = cells.metres[k];
+    const d = cells.along[k] * len + off;
+    a[k] = net.edgeA[e];
+    b[k] = net.edgeB[e];
+    da[k] = d;
+    db[k] = len + 2 * off - d;
+  }
+  return { edge: cells.edge, a, b, da, db };
+}
+
+/** sameEdgeMetres between snap slot i of `s` and grid cell k. */
+export function sameEdgeCellMetres(
+  net: WalkNetwork,
+  s: Snaps,
+  i: number,
+  cells: CellSnaps,
+  k: number,
+): number {
+  const e = s.edge[i];
+  if (e < 0 || e !== cells.edge[k]) return Infinity;
+  const len = net.edgeMetres[e];
+  // da + db = len + 2 * off, and da = along * len + off.
+  const off = Math.max(0, (cells.da[k] + cells.db[k] - len) / 2);
+  return Math.abs(s.along[i] * len - (cells.da[k] - off)) + s.metres[i] + off;
 }
 
 const stopSnaps = new WeakMap<WalkNetwork, WeakMap<PreparedTimetable, Snaps>>();
@@ -491,7 +542,7 @@ export function walkFrom(
   return out;
 }
 
-const cellSnaps = new WeakMap<WalkNetwork, Map<string, Snaps>>();
+const cellSnaps = new WeakMap<WalkNetwork, Map<string, CellSnaps>>();
 
 /** Edges scattered between pauses when snapping in steps (a few tens of ms each). */
 const SNAP_STEP_EDGES = 40_000;
@@ -505,7 +556,7 @@ export function snapCells(
   bbox: [number, number, number, number],
   cols: number,
   rows: number,
-): Snaps {
+): CellSnaps {
   const steps = snapCellsInSteps(net, bbox, cols, rows);
   for (;;) {
     const s = steps.next();
@@ -523,16 +574,16 @@ export function* snapCellsInSteps(
   bbox: [number, number, number, number],
   cols: number,
   rows: number,
-): Generator<void, Snaps> {
+): Generator<void, CellSnaps> {
   const key = `${bbox.join(',')}/${cols}x${rows}`;
   let byLayout = cellSnaps.get(net);
   if (!byLayout) cellSnaps.set(net, (byLayout = new Map()));
-  let snap = byLayout.get(key);
-  if (snap) return snap;
+  const cached = byLayout.get(key);
+  if (cached) return cached;
   const [minLon, minLat, maxLon, maxLat] = bbox;
   const dLon = (maxLon - minLon) / cols;
   const dLat = (maxLat - minLat) / rows;
-  snap = makeSnaps(cols * rows);
+  const snap = makeSnaps(cols * rows);
   const { edge, along, metres } = snap;
   // Squared distances while scattering; square-rooted at the end.
   const dist = metres;
@@ -638,8 +689,10 @@ export function* snapCellsInSteps(
       metres[k] = Infinity;
     }
   }
-  byLayout.set(key, snap);
-  return snap;
+  // Only the cell ends are kept: along and metres follow from them.
+  const ends = cellEnds(net, snap);
+  byLayout.set(key, ends);
+  return ends;
 }
 
 /**
@@ -664,7 +717,9 @@ export function walkPath(
   const onEdge = (e: number, f: number): [number, number] => {
     const a = edgeA[e];
     const b = edgeB[e];
-    return [net.lon[a] + f * (net.lon[b] - net.lon[a]), net.lat[a] + f * (net.lat[b] - net.lat[a])];
+    const [lonA, latA] = nodeLonLat(net, a);
+    const [lonB, latB] = nodeLonLat(net, b);
+    return [lonA + f * (lonB - lonA), latA + f * (latB - latA)];
   };
   const start: [number, number] = [from.lon, from.lat];
   const end: [number, number] = [to.lon, to.lat];
@@ -721,7 +776,7 @@ export function walkPath(
   }
   if (bestNode < 0) return null;
   const nodes: [number, number][] = [];
-  for (let v = bestNode; v >= 0; v = prev.get(v)!) nodes.push([net.lon[v], net.lat[v]]);
+  for (let v = bestNode; v >= 0; v = prev.get(v)!) nodes.push(nodeLonLat(net, v));
   nodes.reverse();
   return [start, p0, ...nodes, p1, end];
 }

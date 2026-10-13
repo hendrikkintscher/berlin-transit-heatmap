@@ -1,7 +1,7 @@
 import { M_PER_DEG_LAT, metresPerDegLon } from './geo';
 import type { PreparedTimetable } from './prepare';
 import {
-  sameEdgeMetres,
+  sameEdgeCellMetres,
   snapCells,
   snapOrigin,
   sharedLabels,
@@ -10,7 +10,6 @@ import {
   walkSpeeds,
   WalkSources,
 } from './walk';
-import type { Snaps, WalkNetwork } from './walk';
 import type {
   GeoJSONFeature,
   GeoJSONFeatureCollection,
@@ -146,7 +145,7 @@ export function heatGrid(
       cols,
       rows,
     );
-    const { cellA, cellB, cellDa, cellDb } = cellEnds(net, cells);
+    const { a: cellA, b: cellB, da: cellDa, db: cellDb } = cells;
     const { time, walk, source } = labels;
     const cellEdge = cells.edge;
     // Edges with a stop on them, so the map lookup below runs only where it can find one.
@@ -194,7 +193,7 @@ export function heatGrid(
       const here = hasStop[e] ? edgeStop.get(e) : undefined;
       if (here)
         for (const s of here) {
-          w = sameEdgeMetres(net, stopSnap, s, cells, k);
+          w = sameEdgeCellMetres(net, stopSnap, s, cells, k);
           t = stopSeconds[s] + egress + w * pace;
           if (w <= maxM) {
             if (t < v) {
@@ -207,7 +206,7 @@ export function heatGrid(
           }
         }
       if (e === originEdge) {
-        w = sameEdgeMetres(net, originSnap!, 0, cells, k);
+        w = sameEdgeCellMetres(net, originSnap!, 0, cells, k);
         t = w * pace;
         if (w <= maxM) {
           if (t < v) {
@@ -244,38 +243,6 @@ export function heatGrid(
   };
   if (nearest) grid.stop = nearest;
   return grid;
-}
-
-const cellEndCache = new WeakMap<Snaps, ReturnType<typeof computeCellEnds>>();
-
-/**
- * For each grid cell, the two ends of its snapped edge and the walk to each (along the
- * edge plus the way onto it), so the per-map loop reads these in order. Cached per snap.
- */
-function cellEnds(net: WalkNetwork, cells: Snaps) {
-  let ends = cellEndCache.get(cells);
-  if (!ends) cellEndCache.set(cells, (ends = computeCellEnds(net, cells)));
-  return ends;
-}
-
-function computeCellEnds(net: WalkNetwork, cells: Snaps) {
-  const n = cells.edge.length;
-  const cellA = new Int32Array(n).fill(-1);
-  const cellB = new Int32Array(n).fill(-1);
-  const cellDa = new Float32Array(n);
-  const cellDb = new Float32Array(n);
-  for (let k = 0; k < n; k++) {
-    const e = cells.edge[k];
-    if (e < 0) continue;
-    const len = net.edgeMetres[e];
-    const off = cells.metres[k];
-    const da = cells.along[k] * len + off;
-    cellA[k] = net.edgeA[e];
-    cellB[k] = net.edgeB[e];
-    cellDa[k] = da;
-    cellDb[k] = len + 2 * off - da;
-  }
-  return { cellA, cellB, cellDa, cellDb };
 }
 
 /** The bbox (snapped outwards to whole cells), columns and rows heatGrid uses for these options. */

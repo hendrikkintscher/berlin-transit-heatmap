@@ -17,6 +17,7 @@ import {
   loadTimetable,
   loadWalkNetwork,
   snapCellsInSteps,
+  snapStops,
   reverseTimetable,
   routeUsage,
   stepFreeTimetable,
@@ -171,6 +172,8 @@ async function loadWalk(): Promise<void> {
     const layout = gridLayout({ cellSizeM: CELL_M });
     const steps = snapCellsInSteps(net, layout.bbox, layout.cols, layout.rows);
     while (!steps.next().done) await new Promise((r) => setTimeout(r, 0));
+    // The stops too, for the shown timetable, so the next map or tap does not pay for it.
+    if (lastTimetable) snapStops(net, lastTimetable);
     walk = net;
     post({ type: 'walk' });
   } catch (err) {
@@ -521,10 +524,11 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const journey = await homeTrip(msg);
       post({ type: 'trip', id: msg.id, ...tripMessage([journey]) });
     } else if (msg.type === 'livingAt') {
-      const l = livings.get(msg.map);
+      const l = livingMap?.id === msg.map ? livingMap : null;
+      const i = l ? cellIndex(l.layout, msg) : -1;
       const minutes = (l?.seconds ?? []).map((g) => {
-        const v = cellSeconds({ ...l!.layout, seconds: g }, msg);
-        return v < Infinity ? Math.round(v / 60) : null;
+        const v = i < 0 ? LIVING_NONE : g[i]!;
+        return v < LIVING_NONE ? Math.round(v / 60) : null;
       });
       post({ type: 'livingAt', id: msg.id, minutes });
     } else if (msg.type === 'trip') {
@@ -702,8 +706,26 @@ async function homeTrip(msg: Extract<ToWorker, { type: 'homeTrip' }>) {
   return trip(lastTrip!, { ...nearRun(tt, result, msg, w), seconds: undefined }, msg);
 }
 
-/** The last two "where can I live?" maps by id: each favourite's grid, for the minutes on tap. */
-const livings = new Map<number, { layout: HeatGrid; seconds: Float32Array[] }>();
+/**
+ * The last "where can I live?" map: each favourite's whole seconds per cell (65535: not
+ * reached), for the minutes on tap. Two bytes a cell instead of four, and one map only.
+ */
+let livingMap: { id: number; layout: HeatGrid; seconds: Uint16Array[] } | null = null;
+const LIVING_NONE = 0xffff;
+
+/**
+ * A grid's seconds as whole seconds in two bytes (LIVING_NONE where not reached). Rounded
+ * down, so the minutes on tap round exactly as from the full value (a half minute is a
+ * whole second).
+ */
+function livingSeconds(g: Float32Array): Uint16Array {
+  const out = new Uint16Array(g.length);
+  for (let i = 0; i < g.length; i++) {
+    const v = g[i]!;
+    out[i] = v < LIVING_NONE ? Math.floor(v) : LIVING_NONE;
+  }
+  return out;
+}
 /** The newest "where can I live?" request; an older one stops at its next place. */
 let livingId = 0;
 
@@ -735,8 +757,12 @@ async function living(msg: Extract<ToWorker, { type: 'living' }>) {
     if (livingId !== msg.id) return;
   }
   if (!layout) return;
-  livings.set(msg.id, { layout, seconds });
-  for (const id of livings.keys()) if (livings.size > 2) livings.delete(id);
+  livingMap = {
+    id: msg.id,
+    // The layout only (bbox and size): not the first place's full-precision grid.
+    layout: { ...layout, stop: undefined, seconds: new Float32Array(0) },
+    seconds: seconds.map(livingSeconds),
+  };
   const grid: HeatGrid = {
     ...layout,
     stop: undefined,
