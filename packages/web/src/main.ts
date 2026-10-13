@@ -1000,6 +1000,9 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ---------- my location ----------
+// The first-open card's buttons: the locate button's action, and the search.
+$('hint-locate').addEventListener('click', () => locateBtn.click());
+$('hint-search').addEventListener('click', () => openSearch());
 locateBtn.addEventListener('click', () => {
   if (!('geolocation' in navigator)) {
     setStatus(() => t('locateFailed'), true);
