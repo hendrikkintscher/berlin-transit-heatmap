@@ -1,15 +1,38 @@
-import { defineConfig, type Plugin } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { build, defineConfig, type Plugin, type Rollup } from 'vite';
 
 /** The map style main.ts loads (STYLE_URL), fetched from the start page already. */
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 /** The style's vector source (TileJSON), which MapLibre would only ask for once the style is in. */
 const TILES_URL = 'https://tiles.openfreemap.org/planet';
 
+/** The start page's inline script (src/start-page.ts), built for the worker's file. */
+async function startPage(workerUrl: string): Promise<string> {
+  const out = (await build({
+    configFile: false,
+    logLevel: 'warn',
+    define: { __WORKER_URL__: JSON.stringify(workerUrl) },
+    build: {
+      write: false,
+      target: 'es2022',
+      lib: {
+        entry: fileURLToPath(new URL('./src/start-page.ts', import.meta.url)),
+        formats: ['iife'],
+        name: 'startPage',
+      },
+    },
+  })) as Rollup.RollupOutput[];
+  const code = out[0]!.output[0].code.trim();
+  // Inline in a <script>: nothing in it may end the element.
+  if (code.includes('</script')) throw new Error('start-page: "</script" in the inline script');
+  return code;
+}
+
 /**
- * A faster first load (roadmap B4): the start page itself starts the routing worker (which
- * fetches the first map's timetable at once, see 'boot' in worker.ts), preloads the app's
- * main code and the map style, and connects to the tile server, all while the entry script
- * is still loading. boot.ts takes the worker over.
+ * A faster first load (roadmap B4): the start page itself starts the routing worker and
+ * downloads the first map's timetable for it (start-page.ts, 'boot' in worker.ts), preloads
+ * the app's main code and the map style, and connects to the tile server, all while the
+ * entry script is still loading. boot.ts takes the worker over.
  */
 function earlyStart(): Plugin {
   return {
@@ -17,7 +40,7 @@ function earlyStart(): Plugin {
     apply: 'build',
     transformIndexHtml: {
       order: 'post',
-      handler(html, ctx) {
+      async handler(html, ctx) {
         const files = Object.keys(ctx.bundle ?? {});
         const worker = files.find((f) => /^assets\/worker-[\w-]+\.js$/.test(f));
         const main = files.find((f) => /^assets\/main-[\w-]+\.js$/.test(f));
@@ -27,8 +50,8 @@ function earlyStart(): Plugin {
           `<link rel="preload" href="${STYLE_URL}" as="fetch" crossorigin>`,
           `<link rel="preload" href="${TILES_URL}" as="fetch" crossorigin>`,
           `<link rel="modulepreload" href="./${main}">`,
-          // Without module workers or storage the entry starts the worker as before.
-          `<script>try{var q=[],s=null,g=null;try{s=localStorage.getItem('step-free');g=localStorage.getItem('travel')}catch(e){}var w=new Worker('./${worker}',{type:'module'});w.onmessage=function(e){q.push(e)};w.postMessage({type:'boot',v:(document.querySelector('meta[name="data-v"]')||{}).content,baseURI:document.baseURI,search:location.search,stepFree:s,travel:g});window.__boot={worker:w,early:q}}catch(e){}</script>`,
+          // Without module workers the entry starts the worker as before.
+          `<script>${await startPage(`./${worker}`)}</script>`,
         ];
         // Right after the charset, ahead of the stylesheet: a script after it would wait for it.
         const charset = /<meta charset="UTF-8" \/>\n/;

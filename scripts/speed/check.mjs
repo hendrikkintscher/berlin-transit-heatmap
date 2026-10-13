@@ -2,7 +2,8 @@
 //
 //   node scripts/speed/check.mjs --dist packages/web/dist --data <dir> [--base <main checkout>]
 //
-// - Bundle: every JS and CSS file of the built app, gzipped, against scripts/speed/budget.json.
+// - Bundle: every JS and CSS file of the built app and its start page, gzipped, against
+//   scripts/speed/budget.json.
 //   A file over its budget, or a new file without one, fails; raising a budget is a
 //   deliberate edit to budget.json in the same pull request.
 // - Routing: bench/speed.ts times the worker's map computation and timetable loading on
@@ -45,6 +46,10 @@ for (const f of readdirSync(assets).sort()) {
   const key = `${m[1]}.${m[2]}`;
   sizes[key] = (sizes[key] ?? 0) + gzipSync(readFileSync(join(assets, f)), { level: 9 }).length;
 }
+// The start page too: its inline script (start-page.ts) runs before anything else loads.
+sizes['index.html'] = gzipSync(readFileSync(join(resolve(args.dist), 'index.html')), {
+  level: 9,
+}).length;
 if (args.write) {
   budget.bundle = sizes;
   writeFileSync(budgetFile, `${JSON.stringify(budget, null, 2)}\n`);
