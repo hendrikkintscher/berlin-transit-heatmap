@@ -2025,3 +2025,22 @@ body.special .legend {
 #readout-home[hidden] {
   display: none;
 }
+
+/* A meeting point's start can be named on its card (D2). */
+.start-name {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--tap);
+  margin-top: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-s);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.start-name:focus {
+  border-color: var(--accent);
+  outline: none;
+}

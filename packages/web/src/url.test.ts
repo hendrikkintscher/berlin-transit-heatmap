@@ -5,6 +5,7 @@ const NOW = { day: 'weekday', hour: 10 } as const;
 const BASE: LinkState = {
   origin: null,
   others: [],
+  names: [],
   to: null,
   when: NOW,
   direction: 'depart',
@@ -34,6 +35,7 @@ describe('links', () => {
         { lat: 52.52, lon: 13.3694 },
         { lat: 52.48, lon: 13.43 },
       ],
+      names: ['Anna', '', 'Cem'],
       to: { lat: 52.43915, lon: 13.47215 },
       when: { day: 'weekend', hour: 2 },
       direction: 'arrive',
@@ -51,7 +53,7 @@ describe('links', () => {
     };
     const q = linkQuery(full, NOW, 'en');
     expect(q).toBe(
-      'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&to=52.43915%2C13.47215&t=weekend-02' +
+      'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&names=Anna%7C%7CCem&to=52.43915%2C13.47215&t=weekend-02' +
         '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=heat%2Cfreq%2Cdesert%2Cnoiso&bis=45&lang=en',
     );
     expect(readLink(`?${q}`, BASE)).toEqual(full);
@@ -114,5 +116,16 @@ describe('links', () => {
 
   it('reads the old night link', () => {
     expect(readLink('?w=night', BASE).when).toEqual({ day: 'weekday', hour: 2 });
+  });
+
+  it('keeps names only for a meeting point, one per start', () => {
+    const one = { ...BASE, origin: { lat: 52.5, lon: 13.4 }, names: ['Anna'] };
+    expect(linkQuery(one, NOW)).not.toMatch(/names=/);
+    const two = { ...one, others: [{ lat: 52.52, lon: 13.37 }], names: ['', 'Ben', 'extra'] };
+    expect(linkQuery(two, NOW)).toMatch(/names=%7CBen(&|$)/);
+    expect(readLink('?from=52.5,13.4&with=52.52,13.37&names=A%20%20b|Ben|C', BASE).names).toEqual([
+      'A b',
+      'Ben',
+    ]);
   });
 });

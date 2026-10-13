@@ -13,7 +13,7 @@ import { $, type State } from './state';
 import { hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
 import { icon } from './icons';
-import { MAX_STARTS, type Point } from './url';
+import { MAX_NAME, MAX_STARTS, type Point } from './url';
 import { liveStatus, liveText, type Board } from './live';
 import { dataBase } from './region';
 import { clockNow, isDate } from './when';
@@ -34,6 +34,8 @@ export interface TapDeps {
   addStart: (p: Point) => void;
   /** Removes start i (0 = the first). */
   removeStart: (i: number) => void;
+  /** Names start i in a meeting point (D2). */
+  nameStart: (i: number, name: string) => void;
   /** Whether a favourite place lies at the point. */
   isFavourite: (at: Point) => boolean;
   /** Adds the point as a favourite place, or removes the one there. */
@@ -158,7 +160,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       else if (secs >= 0 && r?.each) {
         const each = r.each.map((v, i) => {
           const s = gridSeconds(r, lat, lng, v);
-          return `<i class="p${i + 1}"></i>${s < Infinity ? Math.round(s / 60) : '–'}`;
+          const name = state.names[i] ? `${escapeHtml(state.names[i])} ` : '';
+          return `<i class="p${i + 1}"></i>${name}${s < Infinity ? Math.round(s / 60) : '–'}`;
         });
         // Under Typisch these are the hour's averages, not the trips shown below them.
         const avgMark = state.measure === 'typical' ? 'Ø ' : '';
@@ -313,10 +316,15 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     removeWhich = i;
     const mark = state.others.length ? `<i class="p${i + 1}"></i>` : '';
     const goal = state.direction === 'arrive' && !state.others.length;
-    showCard(
-      `${mark}<b>${i ? t('secondPoint', { n: i + 1 }) : t(goal ? 'goalPoint' : 'startPoint')}</b>`,
-      true,
-    );
+    const title = i ? t('secondPoint', { n: i + 1 }) : t(goal ? 'goalPoint' : 'startPoint');
+    // In a meeting point each start can carry a name (D2): the marker shows its initial.
+    const field = state.others.length
+      ? `<input class="start-name" maxlength="${MAX_NAME}" enterkeyhint="done" aria-label="${escapeHtml(t('startNameLabel'))}" placeholder="${escapeHtml(t('startNamePlaceholder'))}" value="${escapeHtml(state.names[i] ?? '')}">`
+      : '';
+    showCard(`${mark}<b>${title}</b>${field}`, true);
+    const input = readoutText.querySelector<HTMLInputElement>('.start-name');
+    input?.addEventListener('change', () => deps.nameStart(i, input.value));
+    input?.addEventListener('keydown', (e) => e.key === 'Enter' && input.blur());
     deps.onCard();
     // Its name (the nearest stop) follows from the worker.
     const p = i ? state.others[i - 1] : state.origin;
@@ -459,6 +467,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       place: spot?.title || undefined,
       changeNote: deps.changeNote,
       avg: shownAvg,
+      names: state.names,
     });
     if (open) el.querySelector<HTMLDetailsElement>('.trip-more')!.open = true;
     detailsBtn.hidden = !el.querySelector('.stops, .timeline');

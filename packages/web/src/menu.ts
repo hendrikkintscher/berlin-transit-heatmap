@@ -28,6 +28,8 @@ export interface MenuDeps {
   langChanged: () => void;
   setStatus: (render: () => string, fade?: boolean) => void;
   install: () => void;
+  /** A meeting point's suggestions and everyone's minutes, for the shared message. */
+  shareText: () => string | null;
 }
 
 export function initMenu(deps: MenuDeps) {
@@ -190,7 +192,7 @@ export function initMenu(deps: MenuDeps) {
     const url = shared.href;
     if (navigator.share) {
       try {
-        await navigator.share({ title: t('title'), text: t('shareText'), url });
+        await navigator.share({ title: t('title'), text: deps.shareText() ?? t('shareText'), url });
         menuDialog.close();
       } catch {
         // Cancelled by the user.
@@ -198,7 +200,8 @@ export function initMenu(deps: MenuDeps) {
       return;
     }
     try {
-      await navigator.clipboard.writeText(url);
+      const text = deps.shareText();
+      await navigator.clipboard.writeText(text ? `${text}\n${url}` : url);
       menuDialog.close();
       deps.setStatus(() => t('linkCopied'), true);
     } catch {

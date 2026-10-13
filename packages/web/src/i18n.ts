@@ -81,6 +81,7 @@ const de = {
   undoGoal: 'Neues Ziel',
   extraMinutes: '{n} Min. mehr als die schnellste Stelle der Karte',
   meetSuggestion: 'Treffpunkt-Vorschlag {name}: {list} Min.',
+  meetShareIntro: 'Wo treffen wir uns? Vorschläge mit Fahrzeit für jede:n:',
   favHere: 'Lieblingsort',
   favName: 'Name des Lieblingsorts',
   favOn: 'Lieblingsort',
@@ -296,6 +297,8 @@ const de = {
   goalPoint: 'Ziel',
   pointNear: 'bei {name}',
   secondPoint: 'Startpunkt {n}',
+  startNameLabel: 'Name dieses Startpunkts',
+  startNamePlaceholder: 'Name, z. B. Anna',
   removeStart: '✕ Entfernen',
 };
 export type Key = keyof typeof de;
@@ -376,6 +379,7 @@ const en: Record<Key, string> = {
   undoGoal: 'Destination moved',
   extraMinutes: '{n} min more than the fastest spot on the map',
   meetSuggestion: 'Suggested meeting point {name}: {list} min',
+  meetShareIntro: 'Where shall we meet? Suggestions with everyone’s travel time:',
   favHere: 'Favourite place',
   favName: 'Name of the favourite place',
   favOn: 'Favourite place',
@@ -589,6 +593,8 @@ const en: Record<Key, string> = {
   goalPoint: 'Destination',
   pointNear: 'near {name}',
   secondPoint: 'Starting point {n}',
+  startNameLabel: 'Name of this starting point',
+  startNamePlaceholder: 'A name, e.g. Anna',
   removeStart: '✕ Remove',
 };
 

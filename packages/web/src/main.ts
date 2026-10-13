@@ -79,7 +79,7 @@ import { initChips } from './chips';
 import { initMenu } from './menu';
 import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
 import { initTap } from './tap';
-import { linkQuery, MAX_STARTS, readLink, type Point } from './url';
+import { cleanName, linkQuery, MAX_STARTS, readLink, type Point } from './url';
 import {
   computeWindow,
   desertThresholds,
@@ -577,8 +577,11 @@ function showOrigin() {
   list.forEach((p, i) => {
     const m = startMarker(i).setLngLat([p.lon, p.lat]).addTo(map);
     const el = m.getElement();
+    const name = list.length > 1 ? (state.names[i] ?? '') : '';
     el.classList.toggle('numbered', list.length > 1);
-    el.textContent = list.length > 1 ? String(i + 1) : '';
+    // A named start shows its initial, and its name on a long press or hover.
+    el.textContent = list.length > 1 ? (name ? [...name][0]!.toUpperCase() : String(i + 1)) : '';
+    el.title = name;
   });
   meetChip.hidden = list.length < 2;
   hint.hidden = list.length > 0 || !!state.special || isSearchOpen();
@@ -653,7 +656,17 @@ $('undo-btn').addEventListener('click', () => {
 function removeStart(i: number) {
   const list = starts();
   list.splice(i, 1);
+  state.names = state.names.filter((_, k) => k !== i);
   setStarts(list);
+}
+
+/** Names start i (D2); empty clears it. The marker, cards and link follow. */
+function nameStart(i: number, name: string) {
+  const names = [...state.names];
+  names[i] = cleanName(name);
+  state.names = Array.from(names, (n) => n ?? '');
+  showOrigin();
+  writeUrl();
 }
 
 function setStarts(list: Point[]) {
@@ -700,7 +713,10 @@ function addStart(p: Point) {
   startsChanged();
 }
 // The banner's ✕ ends the meeting point: only the first start stays.
-$('meet-close').addEventListener('click', () => setStarts(starts().slice(0, 1)));
+$('meet-close').addEventListener('click', () => {
+  state.names = [];
+  setStarts(starts().slice(0, 1));
+});
 
 // Start with the attribution collapsed to its (i) button so it does not cover the legend:
 // MapLibre opens it when the style's sources arrive; until the map has loaded, it is
@@ -821,6 +837,24 @@ function renderBest(r: Result) {
   });
 }
 
+/** Each start's minutes, with its name when it has one: "Anna 23 · 31 · Cem 18". */
+function namedMinutes(mins: readonly (number | string)[]): string {
+  return mins.map((m, i) => (state.names[i] ? `${state.names[i]} ${m}` : String(m))).join(' · ');
+}
+
+/**
+ * The text a shared meeting-point link comes with: the suggested places and everyone's
+ * minutes there (D2); null without suggestions.
+ */
+function meetShareText(): string | null {
+  const meet = state.result?.meet;
+  if (!state.others.length || !meet?.length) return null;
+  const lines = meet.map(
+    (s, i) => `${i + 1}. ${stopName(s.name)}: ${namedMinutes(s.mins)} ${t('min')}`,
+  );
+  return [t('meetShareIntro'), ...lines].join('\n');
+}
+
 let meetMarkers: maplibregl.Marker[] = [];
 /** Pins for the suggested meeting points; a tap shows everyone's trip there. */
 function renderMeet(list: Result['meet']) {
@@ -831,7 +865,7 @@ function renderMeet(list: Result['meet']) {
     el.className = 'meet-marker';
     // A star with the rank, so the suggestions do not read as the numbered starts.
     el.innerHTML = `<i>★${i + 1}</i><span>${escapeHtml(shortStop(s.name))}</span>`;
-    el.title = t('meetSuggestion', { name: stopName(s.name), list: s.mins.join(' · ') });
+    el.title = t('meetSuggestion', { name: stopName(s.name), list: namedMinutes(s.mins) });
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       tap.tapAt(s.lat, s.lon, undefined, stopName(s.name));
@@ -1771,6 +1805,7 @@ const tap = initTap(
     setOrigin,
     addStart,
     removeStart,
+    nameStart,
     isFavourite: (at) => !!favouriteAt(favourites, at),
     toggleFavourite: (at) => {
       const there = favouriteAt(favourites, at);
@@ -1888,6 +1923,7 @@ const menu = initMenu({
   },
   setStatus,
   install: () => void install(),
+  shareText: meetShareText,
 });
 
 // Back closes the top-most open layer (back.ts).
