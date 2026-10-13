@@ -63,6 +63,26 @@ export function linesText(lines: string[], most = 3): string {
     : `${lines.slice(0, most).join(', ')} +${lines.length - most}`;
 }
 
+/** One line's changes in the box's list. */
+export interface LineGroup {
+  key: string;
+  line: string;
+  mode: string;
+  items: Change[];
+}
+
+/** The changes by line (line and mode), each line once, in the file's order. */
+export function byLine(list: Change[]): LineGroup[] {
+  const groups = new Map<string, LineGroup>();
+  for (const c of list) {
+    const key = `${c.mode} ${c.line}`;
+    const g = groups.get(key);
+    if (g) g.items.push(c);
+    else groups.set(key, { key, line: c.line, mode: c.mode, items: [c] });
+  }
+  return [...groups.values()];
+}
+
 /** A ride of the shown connection: its line name and mode. */
 export interface Ride {
   name: string;
@@ -115,6 +135,8 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
   let shown: Change | null = null;
   /** The entries the list shows, for its taps. */
   let listed: Change[] = [];
+  /** The whole day's list keeps one row per line; these lines are unfolded. */
+  let unfolded = new Set<string>();
 
   const allToday = () => (isDate(state.when.day) ? (file?.days[state.when.day] ?? []) : []);
   function items(): Change[] {
@@ -232,18 +254,31 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
       : t('changesTitle', { day: label });
     $('changes-note').textContent = t('changesNote');
     listed = now;
-    list.innerHTML = now
-      .map(
-        (c, i) =>
-          `<li><button type="button" data-i="${i}" aria-pressed="${c === shown}"><span class="line-badge" style="background:${MODE_COLORS[c.mode] ?? '#444'}">${escapeHtml(c.line)}</span> <span>${escapeHtml(changeText(c, day))}</span></button></li>`,
-      )
-      .join('');
+    const badge = (c: { line: string; mode: string }) =>
+      `<span class="line-badge" style="background:${MODE_COLORS[c.mode] ?? '#444'}">${escapeHtml(c.line)}</span>`;
+    const entry = (c: Change, cls = '') =>
+      `<li><button type="button"${cls} data-i="${now.indexOf(c)}" aria-pressed="${c === shown}">${badge(c)} <span>${escapeHtml(changeText(c, day))}</span></button></li>`;
+    // From the trip card: that line's entries in full. The whole day: one row per line, so
+    // a long day stays short; a line with several changes unfolds on a tap.
+    list.innerHTML = opened.ride
+      ? now.map((c) => entry(c)).join('')
+      : byLine(now)
+          .map((g) => {
+            if (g.items.length === 1) return entry(g.items[0], ' class="one"');
+            const open = unfolded.has(g.key);
+            const head = `<li><button type="button" class="group" data-g="${escapeHtml(g.key)}" aria-expanded="${open}">${badge(g)} <span>${escapeHtml(t('changesCount', { n: g.items.length }))}</span></button>`;
+            return open
+              ? `${head}<ul class="changes-sub">${g.items.map((c) => entry(c)).join('')}</ul></li>`
+              : `${head}</li>`;
+          })
+          .join('');
   }
 
   function open(ride: Ride | null) {
     if (shown) draw(null);
     opened = { day: state.when.day, ride };
     folded = false;
+    unfolded = new Set();
     render();
   }
 
@@ -261,6 +296,13 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     render();
   });
   list.addEventListener('click', (e) => {
+    const g = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-g]');
+    if (g) {
+      const key = g.dataset.g ?? '';
+      if (!unfolded.delete(key)) unfolded.add(key);
+      render();
+      return;
+    }
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-i]');
     if (!b) return;
     const c = listed[Number(b.dataset.i)] ?? null;

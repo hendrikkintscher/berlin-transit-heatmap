@@ -286,6 +286,7 @@ const de = {
   changesTitle: '{day} anders als sonst',
   changesLineTitle: '{line}: {day} anders als sonst',
   changesNone: '{day} fährt alles wie sonst',
+  changesCount: '{n} Änderungen',
   changesNote:
     'Aus dem Fahrplan der kommenden Wochen: wo U-Bahn, S-Bahn und Tram an diesem Tag nicht wie sonst fahren. Tippe auf eine Zeile, um die Strecke zu sehen. Kurzfristige Störungen fehlen.',
   changesClose: 'Hinweis schließen',
@@ -589,6 +590,7 @@ const en: Record<Key, string> = {
   changesTitle: 'Changes {day}',
   changesLineTitle: '{line}: changes {day}',
   changesNone: 'No changes {day}',
+  changesCount: '{n} changes',
   changesNote:
     "From the timetable of the coming weeks: where U-Bahn, S-Bahn and tram don't run as usual on this day. Tap a line to see the stretch. Short-notice disruptions are not included.",
   changesClose: 'Close notice',

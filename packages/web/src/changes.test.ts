@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changedLines, changeText, linesText, touching, type Change } from './changes';
+import { byLine, changedLines, changeText, linesText, touching, type Change } from './changes';
 
 const change = (c: Partial<Change>): Change => ({
   line: 'M2',
@@ -67,5 +67,19 @@ describe('what is different today', () => {
   it('shortens long line lists', () => {
     expect(linesText(['M2', 'S3', 'U2', 'M5'])).toBe('M2, S3, U2, M5');
     expect(linesText(['M2', 'S3', 'U2', 'M5', 'M8'])).toBe('M2, S3, U2 +2');
+  });
+
+  it("groups the day by line, each line once in the file's order", () => {
+    const a = change({ line: 'M5' });
+    const b = change({ line: 'M2' });
+    const c = change({ line: 'M5', kind: 'skip' });
+    const d = change({ line: 'M5', mode: 'bus' });
+    const groups = byLine([a, b, c, d]);
+    expect(groups.map((g) => [g.line, g.mode, g.items.length])).toEqual([
+      ['M5', 'tram', 2],
+      ['M2', 'tram', 1],
+      ['M5', 'bus', 1],
+    ]);
+    expect(groups[0].items).toEqual([a, c]);
   });
 });
