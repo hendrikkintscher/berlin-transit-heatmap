@@ -1,6 +1,6 @@
-# Roadmap V1.4
+# Roadmap V1.5
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.2** (through PR #275). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.0** (through PR #276). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
 **How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal.
 
@@ -34,7 +34,8 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.
 | 0.8.0   | 10-13     | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                           | #266–#270 |
 | 0.9.0   | 10-13     | App shows its version in the Mehr menu; git tag per step                                        | #272      |
 | 0.9.1   | 10-13     | Automatic tag `vX.Y.Z` for each merge that bumps the version                                    | #274      |
-| 0.9.2   | 10-13 now | Version line in German and English, short commit shown as text                                  | #275      |
+| 0.9.2   | 10-13     | Version line in German and English, short commit shown as text                                  | #275      |
+| 0.10.0  | 10-13 now | Later connections fill in while pulling the drawer and reach an hour ahead                      | #276      |
 
 ## Inbox
 
@@ -44,10 +45,6 @@ _Empty._
 
 ## 0.10 Trip card and changes
 
-- **0.10.0 Later connections while pulling** (Hendrik, 2026-10-13 11:03: "The drawer shows later connections only when already pulled out, not while pulling. Those should also take connections in the next hour into account.").
-  - a. The later connections are filled in as soon as the pull starts, so they slide up with the drawer.
-  - b. They reach into the next hour (the next hour's timetable, loaded in the background), not only the current one.
-  - c. Timings: the pull stays smooth on a phone.
 - **0.10.1 "Heute anders" into Mehr** (Hendrik, 2026-10-13 07:36: "Heute Anders never as popup, only in the mehr Menu, there should open a box with all the info when tapped. For the map and connection view the information is already displayed when a connection has Änderungen, when those appear, make them clickable and open a popup with the relevant information. Same as now clicking the heute now popup does"). Code: changes.ts, the #changes chip and panel in index.html, noteFor() for the trip card.
   - a. The chip and its popup go.
   - b. Mehr gets a "Heute anders" entry that opens the full list.
@@ -109,6 +106,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.5** (2026-10-13): 0.10.0 Later connections while pulling done (#276): the list fills in as the pull starts and runs for the hour after the shown connection (the hour's file already holds the next hours' trips, so nothing extra loads).
 - **V1.4** (2026-10-13): 0.9.2 Version line in German and English done (#275, tag `v0.9.2`); milestone 0.9 closed.
 - **V1.3** (2026-10-13): 0.9.1 Automatic tag per version done (#274, tag `v0.9.1` set by the new workflow); Hendrik no longer tags by hand.
 - **V1.2** (2026-10-13): the two Inbox notes from step 0.9.0 placed as 0.9.1 Automatic tag per version and 0.9.2 Version line in German and English; milestone 0.9 reopened for them, next in order.
