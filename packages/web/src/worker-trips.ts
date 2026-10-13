@@ -214,24 +214,28 @@ function rideClocks(
   j: Journey,
   start: number,
   reversed: boolean,
+  twins?: Twin[][],
 ): (RideClock | null)[] {
   let t = start;
   const out: (RideClock | null)[] = [];
-  for (const l of j.legs) {
+  for (const [li, l] of j.legs.entries()) {
     if (l.type === 'walk') {
       t += l.seconds;
       out.push(null);
       continue;
     }
-    const n = tt.routeStopOffset[l.route + 1]! - tt.routeStopOffset[l.route]!;
-    const base = tt.routeTimeOffset[l.route]!;
-    let best = -1;
-    for (let trip = 0; trip < tt.routeTripCount[l.route]!; trip++) {
-      const d = tt.times[base + trip * n + l.fromPos]!;
-      if (d >= t && (best < 0 || d < tt.times[base + best * n + l.fromPos]!)) best = trip;
+    // The first vehicle after `t` on the ride's route (or any of its twins).
+    let o = -1;
+    for (const { route, pos } of twins?.[li] ?? [{ route: l.route, pos: l.fromPos }]) {
+      const n = tt.routeStopOffset[route + 1]! - tt.routeStopOffset[route]!;
+      const base = tt.routeTimeOffset[route]!;
+      for (let trip = 0; trip < tt.routeTripCount[route]!; trip++) {
+        const at = base + trip * n + pos;
+        const d = tt.times[at]!;
+        if (d >= t && (o < 0 || d < tt.times[o]!)) o = at;
+      }
     }
-    if (best < 0) return j.legs.map(() => null);
-    const o = base + best * n + l.fromPos;
+    if (o < 0) return j.legs.map(() => null);
     const k = l.stops.length;
     const dep = (i: number) => tt.times[o + i]!;
     const arr = (i: number) => tt.arrivals[o + i]!;
@@ -246,16 +250,55 @@ function rideClocks(
   return out;
 }
 
-/** How many more connections the drawer lists. */
-const MORE_TRIPS = 3;
+/** At most this many more connections in the drawer, */
+const MORE_TRIPS = 10;
+/**
+ * leaving within an hour after the shown one (arriving: arriving within the hour before
+ * it). The hour's timetable file also holds the trips of the next two hours, so the list
+ * runs on past the full hour without loading anything.
+ */
+const MORE_SPAN_S = 3600;
+/** A bound on the vehicles tried, as rows that arrive no earlier are skipped. */
+const MORE_TRIES = 40;
+
+/** A route and the position on it where a ride starts. */
+interface Twin {
+  route: number;
+  pos: number;
+}
+
+/**
+ * The routes a ride could also be taken on: the same line over the same stops. One line's
+ * trips are split over several routes where they overtake, so the next vehicle may be on
+ * another one than the shown ride's.
+ */
+function twinRoutes(
+  tt: PreparedTimetable,
+  l: Extract<Journey['legs'][number], { type: 'ride' }>,
+): Twin[] {
+  const out: Twin[] = [];
+  const k = l.stops.length;
+  for (let e = tt.stopRouteOffset[l.from]!; e < tt.stopRouteOffset[l.from + 1]!; e++) {
+    const route = tt.stopRouteRoute[e]!;
+    const pos = tt.stopRouteIndex[e]!;
+    const so = tt.routeStopOffset[route]! + pos;
+    if (tt.routeNames[route] !== l.name || so + k > tt.routeStopOffset[route + 1]!) continue;
+    let i = 0;
+    while (i < k && tt.routeStops[so + i] === l.stops[i]) i++;
+    if (i === k) out.push({ route, pos });
+  }
+  return out.length ? out : [{ route: l.route, pos: l.fromPos }];
+}
 
 /** The last single connection put on a card, for the drawer's more connections. */
 let lastFound: NonNullable<ReturnType<typeof trip>> | null = null;
 
 /**
  * The next departures of the shown connection (arriving: the ones arriving before it):
- * the same rides, each on the first vehicle a minute after the last one left. No new
- * search, so it costs next to nothing and never holds up a tap.
+ * the same rides, each on the first vehicle a minute after the last one left, for the
+ * hour after the shown one. A row that arrives no earlier than the one before it (a
+ * later first ride waiting for the same onward vehicle) stands in for it: same arrival,
+ * less waiting. No new search, so it costs next to nothing and never holds up a tap.
  */
 export function moreTrips(
   msg: Extract<ToWorker, { type: 'moreTrips' }>,
@@ -272,22 +315,36 @@ export function moreTrips(
   const after = walk(legs.slice(lastRide + 1));
   // On the timetable's own clock: departing it is real time, arriving it runs backwards.
   const reversed = last.direction === 'arrive';
-  let from = (reversed ? -msg.arrive : msg.leave) + 60;
-  const out: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[] = [];
-  for (let k = 0; k < MORE_TRIPS; k++) {
-    const own = rideClocks(last.tt, f0.raw, from, reversed);
-    const clocks = reversed ? own.reverse() : own;
+  const twins = f0.raw.legs.map((l) => (l.type === 'ride' ? twinRoutes(last.tt, l) : []));
+  // Each row as [start, end] on that clock: the start moves on, the end must improve.
+  const own = reversed ? ([-msg.arrive, -msg.leave] as const) : ([msg.leave, msg.arrive] as const);
+  const rows: { start: number; end: number; clocks: (RideClock | null)[] }[] = [];
+  let from = own[0] + 60;
+  for (let k = 0; k < MORE_TRIES; k++) {
+    const clocks = rideClocks(last.tt, f0.raw, from, reversed, twins);
+    if (reversed) clocks.reverse();
     const a = clocks[first];
     const b = clocks[lastRide];
     if (!a || !b) break;
     const leave = a.dep - before;
     const arrive = b.arr + after;
-    out.push(
-      tripMessage([{ ...f0, clocks, leave, arrive, seconds: arrive - leave, board: undefined }]),
-    );
-    from = (reversed ? -arrive : leave) + 60;
+    const [start, end] = reversed ? [-arrive, -leave] : [leave, arrive];
+    if (start - own[0] > MORE_SPAN_S) break;
+    from = start + 60;
+    const prev = rows.at(-1);
+    if (end <= (prev?.end ?? own[1])) {
+      if (prev) Object.assign(prev, { start, end, clocks });
+      continue;
+    }
+    if (rows.length === MORE_TRIPS) break;
+    rows.push({ start, end, clocks });
   }
-  return out;
+  return rows.map(({ start, end, clocks }) => {
+    const [leave, arrive] = reversed ? [-end, -start] : [start, end];
+    return tripMessage([
+      { ...f0, clocks, leave, arrive, seconds: arrive - leave, board: undefined },
+    ]);
+  });
 }
 
 /** Places further than this from any stop go unnamed. */

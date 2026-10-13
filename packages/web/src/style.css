@@ -1956,8 +1956,16 @@ body.special .legend {
 /* The detailed view under Details: each ride with its times, the stops in between folded,
    the walk and wait at each change. The ride's line runs down the left in its colour. */
 #readout:not(.expanded) .timeline,
-#readout:not(.drawer) .more {
+#readout:not(.drawer, .pull-list) .more {
   display: none;
+}
+/* Pulled up from the closed card, the list shows as far as the finger has gone (tap.ts). */
+#readout.pull-list:not(.drawer) .more {
+  box-sizing: border-box;
+  max-height: var(--pull-list, 0px);
+  margin-top: 0;
+  padding-top: 10px;
+  overflow: hidden;
 }
 .timeline,
 .timeline ol {

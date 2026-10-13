@@ -519,8 +519,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     checkLive();
   }
 
-  // The drawer (pulling the card up): the shown connection and the
-  // ones after it (arriving: before it), asked for only once the drawer is open.
+  // The drawer (pulling the card up): the shown connection and the ones after it
+  // (arriving: before it), asked for once the pull starts, so they come up with the card.
   let connections: Trip[] = [];
   let shownConnection = 0;
   let moreAsked = false;
@@ -533,7 +533,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const one = j?.length === 1 ? j[0] : null;
     if (
       moreAsked ||
-      !readout.classList.contains('drawer') ||
+      !readout.matches('.drawer, .pull-list') ||
       !tripAt ||
       !one ||
       one.leave === undefined ||
@@ -771,20 +771,32 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (!pull.dy) {
       readout.setPointerCapture(e.pointerId);
       readout.classList.add('pulling');
+      // Pulled up from the closed card, the list fills in now and slides up with it.
+      if (dy < 0 && !readout.matches('.drawer, .expanded') && hasList()) {
+        readout.classList.add('pull-list');
+        askMore();
+      }
     }
     pull.dy = dy || -0.1;
     const open = readout.classList.contains('drawer') || readout.classList.contains('expanded');
-    if (dy < 0 && !readout.classList.contains('drawer'))
-      readout.style.setProperty('--pull-up', `${Math.min(-dy, 260)}px`);
-    else if (dy > 0 && open) readout.style.transform = `translateY(${dy}px)`;
+    if (dy < 0 && !readout.classList.contains('drawer')) {
+      const up = Math.min(-dy, 260);
+      // The list shows as far as pulled; past its end, the card grows empty below it.
+      const list = readout.classList.contains('pull-list')
+        ? Math.min(up, document.getElementById('trip-more')?.scrollHeight ?? 0)
+        : 0;
+      readout.style.setProperty('--pull-list', `${list}px`);
+      readout.style.setProperty('--pull-up', `${up - list}px`);
+    } else if (dy > 0 && open) readout.style.transform = `translateY(${dy}px)`;
   });
   function endPull(e: PointerEvent) {
     if (!pull || pull.id !== e.pointerId) return;
     const dy = e.type === 'pointerup' ? e.clientY - pull.y : 0;
     const moved = pull.dy !== 0;
     pull = null;
-    readout.classList.remove('pulling');
+    readout.classList.remove('pulling', 'pull-list');
     readout.style.removeProperty('--pull-up');
+    readout.style.removeProperty('--pull-list');
     readout.style.transform = '';
     if (!moved) return;
     pulledAt = performance.now();
