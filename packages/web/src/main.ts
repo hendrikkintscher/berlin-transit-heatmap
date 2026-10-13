@@ -218,7 +218,7 @@ $('home-ticks').append(
  * The travel-time legend (with `extra`: meeting point minutes "+0 … +120"), the comparison
  * legend, or the home map's clock times.
  */
-function showLegend(kind: 'time' | 'diff' | 'home', extra = false) {
+function showLegend(kind: 'time' | 'diff' | 'home', extra = false, avg = false) {
   for (const id of ['legend-bar', 'legend-ticks']) $(id).hidden = kind !== 'time';
   for (const id of ['diff-bar', 'diff-ticks']) $(id).hidden = kind !== 'diff';
   for (const id of ['home-bar', 'home-ticks']) $(id).hidden = kind !== 'home';
@@ -240,8 +240,9 @@ function showLegend(kind: 'time' | 'diff' | 'home', extra = false) {
       tick.dataset.t = extra ? 'legendMaxExtra' : 'legendMax';
       tick.textContent = t(tick.dataset.t as 'legendMax');
     } else if (m === 0 && !extra) {
-      tick.dataset.t = 'legendMin';
-      tick.textContent = t('legendMin');
+      // The where-to-live map shows averages: its key says so.
+      tick.dataset.t = avg ? 'legendMinAvg' : 'legendMin';
+      tick.textContent = t(tick.dataset.t as 'legendMin');
     } else {
       delete tick.dataset.t;
       tick.textContent = extra ? `+${m}` : String(m);
@@ -834,7 +835,11 @@ function showResult(r: Result) {
   renderBest(r);
   frameResult(r);
   renderFavourites();
-  showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined);
+  showLegend(
+    r.compare ? 'diff' : r.home ? 'home' : 'time',
+    r.extraBase !== undefined,
+    !!r.living,
+  );
   if (!state.mapReady) return;
   drawHeat(r);
   (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);

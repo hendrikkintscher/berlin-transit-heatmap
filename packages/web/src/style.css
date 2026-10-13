@@ -336,7 +336,7 @@ body.no-legend .legend {
 .legend {
   position: fixed;
   z-index: 2;
-  right: calc(var(--sr) + 6px);
+  right: calc(var(--sr) + 10px);
   top: calc(var(--st) + 206px);
   height: min(44vh, 380px);
   display: grid;
@@ -366,7 +366,7 @@ body.no-legend .legend {
   grid-column: 1;
   position: relative;
   min-width: 26px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--ink);
   text-shadow:
@@ -482,7 +482,7 @@ body.arrive .spot-marker {
 /* With the colour legend on the right edge, the (i) sits left of it, so the two never
    overlap (landscape, or a tall bottom panel with the install tip). */
 body:not(.no-legend) .maplibregl-ctrl-bottom-right {
-  margin-right: calc(var(--sr) + 46px);
+  margin-right: calc(var(--sr) + 52px);
 }
 
 /* The search bar: always on top, above the chips; its suggestions open under it. */
@@ -760,7 +760,7 @@ dialog.menu::backdrop {
   border-radius: var(--r-s);
   box-shadow: var(--shadow);
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .ll-row {
