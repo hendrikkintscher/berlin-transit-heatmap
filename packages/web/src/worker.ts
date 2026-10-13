@@ -12,6 +12,7 @@ import {
   heatGrid,
   departureAt,
   journeyTo,
+  laterStart,
   NETWORK_WALK_SPEED_MPS,
   walkPath,
   loadTimetable,
@@ -1041,8 +1042,12 @@ function trip(
   /** The journey on the timetable's own clock and order (arriving: reversed), for more. */
   raw: Journey;
 } | null {
-  const j = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
-  if (!j) return null;
+  const found = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
+  if (!found) return null;
+  // Leaving, of two ways to the same onward connection the one leaving later or walking less.
+  const access = r.result.legs?.rounds?.access;
+  const j =
+    last.direction === 'depart' && access ? laterStart(last.tt, found, access, last.from) : found;
   const seconds = r.seconds;
   const o = r.result.origin!;
   const here: [number, number] = [at.lon, at.lat];

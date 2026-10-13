@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { departureAt, heatGrid, journeyTo, loadTimetable, travelTimes } from '../src';
+import { departureAt, heatGrid, journeyTo, laterStart, loadTimetable, travelTimes } from '../src';
 import { A, C, G, H, I, KM_LAT, KM_LON, miniTimetable, STOP_POS } from './fixture';
 
 describe('journeyTo', () => {
@@ -91,5 +91,59 @@ describe('journeyTo leaving at one moment', () => {
     const ride = j.legs[1];
     expect(ride.type === 'ride' && [ride.name, ride.stops]).toEqual(['S1', [1, 2, 3]]);
     expect(j.transfers).toBe(0);
+  });
+});
+
+describe('laterStart', () => {
+  // From P: tram M1 from F (600 m) gets to X at 10:20, bus 200 from N (100 m) at 10:24;
+  // both catch the S1 at 10:30. RAPTOR keeps the tram (earlier at X); the bus walks less.
+  const H10 = 10 * 3600;
+  const p = STOP_POS[A];
+  const pos = [
+    p,
+    { lat: p.lat, lon: p.lon + 0.6 * KM_LON },
+    { lat: p.lat + 0.1 * KM_LAT, lon: p.lon },
+    { lat: p.lat + 4 * KM_LAT, lon: p.lon },
+    { lat: p.lat + 8 * KM_LAT, lon: p.lon },
+  ];
+  const timetable = (busArrives: number) =>
+    loadTimetable({
+      version: 1,
+      window: 'day',
+      serviceDate: '2026-10-14',
+      windowStart: H10,
+      windowEnd: H10 + 7200,
+      feedVersion: 'fixture',
+      stops: ['P', 'F', 'N', 'X', 'Z'].map((name, i) => ({ id: name, name, ...pos[i] })),
+      routes: [
+        { name: 'M1', mode: 'tram', stops: [1, 3], trips: [[H10 + 660, H10 + 1200]] },
+        { name: '200', mode: 'bus', stops: [2, 3], trips: [[H10 + 780, H10 + busArrives]] },
+        { name: 'S1', mode: 'sbahn', stops: [3, 4], trips: [[H10 + 1800, H10 + 2700]] },
+      ],
+      transfers: [],
+    });
+  const names = (j: { legs: { type: string; name?: string }[] }) =>
+    j.legs.map((l) => (l.type === 'ride' ? l.name : 'walk'));
+
+  it('takes the later bus from the nearer stop when it catches the same train', () => {
+    const tt = timetable(1440);
+    const r = travelTimes(tt, pos[0], { trackLegs: true, leaveAt: H10 });
+    const grid = heatGrid(tt, r, { cellSizeM: 50, trackStops: true });
+    const j = journeyTo(tt, r, grid, pos[4].lat, pos[4].lon)!;
+    expect(names(j)).toEqual(['walk', 'M1', 'S1', 'walk']);
+    const later = laterStart(tt, j, r.legs!.rounds!.access, H10);
+    expect(names(later)).toEqual(['walk', '200', 'S1', 'walk']);
+    expect(later.legs[0].type === 'walk' && later.legs[0].seconds).toBeLessThan(
+      j.legs[0].type === 'walk' ? j.legs[0].seconds : 0,
+    );
+    expect(later.transfers).toBe(1);
+  });
+
+  it('keeps the journey when the other way misses the train', () => {
+    const tt = timetable(1860);
+    const r = travelTimes(tt, pos[0], { trackLegs: true, leaveAt: H10 });
+    const grid = heatGrid(tt, r, { cellSizeM: 50, trackStops: true });
+    const j = journeyTo(tt, r, grid, pos[4].lat, pos[4].lon)!;
+    expect(laterStart(tt, j, r.legs!.rounds!.access, H10)).toBe(j);
   });
 });

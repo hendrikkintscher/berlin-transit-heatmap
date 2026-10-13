@@ -193,3 +193,100 @@ export function departureAt(
   }
   return best;
 }
+
+/**
+ * The journey with a first ride that leaves the origin later or walks less, when one gets
+ * to the next leg just as well: RAPTOR keeps the earliest arrival at every stop, so with
+ * two ways to the same onward connection it shows the earlier one, such as an earlier
+ * tram from a farther stop. Only an option that leaves no earlier and walks no more is
+ * taken (the latest leaving, then the least walking); the rest of the journey stays as
+ * it is. Needs `leaveAt` and the origin's walk to each stop (RoundLegs `access`).
+ */
+export function laterStart(
+  tt: PreparedTimetable,
+  j: Journey,
+  access: Float32Array,
+  leaveAt: number,
+): Journey {
+  const first = j.legs.findIndex((l) => l.type === 'ride');
+  const ride = j.legs[first];
+  if (ride?.type !== 'ride') return j;
+  let walk = 0;
+  for (let i = 0; i < first; i++) {
+    const l = j.legs[i];
+    if (l.type === 'walk') walk += l.seconds;
+  }
+  const end = ride.fromPos + ride.stops.length - 1;
+  const trip = boardedTrip(tt, ride.route, ride.fromPos, leaveAt + walk);
+  if (trip < 0) return j;
+  const at = (route: number, t: number, pos: number, times: Int32Array) =>
+    times[tt.routeTimeOffset[route] + t * routeLength(tt, route) + pos];
+  const leave = at(ride.route, trip, ride.fromPos, tt.times) - walk;
+  const arrive = at(ride.route, trip, end, tt.arrivals);
+  // Getting to the end stop by when the next ride leaves (less the walks to it) keeps it;
+  // with no ride after this one, by when this one arrives.
+  let deadline = arrive;
+  let after = 0;
+  for (let i = first + 1; i < j.legs.length; i++) {
+    const l = j.legs[i];
+    if (l.type === 'walk') {
+      after += l.seconds;
+      continue;
+    }
+    const next = boardedTrip(tt, l.route, l.fromPos, arrive + after);
+    if (next >= 0) deadline = at(l.route, next, l.fromPos, tt.times) - after;
+    break;
+  }
+
+  const target = ride.to;
+  let best: { route: number; from: number; to: number; walk: number; leave: number } | null = null;
+  for (let e = tt.stopRouteOffset[target]; e < tt.stopRouteOffset[target + 1]; e++) {
+    const route = tt.stopRouteRoute[e];
+    const to = tt.stopRouteIndex[e];
+    const so = tt.routeStopOffset[route];
+    for (let from = 0; from < to; from++) {
+      const w = access[tt.routeStops[so + from]];
+      if (!(w <= walk)) continue;
+      for (let t = 0; t < tt.routeTripCount[route]; t++) {
+        const dep = at(route, t, from, tt.times);
+        if (dep < leaveAt + w || at(route, t, to, tt.arrivals) > deadline) continue;
+        const l = dep - w;
+        const better = best
+          ? l > best.leave || (l === best.leave && w < best.walk)
+          : l > leave || (l === leave && w < walk);
+        if (better) best = { route, from, to, walk: w, leave: l };
+      }
+    }
+  }
+  if (!best) return j;
+  const legs: JourneyLeg[] = [
+    ...(best.walk > 0
+      ? [
+          {
+            type: 'walk' as const,
+            seconds: Math.round(best.walk),
+            to: tt.routeStops[tt.routeStopOffset[best.route] + best.from],
+          },
+        ]
+      : []),
+    rideLeg(tt, best.route, best.from, best.to),
+    ...j.legs.slice(first + 1),
+  ];
+  const rides = legs.filter((l) => l.type === 'ride').length;
+  return { legs, transfers: Math.max(0, rides - 1) };
+}
+
+const routeLength = (tt: PreparedTimetable, route: number) =>
+  tt.routeStopOffset[route + 1] - tt.routeStopOffset[route];
+
+/** The trip RAPTOR boards at `pos` when ready at `ready`: the first to leave then or later. */
+function boardedTrip(tt: PreparedTimetable, route: number, pos: number, ready: number): number {
+  const n = routeLength(tt, route);
+  const base = tt.routeTimeOffset[route];
+  let best = -1;
+  for (let t = 0; t < tt.routeTripCount[route]; t++) {
+    const d = tt.times[base + t * n + pos];
+    if (d >= ready && (best < 0 || d < tt.times[base + best * n + pos])) best = t;
+  }
+  return best;
+}
