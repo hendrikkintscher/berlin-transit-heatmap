@@ -6,7 +6,9 @@ import {
   HOME_COLORS,
   HOME_OUTLINE_MINUTES,
   homeBandOf,
+  INK,
   LIMIT_VEIL_ALPHA,
+  MAP_TEXT,
   MODE_COLORS,
   OUTLINE_STEP_COLORS,
   OUTLINE_STEP_MINUTES,
@@ -129,7 +131,7 @@ export function addMapLayers(
       'text-size': 11,
       'text-max-angle': 40,
     },
-    paint: { 'text-color': '#1d1d2b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
+    paint: { 'text-color': INK, 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
   });
   const [w, s, e, n] = SEARCH_BBOX;
   map.addSource(DESERT_SOURCE, {
@@ -222,7 +224,7 @@ export function addMapLayers(
       source: OUTLINES_SOURCE,
       layout: { 'line-join': 'round', visibility: isoVisibility },
       paint: {
-        'line-color': '#1d1530',
+        'line-color': INK,
         'line-opacity': ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4],
         // 15 min boldest, then 30 and 45; the other 5-minute steps are hairlines.
         'line-width': [
@@ -252,7 +254,7 @@ export function addMapLayers(
       'text-size': 11,
       'text-keep-upright': true,
     },
-    paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
+    paint: { 'text-color': INK, 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
   });
   map.addSource('ring', { type: 'geojson', data: orient(ringLine) });
   map.addLayer(
@@ -263,7 +265,7 @@ export function addMapLayers(
       layout: { 'line-join': 'round' },
       // A soft wide band: where the Ring is, without another hard line.
       paint: {
-        'line-color': '#1d1530',
+        'line-color': INK,
         'line-opacity': 0.1,
         'line-width': ['interpolate', ['linear'], ['zoom'], 9, 4, 14, 10],
       },
@@ -352,7 +354,7 @@ export function addMapLayers(
     source: TRIP_SOURCE,
     filter: ['all', ['==', ['get', 'walk'], true], ['!=', ['get', 'mode'], 'bike']],
     layout: { 'line-cap': 'round' },
-    paint: { 'line-color': '#1d1530', 'line-width': 3, 'line-dasharray': [0.4, 1.6] },
+    paint: { 'line-color': INK, 'line-width': 3, 'line-dasharray': [0.4, 1.6] },
   });
   map.addLayer({
     id: 'trip-bike',
@@ -360,7 +362,7 @@ export function addMapLayers(
     source: TRIP_SOURCE,
     filter: ['==', ['get', 'mode'], 'bike'],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': '#1d1530', 'line-width': 3.5 },
+    paint: { 'line-color': INK, 'line-width': 3.5 },
   });
   map.addSource(TRIP_STOPS_SOURCE, { type: 'geojson', data: empty });
   map.addLayer({
@@ -388,7 +390,7 @@ export function addMapLayers(
       'text-offset': [0.8, 0],
       'text-optional': true,
     },
-    paint: { 'text-color': '#1d1530', 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
+    paint: { 'text-color': INK, 'text-halo-color': '#ffffff', 'text-halo-width': 2 },
   });
   map.addSource(CHANGES_SOURCE, { type: 'geojson', data: empty });
   map.addLayer({
@@ -450,7 +452,7 @@ export function addMapLayers(
       'text-max-width': 7,
     },
     paint: {
-      'text-color': '#2a2140',
+      'text-color': INK,
       'text-opacity': 0.8,
       'text-halo-color': '#ffffff',
       'text-halo-width': 1.8,
@@ -467,7 +469,7 @@ export function addMapLayers(
       14,
       14,
     ]);
-    map.setPaintProperty('label_other', 'text-color', '#2a2140');
+    map.setPaintProperty('label_other', 'text-color', INK);
     map.setPaintProperty('label_other', 'text-halo-width', 1.8);
   }
   calmPaths(map);
@@ -486,7 +488,7 @@ export function addMapLayers(
       'text-offset': [-0.45, 0],
       'text-optional': true,
     },
-    paint: { 'text-color': '#4a3d63', 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
+    paint: { 'text-color': MAP_TEXT, 'text-halo-color': '#ffffff', 'text-halo-width': 1.6 },
   });
   // House numbers at street level, so a tap can pick an exact address.
   map.addLayer({
@@ -496,7 +498,7 @@ export function addMapLayers(
     'source-layer': 'housenumber',
     minzoom: 17,
     layout: { 'text-field': ['get', 'housenumber'], 'text-font': font, 'text-size': 11 },
-    paint: { 'text-color': '#4a4458', 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 },
+    paint: { 'text-color': MAP_TEXT, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 },
   });
 }
 
@@ -587,7 +589,7 @@ export function styleOutlines(
   map.setPaintProperty(
     'outlines-line',
     'line-color',
-    heat ? '#1d1530' : steps ? stepColors() : homeOutlineColors(),
+    heat ? INK : steps ? stepColors() : homeOutlineColors(),
   );
   map.setPaintProperty(
     'outlines-line',
@@ -669,7 +671,7 @@ function stepColors(): maplibregl.ExpressionSpecification {
     'match',
     ['get', 'min'],
     ...OUTLINE_STEP_MINUTES.flatMap((m, i) => [m, OUTLINE_STEP_COLORS[i]]),
-    '#1d1530',
+    INK,
   ] as never;
 }
 
@@ -680,7 +682,7 @@ function homeOutlineColors(): maplibregl.ExpressionSpecification {
     'match',
     ['get', 'min'],
     ...HOME_OUTLINE_MINUTES.flatMap((m) => [m, color(m)]),
-    '#1d1530',
+    INK,
   ] as never;
 }
 
