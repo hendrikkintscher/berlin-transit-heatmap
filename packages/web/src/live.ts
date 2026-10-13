@@ -6,6 +6,7 @@
 
 import { t } from './i18n';
 import { region } from './region';
+import { dataUrl } from './data-url';
 
 /** The region's journey API; without one the card shows no live line. */
 const API = region.liveApi;
@@ -25,7 +26,7 @@ let stationIds: Promise<number[] | null> | null = null;
 
 /** VBB station numbers by stop index (900100003 for Alexanderplatz), loaded on first use. */
 function stationId(dataBase: string, stop: number): Promise<number | null> {
-  stationIds ??= fetch(new URL('stop-ids.json', dataBase))
+  stationIds ??= fetch(dataUrl(dataBase, 'stop-ids.json'))
     .then((r) => (r.ok ? (r.json() as Promise<{ ids?: number[] }>) : null))
     .then((f) => f?.ids ?? null)
     .catch(() => (stationIds = null));

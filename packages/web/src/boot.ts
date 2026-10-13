@@ -9,6 +9,7 @@ import './style.css';
 import type { FromWorker, ToWorker } from './protocol';
 import { dataBase } from './region';
 import { earlyLoad, linkHasStart } from './early';
+import { pageDataVersions, setDataVersions } from './data-url';
 
 declare global {
   interface Window {
@@ -40,9 +41,10 @@ function loadFirst() {
   send({ type: 'load', ...earlyLoad(location.search, stored) });
 }
 
+setDataVersions(pageDataVersions());
 const withStart = linkHasStart(location.search);
 if (!started) {
-  send({ type: 'init', dataBase: dataBase() });
+  send({ type: 'init', dataBase: dataBase(), v: pageDataVersions() });
   if (withStart) loadFirst();
 }
 

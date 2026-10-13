@@ -94,6 +94,7 @@ import { initWhenSheet } from './when-sheet';
 import { initBack, replaceUrl } from './back';
 import type { FromWorker, ToWorker } from './protocol';
 import { dataBase, region } from './region';
+import { dataUrl } from './data-url';
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 
@@ -1167,7 +1168,7 @@ function openSearch() {
   }
   if (!streetsAsked) {
     streetsAsked = true;
-    fetch(new URL('streets.json', dataBase()))
+    fetch(dataUrl(dataBase(), 'streets.json'))
       .then((r) => (r.ok ? r.json() : null))
       .then((file: StreetsFile | null) => {
         if (!file) return;
