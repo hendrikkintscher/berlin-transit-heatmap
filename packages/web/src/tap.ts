@@ -261,15 +261,16 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   }
 
   /**
-   * Home map: until when the fast connection home runs, and how long the night network
-   * carries on after it. Both are "seconds before end" on the grid, so smaller is later.
+   * Home map: until when a way home takes under 1 h, and until when under 1 h 30. Both are
+   * "seconds before end" on the grid, so smaller is later.
    */
   function homeText(r: NonNullable<State['result']>, lat: number, lng: number): string {
     const h = r.home!;
     const fast = gridSeconds(r, lat, lng);
     const any = gridSeconds(r, lat, lng, h.any);
-    if (!(fast < Infinity)) return t('homeNone');
-    // Leaving at 2 Uhr or later still gets home by 4: the night network carries on.
+    if (!(any < Infinity)) return t('homeNone');
+    if (!(fast < Infinity)) return t('homeSlowOnly', { time: eveningClock(h.end - any) });
+    // Leaving at 2 Uhr or later still gets home by 4: all night.
     const allNight = (v: number) => v <= 2 * 3600;
     if (allNight(fast)) return t('homeAllNight');
     const night = allNight(any)

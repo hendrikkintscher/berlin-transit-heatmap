@@ -185,7 +185,7 @@ async function loadWalk(): Promise<void> {
 
 /**
  * The hops' courses along tracks and roads (lines.bin), fetched once the first map is
- * out; until then, and for hops it does not cover, lines run straight from stop to stop.
+ * out; for hops it does not cover, lines run straight from stop to stop.
  */
 let lineShapes: LineShapes | null = null;
 let linesStarted = false;
@@ -204,23 +204,31 @@ async function loadLines(tt: PreparedTimetable): Promise<void> {
   linesStarted = true;
   try {
     const res = await fetch(new URL('lines.bin', dataBase));
-    if (!res.ok) return;
-    lineShapes = decodeLines(await res.arrayBuffer(), tt.stopCount, (s) => [
-      tt.stopLon[s]!,
-      tt.stopLat[s]!,
-    ]);
-    const last = lastRoutes;
-    if (last)
-      post({
-        type: 'routes',
-        id: last.id,
-        routes: usageGeoJSON(last.tt, last.used),
-        labels: labelLines(last.tt, last.used),
-      });
+    if (res.ok)
+      lineShapes = decodeLines(await res.arrayBuffer(), tt.stopCount, (s) => [
+        tt.stopLon[s]!,
+        tt.stopLat[s]!,
+      ]);
   } catch (err) {
     console.warn('Line courses not used:', err);
   }
+  linesSettled = true;
+  const last = lastRoutes;
+  if (last)
+    post({
+      type: 'routes',
+      id: last.id,
+      routes: usageGeoJSON(last.tt, last.used),
+      labels: labelLines(last.tt, last.used),
+    });
 }
+
+/**
+ * Lines wait for their courses, so the map never shows a line cutting corners that a
+ * trip then draws along the tracks (only without lines.bin do they run straight).
+ */
+let linesSettled = false;
+const NO_LINES = { type: 'FeatureCollection' as const, features: [] };
 
 /** [lon, lat] points from stop to stop along the hops' courses. */
 function course(tt: PreparedTimetable, stops: number[]): [number, number][] {
@@ -413,9 +421,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const runs = starts.map((o) => run(tt, o, typical, travel, true, leaveAt(tt)));
       const grid = slowestOf(runs.map((r) => r.shown));
       const used = runs.flatMap((r) => r.used);
-      const routes = usageGeoJSON(tt, used);
+      const routes = linesSettled ? usageGeoJSON(tt, used) : NO_LINES;
       lastRoutes = { id: msg.id, tt, used };
-      const labels = labelLines(tt, used);
+      const labels = linesSettled ? labelLines(tt, used) : NO_LINES;
       lastTrip = {
         tt,
         runs,
@@ -557,10 +565,12 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
 // ---------- "Bis wann komme ich heim?" ----------
 /** Deadlines step through each file this far apart, from 2 h after its start. */
 const HOME_STEP_S = 900;
-/** A connection counts as fast while it takes at most this much longer than in the evening. */
-const HOME_SLACK_S = 1200;
-/** Trips longer than this (waiting at home included) do not count as getting home. */
-const HOME_MAX_S = 7200;
+/**
+ * The two limits a way home is measured by (Hendrik): under 1 h (the map's colours and
+ * the card's main line) and under 1 h 30 (the card's second line). Waiting included.
+ */
+const HOME_FAST_S = 3600;
+const HOME_MAX_S = 5400;
 
 /** Seconds after midnight of the evening a file's hour starts at (1 Uhr = 25 h). */
 const eveningSeconds = (window: Window) => {
@@ -588,9 +598,8 @@ let lastHome: {
 } | null = null;
 
 /**
- * Per stop, the latest departure that still gets home (any) and the latest whose trip is at
- * most HOME_SLACK_S longer than in the evening (fast; after it the night network takes
- * over). Each pass is an arrive-by RAPTOR from home: a deadline D gives every stop's latest
+ * Per stop, the latest departure that still gets home within HOME_MAX_S (any) and within
+ * HOME_FAST_S (fast). Each pass is an arrive-by RAPTOR from home: a deadline D gives every stop's latest
  * departure L = D - seconds. File h serves deadlines from h+2:15 to h+3, which its trips
  * (departing up to 3 h after its start) cover for journeys leaving after h.
  */
@@ -605,7 +614,6 @@ async function home(msg: Extract<ToWorker, { type: 'home' }>) {
   const passes: { window: Window; leaveAt: number }[] = [];
   let fast: Float64Array | null = null;
   let any: Float64Array | null = null;
-  let base: Float64Array | null = null;
   let fastPass: Uint8Array | null = null;
   let tt: PreparedTimetable | null = null;
   let computedInMs = 0;
@@ -615,7 +623,6 @@ async function home(msg: Extract<ToWorker, { type: 'home' }>) {
     const S = tt.stopCount;
     fast ??= new Float64Array(S).fill(-Infinity);
     any ??= new Float64Array(S).fill(-Infinity);
-    base ??= new Float64Array(S).fill(Infinity);
     fastPass ??= new Uint8Array(S);
     const start = eveningSeconds(window);
     // The reversed file counts backwards from its end: its windowEnd is -(file end).
@@ -631,9 +638,8 @@ async function home(msg: Extract<ToWorker, { type: 'home' }>) {
         const secs = r.stopSeconds[s];
         if (!(secs <= HOME_MAX_S)) continue;
         const L = deadline - secs;
-        if (f === 0) base[s] = Math.min(base[s], secs);
         if (L > any[s]) any[s] = L;
-        if (secs <= base[s] + HOME_SLACK_S && L > fast[s]) {
+        if (secs <= HOME_FAST_S && L > fast[s]) {
           fast[s] = L;
           fastPass[s] = passes.length - 1;
         }

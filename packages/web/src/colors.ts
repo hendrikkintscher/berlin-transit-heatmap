@@ -1,6 +1,7 @@
 // Travel-time colour scale. Bands are 5 minutes up to 20, 2.5 minutes from 20 to 50
 // (where most of the city sits, so that range gets the most colour depth), then
-// widen again. Hues run green (fast) -> yellow -> red -> purple -> navy (slow).
+// widen again. Hues run green (fast, up to 25 min) -> yellow (from 25) -> red -> purple
+// -> navy (slow).
 
 /** Lower band edges in minutes; the last band is open-ended. */
 export const BAND_EDGES_MIN = [
@@ -9,8 +10,9 @@ export const BAND_EDGES_MIN = [
 export const BAND_COUNT = BAND_EDGES_MIN.length;
 export const MAX_BAND = BAND_COUNT - 1;
 
-// Anchor colours: 0–20 greens, 20–50 yellow→purple (12 steps), 50+ blues to navy, 120+ grey.
-const LOW = ['#0f7a52', '#38a35a', '#7cc248', '#c3dc3a'];
+// Anchor colours: 0–25 greens (6 steps, 0–5 the darkest), 25–50 yellow→purple (10 steps),
+// 50+ blues to navy, 120+ grey. 20 minutes is still green; yellow starts at 25 (Hendrik).
+const LOW_ANCHORS = ['#0f7a52', '#38a35a', '#7cc248', '#c8e48a'];
 const MID_ANCHORS = ['#ffe83d', '#fbb02d', '#f2702e', '#d93a4a', '#a92070', '#702088'];
 const HIGH = ['#4b3a9f', '#2f58ad', '#264a85', '#1d315c', '#151c36', '#5b5d6b'];
 
@@ -66,7 +68,7 @@ function ramp(anchors: string[], n: number): string[] {
   });
 }
 
-export const BAND_COLORS: string[] = [...LOW, ...ramp(MID_ANCHORS, 12), ...HIGH];
+export const BAND_COLORS: string[] = [...ramp(LOW_ANCHORS, 6), ...ramp(MID_ANCHORS, 10), ...HIGH];
 
 /** Band index for a travel time in seconds (Infinity -> -1). */
 export function bandOf(seconds: number): number {
