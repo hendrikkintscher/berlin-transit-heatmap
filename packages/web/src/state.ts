@@ -26,7 +26,7 @@ export const seen = (key: string) => readNumber(`seen-${key}`, 0) > 0;
 
 /** The map opens at the current day type and hour in Berlin, unless a link says otherwise. */
 export const NOW_WHEN = whenAt(new Date());
-export const DEFAULT_OPACITY = 80;
+export const DEFAULT_OPACITY = 60;
 
 export type Result = Extract<FromWorker, { type: 'result' }>;
 export type Layers = Extract<FromWorker, { type: 'layers' }>;

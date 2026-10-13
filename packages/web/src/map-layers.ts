@@ -574,8 +574,11 @@ export function styleOutlines(
   kind: OutlineKind,
   heat: boolean,
   unit: string,
+  /** The "look=rings" trial (C9): without the fill, crisp labelled rings at 15/30/45/60. */
+  rings = false,
 ): void {
   if (!map.getLayer('outlines-line')) return;
+  if (rings && !heat && kind !== 'home') return styleRings(map, kind, unit);
   const steps = !heat && kind !== 'home';
   const tens: maplibregl.FilterSpecification = ['==', ['%', ['get', 'min'], 10], 0];
   const half: maplibregl.ExpressionSpecification = ['==', ['%', ['get', 'min'], 30], 0];
@@ -663,6 +666,56 @@ export function styleOutlines(
   map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind, unit));
   // Without the fill the labels are the key, so they repeat about every 3 cm on a phone.
   map.setLayoutProperty('outlines-label', 'symbol-spacing', steps ? 260 : 300);
+}
+
+/** The C9 trial "rings": four crisp rings with a white edge, each labelled. */
+const RING_MINUTES = [15, 30, 45, 60];
+function styleRings(map: maplibregl.Map, kind: OutlineKind, unit: string): void {
+  const rings: maplibregl.FilterSpecification = ['in', ['get', 'min'], ['literal', RING_MINUTES]];
+  map.setPaintProperty('outlines-line', 'line-color', [
+    'match',
+    ['get', 'min'],
+    15,
+    OUTLINE_STEP_COLORS[0],
+    30,
+    OUTLINE_STEP_COLORS[2],
+    45,
+    OUTLINE_STEP_COLORS[3],
+    OUTLINE_STEP_COLORS[5],
+  ] as never);
+  map.setPaintProperty('outlines-line', 'line-opacity', 0.9);
+  map.setPaintProperty('outlines-line', 'line-blur', 0);
+  map.setPaintProperty('outlines-line', 'line-width', [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    9,
+    2.6,
+    14,
+    4,
+  ]);
+  map.setPaintProperty('outlines-casing', 'line-opacity', 0.9);
+  map.setPaintProperty('outlines-casing', 'line-width', [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    9,
+    5,
+    14,
+    7,
+  ]);
+  map.setFilter('outlines-line', rings);
+  map.setFilter('outlines-casing', rings);
+  map.setFilter('outlines-label', rings);
+  map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind, unit));
+  map.setLayoutProperty('outlines-label', 'symbol-spacing', 260);
+}
+
+/** The transit lines thinner (the "look=rings" trial), so the rings lead. */
+export function thinRoutes(map: maplibregl.Map, thin: boolean): void {
+  if (!map.getLayer('routes-line')) return;
+  map.setPaintProperty('routes-line', 'line-opacity', thin ? 0.55 : 1);
+  map.setPaintProperty('routes-casing', 'line-opacity', thin ? 0.4 : 0.9);
 }
 
 /** The 10-minute outlines in one hue, darkest near the start. */
