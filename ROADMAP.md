@@ -1,6 +1,6 @@
-# Roadmap V1.0
+# Roadmap V1.1
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.8.0** (through PR #270). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.0** (through PR #272). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
 **How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal.
 
@@ -30,23 +30,14 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.8.
 | 0.5     | 10-12     | Faster loading, time panel and trip card redesign, real arrivals, Start ⇄ Ziel, Bis N Min.      | #151–#197 |
 | 0.6     | 10-13     | Review track: first open, lighter maps, looks, data versions, smoke test, Rings as default look | #199–#254 |
 | 0.7     | 10-13     | Faster first trip and first map                                                                 | #257–#261 |
-| 0.8.0   | 10-13 now | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                           | #266–#270 |
+| 0.8.0   | 10-13     | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                           | #266–#270 |
+| 0.9.0   | 10-13 now | App shows its version in the Mehr menu; git tag per step                                        | #272      |
 
 ## Inbox
 
 Hendrik's wishes given without a pick land here: one dated line each, in his words. They are moved to their milestone in the next roadmap version.
 
 _Empty._
-
-## 0.9 Version in the app
-
-**Proposed next: 0.9.0**, waiting for Hendrik's go.
-
-- **0.9.0 App shows its version** (Hendrik, 2026-10-13 11:10: "let's introduce versioning to both the roadmap itself and the project").
-  - a. One version, 0.9.0, in the root and web package.json (now 0.0.0); routing and timetable-build keep their own.
-  - b. The build bakes the version and the short commit into the bundle (Vite `define`), so no extra request at start.
-  - c. The Mehr menu shows "Version 0.9.0" in its footer, next to the timetable date where shown.
-  - d. A git tag `v0.9.0` on the merge commit; from here every step's PR bumps the version and tags its merge.
 
 ## 0.10 Trip card and changes
 
@@ -115,4 +106,5 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.1** (2026-10-13): 0.9.0 App shows its version done (#272, tag `v0.9.0`); milestone 0.9 closed. From here every step's PR bumps the version in package.json and tags its merge.
 - **V1.0** (2026-10-13): versioning introduced for the app and the roadmap; milestones renamed to app versions 0.9–1.0 with steps and substeps; the four Inbox notes of 2026-10-13 placed (0.10.0, 0.12, 0.13.1, 0.13.2); Clear trips (old milestone 1) done as 0.8.0.

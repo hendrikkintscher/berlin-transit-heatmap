@@ -7,6 +7,10 @@ import { $, remember, type State } from './state';
 import { TRAVELS, travelOf } from './url';
 import { whenParam } from './when';
 
+/** Baked in by the build (vite.config.ts). */
+declare const __APP_VERSION__: string;
+declare const __APP_COMMIT__: string;
+
 export interface MenuDeps {
   state: State;
   writeUrl: () => void;
@@ -48,6 +52,10 @@ export function initMenu(deps: MenuDeps) {
   const opacityInput = $<HTMLInputElement>('opacity');
   const limitToggle = $<HTMLInputElement>('limit-toggle');
   const limitButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-limit]')];
+
+  const version = $('app-version');
+  version.textContent = `Version ${__APP_VERSION__}`;
+  if (__APP_COMMIT__) version.title = __APP_COMMIT__;
 
   const menuBtn = $('menu-btn');
   menuBtn.addEventListener('click', () => {
