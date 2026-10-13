@@ -814,25 +814,41 @@ dialog.menu[open] {
   background: #d8d5dc;
 }
 
-/* Meeting point: each start has its colour (marker and the dots in the card), and a
-   banner explains the colours. */
+/* Meeting point: each start has its colour (marker and the dots in the card), away from
+   the line colours, and a banner explains the colours. */
 .p1 {
   --pc: var(--accent);
 }
 .p2 {
-  --pc: #0e8a7e;
+  --pc: #e8a317;
 }
 .p3 {
-  --pc: #d9480f;
+  --pc: #1fb5c9;
 }
 .p4 {
-  --pc: #1c64d6;
+  --pc: #e05d8c;
 }
 .p5 {
-  --pc: #c2185b;
+  --pc: #56607a;
 }
 .origin-marker[class*=' p'] {
   border-color: var(--pc);
+}
+/* With several starts each marker carries its number, a dark edge keeps the light colours
+   readable on the map, and starts stay above the suggestions. */
+.origin-marker.numbered {
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow:
+    0 0 0 1.5px rgba(29, 21, 48, 0.55),
+    var(--shadow);
+}
+body.arrive .origin-marker.p1.numbered {
+  color: transparent;
 }
 .meet {
   position: fixed;
@@ -847,7 +863,7 @@ dialog.menu[open] {
   gap: 6px;
   font-size: 13px;
   padding: 4px 4px 4px 12px;
-  border-left: 4px solid #0e8a7e;
+  border-left: 4px solid var(--accent);
 }
 /* Shrunk to a pill (banners.ts): the mode's name and the ✕, tap to read it all again. */
 .meet .banner-pill {
@@ -1621,9 +1637,10 @@ body.special .legend {
   flex: none;
   display: grid;
   place-items: center;
-  width: 18px;
+  min-width: 18px;
   height: 18px;
-  border-radius: 50%;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
   background: var(--ink);
   color: #fff;
   font-style: normal;

@@ -534,6 +534,8 @@ function startMarker(i: number): maplibregl.Marker {
   if (have) return have;
   const el = document.createElement('div');
   el.className = `origin-marker p${i + 1}`;
+  // Above the suggested meeting points and the best-spot pins.
+  el.style.zIndex = '6';
   const m = new maplibregl.Marker({ element: el, draggable: true });
   m.on('dragstart', () => (draggedAt = Date.now()));
   m.on('dragend', () => {
@@ -555,7 +557,12 @@ const starts = (): Point[] => (state.origin ? [state.origin, ...state.others] : 
 function showOrigin() {
   const list = starts();
   startMarkers.forEach((m, i) => i >= list.length && m.remove());
-  list.forEach((p, i) => startMarker(i).setLngLat([p.lon, p.lat]).addTo(map));
+  list.forEach((p, i) => {
+    const m = startMarker(i).setLngLat([p.lon, p.lat]).addTo(map);
+    const el = m.getElement();
+    el.classList.toggle('numbered', list.length > 1);
+    el.textContent = list.length > 1 ? String(i + 1) : '';
+  });
   meetChip.hidden = list.length < 2;
   hint.hidden = list.length > 0 || !!state.special || isSearchOpen();
   // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
@@ -805,7 +812,8 @@ function renderMeet(list: Result['meet']) {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'meet-marker';
-    el.innerHTML = `<i>${i + 1}</i><span>${escapeHtml(shortStop(s.name))}</span>`;
+    // A star with the rank, so the suggestions do not read as the numbered starts.
+    el.innerHTML = `<i>★${i + 1}</i><span>${escapeHtml(shortStop(s.name))}</span>`;
     el.title = t('meetSuggestion', { name: stopName(s.name), list: s.mins.join(' · ') });
     el.addEventListener('click', (e) => {
       e.stopPropagation();
