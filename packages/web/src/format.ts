@@ -3,6 +3,7 @@
 import { cellAt } from '@berlin-transit-heatmap/routing';
 import { lang, t } from './i18n';
 import type { Measure, RasterLayer } from './protocol';
+import { stopName } from './stop-name';
 import {
   addDays,
   isDate,
@@ -17,8 +18,6 @@ export function escapeHtml(t: string): string {
   return t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 }
 
-/** VBB names carry the town: "U Hermannplatz (Berlin)", "Berlin, Greifswalder Str." */
-export const stopName = (n: string) => n.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, '');
 /** Shorter still for the stop chain: "S+U Alexanderplatz Bhf" -> "Alexanderplatz". */
 export const shortStop = (n: string) =>
   stopName(n)

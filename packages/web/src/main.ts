@@ -1,7 +1,8 @@
-// The app: the map and its colours, the start markers, the worker's results, search,
-// favourite places and hints. The time sheet (when-sheet.ts), the menu (menu.ts), taps and
-// the card at the bottom (tap.ts, trip-card.ts) and the link (url.ts) live in their own
-// modules, wired up at the end of this file.
+// The app: the map and its colours, the start markers and the worker's results, framing
+// and hints. The search bar (search-bar.ts), favourite places (fav-places.ts), the
+// where-to-live and home maps (special-maps.ts), the time sheet (when-sheet.ts), the menu
+// (menu.ts), taps and the card at the bottom (tap.ts, trip-card.ts) and the link (url.ts)
+// live in their own modules, wired up in this file.
 import maplibregl, { type CanvasSource, type GeoJSONSource, type MapMouseEvent } from 'maplibre-gl';
 import { listen, send } from './boot';
 import {
@@ -14,40 +15,12 @@ import {
   LIMIT_VEIL,
   bandLabel,
 } from './colors';
-import {
-  formatDate,
-  gridSeconds,
-  nightText,
-  shortStop,
-  stopName,
-  escapeHtml,
-  whenText,
-} from './format';
-import { reverseStreet, searchPlaces, SEARCH_BBOX, streetHouses, type Place } from './search';
-import {
-  loadRecent,
-  localMatches,
-  matchScore,
-  parseStreetLines,
-  rememberRecent,
-  streetMatches,
-  withoutLocal,
-  withRemoteDetail,
-  type LocalPlace,
-  type LocalStreet,
-  type StreetsFile,
-} from './search-local';
-import {
-  loadFavourites,
-  favouriteAt,
-  newId,
-  parseImport,
-  saveFavourites,
-  score,
-  WEIGHTS,
-  type Favourite,
-  type Weight,
-} from './favourites';
+import { formatDate, shortStop, escapeHtml } from './format';
+import { SEARCH_BBOX } from './search';
+import { stopName } from './stop-name';
+import { initSearch } from './search-bar';
+import { initFavouritePlaces } from './fav-places';
+import { initSpecialMaps } from './special-maps';
 import { formatNumber, initialLang, lang, readStoredLang, setLang, t } from './i18n';
 import {
   addMapLayers,
@@ -74,16 +47,14 @@ import {
 } from './map-layers';
 import { initChanges } from './changes';
 import { initBanners } from './banners';
-import { icon } from './icons';
 import { initChips } from './chips';
 import { initMenu } from './menu';
-import { $, createState, NOW_WHEN, remember, seen, type Result, type Special } from './state';
+import { $, createState, NOW_WHEN, remember, seen, type Result } from './state';
 import { initTap } from './tap';
 import { cleanName, linkQuery, MAX_STARTS, readLink, type Point } from './url';
 import {
   computeWindow,
   desertThresholds,
-  eveningWindow,
   isDate,
   isoDay,
   catchUp,
@@ -93,9 +64,8 @@ import {
 } from './when';
 import { initWhenSheet } from './when-sheet';
 import { initBack, replaceUrl } from './back';
-import type { FromWorker, ToWorker } from './protocol';
+import type { FromWorker } from './protocol';
 import { dataBase, region } from './region';
-import { dataUrl } from './data-url';
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 
@@ -105,18 +75,13 @@ const statusEl = $('status');
 const feedInfo = $('feed-info');
 const layerLegend = $('layer-legend');
 const meetChip = $('meet');
-const favChip = $<HTMLButtonElement>('fav-score');
-const favList = $<HTMLUListElement>('fav-list');
 const locateBtn = $<HTMLButtonElement>('locate-btn');
 const tip = $('tip');
 const tipText = $('tip-text');
 const tipAction = $<HTMLButtonElement>('tip-action');
 const installBtn = $<HTMLButtonElement>('install-btn');
 const secondBtn = $<HTMLButtonElement>('second-btn');
-secondBtn.addEventListener('click', () => {
-  searchFor = 'another';
-  openSearch();
-});
+secondBtn.addEventListener('click', () => search.open('another'));
 
 // ---------- state, from the link (see url.ts) ----------
 const state = createState();
@@ -397,15 +362,16 @@ listen((ev: MessageEvent<FromWorker>) => {
   } else if (m.type === 'placeName') {
     tap.onPlaceName(m);
   } else if (m.type === 'stations') {
-    searchStations = m.list.map((s) => ({
-      label: s.name,
-      detail: s.lines,
-      lat: s.lat,
-      lon: s.lon,
-      kind: 'station' as const,
-      weight: s.perHour,
-    }));
-    if (isSearchOpen()) showSuggestions();
+    search.setStations(
+      m.list.map((s) => ({
+        label: s.name,
+        detail: s.lines,
+        lat: s.lat,
+        lon: s.lon,
+        kind: 'station' as const,
+        weight: s.perHour,
+      })),
+    );
   } else if (m.type === 'layers') {
     state.layers[m.window] = m;
     if (m.window === state.window) showLayers();
@@ -584,7 +550,7 @@ function showOrigin() {
     el.title = name;
   });
   meetChip.hidden = list.length < 2;
-  hint.hidden = list.length > 0 || !!state.special || isSearchOpen();
+  hint.hidden = list.length > 0 || !!state.special || search.isOpen();
   // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
   secondBtn.hidden = !list.length || list.length >= MAX_STARTS || !!state.special;
   // With one start it starts a meeting (Treffpunkt); in one it adds a person.
@@ -688,7 +654,7 @@ function clearResult() {
   renderMeet(undefined);
   loadbar.hidden = true;
   setStatus(() => '');
-  renderFavourites();
+  favPlaces.render();
   showLegend('time');
   // Back to the switch's own look (a where-to-live or home map had the colours on).
   showHeat();
@@ -884,7 +850,7 @@ function showResult(r: Result) {
   renderMeet(r.meet);
   renderBest(r);
   frameResult(r);
-  renderFavourites();
+  favPlaces.render();
   showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined, !!r.living);
   if (!state.mapReady) return;
   drawHeat(r);
@@ -1003,7 +969,7 @@ window.addEventListener(
   'pointerdown',
   (e) => {
     ignoreClick =
-      map.getContainer().contains(e.target as Node) && (isSearchOpen() || !!chips.isOpen());
+      map.getContainer().contains(e.target as Node) && (search.isOpen() || !!chips.isOpen());
   },
   true,
 );
@@ -1085,13 +1051,13 @@ document.addEventListener('visibilitychange', () => {
 // ---------- my location ----------
 // The first-open card's buttons: the locate button's action, and the search.
 $('hint-locate').addEventListener('click', () => locateBtn.click());
-$('hint-search').addEventListener('click', () => openSearch());
+$('hint-search').addEventListener('click', () => search.open());
 locateBtn.addEventListener('click', () => {
   if (!('geolocation' in navigator)) {
     setStatus(() => t('locateFailed'), true);
     return;
   }
-  closeSearch();
+  search.close();
   locateBtn.classList.add('busy');
   setStatus(() => t('locating'));
   navigator.geolocation.getCurrentPosition(
@@ -1171,629 +1137,47 @@ function hideTip() {
 $('tip-close').addEventListener('click', hideTip);
 tipAction.addEventListener('click', () => void install());
 
-// ---------- address search ----------
-const searchPanel = $('search');
-const searchInput = $<HTMLInputElement>('search-input');
-const searchResults = $<HTMLUListElement>('search-results');
-const searchMsg = $('search-msg');
-const searchClose = $<HTMLButtonElement>('search-close');
-/** The bar is always there; open means its suggestions show under it. */
-const isSearchOpen = () => searchPanel.classList.contains('open');
-let searchTimer = 0;
-let searchAbort: AbortController | null = null;
-let places: Place[] = [];
-let active = -1;
-const searchCache = new Map<string, Place[]>();
-/** Stations of the loaded timetable, asked from the worker when the search first opens. */
-let searchStations: LocalPlace[] | null = null;
-let stationsAsked = false;
-/** The region's streets (streets.json), loaded when the search first opens. */
-const searchStreets: LocalStreet[] = [];
-let streetsAsked = false;
-/** Photon's last answer, kept on screen (filtered) while the next one is on its way. */
-let lastRemote: Place[] = [];
-/**
- * A street picked from the suggestions: the address search's second step, its house
- * numbers (in that street's postcode). Ends when the text no longer starts with the street.
- */
-let streetPick: Place | null = null;
-/** The text after the picked street's name, or null when no street is picked. */
-function houseQuery(): string | null {
-  const v = searchInput.value;
-  if (!streetPick?.street || !v.startsWith(streetPick.street.name)) return null;
-  return v.slice(streetPick.street.name.length).trim();
-}
-
-/** The search's title and placeholder for what it is for (C6): a start, a favourite, another start. */
-function labelSearch(purpose = searchFor) {
-  const title = $('search-title');
-  title.hidden = purpose === 'start';
-  title.textContent =
-    purpose === 'favourite'
-      ? t('searchFavTitle')
-      : purpose === 'another'
-        ? t('searchAnotherTitle', { n: starts().length + 1 })
-        : '';
-  searchInput.placeholder = t(
-    purpose === 'favourite'
-      ? 'searchFavPlaceholder'
-      : purpose === 'another'
-        ? 'searchAnotherPlaceholder'
-        : 'searchPlaceholder',
-  );
-}
-
-function openSearch() {
-  labelSearch();
-  chips.close();
-  searchPanel.classList.add('open');
-  searchClose.hidden = false;
-  searchInput.setAttribute('aria-expanded', 'true');
-  hint.hidden = true;
-  searchInput.focus();
-  searchInput.select();
-  if (!stationsAsked) {
-    stationsAsked = true;
-    send({ type: 'stations', window: state.window });
-  }
-  if (!streetsAsked) {
-    streetsAsked = true;
-    fetch(dataUrl(dataBase(), 'streets.json'))
-      .then((r) => (r.ok ? r.json() : null))
-      .then((file: StreetsFile | null) => {
-        if (!file) return;
-        // A few thousand lines at a time, so opening the keyboard and typing stay smooth.
-        const lines = file.streets.split('\n');
-        const step = (from: number) => {
-          searchStreets.push(...parseStreetLines(file.box, lines.slice(from, from + 2000)));
-          if (from + 2000 < lines.length) setTimeout(() => step(from + 2000));
-          else if (isSearchOpen()) showSuggestions();
-        };
-        step(0);
-      })
-      .catch(() => {
-        // No street list: streets still come from Photon.
-        streetsAsked = false;
-      });
-  }
-  showSuggestions();
-}
-
-/** Recent searches, favourite places and stations: everything matched without the network. */
-function localPool(): LocalPlace[] {
-  return [
-    ...loadRecent(),
-    ...favourites.map((f) => ({
-      label: f.label,
-      detail: '',
-      lat: f.lat,
-      lon: f.lon,
-      kind: 'favourite' as const,
-    })),
-    ...(searchStations ?? []),
-  ];
-}
-
-/** Local matches at once, then Photon's results that still fit the query. */
-function showSuggestions(remote = lastRemote) {
-  const q = searchInput.value.trim();
-  const house = houseQuery();
-  if (streetPick?.street && house !== null) {
-    // The street's houses for the typed number, and the street itself to pick as is.
-    const { label, detail, lat, lon } = streetPick;
-    const whole = { label, detail, lat, lon };
-    renderPlaces(
-      [...(house ? streetHouses(remote, streetPick.street, streetPick) : []), whole].slice(0, 8),
-    );
-    showMsg(house ? '' : t('houseNumberHint'));
-    return;
-  }
-  const c = map.getCenter();
-  const local = [
-    ...localMatches(q, localPool(), q.length >= 3 ? 3 : 5),
-    ...withRemoteDetail(streetMatches(q, searchStreets, { lat: c.lat, lon: c.lng }), remote),
-  ];
-  const fitting = remote.filter((p) => matchScore(`${p.label} ${p.detail}`, q) > 0);
-  const list = [...local, ...withoutLocal(fitting, local)].slice(0, 8);
-  renderPlaces(list);
-  if (list.length) showMsg('');
-}
-function closeSearch() {
-  // Closed, the bar reads as the start search again (what a picked result does is kept).
-  labelSearch('start');
-  searchPanel.classList.remove('open');
-  searchClose.hidden = true;
-  searchInput.setAttribute('aria-expanded', 'false');
-  hint.hidden = !!state.origin || !!state.special;
-  searchAbort?.abort();
-  clearTimeout(searchTimer);
-  searchInput.blur();
-}
-function showMsg(text: string) {
-  searchMsg.textContent = text;
-  searchMsg.hidden = !text;
-}
-function renderPlaces(list: (Place | LocalPlace)[]) {
-  places = list;
-  active = -1;
-  searchResults.replaceChildren(
-    ...list.map((p, i) => {
-      const li = document.createElement('li');
-      li.id = `place-${i}`;
-      if ('kind' in p) li.className = `place-${p.kind}`;
-      else if (p.street) li.className = 'place-street';
-      li.setAttribute('role', 'option');
-      const b = document.createElement('b');
-      b.textContent = p.label;
-      li.append(b);
-      if (p.detail) {
-        const s = document.createElement('span');
-        s.textContent = p.detail;
-        li.append(s);
-      }
-      // pointerdown fires before the input loses focus, so the list stays put on phones.
-      li.addEventListener('pointerdown', (e) => e.preventDefault());
-      li.addEventListener('click', () => pickPlace(p));
-      return li;
-    }),
-  );
-  searchResults.hidden = list.length === 0;
-  searchInput.setAttribute('aria-expanded', String(list.length > 0));
-  searchInput.removeAttribute('aria-activedescendant');
-}
-function setActive(i: number) {
-  if (!places.length) return;
-  active = (i + places.length) % places.length;
-  [...searchResults.children].forEach((li, j) =>
-    li.setAttribute('aria-selected', String(j === active)),
-  );
-  searchInput.setAttribute('aria-activedescendant', `place-${active}`);
-  searchResults.children[active]?.scrollIntoView({ block: 'nearest' });
-}
-
-async function runSearch(q: string) {
-  // After a picked street: its houses, in its postcode ("Torstraße 12, 10119").
-  const picked = houseQuery() ? streetPick : null;
-  const street = picked?.street;
-  if (street) q = [`${street.name} ${houseQuery()}`, street.postcode].filter(Boolean).join(', ');
-  // Houses are asked for around the picked street: there may be twenty of that name.
-  const c = picked ? { lat: picked.lat, lng: picked.lon } : map.getCenter();
-  const key = `${picked ? `house:${picked.lat},${picked.lon}:` : ''}${q.toLowerCase()}`;
-  const cached = searchCache.get(key);
-  if (cached) {
-    lastRemote = cached;
-    showSuggestions();
-    if (!places.length) showMsg(t('noMatches'));
-    return;
-  }
-  searchAbort?.abort();
-  const ctrl = (searchAbort = new AbortController());
-  try {
-    const list = await searchPlaces(
-      q,
-      { lat: c.lat, lon: c.lng },
-      ctrl.signal,
-      lang(),
-      street ? 'house' : undefined,
-    );
-    searchCache.set(key, list);
-    if (ctrl.signal.aborted) return;
-    lastRemote = list;
-    showSuggestions();
-    if (!places.length) showMsg(t('noMatches'));
-  } catch {
-    if (ctrl.signal.aborted) return;
-    // Local matches stay; only say so when there is nothing at all.
-    if (!places.length) showMsg(t(navigator.onLine ? 'searchDown' : 'searchOffline'));
-  }
-}
-
-searchInput.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  const q = searchInput.value.trim();
-  if (streetPick && houseQuery() === null) {
-    streetPick = null;
-    lastRemote = [];
-  }
-  // Local suggestions on every keystroke, before any network.
-  showSuggestions();
-  if (streetPick) {
-    // A house number typed after the picked street: ask for its houses.
-    if (houseQuery()) searchTimer = window.setTimeout(() => runSearch(q), 150);
-    return;
-  }
-  if (q.length < 3) {
-    searchAbort?.abort();
-    lastRemote = [];
-    showMsg('');
-    return;
-  }
-  // A typed word answered before: show it at once, otherwise ask Photon after a short pause.
-  if (searchCache.has(q.toLowerCase())) runSearch(q);
-  else searchTimer = window.setTimeout(() => runSearch(q), 150);
-});
-searchInput.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowDown') setActive(active + 1);
-  else if (e.key === 'ArrowUp') setActive(active - 1);
-  else if (e.key === 'Escape') closeSearch();
-  else if (e.key === 'Enter') {
-    const p = places[Math.max(active, 0)];
-    if (p) pickPlace(p);
-    else if (searchInput.value.trim().length >= 3) {
-      clearTimeout(searchTimer);
-      runSearch(searchInput.value.trim());
-    }
-  } else return;
-  e.preventDefault();
-});
-
-/** The zoom that shows about 7 km around a point across the map's narrow side. */
-function reachZoom(lat: number): number {
-  const side = Math.min(map.getContainer().clientWidth, map.getContainer().clientHeight);
-  const metresPerPixelZ0 = 156543 * Math.cos((lat * Math.PI) / 180);
-  return Math.min(13, Math.log2(((side / 2) * metresPerPixelZ0) / 7000));
-}
-
-/** What a picked search result does: set the start, add a favourite place or one more start. */
-let searchFor: 'start' | 'favourite' | 'another' = 'start';
-function pickPlace(p: Place) {
-  if (p.street) {
-    // A street: on to its house numbers (or pick the whole street, offered first).
-    streetPick = p;
-    lastRemote = [];
-    searchInput.value = `${p.street.name} `;
-    searchInput.focus();
-    showSuggestions();
-    return;
-  }
-  streetPick = null;
-  closeSearch();
-  rememberRecent(p);
-  if (searchFor === 'favourite') {
-    searchFor = 'start';
-    searchInput.value = '';
-    addFavourites([{ label: p.label, lat: p.lat, lon: p.lon }]);
+const search = initSearch({
+  map,
+  state,
+  starts,
+  favourites: () => favPlaces.list(),
+  closeChips: () => chips.close(),
+  setOrigin: (p) => setOrigin(p),
+  addStart,
+  addFavourite: (p) => {
+    favPlaces.add([p]);
     menu.open();
-    return;
-  }
-  if (searchFor === 'another') {
-    searchFor = 'start';
-    searchInput.value = '';
-    addStart({ lat: p.lat, lon: p.lon });
-    return;
-  }
-  // The bar empties again: the place shows on the map and in its card.
-  searchInput.value = '';
-  // With a start set, the place may be a new start, a destination or another start:
-  // show the trip there, with buttons for the other two, and the starts with it in view.
-  if (state.origin && state.result) {
-    frameView([...starts(), p], true);
-    tap.tapAt(p.lat, p.lon, undefined, p.label, true);
-  } else {
-    // Far enough out for about the 45-minute ring around the new start (C8).
-    map.flyTo({ center: [p.lon, p.lat], zoom: reachZoom(p.lat), essential: true });
-    setOrigin(p);
-  }
-}
-
-// A tap into the bar searches for a start (the other searches open it themselves).
-searchInput.addEventListener('focus', () => {
-  if (isSearchOpen()) return;
-  searchFor = 'start';
-  openSearch();
+  },
+  frameView,
+  tapAt: (...a) => tap.tapAt(...a),
 });
-searchClose.addEventListener('click', () => {
-  searchFor = 'start';
-  searchInput.value = '';
-  streetPick = null;
-  closeSearch();
-});
-for (const ev of ['mousedown', 'touchstart'] as const) {
-  map.on(ev, () => {
-    if (isSearchOpen()) closeSearch();
-  });
-}
 
 // ---------- favourite places ----------
-let favourites = loadFavourites();
-const favMarkers = new Map<string, maplibregl.Marker>();
-
-function addFavourites(places: { label: string; lat: number; lon: number }[]): Favourite[] {
-  const added = places.map((p) => ({
-    id: newId(),
-    label: p.label,
-    lat: p.lat,
-    lon: p.lon,
-    weight: 2 as Weight,
-  }));
-  favourites = [...favourites, ...added];
-  favouritesChanged();
-  return added;
-}
-
-function favouriteTimes() {
-  const r = state.result;
-  return r && state.origin && !r.living && !r.home
-    ? score(favourites, (lat, lon) => gridSeconds(r, lat, lon))
-    : null;
-}
-
-/** The list changed: save it, redraw it, and redo the where-to-live map if it is shown. */
-function favouritesChanged() {
-  saveFavourites(favourites);
-  renderFavourites();
-  if (state.special?.kind === 'living') compute();
-}
-
-// ---------- maps shown instead of the start's ----------
-// "Where can I live?" shades the map by the weighted average to the favourite places,
-// arriving in the chosen hour (one pass per place). "Bis wann komme ich heim?" shows, for
-// home (a start or a favourite), until when a quick connection runs through the evening
-// and night (passes every 15 minutes, one hourly file after the other). Both take a few
-// seconds, so they run only on request, with progress; the last one is kept until its
-// places or the settings change.
-/** The evening and night hours the home map reads, in order. */
-const HOME_HOURS = [20, 21, 22, 23, 0, 1];
-
-const special = (() => {
-  const chip = $('special');
-  let last: { key: string; result: Result } | null = null;
-  let pending = '';
-
-  function render() {
-    const s = state.special;
-    chip.hidden = !s;
-    document.body.classList.toggle('special', !!s);
-    // The "tap the map or search a start" hint would sit on the banner.
-    hint.hidden = !!s || !!state.origin || isSearchOpen();
-    if (!s) return;
-    $('special-text').textContent =
-      s.kind === 'living'
-        ? t('living', { count: favourites.length, when: whenText(state.when, 'arrive') })
-        : t('home', {
-            name: s.name,
-            night: nightText(state.when.day),
-          });
-  }
-
-  /** What the worker is asked for (without the id), or null when there is nothing to show. */
-  function request():
-    | Omit<Extract<ToWorker, { type: 'living' }>, 'id'>
-    | Omit<Extract<ToWorker, { type: 'home' }>, 'id'>
-    | null {
-    const s = state.special;
-    const how = {
-      walkKmh: state.walkKmh,
-      ...(state.stepFree ? { stepFree: true } : {}),
-      ...(state.travel !== 'walk' ? { travel: state.travel } : {}),
-    };
-    if (s?.kind === 'living')
-      return favourites.length
-        ? {
-            type: 'living',
-            window: computeWindow(state.when, 'arrive'),
-            places: favourites.map((f) => ({ lat: f.lat, lon: f.lon, weight: f.weight })),
-            ...how,
-          }
-        : null;
-    if (s?.kind === 'home')
-      return {
-        type: 'home',
-        windows: HOME_HOURS.map((hour) => eveningWindow(state.when.day, hour)),
-        lat: s.at.lat,
-        lon: s.at.lon,
-        ...how,
-      };
-    return null;
-  }
-
-  function progress(done: number, total: number) {
-    const i = Math.min(done + 1, total);
-    const key = state.special?.kind === 'home' ? 'homeProgress' : 'livingProgress';
-    setStatus(() => t(key, { i, n: total }));
-  }
-
-  function run() {
-    const req = request();
-    if (!req) return show(null);
-    const key = JSON.stringify(req);
-    render();
-    state.requestId++;
-    if (last?.key === key) {
-      state.result = last.result;
-      showResult(last.result);
-      tap.onResult();
-      loadbar.hidden = true;
-      return;
-    }
-    pending = key;
-    loadbar.hidden = false;
-    loadbar.classList.remove('indeterminate');
-    (loadbar.firstElementChild as HTMLElement).style.width = '0%';
-    progress(0, req.type === 'home' ? req.windows.length : req.places.length);
-    send({ ...req, id: state.requestId });
-  }
-
-  /** Shows a special map (computing it) or none (back to the start's map, if any). */
-  function show(s: Special | null) {
-    if (JSON.stringify(s) === JSON.stringify(state.special)) return;
-    state.special = s;
-    render();
-    if (s) {
-      tap.hideReadout();
-      run();
-    } else if (state.origin) {
-      tap.keepSpot();
-      compute();
-    } else {
-      tap.hideReadout();
-      clearResult();
-    }
-  }
-
-  $('special-close').addEventListener('click', () => show(null));
-  $('fav-living').addEventListener('click', () => {
-    menu.close();
-    show({ kind: 'living' });
-  });
-  return {
-    compute: run,
-    show,
-    render,
-    progress,
-    done: (result: Result) => (last = { key: pending, result }),
-    /** The footpaths arrived: the next map is better than the kept one. */
-    forget: () => (last = null),
-  };
-})();
-
-/** Redraws the list in the menu, the star markers on the map and the score chip. */
-function renderFavourites() {
-  const times = favouriteTimes();
-  favList.replaceChildren(
-    ...favourites.map((f, i) => {
-      const li = document.createElement('li');
-      // The name is a text field: tap it to rename the place (C7).
-      const name = document.createElement('input');
-      name.className = 'fav-name';
-      name.value = f.label;
-      name.enterKeyHint = 'done';
-      name.setAttribute('aria-label', t('favName'));
-      name.addEventListener('keydown', (e) => e.key === 'Enter' && name.blur());
-      name.addEventListener('change', () => {
-        const label = name.value.trim();
-        if (label && label !== f.label) {
-          f.label = label;
-          favouritesChanged();
-        } else name.value = f.label;
-      });
-      const min = document.createElement('span');
-      min.className = 'fav-min';
-      const m = times?.minutes[i];
-      min.textContent = times ? (m === null ? '–' : `${m} ${t('min')}`) : '';
-      const weight = document.createElement('select');
-      weight.setAttribute('aria-label', t('favWeight'));
-      for (const w of WEIGHTS) {
-        const o = document.createElement('option');
-        o.value = String(w);
-        o.textContent = t(`weight${w}` as const);
-        o.selected = f.weight === w;
-        weight.append(o);
-      }
-      weight.addEventListener('change', () => {
-        f.weight = Number(weight.value) as Weight;
-        favouritesChanged();
-      });
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'fav-del';
-      del.textContent = '✕';
-      del.setAttribute('aria-label', t('favRemove', { name: f.label }));
-      del.addEventListener('click', () => {
-        favourites = favourites.filter((x) => x !== f);
-        favouritesChanged();
-      });
-      const home = document.createElement('button');
-      home.type = 'button';
-      home.className = 'fav-home';
-      home.innerHTML = icon('moon', 18);
-      home.setAttribute('aria-label', t('homeFav', { name: f.label }));
-      home.title = t('homeFav', { name: f.label });
-      home.addEventListener('click', () => {
-        menu.close();
-        special.show({ kind: 'home', at: { lat: f.lat, lon: f.lon }, name: f.label });
-      });
-      li.append(name, min, weight, home, del);
-      return li;
-    }),
-  );
-  $('fav-empty').hidden = favourites.length > 0;
-  $('fav-living').hidden = $('fav-living-help').hidden = favourites.length === 0;
-  $('fav-export').hidden = favourites.length === 0;
-
-  const keep = new Set(favourites.map((f) => f.id));
-  for (const [id, m] of favMarkers) {
-    if (!keep.has(id)) {
-      m.remove();
-      favMarkers.delete(id);
-    }
-  }
-  favourites.forEach((f, i) => {
-    let m = favMarkers.get(f.id);
-    if (!m) {
-      const el = document.createElement('div');
-      el.className = 'fav-marker';
-      m = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-        .setLngLat([f.lon, f.lat])
-        .addTo(map);
-      favMarkers.set(f.id, m);
-    }
-    const mins = times?.minutes[i];
-    m.getElement().textContent = times ? `★ ${mins === null ? '–' : mins}` : '★';
-    m.getElement().title = f.label;
-  });
-
-  favChip.hidden = !(times && times.average !== null);
-  if (times?.average != null) {
-    favChip.textContent = t(favourites.length > 1 ? 'favScore' : 'favScore1', {
-      n: times.average,
-      count: favourites.length,
-    });
-  }
-}
-
-favChip.addEventListener('click', () => {
-  menu.open();
-  $('fav-title').scrollIntoView({ block: 'start' });
+const favPlaces = initFavouritePlaces({
+  map,
+  state,
+  compute: () => compute(),
+  openMenu: () => menu.open(),
+  closeMenu: () => menu.close(),
+  openSearch: () => search.open('favourite'),
+  showHome: (f) => special.show({ kind: 'home', at: { lat: f.lat, lon: f.lon }, name: f.label }),
 });
-$('fav-add').addEventListener('click', () => {
-  menu.close();
-  searchFor = 'favourite';
-  openSearch();
-});
-const favFile = $<HTMLInputElement>('fav-file');
-$('fav-import').addEventListener('click', () => favFile.click());
-favFile.addEventListener('change', async () => {
-  const file = favFile.files?.[0];
-  favFile.value = '';
-  if (!file) return;
-  const msg = $('fav-msg');
-  try {
-    const places = parseImport(await file.text());
-    const found: { label: string; lat: number; lon: number }[] = [];
-    let missing = 0;
-    for (const [i, p] of places.entries()) {
-      msg.textContent = t('favImporting', { i: i + 1, n: places.length });
-      if (p.lat !== undefined && p.lon !== undefined) {
-        found.push({ label: p.label, lat: p.lat, lon: p.lon });
-        continue;
-      }
-      // No position in the file: look the name up, one request at a time to be kind to Photon.
-      const hit = (
-        await searchPlaces(
-          p.query ?? p.label,
-          { lat: region.center[1], lon: region.center[0] },
-          new AbortController().signal,
-          lang(),
-        ).catch(() => [] as Place[])
-      )[0];
-      if (hit) found.push({ label: p.label, lat: hit.lat, lon: hit.lon });
-      else missing++;
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    addFavourites(found);
-    msg.textContent = t('favImported', { n: found.length, missing });
-  } catch {
-    msg.textContent = t('favImportFailed');
-  }
-});
-$('fav-export').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(favourites, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'lieblingsorte.json';
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+
+// ---------- maps shown instead of the start's (special-maps.ts) ----------
+const special = initSpecialMaps({
+  state,
+  send,
+  favourites: favPlaces.list,
+  isSearchOpen: () => search.isOpen(),
+  setStatus,
+  showResult,
+  compute: () => compute(),
+  clearResult,
+  closeMenu: () => menu.close(),
+  onResult: () => tap.onResult(),
+  keepSpot: () => tap.keepSpot(),
+  hideReadout: () => tap.hideReadout(),
 });
 
 // ---------- the parts in their own modules ----------
@@ -1806,32 +1190,13 @@ const tap = initTap(
     addStart,
     removeStart,
     nameStart,
-    isFavourite: (at) => !!favouriteAt(favourites, at),
-    toggleFavourite: (at) => {
-      const there = favouriteAt(favourites, at);
-      if (there) {
-        favourites = favourites.filter((f) => f !== there);
-        favouritesChanged();
-        return;
-      }
-      // In the list at once, under its coordinates; the street name follows when Photon answers.
-      const [f] = addFavourites([{ label: `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`, ...at }]);
-      reverseStreet(at, lang())
-        .then((label) => {
-          if (label && f && favourites.includes(f)) {
-            f.label = label;
-            favouritesChanged();
-          }
-        })
-        .catch(() => {
-          // Offline or Photon down: keep the coordinates as the name.
-        });
-    },
+    isFavourite: favPlaces.isAt,
+    toggleFavourite: favPlaces.toggle,
     writeUrl,
     onCard: () => {
       if (tipKey === 'tap') hideTip();
     },
-    favouriteLabels: () => favourites.map((f) => f.label),
+    favouriteLabels: () => favPlaces.list().map((f) => f.label),
     changeNote: (ride) => changes?.noteFor(ride) ?? null,
     focusChanges: (rides) => changes?.focus(rides),
     showHome: (i) => {
@@ -1847,7 +1212,7 @@ const tap = initTap(
   link.to,
 );
 
-const chips = initChips({ state, closeSearch });
+const chips = initChips({ state, closeSearch: search.close });
 initBanners();
 
 const whenSheet = initWhenSheet({
@@ -1868,7 +1233,7 @@ const whenSheet = initWhenSheet({
 const menu = initMenu({
   state,
   writeUrl,
-  closeSearch,
+  closeSearch: search.close,
   travelChanged: () => {
     whenSheet.renderWhen();
     tap.keepSpot();
@@ -1913,13 +1278,13 @@ const menu = initMenu({
     renderFeedInfo();
     showOrigin();
     showHeat();
-    renderFavourites();
+    favPlaces.render();
     whenSheet.renderWhen();
     renderTip();
     special.render();
     statusEl.textContent = state.status();
     tap.redrawSpot();
-    searchCache.clear();
+    search.clearCache();
   },
   setStatus,
   install: () => void install(),
@@ -1933,13 +1298,13 @@ const readout = $('readout');
 initBack(
   [
     ...dialogs.map((d) => ({ isOpen: () => d.open, close: () => d.close() })),
-    { isOpen: isSearchOpen, close: closeSearch },
+    { isOpen: search.isOpen, close: search.close },
     { isOpen: () => !!chips.isOpen(), close: chips.close },
     { isOpen: () => !readout.hidden, close: tap.hideReadout },
   ],
   [
     ...dialogs.map((d) => [d, 'open'] as [Element, string]),
-    [searchPanel, 'class'],
+    [search.panel, 'class'],
     ...pops.map((p) => [p, 'hidden'] as [Element, string]),
     [readout, 'hidden'],
   ],
@@ -1951,7 +1316,7 @@ menu.applyLang(lang(), false);
 // First view: the chip labels are known now (they start hidden, so the page never
 // paints the HTML's placeholder time or German labels for an English link).
 $('chips').classList.remove('unrendered');
-searchPanel.classList.remove('unrendered');
+search.panel.classList.remove('unrendered');
 hint.hidden = !!state.origin || !!state.special;
 showHeat();
 if (linkOutside) setStatus(() => t('linkOutside'), true);

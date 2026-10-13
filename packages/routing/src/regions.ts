@@ -20,6 +20,8 @@ export interface Region {
   walkBbox: Box;
   /** Cut from the OpenStreetMap extracts by the monthly footpath refresh. */
   osmBbox: Box;
+  /** The town the feed adds to stop names ("U Hermannplatz (Berlin)"), dropped for display. */
+  town: string;
   /** Where the map opens: [lon, lat]. */
   center: [number, number];
   /** The GTFS feed the timetables are built from. */
@@ -43,6 +45,7 @@ export const REGIONS = {
     stopBbox: [12.87, 52.25, 13.95, 52.82],
     walkBbox: [12.88, 52.26, 13.94, 52.81],
     osmBbox: [12.8, 52.2, 14.0, 52.85],
+    town: 'Berlin',
     center: [13.405, 52.515],
     gtfsUrl: 'https://www.vbb.de/vbbgtfs',
     osmExtracts: ['berlin', 'brandenburg'],

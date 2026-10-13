@@ -7,7 +7,8 @@ import type { WalkNetwork } from './walk';
  */
 export interface Timetable {
   version: 1;
-  window: 'day' | 'night';
+  /** The window's name: an hour such as "weekday-10" or "20261012-10"; "day" or "night" in tests. */
+  window: string;
   /** YYYY-MM-DD, the reference weekday used. */
   serviceDate: string;
   /** Seconds, e.g. 36000 for 10:00. */

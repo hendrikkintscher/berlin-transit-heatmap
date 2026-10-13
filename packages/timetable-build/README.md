@@ -26,15 +26,15 @@ pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 - **Reference day:** the first Tuesday–Thursday at least 3 days after the feed start that is not a Berlin public holiday (computed, including Easter-based dates).
 - **Weekend reference day:** the first Saturday after the weekday reference day where neither that Saturday nor the Sunday after is a public holiday. `weekend-00` to `weekend-04` are the night from Friday to Saturday.
 - **Services:** `calendar.txt` plus `calendar_dates.txt`. Trips of the previous and next service day are included when their shifted times fall in the window, so the night window also contains trips the feed lists as 02:xx on the next day.
-- **Area:** stops inside lon 13.05–13.80, lat 52.33–52.70; trips keep only their stops inside. Stops where the vehicle neither picks up nor drops off are skipped.
+- **Area:** stops inside the region's `stopBbox` (`packages/routing/src/regions.ts`); trips keep only their stops inside. Stops where the vehicle neither picks up nor drops off are skipped.
 - **Time filter:** a trip is kept if it departs any kept stop within `[windowStart, windowEnd + 2h]`.
 - **Routes:** identical trips are removed; trips are grouped by GTFS route and identical stop sequence, then split so no trip overtakes another (RAPTOR needs this). Trips are sorted by first departure.
 - **Missing times** are interpolated; times are made non-decreasing along a trip.
-- **Transfers** (shared by both windows, both directions always present): every pair of stops within 400 m, `network distance / 4.8 km/h + 60 s` with `--osm` (pairs whose walk is over 800 m, e.g. across a river, get none), else `distance / 1.2 m/s + 60 s`; platforms of the same station at most 120 s; `transfers.txt` rows of type 2 with `min_transfer_time` and no route/trip restriction override the walking estimate.
+- **Transfers** (the same in every window, both directions always present): every pair of stops within 400 m, `network distance / 4 km/h + 60 s` with `--osm` (pairs whose walk is over 800 m, e.g. across a river, get none), else `distance / 1.2 m/s + 60 s`; platforms of the same station at most 120 s, both edges of one island platform 60 s. `transfers.txt` overrides the walking estimate: type 2 rows with `min_transfer_time` and timed transfers (type 1, 0 s), without trip restrictions; rows tied to routes count only where no general row exists, with the longest of them.
 
 ## Notes for consumers
 
-- `stops` is identical in both window files (and `stops.json`), so a stop index means the same stop in day and night.
+- `stops` is identical in every window file (and `stops.json`), so a stop index means the same stop in every hour.
 - Parent stations are included as entries so that `parent` can point at them. They have no routes and no transfers; routing can treat them as ordinary stops.
 - Coordinates are rounded to 5 decimals (about 1 m).
 
