@@ -239,7 +239,7 @@
           <span class="toggle-text">
             <b data-t="heat">Farben (Heatmap)</b>
             <small data-t="heatHint"
-              >Die Reisezeit als Farbfläche; ohne sie zeigen die Umrisse die Minuten</small
+              >Die Reisezeit als Farbfläche; ohne sie zeigen die Zeitlinien die Minuten</small
             >
           </span>
           <input id="heat-toggle" type="checkbox" role="switch" />
@@ -254,7 +254,9 @@
         <label class="toggle">
           <span class="toggle-text">
             <b data-t="limit">Bis N Min.</b>
-            <small data-t="limitHint">Alles, was du in dieser Zeit erreichst, in einer Farbe</small>
+            <small data-t="limitHint"
+              >Was du in dieser Zeit erreichst, bleibt klar; der Rest wird blass</small
+            >
           </span>
           <input id="limit-toggle" type="checkbox" role="switch" />
         </label>
@@ -280,10 +282,8 @@
         </label>
         <label class="toggle">
           <span class="toggle-text">
-            <b data-t="iso">Umrisse alle 5 Min.</b>
-            <small data-t="isoHint"
-              >Linien alle 5 Minuten, kräftiger bei 15, 30 und 45 Minuten</small
-            >
+            <b data-t="iso">Zeitlinien</b>
+            <small data-t="isoHint">Eine Linie alle 10 Minuten, kräftiger bei 30 und 60</small>
           </span>
           <input id="iso-toggle" type="checkbox" role="switch" checked />
         </label>

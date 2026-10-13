@@ -11,6 +11,7 @@ import {
   DIFF_EDGES_MIN,
   HOME_COLORS,
   HOME_TICKS,
+  LIMIT_VEIL,
   bandLabel,
 } from './colors';
 import {
@@ -65,6 +66,10 @@ import {
   ROUTES_SOURCE,
   STATIONS_LAYER,
   STATIONS_SOURCE,
+  VEIL_LAYER,
+  VEIL_SOURCE,
+  veilAround,
+  veilOpacity,
 } from './map-layers';
 import { initChanges } from './changes';
 import { initBanners } from './banners';
@@ -150,7 +155,7 @@ desertCanvas.width = desertCanvas.height = 1;
 const legendBands = BAND_COLORS.map((c, b) => {
   const s = document.createElement('span');
   s.style.background = c;
-  s.title = `${bandLabel(b)} min`;
+  s.title = `${bandLabel(b)} ${t('min')}`;
   return s;
 });
 $('legend-bar').append(...legendBands);
@@ -161,6 +166,7 @@ const legendTicks = [0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
   tick.textContent = String(m);
   tick.dataset.m = String(m);
   if (m === 120) tick.dataset.t = 'legendMax';
+  if (m === 0) tick.dataset.t = 'legendMin';
   return tick;
 });
 $('legend-ticks').append(...legendTicks);
@@ -233,7 +239,13 @@ function showLegend(kind: 'time' | 'diff' | 'home', extra = false) {
     if (m === 120) {
       tick.dataset.t = extra ? 'legendMaxExtra' : 'legendMax';
       tick.textContent = t(tick.dataset.t as 'legendMax');
-    } else tick.textContent = extra ? `+${m}` : String(m);
+    } else if (m === 0 && !extra) {
+      tick.dataset.t = 'legendMin';
+      tick.textContent = t('legendMin');
+    } else {
+      delete tick.dataset.t;
+      tick.textContent = extra ? `+${m}` : String(m);
+    }
   }
 }
 
@@ -692,7 +704,6 @@ map.on('load', () => {
 
 /** Shows or hides the stop-frequency and desert layers, asking the worker for data once. */
 function showLayers() {
-  layerLegend.hidden = !(state.freq || state.desert);
   renderLayerLegend();
   if (!state.mapReady) return;
   const data = state.layers[state.window];
@@ -722,6 +733,14 @@ function showLayers() {
 
 function renderLayerLegend() {
   const rows: string[] = [];
+  if (limitShown()) {
+    // The key for "Bis N Min."; a tap opens Ebenen, where it is switched.
+    rows.push(
+      `<button type="button" class="ll-row ll-limit"><span class="ll-title">${t('limitLegend', { n: state.limit })}</span>` +
+        `<span class="ll-box ll-clear"></span><span>${t('limitReached')}</span>` +
+        `<span class="ll-box ll-veil"></span><span>${t('limitLonger')}</span></button>`,
+    );
+  }
   if (state.freq) {
     const labels = ['<4', '4', '12', '30', '60+'];
     rows.push(
@@ -739,6 +758,16 @@ function renderLayerLegend() {
     );
   }
   layerLegend.innerHTML = rows.join('');
+  layerLegend.hidden = !rows.length;
+}
+layerLegend.addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('.ll-limit')) chips.show('layers');
+});
+
+/** Whether the map shows "Bis N Min." (only the start's own map does). */
+function limitShown() {
+  const r = state.result;
+  return state.limit > 0 && !r?.compare && !r?.living && !r?.home;
 }
 
 // ---------- suggested meeting points ----------
@@ -793,6 +822,7 @@ function drawHeat(r: Result) {
     [e, s],
     [w, s],
   ];
+  const veil = { type: 'FeatureCollection' as const, features: [veilAround([w, s, e, n])] };
   const src = map.getSource(HEAT_SOURCE) as CanvasSource | undefined;
   if (!src) {
     map.addSource(HEAT_SOURCE, {
@@ -814,7 +844,19 @@ function drawHeat(r: Result) {
       },
       DESERT_LAYER,
     );
+    map.addSource(VEIL_SOURCE, { type: 'geojson', data: veil });
+    map.addLayer(
+      {
+        id: VEIL_LAYER,
+        type: 'fill',
+        source: VEIL_SOURCE,
+        layout: { visibility: r.limit ? 'visible' : 'none' },
+        paint: { 'fill-color': LIMIT_VEIL, 'fill-opacity': veilOpacity(state.opacity) },
+      },
+      DESERT_LAYER,
+    );
   } else {
+    if (r.limit) (map.getSource(VEIL_SOURCE) as GeoJSONSource).setData(veil);
     src.setCoordinates(coordinates);
     // A non-animated canvas source re-reads its canvas only while "playing".
     src.play();
@@ -847,15 +889,20 @@ function showHeat() {
   const limit = own && state.limit > 0;
   const heat = state.heat || limit || !own;
   // Outlines alone carry their minutes, so the colour legend steps aside (not the home
-  // map's clock colours); "Bis N Min." has one colour and needs none either.
+  // map's clock colours); "Bis N Min." has its own key in the layer legend.
   document.body.classList.toggle('no-legend', (!heat && !r?.home) || limit);
+  renderLayerLegend();
   if (!state.mapReady) return;
-  if (map.getLayer(HEAT_LAYER))
+  if (map.getLayer(HEAT_LAYER)) {
     map.setLayoutProperty(HEAT_LAYER, 'visibility', r && heat ? 'visible' : 'none');
+    // The veil goes with the "Bis N Min." image, not before it arrives.
+    map.setLayoutProperty(VEIL_LAYER, 'visibility', limit && r?.limit ? 'visible' : 'none');
+  }
   styleOutlines(
     map,
     r?.home ? 'home' : r?.living ? 'living' : r?.extraBase !== undefined ? 'extra' : 'time',
     heat,
+    t('min'),
   );
 }
 
@@ -1675,10 +1722,12 @@ const menu = initMenu({
   opacityChanged: () => {
     if (map.getLayer(HEAT_LAYER))
       map.setPaintProperty(HEAT_LAYER, 'raster-opacity', heatOpacity(state.opacity));
+    if (map.getLayer(VEIL_LAYER))
+      map.setPaintProperty(VEIL_LAYER, 'fill-opacity', veilOpacity(state.opacity));
   },
   langChanged: () => {
     renderFeedInfo();
-    renderLayerLegend();
+    showHeat();
     renderFavourites();
     whenSheet.renderWhen();
     renderTip();

@@ -126,11 +126,20 @@ export function initMenu(deps: MenuDeps) {
     deps.setLayerVisible('outlines', state.iso);
     deps.writeUrl();
   });
+  // The time lines' hint says what is drawn: every 10 minutes alone, every 5 with colours.
+  const isoHint = isoToggle.closest('label')!.querySelector('small')!;
+  function renderIsoHint() {
+    const key = state.heat || state.limit ? 'isoHintHeat' : 'isoHint';
+    isoHint.dataset.t = key;
+    isoHint.textContent = t(key);
+  }
   heatToggle.checked = state.heat;
   opacityInput.disabled = !state.heat && !state.limit;
+  renderIsoHint();
   heatToggle.addEventListener('change', () => {
     state.heat = heatToggle.checked;
     opacityInput.disabled = !state.heat && !state.limit;
+    renderIsoHint();
     deps.heatChanged();
     deps.writeUrl();
   });
@@ -140,9 +149,14 @@ export function initMenu(deps: MenuDeps) {
   function renderLimit() {
     limitToggle.checked = state.limit > 0;
     opacityInput.disabled = !state.heat && !state.limit;
+    renderIsoHint();
+    // While it is off no minutes look picked.
     for (const b of limitButtons) {
       b.textContent = `${b.dataset.limit} ${t('min')}`;
-      b.setAttribute('aria-checked', String(Number(b.dataset.limit) === limitMinutes));
+      b.setAttribute(
+        'aria-checked',
+        String(state.limit > 0 && Number(b.dataset.limit) === limitMinutes),
+      );
     }
   }
   function setLimit(minutes: number) {

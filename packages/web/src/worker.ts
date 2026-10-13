@@ -88,11 +88,12 @@ function paintShown(shown: NonNullable<typeof lastShown>, limit?: number) {
   let lut = LIMIT_LUTS.get(limit);
   if (!lut) LIMIT_LUTS.set(limit, (lut = limitLut(limit)));
   // A meeting point counts everyone's own minutes (the slowest), not the extra ones. Only
-  // the area within reach is painted, so fewer minutes paint faster.
+  // the area within reach is painted, so fewer minutes paint faster; the map veils all
+  // around the image (and the image its unreached cells) in the same white.
   const { grid } = shown;
   const win = windowUpTo(grid.seconds, grid.cols, grid.rows, limit * 60 + LIMIT_FEATHER_S);
-  if (!win) return { width: 1, height: 1, rgba: new Uint8ClampedArray(4) };
-  return paint(grid, grid.seconds, lut, 0, win);
+  if (!win) return { width: 1, height: 1, rgba: new Uint8ClampedArray(lut.slice(-4)) };
+  return paint(grid, grid.seconds, lut, 0, win, true);
 }
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -1319,6 +1320,8 @@ function paint(
   lut = LUT,
   offset = 0,
   win?: PaintWindow,
+  /** Unreached cells take the lookup's last entry instead of staying clear. */
+  fillUnreached = false,
 ): { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer>; bbox?: Bbox } {
   const { cols: fullCols } = grid;
   const { c0, r0, cols, rows } = win ?? { c0: 0, r0: 0, cols: grid.cols, rows: grid.rows };
@@ -1374,7 +1377,7 @@ function paint(
       } else {
         // At the edge of the reachable area: nearest cell, no blending with "unreachable".
         v = ry < 0.5 ? (rx < 0.5 ? a : b) : rx < 0.5 ? d : e;
-        if (!(v < Infinity)) continue;
+        if (!(v < Infinity) && !fillUnreached) continue;
       }
       const i = v + offset;
       const k = (i >= lutMax ? lutMax : i <= 0 ? 0 : (i + 0.5) | 0) * 4;
