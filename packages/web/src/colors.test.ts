@@ -122,15 +122,18 @@ describe('single-hue outlines', () => {
 });
 
 describe('"Bis N Min." shading', () => {
-  it('is one colour up to N minutes, fading out across the edge, and clear beyond', () => {
+  it('is clear up to N minutes, fading in across the edge, and veiled beyond', () => {
     const lut = limitLut(30);
     const alpha = (s: number) => lut[Math.min(s, lut.length / 4 - 1) * 4 + 3];
-    expect(alpha(0)).toBeGreaterThan(0);
-    expect(alpha(29 * 60)).toBe(alpha(0));
-    expect(alpha(30 * 60)).toBeLessThan(alpha(0));
+    expect(alpha(0)).toBe(0);
+    expect(alpha(29 * 60)).toBe(0);
     expect(alpha(30 * 60)).toBeGreaterThan(0);
-    expect(alpha(31 * 60)).toBe(0);
-    expect(alpha(120 * 60)).toBe(0);
-    expect([lut[0], lut[1], lut[2]]).toEqual([lut[4], lut[5], lut[6]]);
+    expect(alpha(31 * 60)).toBeGreaterThan(alpha(30 * 60));
+    expect(alpha(120 * 60)).toBe(alpha(31 * 60));
+    // One light, near-neutral grey that no transit line uses.
+    const last = lut.length - 4;
+    expect([lut[0], lut[1], lut[2]]).toEqual([lut[last], lut[last + 1], lut[last + 2]]);
+    expect(Math.max(lut[0], lut[1], lut[2]) - Math.min(lut[0], lut[1], lut[2])).toBeLessThan(12);
+    expect(Math.min(lut[0], lut[1], lut[2])).toBeGreaterThan(190);
   });
 });

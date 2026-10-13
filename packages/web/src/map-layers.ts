@@ -6,6 +6,7 @@ import {
   HOME_COLORS,
   HOME_OUTLINE_MINUTES,
   homeBandOf,
+  LIMIT_VEIL_ALPHA,
   MODE_COLORS,
   OUTLINE_STEP_COLORS,
   OUTLINE_STEP_MINUTES,
@@ -20,6 +21,9 @@ import { SEARCH_BBOX } from './search';
 
 export const HEAT_SOURCE = 'heat';
 export const HEAT_LAYER = 'heat-raster';
+/** "Bis N Min.": the veil all around the image, which veils only what lies inside it. */
+export const VEIL_SOURCE = 'limit-veil';
+export const VEIL_LAYER = 'limit-veil';
 export const ROUTES_SOURCE = 'routes';
 export const LABELS_SOURCE = 'route-labels';
 export const ROUTE_LAYERS = ['routes-casing', 'routes-line', 'routes-label'];
@@ -243,7 +247,7 @@ export function addMapLayers(
       visibility: isoVisibility,
       'symbol-placement': 'line',
       'symbol-spacing': 300,
-      'text-field': outlineLabel('time'),
+      'text-field': outlineLabel('time', 'min'),
       'text-font': font,
       'text-size': 11,
       'text-keep-upright': true,
@@ -512,16 +516,49 @@ export function heatOpacity(percent: number): maplibregl.ExpressionSpecification
   return ['interpolate', ['linear'], ['zoom'], 13, o, 16, o * 0.45];
 }
 
+/** The veil around the "Bis N Min." image as strong as the image's own, at any zoom. */
+export function veilOpacity(percent: number): maplibregl.ExpressionSpecification {
+  const o = (percent / 100) * LIMIT_VEIL_ALPHA;
+  return ['interpolate', ['linear'], ['zoom'], 13, o, 16, o * 0.45];
+}
+
+/** The whole world but the image's box: the veil around the "Bis N Min." image. */
+export function veilAround([w, s, e, n]: [number, number, number, number]) {
+  return {
+    type: 'Feature' as const,
+    properties: {},
+    geometry: {
+      type: 'Polygon' as const,
+      coordinates: [
+        [
+          [-180, -85],
+          [180, -85],
+          [180, 85],
+          [-180, 85],
+          [-180, -85],
+        ],
+        [
+          [w, s],
+          [w, n],
+          [e, n],
+          [e, s],
+          [w, s],
+        ],
+      ],
+    },
+  };
+}
+
 /**
- * Outline labels: minutes ("15 min"), extra minutes at a meeting point ("+15 min"), or on
+ * Outline labels: minutes ("15 Min."), extra minutes at a meeting point ("+15 min"), or on
  * the home map the clock time, its levels being minutes before 4 Uhr ("1:00").
  */
-export function outlineLabel(kind: OutlineKind): maplibregl.ExpressionSpecification {
+export function outlineLabel(kind: OutlineKind, unit: string): maplibregl.ExpressionSpecification {
   if (kind === 'home')
     return ['concat', ['to-string', ['%', ['-', 28, ['/', ['get', 'min'], 60]], 24]], ':00'];
   // The where-to-live map shows a weighted average: "Ø 40".
   if (kind === 'living') return ['concat', 'Ø ', ['to-string', ['get', 'min']]];
-  return ['concat', kind === 'extra' ? '+' : '', ['to-string', ['get', 'min']], ' min'];
+  return ['concat', kind === 'extra' ? '+' : '', ['to-string', ['get', 'min']], ` ${unit}`];
 }
 
 /**
@@ -530,7 +567,12 @@ export function outlineLabel(kind: OutlineKind): maplibregl.ExpressionSpecificat
  * in one hue, darkest near the start, its minutes repeated along it, and every 30 minutes
  * (30, 60, 90) a stronger one; the home map's few outlines take its legend colours instead.
  */
-export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: boolean): void {
+export function styleOutlines(
+  map: maplibregl.Map,
+  kind: OutlineKind,
+  heat: boolean,
+  unit: string,
+): void {
   if (!map.getLayer('outlines-line')) return;
   const steps = !heat && kind !== 'home';
   const tens: maplibregl.FilterSpecification = ['==', ['%', ['get', 'min'], 10], 0];
@@ -616,7 +658,7 @@ export function styleOutlines(map: maplibregl.Map, kind: OutlineKind, heat: bool
         ? ['in', ['get', 'min'], ['literal', [...MAJOR_OUTLINES]]]
         : null,
   );
-  map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind));
+  map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind, unit));
   // Without the fill the labels are the key, so they repeat about every 3 cm on a phone.
   map.setLayoutProperty('outlines-label', 'symbol-spacing', steps ? 260 : 300);
 }

@@ -131,27 +131,29 @@ export function colorLut(
   return lut;
 }
 
-// "Bis N Min.": everything reachable within N minutes in one colour, the rest left plain.
+// "Bis N Min.": everything reachable within N minutes stays clear, the rest is greyed out
+// under a light veil, so no transit colour is taken and the answer stays calm.
 
 /** The minutes offered for "Bis N Min.". */
 export const LIMIT_MINUTES = [15, 30, 45, 60];
-export const LIMIT_COLOR = '#0f7a52';
-/** Seconds over which the shading fades out across the N-minute edge. */
+/** The grey veil over what is out of reach: about 70 % at the default colour strength. */
+export const LIMIT_VEIL = '#d6d3db';
+export const LIMIT_VEIL_ALPHA = 0.85;
+/** Seconds over which the veil fades in across the N-minute edge. */
 export const LIMIT_FEATHER_S = 60;
 
 /**
- * RGBA lookup for "Bis N Min.", indexed by whole seconds: the colour, partly see-through so
- * streets stay readable, up to N minutes, fading to nothing across the edge; the last entry
- * (all longer times) is transparent.
+ * RGBA lookup for "Bis N Min.", indexed by whole seconds: clear up to N minutes, the veil
+ * fading in across the edge; the last entry (all longer times) is the full veil.
  */
 export function limitLut(minutes: number): Uint8Array {
   const edge = minutes * 60;
   const n = edge + LIMIT_FEATHER_S / 2 + 2;
   const lut = new Uint8Array(n * 4);
-  const [r, g, b] = hexToRgb(LIMIT_COLOR);
+  const [r, g, b] = hexToRgb(LIMIT_VEIL);
   for (let s = 0; s < n; s++) {
-    const t = Math.min(1, Math.max(0, (edge + LIMIT_FEATHER_S / 2 - s) / LIMIT_FEATHER_S));
-    lut.set([r, g, b, Math.round(170 * t)], s * 4);
+    const t = Math.min(1, Math.max(0, (s - edge + LIMIT_FEATHER_S / 2) / LIMIT_FEATHER_S));
+    lut.set([r, g, b, Math.round(255 * LIMIT_VEIL_ALPHA * t)], s * 4);
   }
   return lut;
 }

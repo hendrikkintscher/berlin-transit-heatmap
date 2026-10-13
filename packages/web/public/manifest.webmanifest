@@ -1,7 +1,7 @@
 {
   "name": "Wohin jetzt? · Öffis mit einem Tap",
   "short_name": "Wohin jetzt?",
-  "description": "How long does public transport take from any point in Berlin to everywhere else?",
+  "description": "Wie lange brauchst du mit Bus und Bahn von einem Punkt in Berlin überallhin?",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
