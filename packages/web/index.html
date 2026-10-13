@@ -512,9 +512,12 @@
           aria-hidden="true"
         ></button>
         <span id="readout-text"></span>
-        <!-- One row of 44 px buttons: start here, another start, favourite, details. -->
-        <span class="readout-btns">
-          <button id="readout-start" type="button" data-t="startHere">Hier starten</button>
+        <!-- The column under the ✕: swap Start and Ziel, another start, favourite. The rings
+             button (the map computed from the other place) sits in that place's row of the
+             trip, or here without one. -->
+        <span class="readout-side">
+          <button id="readout-dir" class="alt icon" type="button" hidden></button>
+          <button id="readout-anchor" class="alt icon" type="button" hidden></button>
           <button id="readout-second" class="alt icon" type="button" hidden>
             <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
               <circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2" />
@@ -528,6 +531,9 @@
             </svg>
           </button>
           <button id="readout-fav" class="alt icon" type="button" aria-pressed="false"></button>
+        </span>
+        <!-- One row of 44 px buttons: details (a start's card: remove, home). -->
+        <span class="readout-btns">
           <button id="readout-remove" class="alt" type="button" data-t="removeStart" hidden>
             Entfernen
           </button>
@@ -554,8 +560,6 @@
             Details
           </button>
         </span>
-        <!-- Which way the trip goes: from the start to here, or from here back to it. -->
-        <button id="readout-dir" class="dir-pill" type="button" hidden></button>
         <button
           id="readout-close"
           class="x"

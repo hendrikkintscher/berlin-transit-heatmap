@@ -36,6 +36,11 @@ export interface TapDeps {
   send: (m: ToWorker) => void;
   /** `spot`: the tapped place before the change, for "Rückgängig". */
   setOrigin: (p: Point, spot?: Point | null) => void;
+  /**
+   * The map's place moves to p and keeps p's role (the direction turns round); `text`
+   * names it for "Rückgängig".
+   */
+  moveAnchor: (p: Point, spot: Point | null, text: string) => void;
   /** Meeting point: one more start. */
   addStart: (p: Point) => void;
   /** Removes start i (0 = the first). */
@@ -76,11 +81,18 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   const secondBtn = $<HTMLButtonElement>('readout-second');
   const detailsBtn = $<HTMLButtonElement>('readout-details');
   const dirBtn = $<HTMLButtonElement>('readout-dir');
+  const anchorBtn = $<HTMLButtonElement>('readout-anchor');
+  dirBtn.innerHTML = icon('swap', 22);
+  dirBtn.setAttribute('aria-label', t('dirSwap'));
+  dirBtn.title = t('dirSwap');
+  anchorBtn.innerHTML = icon('rings', 22);
+  /** What the next card highlights: the roles after ⇅, the rings after they moved. */
+  let flash: 'roles' | 'rings' | null = null;
   const removeBtn = $<HTMLButtonElement>('readout-remove');
   const homeBtn = $<HTMLButtonElement>('readout-home');
 
   let spot: Spot | null = initial && { ...initial, title: '', searched: false };
-  /** Where "Hier starten", "2. Start" and "Merken" act: the place, or the address it snapped to. */
+  /** Where the rings button, "2. Start" and "Merken" act: the place, or the address it snapped to. */
   let pending: Point | null = null;
   let tripId = 0;
   /** Under Typisch, the map's average minutes at the tapped place (one start). */
@@ -226,7 +238,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const render = () => {
       deferred = null;
       readout.classList.remove('stale');
-      showCard(html, false, searched);
+      showCard(html, false);
       const count = state.origin ? 1 + state.others.length : 0;
       secondBtn.hidden = !count || count >= MAX_STARTS || !!state.special;
       const second = count === 1 ? t('meetUpLabel') : t('secondHere', { n: count + 1 });
@@ -241,13 +253,18 @@ export function initTap(deps: TapDeps, initial: Point | null) {
         !state.compare &&
         html.includes('id="trip"')
       );
-      if (!dirBtn.hidden) {
-        placeDir();
-        // The set place's role in the trip: Start or Ziel, the current one marked.
-        const arrive = state.direction === 'arrive';
-        dirBtn.innerHTML = `<b${arrive ? '' : ' class="on"'}>${t('dirThere')}</b> ⇄ <b${arrive ? ' class="on"' : ''}>${t('dirBack')}</b>`;
-        dirBtn.setAttribute('aria-label', t('dirSwap'));
-        dirBtn.title = t('dirSwap');
+      // The rings move to the place (keeping its role) wherever a trip could go.
+      anchorBtn.hidden = !(
+        state.origin &&
+        !state.others.length &&
+        !state.special &&
+        !state.compare
+      );
+      if (!anchorBtn.hidden) {
+        const label = t(state.direction === 'arrive' ? 'anchorFrom' : 'anchorTo');
+        anchorBtn.setAttribute('aria-label', label);
+        anchorBtn.title = label;
+        placeAnchor();
       }
       deps.onCard();
     };
@@ -266,8 +283,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   }
 
   /**
-   * At street level, names the address under the tap; "Hier starten" then starts there, so
-   * the start sits on the house rather than a few metres off it.
+   * At street level, names the address under the tap; moving the rings there then starts
+   * at the house rather than a few metres off it.
    */
   async function showAddress(at: Point) {
     let place: Place | null = null;
@@ -310,16 +327,10 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   }
 
   /** The card at the bottom: minutes for a spot, or a start point with a remove button. */
-  function showCard(html: string, start: boolean, searched = false) {
+  function showCard(html: string, start: boolean) {
     readoutText.innerHTML = html;
-    dirBtn.hidden = true;
-    // A search result offers "Neuer Start" next to "2. Start". Arriving, the set place is
-    // where trips end, so the button makes the place the new destination.
-    const arrive = state.direction === 'arrive' && !state.others.length;
-    $('readout-start').textContent = t(
-      searched ? (arrive ? 'newGoal' : 'newStart') : arrive ? 'goalHere' : 'startHere',
-    );
-    for (const id of ['readout-start', 'readout-second', 'readout-fav']) $(id).hidden = start;
+    dirBtn.hidden = anchorBtn.hidden = true;
+    for (const id of ['readout-second', 'readout-fav']) $(id).hidden = start;
     // Details (the stops) once a trip with stops has come.
     detailsBtn.hidden = true;
     showFav();
@@ -485,8 +496,14 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       changeNote: deps.changeNote,
       avg: shownAvg,
       names: state.names,
+      rows: home || state.others.length ? undefined : { anchorTitle: t('anchorIs') },
     });
     if (open) el.querySelector<HTMLDetailsElement>('.trip-more')!.open = true;
+    // Right after ⇅ or the rings moved, the rows show what changed (style.css).
+    if (flash) {
+      el.querySelector('.trip-rows')?.classList.add(`flash-${flash}`);
+      flash = null;
+    }
     detailsBtn.hidden = !el.querySelector('.stops, .timeline');
     shownRides = m.journeys.flatMap((j) =>
       (j?.legs ?? []).flatMap((l) => (l.type === 'ride' ? [{ name: l.name, mode: l.mode }] : [])),
@@ -495,7 +512,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     // With one start, the connection's own minutes and arrival become the card's main line.
     if (m.journeys.length === 1 && m.journeys[0]?.leave !== undefined)
       document.getElementById('tap-mins')?.remove();
-    placeDir();
+    placeAnchor();
     if (tripAt) tripAt.askedLater = false;
     setTrip(m);
     board = (m.journeys.length === 1 && m.journeys[0]?.board) || null;
@@ -592,12 +609,12 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     renderMore();
   });
 
-  /** The Start ⇄ Ziel switch sits beside the lines under the trip's main line, so that keeps one line. */
-  function placeDir() {
-    if (dirBtn.hidden) return;
-    const main = readoutText.querySelector('.trip-main');
-    if (main) main.after(dirBtn);
-    else if (dirBtn.parentElement !== readoutText) readoutText.prepend(dirBtn);
+  /** The rings button sits in the other place's row of the trip; without rows, in the side column. */
+  function placeAnchor() {
+    if (anchorBtn.hidden) return;
+    const slot = readoutText.querySelector('.anchor-slot');
+    if (slot) slot.replaceChildren(anchorBtn);
+    else if (anchorBtn.parentElement !== dirBtn.parentElement) dirBtn.after(anchorBtn);
   }
 
   /** The notes for the shown connection, when the changes arrived after its card. */
@@ -640,16 +657,24 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       .join(' · ')}</small>`;
   }
 
-  // The place becomes the start, and the old start the place the trip goes to (with one
-  // start), so a second tap on "Hier starten" turns it back.
-  $('readout-start').addEventListener('click', () => {
+  // The rings move to the place, which keeps its role (a Ziel stays the Ziel: the direction
+  // turns round, the trip stays). The old place of the map becomes the tapped place, so a
+  // second tap turns it back.
+  anchorBtn.addEventListener('click', () => {
     const at = pending;
-    const old = state.origin && !state.others.length && !state.special ? state.origin : null;
+    const old = state.origin;
     const before = spot;
+    if (!at || !old) return;
+    const arrive = state.direction === 'arrive';
+    // The place's name from its row (the nearest stop or its search title), if the trip is in.
+    const name = readoutText.querySelector('.trip-row:not(.anchor) .name')?.textContent;
+    const text = name
+      ? t(arrive ? 'anchorFromNow' : 'anchorToNow', { name })
+      : t(arrive ? 'anchorFromHere' : 'anchorToHere');
+    flash = 'rings';
     hideReadout();
-    if (!at) return;
-    if (old) setSpot({ lat: old.lat, lon: old.lon, title: '', searched: false });
-    deps.setOrigin(at, before);
+    setSpot({ lat: old.lat, lon: old.lon, title: '', searched: false });
+    deps.moveAnchor(at, before, text);
   });
   secondBtn.addEventListener('click', () => {
     const at = pending;
@@ -675,13 +700,14 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   homeBtn.addEventListener('click', () => deps.showHome(removeWhich));
   $('readout-close').addEventListener('click', hideReadout);
   // The same switch as Losfahren / Ankommen in the time panel: the map and the trip turn round.
-  dirBtn.addEventListener('click', () =>
+  dirBtn.addEventListener('click', () => {
+    flash = 'roles';
     document
       .querySelector<HTMLButtonElement>(
         `#pop-when [data-dir="${state.direction === 'arrive' ? 'depart' : 'arrive'}"]`,
       )
-      ?.click(),
-  );
+      ?.click();
+  });
   // Details opens the drawer and it stays open for the next cards, until closed again.
   function setDrawer(open: boolean) {
     readout.classList.toggle('details', open);

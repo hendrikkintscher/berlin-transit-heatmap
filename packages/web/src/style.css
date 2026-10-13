@@ -206,18 +206,21 @@ body {
 /* The tap info sits right on top of the legend, so the two read as one bottom panel. */
 /* The card (layout B, picked 2026-10-12): the minutes and lines, then one row of 44 px
    buttons; the stops open under Details, a meeting point's other trips under a fold. */
+/* A grid: the text, the column of buttons under the ✕ beside it, the button row under
+   both; the card grows with whichever is taller. */
 #readout {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 10px 4px;
   box-sizing: border-box;
   width: 100%;
   max-width: 480px;
   padding-top: 10px;
 }
-#readout-text {
-  padding-right: 40px;
+#readout > .grip,
+#readout > .readout-btns {
+  grid-column: 1 / -1;
 }
 #readout:not([hidden]) {
   border-radius: var(--r-m);
@@ -256,41 +259,104 @@ body.no-legend .legend {
   background: transparent;
   color: var(--muted);
 }
-/* Set place as Start / Ziel: right under the ✕, beside the lines under the headline. */
-/* 36 px tall (its tap area 44 px), so it spans only the leave time and the line badges and
-   the summary line under them keeps the full width. */
-#readout-dir {
-  position: relative;
-  float: right;
-  margin: 2px 0 0 8px;
-  min-height: 36px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: var(--r-pill);
-  background: var(--surface-soft);
-  color: var(--accent);
-  font: inherit;
-  font-size: 13px;
+/* The column under the ✕ (roadmap, Hendrik 2026-10-13): ⇅ swaps Start and Ziel, then
+   another start and the favourite star; the rings button joins it when the trip has no
+   rows to sit in. 40 px round buttons, their tap areas touching. */
+.readout-side {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  /* Under the ✕ (its 44 px, less the card's top padding). */
+  padding-top: 36px;
+}
+#readout .readout-side .alt.icon {
+  width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
+}
+/* The trip's ends as rows: Start and Ziel with the map's marker colours, the name, and
+   the rings where the map is computed (the button in the other row moves them there). */
+#readout .trip-rows {
+  display: block;
+  margin: 2px 0 6px;
+}
+#readout .trip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+#readout .trip-row .dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  background: var(--surface);
+}
+#readout .trip-row.end .dot {
+  border-color: var(--trip-end);
+  background: var(--trip-end);
+}
+#readout .trip-row .role {
+  flex: none;
+  width: 34px;
+  margin: 0;
+  font-size: 12px;
+}
+#readout .trip-row .name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
-  cursor: pointer;
 }
-#readout-dir::before {
-  content: '';
-  position: absolute;
-  inset: -4px 0;
+#readout .trip-row .rings,
+#readout .trip-row .anchor-slot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
 }
-/* On the headline's line (no leave time under it): level with the ✕, clear of the line summary. */
-#readout-dir:first-child {
-  margin: -8px 0 -8px 8px;
+#readout .trip-row .rings {
+  color: var(--accent);
 }
-#readout #readout-dir b {
-  font-size: 13px;
-  font-weight: 400;
-  opacity: 0.6;
+/* The rings button in a row: smaller and grey, until it is tapped. */
+#readout .trip-row #readout-anchor {
+  width: 30px;
+  min-height: 30px;
+  border-radius: 50%;
+  color: var(--muted);
+  opacity: 0.5;
 }
-#readout #readout-dir b.on {
-  font-weight: 700;
-  opacity: 1;
+#readout .trip-row #readout-anchor .ico {
+  width: 20px;
+  height: 20px;
+}
+/* After ⇅ the roles blink; after the rings moved, they grow in at their new row. */
+@keyframes role-flash {
+  0%,
+  60% {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+}
+@keyframes rings-in {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+#readout .trip-rows.flash-roles .role {
+  border-radius: var(--r-s);
+  animation: role-flash 0.9s;
+}
+#readout .trip-rows.flash-rings .rings {
+  animation: rings-in 0.35s ease-out;
 }
 #readout b {
   font-size: 17px;
@@ -307,20 +373,6 @@ body.no-legend .legend {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-#readout-start {
-  flex: none;
-  white-space: nowrap;
-  border: 0;
-  background: var(--accent);
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  border-radius: var(--r-pill);
-  padding: 6px 16px;
-  min-height: 44px;
-  cursor: pointer;
 }
 .status {
   font-size: 12px;
@@ -947,13 +999,9 @@ body.arrive .origin-marker.p1.numbered {
 .readout-btns:not(:has(> :not([hidden]))) {
   display: none;
 }
-#readout-start,
 #readout .alt {
   flex: none;
   white-space: nowrap;
-}
-#readout-start {
-  flex: 1 1 auto;
 }
 #readout .alt {
   display: grid;

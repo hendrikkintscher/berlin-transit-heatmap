@@ -150,12 +150,13 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   function setWhen(
     w: When,
     more: Partial<{ direction: Direction; measure: Measure; compare: When | null }> = {},
+    quiet = false,
   ) {
     Object.assign(state, more);
     state.when = w;
     state.window = windowName(w);
     renderWhen();
-    changed();
+    if (!quiet) changed();
   }
 
   hourGrid.append(
@@ -183,22 +184,26 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   for (const b of typicalButtons) b.addEventListener('click', () => pickDay(b.dataset.day));
   /** Leaving's time before switching to Ankommen, and the time that switch gave it. */
   let beforeArrive: { depart: When; arrive: When } | null = null;
+  /**
+   * Losfahren or Ankommen (the trip card's ⇅ uses it too). `quiet` only sets it: the caller
+   * recomputes the map itself, when the start moves in the same step.
+   */
+  function setDirection(direction: Direction, quiet = false) {
+    let w = state.when;
+    if (direction === 'arrive' && state.direction !== 'arrive') {
+      w = arriveWhen(state.when);
+      beforeArrive = { depart: state.when, arrive: w };
+    } else if (direction === 'depart' && state.direction === 'arrive') {
+      // Straight back (Ziel back to Start): leaving at the time it was before.
+      if (beforeArrive && whenParam(beforeArrive.arrive) === whenParam(state.when))
+        w = beforeArrive.depart;
+      beforeArrive = null;
+    }
+    arriveMoved = direction === 'arrive' && w.day !== state.when.day ? state.when.day : null;
+    setWhen(w, { direction }, quiet);
+  }
   for (const b of dirButtons)
-    b.addEventListener('click', () => {
-      const direction = b.dataset.dir as Direction;
-      let w = state.when;
-      if (direction === 'arrive' && state.direction !== 'arrive') {
-        w = arriveWhen(state.when);
-        beforeArrive = { depart: state.when, arrive: w };
-      } else if (direction === 'depart' && state.direction === 'arrive') {
-        // Straight back (Ziel back to Start): leaving at the time it was before.
-        if (beforeArrive && whenParam(beforeArrive.arrive) === whenParam(state.when))
-          w = beforeArrive.depart;
-        beforeArrive = null;
-      }
-      arriveMoved = direction === 'arrive' && w.day !== state.when.day ? state.when.day : null;
-      setWhen(w, { direction });
-    });
+    b.addEventListener('click', () => setDirection(b.dataset.dir as Direction));
   for (const b of measureButtons)
     b.addEventListener('click', () => {
       state.measureBefore = null;
@@ -248,5 +253,5 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   });
   cmpHour.addEventListener('change', () => setWhen(state.when, { compare: readCompare() }));
   $('cmp-close').addEventListener('click', () => setWhen(state.when, { compare: null }));
-  return { renderWhen, setWhen };
+  return { renderWhen, setWhen, setDirection };
 }
