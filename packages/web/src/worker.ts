@@ -373,6 +373,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       backgroundOk = true;
       void loadWalk();
       if (lastTimetable) void loadLines(lastTimetable);
+    } else if (msg.type === 'moreTrips') {
+      await nextTask();
+      post({ type: 'moreTrips', id: msg.id, trips: moreTrips(msg) });
     } else if (msg.type === 'placeName') {
       const tt = lastTimetable;
       post({ type: 'placeName', id: msg.id, name: tt && nearestStopName(tt, msg.lat, msg.lon) });
@@ -558,6 +561,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const journeys = (last?.runs ?? []).map((r) =>
         later ? trip(later, laterRun(later, r, msg), msg) : trip(last!, nowRun(last!, r, msg), msg),
       );
+      lastFound = journeys.length === 1 ? journeys[0]! : null;
       post({ type: 'trip', id: msg.id, ...tripMessage(journeys) });
     }
   } catch (err) {
@@ -1010,6 +1014,10 @@ function trip(
   arrive?: number;
   /** Departing: the first vehicle, for its live status. */
   board?: { stop: number; line: string; at: number };
+  /** Per leg: a ride's real times (null for walks). */
+  clocks: (RideClock | null)[];
+  /** The journey on the timetable's own clock and order (arriving: reversed), for more. */
+  raw: Journey;
 } | null {
   const j = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
   if (!j) return null;
@@ -1035,6 +1043,7 @@ function trip(
       board = { stop: ride.from, line: ride.name, at: dep };
     }
   }
+  const clocks = rideClocks(last.tt, j, last.from, last.direction === 'arrive');
   if (last.direction === 'depart')
     return {
       journey: j,
@@ -1044,6 +1053,8 @@ function trip(
       leave,
       arrive: last.from + total,
       board,
+      clocks,
+      raw: j,
     };
   // Arriving: the tree runs backwards in time from the destination, so flip it.
   const legs = [...j.legs]
@@ -1058,7 +1069,102 @@ function trip(
     seconds,
     leave: -(last.from + total),
     arrive: -leave,
+    clocks: clocks.reverse(),
+    raw: j,
   };
+}
+
+/** A ride's real times: boarding, getting off, and its departure at each stop. */
+interface RideClock {
+  dep: number;
+  arr: number;
+  at: number[];
+}
+
+/**
+ * Rides the journey from `start` on its own timetable, each vehicle the first to leave
+ * after the walk to it. The times come back real (the reversed timetable's negated, its
+ * stops turned round), per leg in the journey's order; all null if a vehicle is missing.
+ */
+function rideClocks(
+  tt: PreparedTimetable,
+  j: Journey,
+  start: number,
+  reversed: boolean,
+): (RideClock | null)[] {
+  let t = start;
+  const out: (RideClock | null)[] = [];
+  for (const l of j.legs) {
+    if (l.type === 'walk') {
+      t += l.seconds;
+      out.push(null);
+      continue;
+    }
+    const n = tt.routeStopOffset[l.route + 1]! - tt.routeStopOffset[l.route]!;
+    const base = tt.routeTimeOffset[l.route]!;
+    let best = -1;
+    for (let trip = 0; trip < tt.routeTripCount[l.route]!; trip++) {
+      const d = tt.times[base + trip * n + l.fromPos]!;
+      if (d >= t && (best < 0 || d < tt.times[base + best * n + l.fromPos]!)) best = trip;
+    }
+    if (best < 0) return j.legs.map(() => null);
+    const o = base + best * n + l.fromPos;
+    const k = l.stops.length;
+    const dep = (i: number) => tt.times[o + i]!;
+    const arr = (i: number) => tt.arrivals[o + i]!;
+    t = arr(k - 1);
+    // Reversed, a stop's departure is its real arrival negated and the other way round.
+    out.push(
+      reversed
+        ? { dep: -arr(k - 1), arr: -dep(0), at: l.stops.map((_, i) => -arr(i)).reverse() }
+        : { dep: dep(0), arr: arr(k - 1), at: l.stops.map((_, i) => dep(i)) },
+    );
+  }
+  return out;
+}
+
+/** How many more connections the drawer lists. */
+const MORE_TRIPS = 3;
+
+/** The last single connection put on a card, for the drawer's more connections. */
+let lastFound: NonNullable<ReturnType<typeof trip>> | null = null;
+
+/**
+ * The next departures of the shown connection (arriving: the ones arriving before it):
+ * the same rides, each on the first vehicle a minute after the last one left. No new
+ * search, so it costs next to nothing and never holds up a tap.
+ */
+function moreTrips(
+  msg: Extract<ToWorker, { type: 'moreTrips' }>,
+): Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[] {
+  const last = lastTrip;
+  const f0 = lastFound;
+  if (!last || !f0 || f0.leave !== msg.leave || f0.arrive !== msg.arrive) return [];
+  const legs = f0.journey.legs;
+  const first = legs.findIndex((l) => l.type === 'ride');
+  if (first < 0) return [];
+  const lastRide = legs.length - 1 - [...legs].reverse().findIndex((l) => l.type === 'ride');
+  const walk = (ls: typeof legs) => ls.reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
+  const before = walk(legs.slice(0, first));
+  const after = walk(legs.slice(lastRide + 1));
+  // On the timetable's own clock: departing it is real time, arriving it runs backwards.
+  const reversed = last.direction === 'arrive';
+  let from = (reversed ? -msg.arrive : msg.leave) + 60;
+  const out: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[] = [];
+  for (let k = 0; k < MORE_TRIPS; k++) {
+    const own = rideClocks(last.tt, f0.raw, from, reversed);
+    const clocks = reversed ? own.reverse() : own;
+    const a = clocks[first];
+    const b = clocks[lastRide];
+    if (!a || !b) break;
+    const leave = a.dep - before;
+    const arrive = b.arr + after;
+    out.push(
+      tripMessage([{ ...f0, clocks, leave, arrive, seconds: arrive - leave, board: undefined }]),
+    );
+    from = (reversed ? -arrive : leave) + 60;
+  }
+  return out;
 }
 
 /** Places further than this from any stop go unnamed. */
@@ -1145,6 +1251,7 @@ function tripMessage(
       stopPoint(l.from, l.mode, i === firstRide);
       stopPoint(l.to, l.mode, i === lastRide);
       at = pos(l.to);
+      const clock = f.clocks[i];
       legs.push({
         type: 'ride',
         name: l.name,
@@ -1152,6 +1259,15 @@ function tripMessage(
         from: tt.stops[l.from].name,
         to: tt.stops[l.to].name,
         stops: l.stops.length - 1,
+        ...(clock
+          ? {
+              dep: clock.dep,
+              arr: clock.arr,
+              passed: l.stops
+                .slice(1, -1)
+                .map((s, k) => ({ name: tt.stops[s].name, at: clock.at[k + 1]! })),
+            }
+          : {}),
       });
     }
     walkLine(at, f.end, cycling);

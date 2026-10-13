@@ -13,7 +13,19 @@ export type Travel = 'walk' | 'bike' | 'bikeonly';
 /** One leg of the journey shown for a tapped spot, in travel order. */
 export type TripLeg =
   | { type: 'walk'; minutes: number; bike?: true }
-  | { type: 'ride'; name: string; mode: string; from: string; to: string; stops: number };
+  | {
+      type: 'ride';
+      name: string;
+      mode: string;
+      from: string;
+      to: string;
+      stops: number;
+      /** When the vehicle leaves `from` and reaches `to`, seconds of the day. */
+      dep?: number;
+      arr?: number;
+      /** The stops in between, with the vehicle's departure there. */
+      passed?: { name: string; at: number }[];
+    };
 
 export type ToWorker =
   | { type: 'init'; dataBase: string }
@@ -83,6 +95,11 @@ export type ToWorker =
   | { type: 'paint'; id: number; limit?: number }
   /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
   | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
+  /**
+   * The connections after the shown one (arriving: before it), which left at `leave` and
+   * arrives at `arrive`, to the same place; for the drawer.
+   */
+  | { type: 'moreTrips'; id: number; lat: number; lon: number; leave: number; arrive: number }
   /** The nearest stop's name, to name a place ("bei S Südkreuz"). */
   | { type: 'placeName'; id: number; lat: number; lon: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
@@ -241,6 +258,12 @@ export type FromWorker =
       limit?: number;
     }
   | { type: 'stations'; list: SearchStation[] }
+  /** Up to three more connections for the drawer, each drawn as a trip would be. */
+  | {
+      type: 'moreTrips';
+      id: number;
+      trips: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[];
+    }
   /** The nearest stop's name (null: none close or no timetable yet). */
   | { type: 'placeName'; id: number; name: string | null }
   /** The map `id`'s lines again, now along the real tracks and roads (lines.bin arrived). */

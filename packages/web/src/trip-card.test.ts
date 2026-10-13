@@ -9,6 +9,46 @@ const ride = (name: string, mode: string, from: string, to: string) =>
   ({ type: 'ride', name, mode, from, to, stops: 3 }) as const;
 
 describe('trip card', () => {
+  it('details each ride with its times and the wait at a change', () => {
+    const html = tripHtml(
+      {
+        journeys: [
+          {
+            transfers: 1,
+            legs: [
+              { type: 'walk', minutes: 2 },
+              {
+                ...ride('S7', 'sbahn', 'S Ostkreuz Bhf (Berlin)', 'S Warschauer Str. (Berlin)'),
+                dep: 36_120,
+                arr: 36_300,
+                passed: [],
+              },
+              { type: 'walk', minutes: 3 },
+              {
+                ...ride('U1', 'ubahn', 'U Warschauer Str. (Berlin)', 'U Kottbusser Tor (Berlin)'),
+                dep: 36_780,
+                arr: 37_200,
+                passed: [
+                  { name: 'U Schlesisches Tor (Berlin)', at: 36_900 },
+                  { name: 'U Görlitzer Bahnhof (Berlin)', at: 37_020 },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      ctx,
+    );
+    expect(html).toContain('<time>10:02</time><span>S Ostkreuz Bhf</span>');
+    expect(html).toContain('ohne Halt · 3 Min.');
+    // 10:05 off, 10:13 on: 3 minutes walking, 5 waiting.
+    expect(html).toContain('<li class="tl-change">Umstieg · 3 Min. Fußweg · 5 Min. warten</li>');
+    expect(html).toContain('<summary>2 Stationen · 7 Min.</summary>');
+    expect(html).toContain('<time>10:15</time><span>U Schlesisches Tor</span>');
+    // The stops line gives way to the timeline.
+    expect(html).not.toContain('class="stops"');
+  });
+
   it('names where the trip starts and ends, the place by its own name', () => {
     const journey = {
       transfers: 0,

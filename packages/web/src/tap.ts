@@ -10,7 +10,8 @@ import { STATIONS_LAYER, TRIP_SOURCE, TRIP_STOPS_SOURCE } from './map-layers';
 import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
-import { leaveText, tripHtml, type Trip } from './trip-card';
+import { hhmm, leaveText, tripHtml, type Trip } from './trip-card';
+import { MODE_COLORS } from './colors';
 import { MAX_STARTS, type Point } from './url';
 import { liveStatus, liveText, type Board } from './live';
 import { dataBase } from './region';
@@ -176,7 +177,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
         );
         tripAt = r.living || r.home ? null : { lat, lon: lng, askedLater: false };
         tripAsked = tripAt !== null;
-        tripSlot = '<span id="trip" class="trip"></span>';
+        tripSlot = '<span id="trip" class="trip"></span><div id="trip-more" class="more"></div>';
       }
       if (state.desert && data) {
         const access = gridSeconds(data.desert, lat, lng);
@@ -331,6 +332,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
 
   function hideReadout() {
     clearDeferred();
+    connections = [];
+    moreState = 'idle';
     readout.hidden = true;
     tripId++;
     setTrip(null);
@@ -424,20 +427,33 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       clearTimeout(deferred.timer);
       deferred.render();
     }
+    if (!document.getElementById('trip')) return;
+    showTrip(m);
+    // The drawer's list starts again from this connection.
+    connections = [m];
+    shownConnection = 0;
+    moreAsked = false;
+    moreState = 'idle';
+    renderMore();
+    askMore();
+  }
+
+  /** Puts a connection on the card and the map. */
+  function showTrip(m: Trip) {
     const el = document.getElementById('trip');
     if (!el) return;
     // On the home map the trip runs from the place to home.
     const home = state.special?.kind === 'home' ? state.special.at : null;
     // A meeting point's other trips stay unfolded when the card refreshes.
-    const open = el.querySelector('details')?.open;
+    const open = el.querySelector<HTMLDetailsElement>('.trip-more')?.open;
     el.innerHTML = tripHtml(m, {
       direction: home ? 'arrive' : state.direction,
       now: clockNow(state.when),
       place: spot?.title || undefined,
       changeNote: deps.changeNote,
     });
-    if (open) el.querySelector('details')!.open = true;
-    detailsBtn.hidden = !el.querySelector('.stops');
+    if (open) el.querySelector<HTMLDetailsElement>('.trip-more')!.open = true;
+    detailsBtn.hidden = !el.querySelector('.stops, .timeline');
     shownRides = m.journeys.flatMap((j) =>
       (j?.legs ?? []).flatMap((l) => (l.type === 'ride' ? [{ name: l.name, mode: l.mode }] : [])),
     );
@@ -451,6 +467,96 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     board = (m.journeys.length === 1 && m.journeys[0]?.board) || null;
     checkLive();
   }
+
+  // The drawer (Details, or pulling the card up): the shown connection in detail and the
+  // ones after it (arriving: before it), asked for only once the drawer is open.
+  let connections: Trip[] = [];
+  let shownConnection = 0;
+  let moreAsked = false;
+  let moreId = 0;
+  /** The drawer's list: "loading" until the worker answers, then the connections. */
+  let moreState: 'idle' | 'loading' | 'done' = 'idle';
+
+  function askMore() {
+    const j = connections[0]?.journeys;
+    const one = j?.length === 1 ? j[0] : null;
+    if (
+      moreAsked ||
+      !readout.classList.contains('details') ||
+      !tripAt ||
+      !one ||
+      one.leave === undefined ||
+      one.arrive === undefined ||
+      state.special
+    )
+      return;
+    moreAsked = true;
+    moreState = 'loading';
+    moreId++;
+    send({
+      type: 'moreTrips',
+      id: moreId,
+      lat: tripAt.lat,
+      lon: tripAt.lon,
+      leave: one.leave,
+      arrive: one.arrive,
+    });
+    renderMore();
+  }
+
+  function onMoreTrips(m: { id: number; trips: Omit<Trip, 'type' | 'id'>[] }) {
+    if (m.id !== moreId || !connections.length) return;
+    connections = [
+      connections[0]!,
+      ...m.trips.map((x) => ({ ...x, type: 'trip' as const, id: connections[0]!.id })),
+    ];
+    moreState = 'done';
+    renderMore();
+  }
+
+  /** The list of connections in the open drawer, the shown one marked. */
+  function renderMore() {
+    const box = document.getElementById('trip-more');
+    if (!box) return;
+    if (moreState === 'idle' || !connections.length) {
+      box.innerHTML = '';
+      return;
+    }
+    const arrive = state.direction === 'arrive';
+    const rows = connections.map((c, k) => {
+      const j = c.journeys[0];
+      if (!j || j.leave === undefined || j.arrive === undefined) return '';
+      const badges = j.legs
+        .filter((l) => l.type === 'ride')
+        .map(
+          (l) =>
+            `<span class="line-badge" style="background:${MODE_COLORS[l.mode] ?? '#444'}">${escapeHtml(l.name)}</span>`,
+        )
+        .join('');
+      const mins = Math.max(1, Math.round((j.arrive - j.leave) / 60));
+      return `<button type="button" class="more-row${k === shownConnection ? ' on' : ''}" data-k="${k}" aria-pressed="${k === shownConnection}"><time>${hhmm(j.leave)} → ${hhmm(j.arrive)}</time><span>${mins} ${t('min')}</span><span class="more-badges">${badges}</span></button>`;
+    });
+    // Arriving, the earlier ones go above the shown one, in time order.
+    const ordered = arrive ? rows.slice(1).reverse().concat(rows[0]!) : rows;
+    const note =
+      moreState === 'loading'
+        ? `<small>${t('moreLoading')}</small>`
+        : connections.length === 1
+          ? `<small>${t('moreNone')}</small>`
+          : '';
+    box.innerHTML = `<b class="more-title">${t(arrive ? 'moreEarlier' : 'moreLater')}</b>${ordered.join('')}${note}`;
+  }
+
+  readoutText.addEventListener('click', (e) => {
+    const row = (e.target as Element).closest<HTMLButtonElement>('.more-row');
+    if (!row) return;
+    const k = Number(row.dataset.k);
+    const c = connections[k];
+    if (!c || k === shownConnection) return;
+    shownConnection = k;
+    showTrip(c);
+    renderMore();
+  });
 
   /** The Start ⇄ Ziel switch sits beside the lines under the trip's main line, so that keeps one line. */
   function placeDir() {
@@ -542,10 +648,37 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       )
       ?.click(),
   );
-  // Details opens the stops and stays open for the next cards, until closed again.
-  detailsBtn.addEventListener('click', () => {
-    const open = readout.classList.toggle('details');
+  // Details opens the drawer and it stays open for the next cards, until closed again.
+  function setDrawer(open: boolean) {
+    readout.classList.toggle('details', open);
     detailsBtn.setAttribute('aria-expanded', String(open));
+    if (open) askMore();
+  }
+  detailsBtn.addEventListener('click', () => setDrawer(!readout.classList.contains('details')));
+  // Pulling the card up opens the drawer, pushing it down closes it.
+  let pull: { y: number; id: number } | null = null;
+  readout.addEventListener('pointerdown', (e) => {
+    const target = e.target as Element;
+    if (detailsBtn.hidden || target.closest('button:not(.grip), summary, a, input')) return;
+    // Inside the scrolled drawer, a drag scrolls it until it is back at the top.
+    if (readoutText.scrollTop > 0) return;
+    pull = { y: e.clientY, id: e.pointerId };
+  });
+  readout.addEventListener('pointerup', (e) => {
+    if (!pull || pull.id !== e.pointerId) return;
+    const dy = e.clientY - pull.y;
+    pull = null;
+    const open = readout.classList.contains('details');
+    pulled = Math.abs(dy) > 30;
+    if (dy < -30 && !open) setDrawer(true);
+    else if (dy > 30 && open) setDrawer(false);
+  });
+  readout.addEventListener('pointercancel', () => (pull = null));
+  /** The grip's click right after a pull is the pull's own. */
+  let pulled = false;
+  $('readout-grip').addEventListener('click', () => {
+    if (pulled) return void (pulled = false);
+    if (!detailsBtn.hidden) setDrawer(!readout.classList.contains('details'));
   });
 
   /** Puts the tapped place back (or none) before the starts change ("Rückgängig"). */
@@ -558,6 +691,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     tapAt,
     placeSpot,
     onPlaceName,
+    onMoreTrips,
     /** The map's layers are in: a trip that came before them is drawn now. */
     onMapReady: () => drawn && setTrip(drawn),
     showStartCard,
