@@ -1,16 +1,14 @@
-// Which way a trip goes (roadmap 1.1/1.2, Hendrik picked look C in line colours): one
-// arrowhead near the end of each piece of the trip (walk, ride, bike) in that piece's
-// colour. The ends carry "Start" and "Ziel" labels and the end point is as big as the start
+// Which way a trip goes (roadmap 1.1/1.2, Hendrik picked look C in line colours): one small
+// arrowhead in the middle of each ride, in its line's colour; walks and bike legs get none. The ends carry "Start" and "Ziel" labels and the end point is as big as the start
 // (style.css).
 
 import type maplibregl from 'maplibre-gl';
 import type { GeoJSONSource } from 'maplibre-gl';
-import { INK, MODE_COLORS } from './colors';
+import { MODE_COLORS } from './colors';
 
 const ARROW_SOURCE = 'trip-arrows';
-/** The arrow sits this share of a piece before its end, at most ARROW_BACK_M. */
-const ARROW_SHARE = 0.15;
-const ARROW_BACK_M = 400;
+/** The arrowhead's size in px. */
+const ARROW_PX = 20;
 
 type Coord = [number, number];
 
@@ -66,13 +64,8 @@ function arrowImage(fill: string, size: number) {
   return { image: { width: px, height: px, data: new Uint8Array(data.data.buffer) }, ratio };
 }
 
-/** Where a piece's arrow goes: near its end, at most ARROW_BACK_M before it. */
-export function arrowAt(line: Coord[]) {
-  let total = 0;
-  for (let i = 1; i < line.length; i++) total += metres(line[i - 1]!, line[i]!);
-  if (!total) return null;
-  return pointAlong(line, 1 - Math.min(ARROW_SHARE, ARROW_BACK_M / total));
-}
+/** Where a ride's arrow goes: halfway along it. */
+export const arrowAt = (line: Coord[]) => pointAlong(line, 0.5);
 
 const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
 
@@ -81,14 +74,9 @@ const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: 
  * the trip's lines (null: none).
  */
 export function addTripArrows(map: maplibregl.Map) {
-  const colours: Record<string, string> = {
-    ...MODE_COLORS,
-    walk: INK,
-    bike: INK,
-    other: '#444444',
-  };
+  const colours: Record<string, string> = { ...MODE_COLORS, other: '#444444' };
   for (const [mode, colour] of Object.entries(colours)) {
-    const a = arrowImage(colour, 30);
+    const a = arrowImage(colour, ARROW_PX);
     map.addImage(`trip-arrow-${mode}`, a.image, { pixelRatio: a.ratio });
   }
   map.addSource(ARROW_SOURCE, { type: 'geojson', data: empty });
@@ -117,7 +105,7 @@ export function addTripArrows(map: maplibregl.Map) {
   return (lines: GeoJSON.FeatureCollection | null) => {
     const features: GeoJSON.Feature[] = [];
     for (const f of lines?.features ?? []) {
-      if (f.geometry.type !== 'LineString') continue;
+      if (f.geometry.type !== 'LineString' || f.properties?.walk) continue;
       const at = arrowAt(f.geometry.coordinates as Coord[]);
       if (at)
         features.push({
