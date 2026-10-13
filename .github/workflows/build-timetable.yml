@@ -3,12 +3,18 @@ name: Build timetable
 # Turns the latest VBB GTFS feed (release `gtfs-latest`) into the compact
 # per-window timetable files the web app downloads, and publishes them on the
 # release `timetable-latest`. Runs every night after the feed check, so the
-# files for today and the next seven days (DAYS) move on with the calendar.
+# files for today and the next seven days (DAYS) move on with the calendar. It also
+# has a schedule of its own: when the feed check failed (or never ran), the dates
+# still move on, built from the last good feed on `gtfs-latest`.
 
 on:
   workflow_run:
     workflows: ['Refresh VBB GTFS', 'Refresh OSM footpaths']
     types: [completed]
+  # 03:37 or 04:37 in Berlin, well after the feed check at 00:17 UTC. Builds only when
+  # the published timetable does not start today yet (see the guard job).
+  schedule:
+    - cron: '37 2 * * *'
   workflow_dispatch:
     inputs:
       tag:
@@ -20,6 +26,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
   group: build-timetable
@@ -29,15 +36,61 @@ env:
   GTFS_TAG: gtfs-latest
   OSM_TAG: osm-latest
   TIMETABLE_TAG: ${{ inputs.tag || 'timetable-latest' }}
-  # Budget from the alpha plan, per timetable file.
+  # Budget from the alpha plan, per timetable file: above it the build warns; above
+  # one and a half times it (CEILING_PERCENT) it fails and nothing is published.
   MAX_BYTES: 8000000
   MAX_GZIP_BYTES: 2000000
+  CEILING_PERCENT: 150
   # Real dates with their own hourly files: today and the next seven days.
   DAYS: 8
 
 jobs:
+  # The scheduled run builds only when the nightly one did not: the published files do
+  # not start today in Berlin, and no feed check or build runs or started within the
+  # last hour (the publish's API budget).
+  guard:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.check.outputs.build }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          today=$(TZ=Europe/Berlin date +%F)
+          first=$(curl -fsSL --retry 3 \
+            "https://github.com/$REPO/releases/download/$TIMETABLE_TAG/build-info.json" \
+            | jq -r '.serviceDate // empty' || true)
+          echo "The published timetable starts on '$first'; in Berlin it is $today."
+          if [[ -n "$first" && ! "$first" < "$today" ]]; then
+            echo "Up to date, nothing to build."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          since=$(date -u -d '-60 min' +%FT%TZ)
+          busy=$(gh api -X GET "repos/$REPO/actions/runs" -f per_page=50 --jq "
+            [.workflow_runs[]
+              | select(.id != ${{ github.run_id }})
+              | select(.name == \"Refresh VBB GTFS\" or .name == \"Build timetable\")
+              | select(.status != \"completed\" or .created_at > \"$since\")]
+            | length")
+          if (( busy > 0 )); then
+            echo "A feed check or build is running or started within the last hour."
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "build=true" >> "$GITHUB_OUTPUT"
+
   build:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    needs: guard
+    if: >-
+      !cancelled() && (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'schedule' && needs.guard.outputs.build == 'true') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -76,15 +129,23 @@ jobs:
 
       - name: Check size budget
         run: |
+          ceil_bytes=$((MAX_BYTES * CEILING_PERCENT / 100))
+          ceil_gz=$((MAX_GZIP_BYTES * CEILING_PERCENT / 100))
+          over=0
           for path in work/out/timetable-*.bin; do
             f=$(basename "$path")
             bytes=$(jq ".files[\"$f\"].bytes" work/out/build-info.json)
             gz=$(jq ".files[\"$f\"].gzipBytes" work/out/build-info.json)
             echo "$f: $bytes bytes, $gz gzipped"
-            if [ "$bytes" -gt "$MAX_BYTES" ] || [ "$gz" -gt "$MAX_GZIP_BYTES" ]; then
+            if [ "$bytes" -gt "$ceil_bytes" ] || [ "$gz" -gt "$ceil_gz" ]; then
+              echo "::error title=Timetable over its ceiling::$f is $bytes bytes ($gz gzipped), ceiling $ceil_bytes ($ceil_gz gzipped)"
+              over=1
+            elif [ "$bytes" -gt "$MAX_BYTES" ] || [ "$gz" -gt "$MAX_GZIP_BYTES" ]; then
               echo "::warning title=Timetable over budget::$f is $bytes bytes ($gz gzipped), budget $MAX_BYTES ($MAX_GZIP_BYTES gzipped)"
             fi
           done
+          # Phones would download far too much: keep the files already published.
+          if [ "$over" = 1 ]; then exit 1; fi
 
       - name: Publish release
         env:
