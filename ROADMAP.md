@@ -10,7 +10,7 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #233. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
+State on 2026-10-13, live through PR #238. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): Done (PR #184, live with the timetable build of 2026-10-13 00:58)
 2. No flicker when tapping another destination (group 6, Inbox): Done (PR #213)
@@ -19,11 +19,11 @@ State on 2026-10-13, live through PR #233. **Plan for everything noted** (Hendri
 5. Trip card round (group 6): Done (PR #217 Hier starten, 360 px, markers; PR #218 names both ends, Ziel wording, arrive-by times; PR #220 drawer with later connections and the detailed view)
 6. Review fixes for the rest of the app (group 17): Done (PR #222 V2 + U11 + V4; PR #223 U2; PR #225 V3; PR #227 U6; PR #228 U5; PR #229 U9; PR #230 U10 first-open card with Standort and Suchen; PR #232 U13 Wohnlage pins on the 3 best spots; PR #233 V5, V7–V13: colour tokens, light-only, numbered meeting colours, bus colour, one gold favourite, calmer panels, 12 px legends, line icons instead of emoji)
 7. Smaller Wohnlage-Karte memory (B7 + P9, group 15): Done (PR #210)
-8. **Next:** Typical timetable when offline, cache-first data after a deploy (B8 + P3, group 15) (in progress, PR #234: versioned data URLs served cache-first, dated tiles cache-first, an offline or failed timetable falls back to its typical day)
-9. Notice, search and favourites polish (C5–C8, group 15)
-10. Less walking on equal arrival (group 6, from the connection test)
-11. Default view readability: two variants to compare (C9, group 15; builds on the new colour scale; Hendrik picks one on a card)
-12. Named starts in meeting mode (D2, group 15)
+8. Typical timetable when offline, cache-first data after a deploy (B8 + P3, group 15): Done (PR #234)
+9. Notice, search and favourites polish (C5–C8, group 15): Done (PR #236)
+10. Less walking on equal arrival (group 6): Done (PR #237)
+11. Default view readability (C9, group 15): both looks built for trial (PR #238: look=rings and look=faint links, plus a clearer opacity slider thumb and 60 % default opacity, C10); the default changes once Hendrik answers his card (recommended: Rings)
+12. **Next:** Named starts in meeting mode (D2, group 15), in progress
 13. Broader CI checks and a sturdier timetable build (B9 + B10 + P10, group 15)
 14. Code health, no change in behaviour (E1, group 15)
 15. Smaller walking network file (P8, group 15)
@@ -122,15 +122,7 @@ Features that explain and sharpen the travel times. Each is a day or two of work
 
 - **Shorter platform changes**: Done (PR #184, live since the timetable build of 2026-10-13 00:58): island platforms get 60 s, timed transfers count as 0 s, and route-tied transfer rows apply where no general row exists (533 transfers shorter).
 
-### Less walking on equal arrival (low priority)
-
-Parked by Hendrik on 2026-10-12. From the connection test, finding 5. When two trips arrive at the same time, prefer the one with less walking or leaving later; today the earliest departure wins, for example an earlier tram from a farther stop. Cosmetic, and a reverse pass would cost time on every tap, so it is only built if it keeps taps as fast as now.
-
-- **Trip drawer with more connections**: Done (PR #220): pulling the card up by its grip (or Details) opens the drawer; "Spätere Verbindungen" (arriving: "Frühere Verbindungen") lists the next 3 departures of the same connection, and tapping one switches card and map. These re-ride the same lines on later vehicles without a new search, so taps stay at about 105 ms (a full search would take about 3 s on a phone); alternatives on other lines are not listed.
-
-- **Detailed connection view**: Done (PR #220): each ride with departure and arrival, the stops in between folded with their times, and "Umstieg · 3 Min. Fußweg · 5 Min. warten" at each change.
-
-- **"Bis wann heim?" limits of 1 h and 1 h 30**: Done (PR #214): colours and the main line use under 1 h, the second line under 1 h 30, with a text for places reachable only under 1 h 30; no new control.
+- **Less walking on equal arrival**: Done (PR #237): on equal arrival the later start wins; 12 % of trips change, at about 6 µs per tap.
 
 ## 7. Reading the map
 
@@ -281,18 +273,9 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 
 - **Smaller Wohnlage-Karte memory (B7 + P9)**: Done (PR #210): compact Wohnlage grids (three favourites 39 → 10 MB) and a leaner walk network (95 → 72.5 MB); the map and the minutes on tap are unchanged.
 
-### Typical timetable when offline (B8)
+- **Typical timetable when offline, cache-first data (B8 + P3)**: Done (PR #234): versioned data URLs served cache-first by the service worker, dated tiles cache-first, and an offline or failed timetable falls back to its typical day.
 
-When a timetable fails to download (network error or offline), fall back to the typical window if one exists and show the existing "typical day" note instead of failing. From the code review, also P3: data files get hashed URLs and are served cache-first, so a deploy no longer makes the next start re-download about 3 MB.
-
-### Notice, search and favourites polish (C5–C8)
-
-Picked by Hendrik on 2026-10-12 ("Yes, all four"), one PR.
-
-- **C5:** show a "N Linien anders" chip whenever the chosen day has changes within the visible map, with the list on tap, not only after a trip on an affected line.
-- **C6:** the search box gets a title and placeholder for its purpose, such as "Lieblingsort hinzufügen" or "2. Startpunkt wählen", at every entry point.
-- **C7:** a ☆ set on a map point is named by street and house number rather than a nearby place, and names can be edited in the favourites list.
-- **C8:** stops rank above other places in the suggestions ("Potsdam Hbf" currently offers an old signal box first), and after picking a result the map fits the 45-minute ring instead of zooming in close.
+- **Notice, search and favourites polish (C5–C8)**: Done (PR #236).
 
 ### Broader CI checks and a sturdier timetable build (B9 + B10)
 
