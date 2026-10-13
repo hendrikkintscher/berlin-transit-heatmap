@@ -140,6 +140,12 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
             t.windowEnd - (msg.arriveOffset ?? 0);
       const leaveAt = (t: PreparedTimetable) => (msg.measure === 'next' ? now(t) : undefined);
       const runs = starts.map((o) => run(tt, o, typical, travel, true, leaveAt(tt)));
+      // A tap while this map was computed gets its trip first, from the map still shown;
+      // the colours and outlines follow right after.
+      const trips = latestTrip;
+      await nextTask();
+      if (latestTrip !== trips) await nextTask();
+      if (msg.id !== latestCompute) return;
       const grid = slowestOf(runs.map((r) => r.shown));
       const used = runs.flatMap((r) => r.used);
       const routes = linesSettled ? usageGeoJSON(tt, used) : NO_LINES;
@@ -234,9 +240,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       mapShown(tt);
       // The first tap's trip needs a pass from now: made ahead, one start at a time, unless
       // a newer map or a tap (which makes its own) is asked for meanwhile.
-      const trips = latestTrip;
+      const tapped = latestTrip;
       do await nextTask();
-      while (msg.id === latestCompute && latestTrip === trips && warmNextTrip());
+      while (msg.id === latestCompute && latestTrip === tapped && warmNextTrip());
     } else if (msg.type === 'paint') {
       if (lastShown?.id !== msg.id) return;
       const image = paintShown(lastShown, msg.limit);
