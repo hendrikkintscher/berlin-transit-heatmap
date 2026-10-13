@@ -58,7 +58,7 @@ import {
   type Result,
 } from './state';
 import { initTap } from './tap';
-import { addPathLook, pathLook, type PathLookView } from './path-looks';
+import { addTripArrows } from './trip-arrows';
 import { cleanName, linkQuery, MAX_STARTS, type Point } from './url';
 import { computeWindow, desertThresholds, isDate, isoDay, catchUp, fullHour } from './when';
 import { initWhenSheet } from './when-sheet';
@@ -84,10 +84,8 @@ secondBtn.addEventListener('click', () => search.open('another'));
 
 // ---------- state, from the link (see url.ts) ----------
 const { state, link, outside: linkOutside } = linkState(location.search);
-/** A trial look for the trip on the map (roadmap 1.1); kept in the link while comparing. */
-const look = pathLook(location.search);
-if (look) document.body.classList.add(`path-${look}`);
-let lookView: PathLookView | null = null;
+/** Draws the trip's direction arrows, once the map is up. */
+let showArrows: ((lines: GeoJSON.FeatureCollection | null) => void) | null = null;
 const urlLang = new URLSearchParams(location.search).get('lang');
 setLang(initialLang(location.search, readStoredLang()), false);
 /** The "what's different today" notice, once the map exists. */
@@ -433,7 +431,7 @@ let computedMinute = 0;
 
 function compute() {
   clearTimeout(preloadTimer);
-  // Arriving, the set place is where trips end: its marker shows a flag (style.css).
+  // Arriving, the set place is where trips end: its marker becomes the Ziel (style.css).
   document.body.classList.toggle(
     'arrive',
     state.direction === 'arrive' && !state.others.length && !state.special,
@@ -456,8 +454,7 @@ function writeUrl() {
     // Keep an explicit ?lang= so a shared English link stays English.
     urlLang && urlLang === lang() ? urlLang : null,
   );
-  const full = look ? [q, `path=${look}`].filter(Boolean).join('&') : q;
-  replaceUrl(full ? `?${full}` : location.pathname);
+  replaceUrl(q ? `?${q}` : location.pathname);
 }
 
 // ---------- map ----------
@@ -681,7 +678,7 @@ map.on('load', () => {
   state.mapReady = true;
   attrib?.classList.remove('maplibregl-compact-show');
   addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
-  if (look) lookView = addPathLook(map, look);
+  showArrows = addTripArrows(map);
   showHeat();
   if (state.result) showResult(state.result);
   tap.onMapReady();
@@ -1173,7 +1170,7 @@ const tap = initTap(
     favouriteLabels: () => favPlaces.list().map((f) => f.label),
     changeNote: (ride) => changes?.noteFor(ride) ?? null,
     focusChanges: (rides) => changes?.focus(rides),
-    pathLook: () => lookView,
+    showArrows: (lines) => showArrows?.(lines),
     showHome: (i) => {
       const at = starts()[i];
       if (at)
