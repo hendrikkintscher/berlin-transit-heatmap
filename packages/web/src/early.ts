@@ -8,6 +8,15 @@ export const travelOf = (v: string | null): Travel =>
   TRAVELS.includes(v as Travel) ? (v as Travel) : 'walk';
 
 /**
+ * Whether the link has a start (from=), so the first map needs a timetable right away.
+ * Without one nothing needs it before the first tap: it waits until the app has loaded.
+ */
+export function linkHasStart(search: string): boolean {
+  const [lat, lon] = (new URLSearchParams(search).get('from') ?? '').split(',').map(Number);
+  return Boolean(lat && lon);
+}
+
+/**
  * What the first map will need, known before the app has loaded: the timetable file and how
  * it is prepared (direction, step-free, bikes), from the link and the stored settings
  * ('step-free' and 'travel' in localStorage, null when unset). The same as readLink and the

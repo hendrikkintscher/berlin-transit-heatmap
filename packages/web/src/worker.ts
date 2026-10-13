@@ -48,7 +48,7 @@ import { outlines as traceOutlines } from './contours';
 import { accessGrid, departuresPerHour, stations } from './layers';
 import { scoreGrid } from './favourites';
 import { suggestMeetingPoints, type MeetCandidate } from './meet';
-import { earlyLoad } from './early';
+import { earlyLoad, linkHasStart } from './early';
 import { typicalWindow } from './when';
 import type {
   Direction,
@@ -186,6 +186,13 @@ async function loadWalk(): Promise<void> {
  */
 let lineShapes: LineShapes | null = null;
 let linesStarted = false;
+/**
+ * The app asked for the footpaths (the base map is up): the lines' courses may come too.
+ * Until then they wait, so they do not hold up the base map's tiles.
+ */
+let backgroundOk = false;
+/** The last map's timetable, for the lines' courses once they may load. */
+let lastTimetable: PreparedTimetable | null = null;
 /** The last map's lines, redrawn along their courses when lines.bin arrives. */
 let lastRoutes: { id: number; tt: PreparedTimetable; used: Segments } | null = null;
 
@@ -337,9 +344,10 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     if (msg.type === 'init') {
       dataBase = msg.dataBase;
     } else if (msg.type === 'boot') {
-      // From the start page, before the app's code is in: the first map's timetable, prepared
-      // as that map will need it.
+      // From the start page, before the app's code is in: with a start in the link, the first
+      // map's timetable, prepared as that map will need it (without one boot.ts asks later).
       dataBase = new URL(`data/${REGION.id}/`, msg.baseURI).href;
+      if (!linkHasStart(msg.search)) return;
       const first = earlyLoad(msg.search, msg);
       await prepared(first.window, first.direction, {
         stepFree: first.stepFree,
@@ -351,7 +359,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const p = prepared(msg.window, msg.direction ?? 'depart', variant);
       await (msg.quiet ? p.catch(() => undefined) : p);
     } else if (msg.type === 'loadWalk') {
+      backgroundOk = true;
       void loadWalk();
+      if (lastTimetable) void loadLines(lastTimetable);
     } else if (msg.type === 'stations') {
       const tt = await ensure(msg.window);
       const list = stations(tt, departuresPerHour(tt)).features.map((f) => ({
@@ -488,8 +498,9 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           ...(compare ? [compare.buffer] : []),
         ],
       );
-      // The lines' courses come after the first map, never before it.
-      void loadLines(tt);
+      // The lines' courses come after the first map and the base map, never before them.
+      lastTimetable = tt;
+      if (backgroundOk) void loadLines(tt);
     } else if (msg.type === 'paint') {
       if (lastShown?.id !== msg.id) return;
       const image = paintShown(lastShown, msg.limit);

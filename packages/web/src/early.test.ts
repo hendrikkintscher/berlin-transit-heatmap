@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { earlyLoad } from './early';
+import { earlyLoad, linkHasStart } from './early';
 
 const NONE = { stepFree: null, travel: null };
 // 2026-10-14 08:35 in Berlin (summer time).
@@ -30,5 +30,14 @@ describe('early load', () => {
     expect(earlyLoad('?sf=0&go=walk', stored, NOW)).toMatchObject({ stepFree: false, bike: false });
     // Cycling only needs no bike timetable.
     expect(earlyLoad('', { stepFree: null, travel: '2' }, NOW)).toMatchObject({ bike: false });
+  });
+});
+
+describe('linkHasStart', () => {
+  it('is true only for a link with a start', () => {
+    expect(linkHasStart('?from=52.52190,13.41320&m=typical')).toBe(true);
+    expect(linkHasStart('')).toBe(false);
+    expect(linkHasStart('?h=8&layers=freq')).toBe(false);
+    expect(linkHasStart('?from=abc')).toBe(false);
   });
 });

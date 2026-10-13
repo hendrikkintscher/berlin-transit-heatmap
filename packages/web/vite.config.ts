@@ -2,6 +2,8 @@ import { defineConfig, type Plugin } from 'vite';
 
 /** The map style main.ts loads (STYLE_URL), fetched from the start page already. */
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+/** The style's vector source (TileJSON), which MapLibre would only ask for once the style is in. */
+const TILES_URL = 'https://tiles.openfreemap.org/planet';
 
 /**
  * A faster first load (roadmap B4): the start page itself starts the routing worker (which
@@ -23,6 +25,7 @@ function earlyStart(): Plugin {
         const early = [
           `<link rel="preconnect" href="${new URL(STYLE_URL).origin}" crossorigin>`,
           `<link rel="preload" href="${STYLE_URL}" as="fetch" crossorigin>`,
+          `<link rel="preload" href="${TILES_URL}" as="fetch" crossorigin>`,
           `<link rel="modulepreload" href="./${main}">`,
           // Without module workers or storage the entry starts the worker as before.
           `<script>try{var q=[],s=null,g=null;try{s=localStorage.getItem('step-free');g=localStorage.getItem('travel')}catch(e){}var w=new Worker('./${worker}',{type:'module'});w.onmessage=function(e){q.push(e)};w.postMessage({type:'boot',baseURI:document.baseURI,search:location.search,stepFree:s,travel:g});window.__boot={worker:w,early:q}}catch(e){}</script>`,
