@@ -1509,6 +1509,40 @@ body.special .legend {
   width: 100%;
   accent-color: var(--accent);
 }
+/* A thumb big enough for a thumb (the browser's own is about 16 px). */
+.slider input[type='range'] {
+  appearance: none;
+  height: 28px;
+  background: transparent;
+}
+.slider input[type='range']::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-strong);
+}
+.slider input[type='range']::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-strong);
+}
+.slider input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--shadow);
+}
+.slider input[type='range']::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--shadow);
+}
 /* The opacity slider belongs to the Heatmap switch above it, and rests while that is off. */
 .slider-sub {
   padding-left: 14px;
