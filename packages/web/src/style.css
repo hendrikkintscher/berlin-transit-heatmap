@@ -1953,6 +1953,25 @@ body.special .legend {
 .changes-list .line-badge {
   vertical-align: 1px;
 }
+/* The whole day: one line per row, cut short; tapped, the stretch and its full text show. */
+.changes-list .one,
+.changes-list .group {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.changes-list .group::after {
+  content: ' ▾';
+  color: var(--muted);
+}
+.changes-list .group[aria-expanded='true']::after {
+  content: ' ▴';
+}
+.changes-sub {
+  list-style: none;
+  margin: 0 0 4px 12px;
+  padding: 0;
+}
 
 /* Locate (bottom left) and one more starting point (meeting point, bottom right). */
 .bottom-row {
