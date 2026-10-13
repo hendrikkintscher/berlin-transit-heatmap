@@ -4,6 +4,11 @@
 // -> navy (slow).
 
 /** Lower band edges in minutes; the last band is open-ended. */
+/** The app's ink, for map lines and strong map labels (style.css --ink). */
+export const INK = '#1d1530';
+/** The map's softer label ink: district names, landmarks and place labels. */
+export const MAP_TEXT = '#4a3d63';
+
 export const BAND_EDGES_MIN = [
   0, 5, 10, 15, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5, 40, 42.5, 45, 47.5, 50, 55, 60, 75, 90, 120,
 ];
@@ -259,7 +264,7 @@ export const MODE_COLORS: Record<string, string> = {
   sbahn: '#00843d',
   ubahn: '#0a5ea8',
   tram: '#c8102e',
-  bus: '#7b2d8e',
+  bus: '#95276e',
   regional: '#8a1c1c',
   ferry: '#0090c8',
 };

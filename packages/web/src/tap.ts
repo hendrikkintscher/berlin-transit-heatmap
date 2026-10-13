@@ -12,6 +12,7 @@ import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
 import { hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
+import { icon } from './icons';
 import { MAX_STARTS, type Point } from './url';
 import { liveStatus, liveText, type Board } from './live';
 import { dataBase } from './region';
@@ -634,8 +635,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   function showFav() {
     const on = !!pending && deps.isFavourite(pending);
     // A star icon; its words for screen readers and as a tooltip.
-    favBtn.textContent = on ? '★' : '☆';
-    favBtn.setAttribute('aria-label', t(on ? 'favOn' : 'favHere').replace(/^[☆★] /, ''));
+    favBtn.innerHTML = icon(on ? 'starFilled' : 'star', 22);
+    favBtn.setAttribute('aria-label', t(on ? 'favOn' : 'favHere'));
     favBtn.title = favBtn.getAttribute('aria-label')!;
     favBtn.setAttribute('aria-pressed', String(on));
   }

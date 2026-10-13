@@ -1,11 +1,13 @@
 // The chip row under the search bar: Zeit (with Reisezeit), Bahn (with Barrierefrei),
 // then Ebenen (with Vergleich) and Mehr (the menu) as icons, so the row fits a phone
 // without scrolling. They show at a glance what is set (a chip that differs from the
-// default is purple). A tap opens that
+// default has an accent dot). A tap opens that
 // chip's small panel right under the row, with only its own settings; the map stays
 // visible, and a tap outside closes it.
 
+import { escapeHtml } from './format';
 import { t } from './i18n';
+import { icon } from './icons';
 import { $, type State } from './state';
 import { DEFAULT_WALK_KMH } from './url';
 
@@ -79,25 +81,25 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
 
   /** Chip labels and which ones differ from the default. */
   function render() {
-    const set = (id: string, text: string, on: boolean) => {
+    const set = (id: string, text: string, on: boolean, iconHtml = '') => {
       const chip = $(id);
       // Icon-only chips (Ebenen, Mehr) carry their name as the label.
       const label = chip.querySelector('span');
-      if (label) label.textContent = text;
+      if (label) label.innerHTML = iconHtml + escapeHtml(text);
       else chip.setAttribute('aria-label', text);
       chip.classList.toggle('on', on);
     };
     set(
       'travel-chip',
-      (state.stepFree ? '♿ ' : '') +
-        t(
-          state.travel === 'bike'
-            ? 'travelBike'
-            : state.travel === 'bikeonly'
-              ? 'travelBikeOnly'
-              : 'travelWalk',
-        ),
+      t(
+        state.travel === 'bike'
+          ? 'travelBike'
+          : state.travel === 'bikeonly'
+            ? 'travelBikeOnly'
+            : 'travelWalk',
+      ),
       state.travel !== 'walk' || state.walkKmh !== DEFAULT_WALK_KMH || state.stepFree,
+      state.stepFree ? icon('wheelchair', 16) : '',
     );
     set(
       'layers-chip',

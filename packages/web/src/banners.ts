@@ -3,15 +3,17 @@
 // mode's name and the ✕; a tap on the pill opens the full text again for a while.
 
 import { t } from './i18n';
+import { escapeHtml } from './format';
+import { icon } from './icons';
 import { $ } from './state';
 
 const COLLAPSE_MS = 5000;
 
-/** The pill's text: the mode's name ("Treffpunkt", or "Wohnlage" from "Wohnlage: …"). */
+/** The pill's content (HTML): the mode's name ("Treffpunkt", or "Wohnlage" from "Wohnlage: …"). */
 const SHORT: Record<string, () => string> = {
-  meet: () => `👥 ${t('meetShort')}`,
-  cmp: () => `⇄ ${t('compareChipLabel')}`,
-  special: () => $('special-text').textContent!.split(/[:,]/)[0]!,
+  meet: () => `${icon('people', 16)} ${t('meetShort')}`,
+  cmp: () => `${icon('compare', 16)} ${t('compareChipLabel')}`,
+  special: () => escapeHtml($('special-text').textContent!.split(/[:,]/)[0]!),
 };
 
 export function initBanners() {
@@ -26,7 +28,7 @@ export function initBanners() {
       clearTimeout(timer);
       el.classList.remove('small');
       timer = window.setTimeout(() => {
-        pill.textContent = short();
+        pill.innerHTML = short();
         el.classList.add('small');
       }, COLLAPSE_MS);
     };

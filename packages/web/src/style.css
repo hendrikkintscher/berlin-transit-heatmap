@@ -4,6 +4,27 @@
   --panel: rgba(255, 255, 255, 0.94);
   --accent: #5e1f8c;
   --shadow: 0 2px 10px rgba(20, 10, 40, 0.18);
+  /* Design tokens (review V5): surfaces, lines, states, radii, the larger shadow, and the
+     tops of the chip row and the panels under it. */
+  --surface: #fff;
+  --surface-soft: #f0ecf4;
+  --surface-strong: #e4dcef;
+  --line: #ece8f1;
+  --line-strong: #d6cfe0;
+  --accent-soft: #f4eefa;
+  --danger: #c92a2a;
+  --changes: #d6336c;
+  --ok: #2b8a3e;
+  --fav: #e0a100;
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 16px;
+  --r-pill: 999px;
+  --shadow-2: 0 10px 40px rgba(20, 10, 40, 0.3);
+  --top-chips: calc(var(--st) + 66px);
+  --top-panels: calc(var(--st) + 114px);
+  /* Light only: no forced dark mode inverting the map's colours (review V13). */
+  color-scheme: light;
   --st: env(safe-area-inset-top, 0px);
   --sb: env(safe-area-inset-bottom, 0px);
   --sl: env(safe-area-inset-left, 0px);
@@ -70,7 +91,7 @@ body {
 .seg {
   display: flex;
   background: var(--panel);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 3px;
   box-shadow: var(--shadow);
 }
@@ -81,7 +102,7 @@ body {
   font: inherit;
   font-weight: 600;
   padding: 8px 13px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   min-height: var(--tap);
   cursor: pointer;
 }
@@ -94,7 +115,7 @@ body {
   color: #fff;
 }
 .seg button[aria-checked='true'] small {
-  color: #e4d6f2;
+  color: var(--surface-strong);
 }
 .round {
   /* True circles on every browser: no shrinking, no default padding or button look. */
@@ -120,7 +141,7 @@ body {
 
 .chip {
   background: var(--panel);
-  border-radius: 12px;
+  border-radius: var(--r-m);
   box-shadow: var(--shadow);
   padding: 8px 12px;
   font-size: 15px;
@@ -149,8 +170,8 @@ body {
   min-height: var(--tap);
   padding: 0 14px;
   border: 0;
-  border-radius: 999px;
-  background: #f0ecf4;
+  border-radius: var(--r-pill);
+  background: var(--surface-soft);
   color: var(--accent);
   font: inherit;
   font-weight: 600;
@@ -199,7 +220,7 @@ body {
   padding-right: 40px;
 }
 #readout:not([hidden]) {
-  border-radius: 14px;
+  border-radius: var(--r-m);
 }
 /* Outlines alone carry their minutes: no colour legend. */
 body.no-legend .legend {
@@ -216,7 +237,7 @@ body.no-legend .legend {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #ebe4f2;
+  background: var(--surface-soft);
   color: var(--ink);
   font-size: 17px;
   font-weight: 700;
@@ -245,8 +266,8 @@ body.no-legend .legend {
   min-height: 36px;
   padding: 0 9px;
   border: 0;
-  border-radius: 999px;
-  background: #f0ecf4;
+  border-radius: var(--r-pill);
+  background: var(--surface-soft);
   color: var(--accent);
   font: inherit;
   font-size: 13px;
@@ -296,7 +317,7 @@ body.no-legend .legend {
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 6px 16px;
   min-height: 44px;
   cursor: pointer;
@@ -305,7 +326,7 @@ body.no-legend .legend {
   font-size: 12px;
   color: var(--muted);
   background: var(--panel);
-  border-radius: 8px;
+  border-radius: var(--r-s);
   padding: 2px 8px;
 }
 .status:empty {
@@ -315,7 +336,7 @@ body.no-legend .legend {
 .legend {
   position: fixed;
   z-index: 2;
-  right: calc(var(--sr) + 6px);
+  right: calc(var(--sr) + 10px);
   top: calc(var(--st) + 206px);
   height: min(44vh, 380px);
   display: grid;
@@ -345,7 +366,7 @@ body.no-legend .legend {
   grid-column: 1;
   position: relative;
   min-width: 26px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--ink);
   text-shadow:
@@ -370,10 +391,10 @@ body.no-legend .legend {
 
 dialog {
   border: 0;
-  border-radius: 16px;
+  border-radius: var(--r-l);
   padding: 18px 20px;
   max-width: min(440px, calc(100vw - 32px));
-  box-shadow: 0 10px 40px rgba(20, 10, 40, 0.35);
+  box-shadow: var(--shadow-2);
   color: var(--ink);
   font-size: 15px;
   line-height: 1.45;
@@ -407,7 +428,7 @@ dialog form button {
   color: #fff;
   font: inherit;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 8px 18px;
   cursor: pointer;
 }
@@ -416,7 +437,7 @@ dialog form button {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface);
   border: 5px solid var(--accent);
   box-shadow: var(--shadow);
 }
@@ -426,7 +447,7 @@ dialog form button {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #1d1530;
+  background: var(--ink);
   border: 3px solid #fff;
   box-shadow: var(--shadow);
   pointer-events: none;
@@ -439,7 +460,7 @@ body.arrive .origin-marker.p1 {
     center / 12px no-repeat;
 }
 body.arrive .spot-marker {
-  background: #fff;
+  background: var(--surface);
   border: 4px solid var(--accent);
 }
 /* While a new map is computed, the place's old minutes and trip fade. */
@@ -461,7 +482,7 @@ body.arrive .spot-marker {
 /* With the colour legend on the right edge, the (i) sits left of it, so the two never
    overlap (landscape, or a tall bottom panel with the install tip). */
 body:not(.no-legend) .maplibregl-ctrl-bottom-right {
-  margin-right: calc(var(--sr) + 46px);
+  margin-right: calc(var(--sr) + 52px);
 }
 
 /* The search bar: always on top, above the chips; its suggestions open under it. */
@@ -471,14 +492,14 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
   top: calc(var(--st) + 10px);
   left: calc(var(--sl) + 10px);
   width: min(520px, calc(100vw - var(--sl) - var(--sr) - 20px));
-  background: #fff;
+  background: var(--surface);
   border-radius: 23px;
   box-shadow: var(--shadow);
   overflow: hidden;
 }
 .search.open {
-  border-radius: 16px;
-  box-shadow: 0 6px 24px rgba(20, 10, 40, 0.28);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-2);
 }
 .search:not(.open) .search-results,
 .search:not(.open) .search-msg {
@@ -528,7 +549,7 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid #ece8f1;
+  border-top: 1px solid var(--line);
   max-height: min(60vh, 380px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -541,14 +562,14 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
   min-height: 48px;
   justify-content: center;
   cursor: pointer;
-  border-bottom: 1px solid #f3f0f6;
+  border-bottom: 1px solid var(--line);
 }
 .search-results li:last-child {
   border-bottom: 0;
 }
 .search-results li:hover,
 .search-results li[aria-selected='true'] {
-  background: #f3ecf9;
+  background: var(--surface-soft);
 }
 .search-results b {
   font-weight: 600;
@@ -577,14 +598,14 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
 }
 .search-results .place-favourite b::before {
   content: '★';
-  color: #7b2cbf;
+  color: var(--fav);
 }
 .search-results .place-station b::before {
   content: '◉';
   font-size: 0.8em;
 }
 .search-msg {
-  border-top: 1px solid #ece8f1;
+  border-top: 1px solid var(--line);
   padding: 12px 16px;
   font-size: 14px;
   color: var(--muted);
@@ -604,7 +625,7 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
 dialog.menu {
   position: fixed;
   margin: 0;
-  top: calc(var(--st) + 114px);
+  top: var(--top-panels);
   right: calc(var(--sr) + 10px);
   left: auto;
   bottom: auto;
@@ -616,6 +637,10 @@ dialog.menu {
 }
 dialog.menu[open] {
   animation: drop 0.16s ease-out;
+}
+/* Like the chip panels, the menu leaves the map undimmed (a tap outside still closes it). */
+dialog.menu::backdrop {
+  background: transparent;
 }
 @keyframes drop {
   from {
@@ -642,8 +667,8 @@ dialog.menu[open] {
   cursor: pointer;
 }
 .menu h3 {
-  margin: 16px 0 8px;
-  font-size: 12px;
+  margin: 14px 0 8px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -675,8 +700,8 @@ dialog.menu[open] {
   width: 46px;
   height: 28px;
   margin: 0;
-  border-radius: 999px;
-  background: #cfc8d8;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
   transition: background 0.15s;
   cursor: pointer;
 }
@@ -688,7 +713,7 @@ dialog.menu[open] {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   transition: transform 0.15s;
 }
@@ -704,7 +729,7 @@ dialog.menu[open] {
 }
 .seg-wide {
   box-shadow: none;
-  background: #f0ecf4;
+  background: var(--surface-soft);
 }
 .seg-wide button {
   flex: 1;
@@ -716,7 +741,7 @@ dialog.menu[open] {
   margin-top: 16px;
   padding: 12px 0 4px;
   border: 0;
-  border-top: 1px solid #ece8f1;
+  border-top: 1px solid var(--line);
   background: transparent;
   color: var(--accent);
   font: inherit;
@@ -732,10 +757,10 @@ dialog.menu[open] {
   flex-direction: column;
   gap: 4px;
   background: var(--panel);
-  border-radius: 10px;
+  border-radius: var(--r-s);
   box-shadow: var(--shadow);
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 .ll-row {
@@ -793,25 +818,41 @@ dialog.menu[open] {
   background: #d8d5dc;
 }
 
-/* Meeting point: each start has its colour (marker and the dots in the card), and a
-   banner explains the colours. */
+/* Meeting point: each start has its colour (marker and the dots in the card), away from
+   the line colours, and a banner explains the colours. */
 .p1 {
   --pc: var(--accent);
 }
 .p2 {
-  --pc: #0e8a7e;
+  --pc: #e8a317;
 }
 .p3 {
-  --pc: #d9480f;
+  --pc: #1fb5c9;
 }
 .p4 {
-  --pc: #1c64d6;
+  --pc: #e05d8c;
 }
 .p5 {
-  --pc: #c2185b;
+  --pc: #56607a;
 }
 .origin-marker[class*=' p'] {
   border-color: var(--pc);
+}
+/* With several starts each marker carries its number, a dark edge keeps the light colours
+   readable on the map, and starts stay above the suggestions. */
+.origin-marker.numbered {
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow:
+    0 0 0 1.5px rgba(29, 21, 48, 0.55),
+    var(--shadow);
+}
+body.arrive .origin-marker.p1.numbered {
+  color: transparent;
 }
 .meet {
   position: fixed;
@@ -826,7 +867,7 @@ dialog.menu[open] {
   gap: 6px;
   font-size: 13px;
   padding: 4px 4px 4px 12px;
-  border-left: 4px solid #0e8a7e;
+  border-left: 4px solid var(--accent);
 }
 /* Shrunk to a pill (banners.ts): the mode's name and the ✕, tap to read it all again. */
 .meet .banner-pill {
@@ -837,7 +878,7 @@ dialog.menu[open] {
   transform: none;
   padding-left: 4px;
   border-left-width: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
 }
 .meet.small > span {
   display: none;
@@ -880,12 +921,12 @@ dialog.menu[open] {
   display: grid;
   place-items: center;
   border: 0;
-  background: #efe8f6;
+  background: var(--surface-soft);
   color: var(--accent);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 4px 14px;
   min-height: 44px;
   cursor: pointer;
@@ -942,7 +983,7 @@ dialog.menu[open] {
   gap: 4px;
   width: fit-content;
   padding-left: 14px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--panel);
   box-shadow: var(--shadow);
   font-size: 14px;
@@ -970,11 +1011,15 @@ dialog.menu[open] {
   padding: 6px 12px;
   cursor: pointer;
 }
+/* One favourite colour: the gold of the map's stars, also on the card's filled ★. */
+#readout-fav[aria-pressed='true'] {
+  color: var(--fav);
+}
 .fav-marker {
-  background: #fff;
+  background: var(--surface);
   color: #8a5a00;
-  border: 2px solid #e0a100;
-  border-radius: 999px;
+  border: 2px solid var(--fav);
+  border-radius: var(--r-pill);
   padding: 1px 6px;
   font-size: 12px;
   font-weight: 700;
@@ -991,7 +1036,7 @@ dialog.menu[open] {
   align-items: center;
   gap: 6px;
   min-height: 44px;
-  border-bottom: 1px solid #f0ecf4;
+  border-bottom: 1px solid var(--surface-soft);
   font-size: 14px;
 }
 .fav-name {
@@ -1008,10 +1053,10 @@ dialog.menu[open] {
 .fav-list select {
   font: inherit;
   font-size: 13px;
-  border: 1px solid #ddd5e6;
-  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-s);
   padding: 4px;
-  background: #fff;
+  background: var(--surface);
   color: var(--ink);
   max-width: 96px;
 }
@@ -1034,12 +1079,12 @@ dialog.menu[open] {
 .fav-actions button {
   min-height: var(--tap);
   border: 0;
-  background: #f0ecf4;
+  background: var(--surface-soft);
   color: var(--accent);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 8px 12px;
   cursor: pointer;
 }
@@ -1054,7 +1099,7 @@ dialog.menu[open] {
   font: inherit;
   font-size: 15px;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 10px 14px;
   cursor: pointer;
 }
@@ -1096,7 +1141,7 @@ body.special .legend {
   position: fixed;
   z-index: 4;
   /* Under the search bar (46px and a 10px gap). */
-  top: calc(var(--st) + 66px);
+  top: var(--top-chips);
   left: 0;
   right: 0;
   display: flex;
@@ -1140,7 +1185,7 @@ body.special .legend {
   height: 40px;
   padding: 0 12px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--panel);
   box-shadow: var(--shadow);
   color: var(--ink);
@@ -1182,23 +1227,31 @@ body.special .legend {
 .chip-btn.icon-chip.menu-chip::after {
   content: none;
 }
+/* Open: a tinted chip. Not on the default setting: an accent dot, so the two read apart. */
+.chip-btn[aria-expanded='true'] {
+  background: var(--surface-strong);
+}
 .chip-btn.on {
-  background: var(--accent);
-  color: #fff;
+  color: var(--accent);
+  background-image: radial-gradient(
+    circle at calc(100% - 8px) 8px,
+    var(--accent) 3.5px,
+    transparent 4px
+  );
 }
 /* A chip's panel: right under the row, the map stays visible around it. */
 .pop {
   position: fixed;
   z-index: 5;
-  top: calc(var(--st) + 114px);
+  top: var(--top-panels);
   left: calc(var(--sl) + 10px);
   width: min(420px, calc(100vw - 20px));
   max-height: calc(100dvh - var(--st) - var(--sb) - 186px);
   overflow-y: auto;
   padding: 4px 16px 14px;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 10px 40px rgba(20, 10, 40, 0.3);
+  border-radius: var(--r-l);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
   font-size: 15px;
   line-height: 1.45;
   animation: drop 0.12s ease-out;
@@ -1213,7 +1266,7 @@ body.special .legend {
 }
 .pop .seg {
   box-shadow: none;
-  background: #f0ecf4;
+  background: var(--surface-soft);
 }
 .pop .seg button {
   min-height: 44px;
@@ -1233,8 +1286,8 @@ body.special .legend {
 .day-row button {
   min-height: 44px;
   border: 0;
-  border-radius: 10px;
-  background: #f0ecf4;
+  border-radius: var(--r-s);
+  background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
   font-weight: 600;
@@ -1265,8 +1318,8 @@ body.special .legend {
   justify-content: center;
   min-height: 50px;
   padding: 0 8px;
-  border-radius: 999px;
-  background: #f0ecf4;
+  border-radius: var(--r-pill);
+  background: var(--surface-soft);
   color: var(--ink);
   cursor: pointer;
 }
@@ -1327,22 +1380,22 @@ body.special .legend {
   min-height: 44px;
   padding: 0;
   border: 0;
-  border-radius: 10px;
-  background: #f0ecf4;
+  border-radius: var(--r-s);
+  background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
 }
 .hour-grid button:nth-child(-n + 5) {
-  background: #e3dcef;
+  background: var(--surface-strong);
 }
 .hour-grid button[aria-pressed='true'] {
   background: var(--accent);
   color: #fff;
 }
 .hour-grid button:disabled {
-  background: #f6f4f8;
+  background: var(--surface-soft);
   color: #b9b2c3;
   cursor: default;
 }
@@ -1359,7 +1412,7 @@ body.special .legend {
     margin-left: calc(var(--sl) + 10px);
     background: var(--panel);
     box-shadow: var(--shadow);
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     padding: 8px 18px;
     font-weight: 800;
     font-size: 18px;
@@ -1401,7 +1454,7 @@ body.special .legend {
   color: #fff;
   font: inherit;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 6px 12px;
   cursor: pointer;
 }
@@ -1415,7 +1468,7 @@ body.special .legend {
   min-height: 44px;
   margin-top: 4px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--accent);
   color: #fff;
   font: inherit;
@@ -1423,7 +1476,7 @@ body.special .legend {
   cursor: pointer;
 }
 .menu-share.alt {
-  background: #f0ecf4;
+  background: var(--surface-soft);
   color: var(--accent);
 }
 .slider {
@@ -1453,8 +1506,8 @@ body.special .legend {
   flex: 1;
   min-height: var(--tap);
   border: 0;
-  border-radius: 10px;
-  background: #f0ecf4;
+  border-radius: var(--r-s);
+  background: var(--surface-soft);
   color: var(--ink);
   font: inherit;
   font-weight: 600;
@@ -1526,7 +1579,7 @@ body.special .legend {
 #readout .trip-live {
   display: block;
   margin: -2px 0 2px;
-  color: #2b8a3e;
+  color: var(--ok);
   font-weight: 600;
 }
 .trip-live::before {
@@ -1535,7 +1588,7 @@ body.special .legend {
   vertical-align: 2px;
 }
 #readout .trip-live.bad {
-  color: #c92a2a;
+  color: var(--danger);
 }
 #readout .trip-live[hidden] {
   display: none;
@@ -1582,10 +1635,10 @@ body.special .legend {
   gap: 4px;
   max-width: 150px;
   padding: 2px;
-  border: 2px solid #1d1530;
-  border-radius: 999px;
-  background: #fff;
-  color: #1d1530;
+  border: 2px solid var(--ink);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -1600,10 +1653,11 @@ body.special .legend {
   flex: none;
   display: grid;
   place-items: center;
-  width: 18px;
+  min-width: 18px;
   height: 18px;
-  border-radius: 50%;
-  background: #1d1530;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
   color: #fff;
   font-style: normal;
   font-size: 11px;
@@ -1643,7 +1697,7 @@ body.special .legend {
   box-sizing: border-box;
   max-width: min(480px, 100%);
   padding: 4px 4px 4px 4px;
-  border-left: 4px solid #d6336c;
+  border-left: 4px solid var(--changes);
   font-size: 13px;
 }
 .changes[hidden] {
@@ -1674,7 +1728,7 @@ body.special .legend {
 }
 .changes-chip::before {
   content: '⚠ ';
-  color: #d6336c;
+  color: var(--changes);
 }
 .changes-panel {
   flex: 1;
@@ -1693,7 +1747,7 @@ body.special .legend {
   width: 100%;
   padding: 6px 6px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-s);
   background: none;
   color: var(--ink);
   font: inherit;
@@ -1727,7 +1781,7 @@ body.special .legend {
   height: 44px;
   padding: 0 16px 0 13px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--panel);
   box-shadow: var(--shadow);
   color: var(--accent);
@@ -1851,7 +1905,7 @@ body.special .legend {
   right: 14px;
   height: 4px;
   border-radius: 2px;
-  background: #d6cfe0;
+  background: var(--line-strong);
 }
 #readout:has(#readout-details[hidden]) .grip {
   display: none;
@@ -1876,8 +1930,8 @@ body.special .legend {
   min-height: 44px;
   padding: 0 10px;
   margin-bottom: 4px;
-  border: 1px solid #e6dfee;
-  border-radius: 10px;
+  border: 1px solid var(--surface-strong);
+  border-radius: var(--r-s);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -1891,10 +1945,29 @@ body.special .legend {
 }
 .more-row.on {
   border-color: var(--accent);
-  background: #f4eefa;
+  background: var(--accent-soft);
 }
 .more-badges {
   display: flex;
   gap: 3px;
   margin-left: auto;
+}
+
+/* Inline line icons (icons.ts) sit on the text's middle. */
+.ico {
+  flex: none;
+  vertical-align: -0.2em;
+}
+.banner-pill .ico,
+.chip-btn .ico {
+  vertical-align: -3px;
+  margin-right: 2px;
+}
+#readout-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#readout-home[hidden] {
+  display: none;
 }

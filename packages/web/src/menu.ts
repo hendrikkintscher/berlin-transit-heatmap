@@ -47,10 +47,13 @@ export function initMenu(deps: MenuDeps) {
   const limitToggle = $<HTMLInputElement>('limit-toggle');
   const limitButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-limit]')];
 
-  $('menu-btn').addEventListener('click', () => {
+  const menuBtn = $('menu-btn');
+  menuBtn.addEventListener('click', () => {
     deps.closeSearch();
     menuDialog.showModal();
+    menuBtn.setAttribute('aria-expanded', 'true');
   });
+  menuDialog.addEventListener('close', () => menuBtn.setAttribute('aria-expanded', 'false'));
   $('menu-close').addEventListener('click', () => menuDialog.close());
   $('about-btn').addEventListener('click', () => {
     menuDialog.close();
