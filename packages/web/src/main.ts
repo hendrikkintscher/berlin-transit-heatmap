@@ -85,6 +85,7 @@ import {
   windowName,
 } from './when';
 import { initWhenSheet } from './when-sheet';
+import { initBack, replaceUrl } from './back';
 import type { FromWorker, ToWorker } from './protocol';
 import { dataBase, region } from './region';
 
@@ -480,7 +481,7 @@ function writeUrl() {
     // Keep an explicit ?lang= so a shared English link stays English.
     urlLang && urlLang === lang() ? urlLang : null,
   );
-  history.replaceState(null, '', q ? `?${q}` : location.pathname);
+  replaceUrl(q ? `?${q}` : location.pathname);
 }
 
 // ---------- map ----------
@@ -1649,6 +1650,25 @@ const menu = initMenu({
   setStatus,
   install: () => void install(),
 });
+
+// Back closes the top-most open layer (back.ts).
+const dialogs = [...document.querySelectorAll('dialog')];
+const pops = [...document.querySelectorAll<HTMLElement>('#pops > *')];
+const readout = $('readout');
+initBack(
+  [
+    ...dialogs.map((d) => ({ isOpen: () => d.open, close: () => d.close() })),
+    { isOpen: isSearchOpen, close: closeSearch },
+    { isOpen: () => !!chips.isOpen(), close: chips.close },
+    { isOpen: () => !readout.hidden, close: tap.hideReadout },
+  ],
+  [
+    ...dialogs.map((d) => [d, 'open'] as [Element, string]),
+    [searchPanel, 'class'],
+    ...pops.map((p) => [p, 'hidden'] as [Element, string]),
+    [readout, 'hidden'],
+  ],
+);
 
 whenSheet.setWhen(state.when);
 showOrigin();
