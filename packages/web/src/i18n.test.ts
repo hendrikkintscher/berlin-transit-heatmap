@@ -19,4 +19,14 @@ describe('i18n', () => {
       expect(holes(STRINGS.en[key as keyof typeof STRINGS.de]), key).toEqual(holes(text));
     }
   });
+
+  it('words the version line in each language, with the commit as text', () => {
+    for (const l of ['de', 'en'] as const) {
+      expect(STRINGS[l].appVersion).toContain('{version}');
+      expect(STRINGS[l].appVersion).toContain('{commit}');
+      expect(STRINGS[l].appVersionNoCommit).toContain('{version}');
+    }
+    expect(STRINGS.de.appVersion).not.toBe(STRINGS.en.appVersion);
+    expect(STRINGS.de.appVersionNoCommit).not.toBe(STRINGS.en.appVersionNoCommit);
+  });
 });

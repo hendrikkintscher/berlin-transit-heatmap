@@ -1,6 +1,6 @@
-# Roadmap V1.3
+# Roadmap V1.4
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.1** (through PR #274). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.2** (through PR #275). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
 **How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal.
 
@@ -33,21 +33,14 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.9.
 | 0.7     | 10-13     | Faster first trip and first map                                                                 | #257–#261 |
 | 0.8.0   | 10-13     | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                           | #266–#270 |
 | 0.9.0   | 10-13     | App shows its version in the Mehr menu; git tag per step                                        | #272      |
-| 0.9.1   | 10-13 now | Automatic tag `vX.Y.Z` for each merge that bumps the version                                    | #274      |
+| 0.9.1   | 10-13     | Automatic tag `vX.Y.Z` for each merge that bumps the version                                    | #274      |
+| 0.9.2   | 10-13 now | Version line in German and English, short commit shown as text                                  | #275      |
 
 ## Inbox
 
 Hendrik's wishes given without a pick land here: one dated line each, in his words. They are moved to their milestone in the next roadmap version.
 
 _Empty._
-
-## 0.9 App version (follow-ups)
-
-One note from step 0.9.0 left, placed first.
-
-- **0.9.2 Version line in German and English** (from step 0.9.0, 2026-10-13 12:47: "the version line is the same in German and English; the short commit shows only as a tooltip, which can't be seen on a phone").
-  - a. The version line in Mehr gets German and English wording.
-  - b. The short commit is shown in visible text instead of only as a tooltip.
 
 ## 0.10 Trip card and changes
 
@@ -116,6 +109,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.4** (2026-10-13): 0.9.2 Version line in German and English done (#275, tag `v0.9.2`); milestone 0.9 closed.
 - **V1.3** (2026-10-13): 0.9.1 Automatic tag per version done (#274, tag `v0.9.1` set by the new workflow); Hendrik no longer tags by hand.
 - **V1.2** (2026-10-13): the two Inbox notes from step 0.9.0 placed as 0.9.1 Automatic tag per version and 0.9.2 Version line in German and English; milestone 0.9 reopened for them, next in order.
 - **V1.1** (2026-10-13): 0.9.0 App shows its version done (#272, tag `v0.9.0`); milestone 0.9 closed. From here every step's PR bumps the version in package.json and tags its merge.
