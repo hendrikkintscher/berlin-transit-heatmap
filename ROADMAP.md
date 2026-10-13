@@ -1,6 +1,6 @@
-# Roadmap V1.11
+# Roadmap V1.12
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.3** (through PR #281). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.4** (through PR #283). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
 **How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal.
 
@@ -39,7 +39,8 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 | 0.10.0  | 10-13     | Later connections fill in while pulling the drawer and reach an hour ahead                      | #276      |
 | 0.10.1  | 10-13     | "Heute anders" only in Mehr; change notes on the trip card open their line's changes            | #277      |
 | 0.10.2  | 10-13     | The countdown moves on to the next connection past the full hour, from the loaded file          | #279      |
-| 0.10.3  | 10-13 now | The drawer also lists faster connections on other lines, found in the background                | #281      |
+| 0.10.3  | 10-13     | The drawer also lists faster connections on other lines, found in the background                | #281      |
+| 0.10.4  | 10-13 now | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap       | #283      |
 
 ## Inbox
 
@@ -47,11 +48,8 @@ Hendrik's wishes given without a pick land here: one dated line each, in his wor
 
 ## 0.10 Trip drawer and changes, follow-ups
 
-Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus one from step 0.10.3; 0.10.2 and 0.10.3 are done. Next in order.
+Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus one from step 0.10.3; 0.10.2, 0.10.3 and 0.10.4 are done. Next in order.
 
-- **0.10.4 Shorter "Heute anders" box** (from step 0.10.1, 2026-10-13 15:51: "on days with many changes, the "Heute anders" box opened from Mehr gets long, and the explanation note at its bottom only shows after scrolling").
-  - a. The explanation note moves to the top of the box (or stays pinned in view).
-  - b. Long days stay readable, for example grouped by line with each group folded.
 - **0.10.5 Drawer list asked for only once** (from step 0.10.3, 2026-10-13: "the drawer's list gets asked for a second time about 1–2 s after it opens, when the trip card refreshes. This already happened in 0.10.0. It costs one extra round of searches but the list doesn't visibly change").
   - a. Find why the card's refresh requests the list again while the drawer is open.
   - b. Keep the open drawer's list when the refresh shows the same trip; ask again only when the trip changes.
@@ -114,6 +112,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.12** (2026-10-13): 0.10.4 Shorter "Heute anders" box done (#283): the explanation note is at the top; the whole day lists one row per line, cut to one line, and a line with several changes unfolds on a tap (Sa 17.10.: list 733 → 401 px). Next in order: 0.10.5 Drawer list asked for only once.
 - **V1.11** (2026-10-13): the two Inbox notes from step 0.10.3 sorted: "drawer list asked for a second time" placed as 0.10.5 Drawer list asked for only once; "two rows with the same arrival minute" discarded (Hendrik). Inbox emptied. Next in order: 0.10.4 Shorter "Heute anders" box.
 - **V1.10** (2026-10-13): 0.10.3 Faster other lines in the drawer done (#281): after the instant list of the shown lines' later trips, the worker searches one connection at a time on any line and adds those that beat a row (a tap or new map goes first); each row keeps its line badges.
 - **V1.9** (2026-10-13): the two Inbox notes from step 0.10.2 placed: "bump both package.json versions" as a rule under Versioning, and "slightly worse long trips late in the extra hour" as substep 0.13.2 c (Timetable windows check); Inbox emptied. Next in order: 0.10.3 Faster other lines in the drawer.
