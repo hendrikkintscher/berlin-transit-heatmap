@@ -409,8 +409,14 @@
       </button>
     </div>
 
-    <div id="hint" class="chip" data-t="hint" hidden>
-      Tippe auf die Karte oder suche einen Startpunkt
+    <!-- First open: what the map shows, and the two quickest ways to a start. -->
+    <div id="hint" class="chip" hidden>
+      <p data-t="hint">Sieh, wie weit du in 10, 20 und 30 Min. mit Bus und Bahn kommst.</p>
+      <div class="hint-actions">
+        <button id="hint-locate" type="button" data-t="hintLocate">📍 Von meinem Standort</button>
+        <button id="hint-search" type="button" data-t="hintSearch">Adresse suchen</button>
+      </div>
+      <small data-t="hintTap">Oder tippe irgendwo auf die Karte.</small>
     </div>
 
     <footer class="bottom">
