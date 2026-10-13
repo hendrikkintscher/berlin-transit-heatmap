@@ -363,11 +363,13 @@ export function addMapLayers(
     id: 'trip-stops',
     type: 'circle',
     source: TRIP_STOPS_SOURCE,
+    // In the line's colour, so they belong to the line; changes smaller than where you get
+    // on and off.
     paint: {
-      'circle-radius': 5,
+      'circle-radius': ['case', ['get', 'end'], 5, 3.5],
       'circle-color': '#ffffff',
-      'circle-stroke-color': '#1d1530',
-      'circle-stroke-width': 2.5,
+      'circle-stroke-color': modeColor,
+      'circle-stroke-width': ['case', ['get', 'end'], 2.5, 2],
     },
   });
   map.addLayer({
@@ -377,7 +379,7 @@ export function addMapLayers(
     layout: {
       'text-field': ['get', 'name'],
       'text-font': BOLD_FONT,
-      'text-size': 12,
+      'text-size': ['case', ['get', 'end'], 12, 11],
       'text-anchor': 'left',
       'text-offset': [0.8, 0],
       'text-optional': true,

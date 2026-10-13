@@ -26,7 +26,8 @@ export interface TapDeps {
   map: maplibregl.Map;
   state: State;
   send: (m: ToWorker) => void;
-  setOrigin: (p: Point) => void;
+  /** `spot`: the tapped place before the change, for "Rückgängig". */
+  setOrigin: (p: Point, spot?: Point | null) => void;
   /** Meeting point: one more start. */
   addStart: (p: Point) => void;
   /** Removes start i (0 = the first). */
@@ -353,8 +354,11 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     if (spot) tapAt(spot.lat, spot.lon, undefined, spot.title, spot.searched);
   }
 
+  /** The journey on the map, kept for a map that was not ready when it came. */
+  let drawn: Pick<Trip, 'lines' | 'stops'> | null = null;
   /** Draws a journey (or clears it); while one is shown the Lines layer steps back. */
   function setTrip(trip: Pick<Trip, 'lines' | 'stops'> | null) {
+    drawn = trip;
     if (!state.mapReady) return;
     const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
     (map.getSource(TRIP_SOURCE) as GeoJSONSource | undefined)?.setData(trip?.lines ?? empty);
@@ -469,11 +473,16 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       .join(' · ')}</small>`;
   }
 
-  // The place becomes a start, so it no longer stays as the destination.
+  // The place becomes the start, and the old start the place the trip goes to (with one
+  // start), so a second tap on "Hier starten" turns it back.
   $('readout-start').addEventListener('click', () => {
     const at = pending;
+    const old = state.origin && !state.others.length && !state.special ? state.origin : null;
+    const before = spot;
     hideReadout();
-    if (at) deps.setOrigin(at);
+    if (!at) return;
+    if (old) setSpot({ lat: old.lat, lon: old.lon, title: '', searched: false });
+    deps.setOrigin(at, before);
   });
   secondBtn.addEventListener('click', () => {
     const at = pending;
@@ -512,8 +521,17 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     detailsBtn.setAttribute('aria-expanded', String(open));
   });
 
+  /** Puts the tapped place back (or none) before the starts change ("Rückgängig"). */
+  function placeSpot(p: Point | null) {
+    hideReadout();
+    if (p) setSpot({ lat: p.lat, lon: p.lon, title: '', searched: false });
+  }
+
   return {
     tapAt,
+    placeSpot,
+    /** The map's layers are in: a trip that came before them is drawn now. */
+    onMapReady: () => drawn && setTrip(drawn),
     showStartCard,
     hideReadout,
     keepSpot,

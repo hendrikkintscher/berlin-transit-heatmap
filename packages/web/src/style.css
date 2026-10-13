@@ -203,10 +203,13 @@ body.no-legend .legend {
   color: var(--muted);
 }
 /* Set place as Start / Ziel: right under the ✕, beside the lines under the headline. */
+/* 36 px tall (its tap area 44 px), so it spans only the leave time and the line badges and
+   the summary line under them keeps the full width. */
 #readout-dir {
+  position: relative;
   float: right;
-  margin: 2px 0 2px 8px;
-  min-height: 44px;
+  margin: 2px 0 0 8px;
+  min-height: 36px;
   padding: 0 9px;
   border: 0;
   border-radius: 999px;
@@ -216,6 +219,11 @@ body.no-legend .legend {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+#readout-dir::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 /* On the headline's line (no leave time under it): level with the ✕, clear of the line summary. */
 #readout-dir:first-child {
@@ -372,15 +380,27 @@ dialog form button {
   border: 5px solid var(--accent);
   box-shadow: var(--shadow);
 }
-/* The tapped place: a small dark dot that stays while settings change. */
+/* The tapped place: a dark dot that stays while settings change; the trip's end stands out
+   from its change stops. */
 .spot-marker {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #1d1530;
   border: 3px solid #fff;
   box-shadow: var(--shadow);
   pointer-events: none;
+}
+/* Arriving, trips end at the set place (a flag in its marker) and start at the tapped
+   place (the start ring). */
+body.arrive .origin-marker.p1 {
+  background: #fff
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 1v10.5' stroke='%235e1f8c' stroke-width='1.6'/%3E%3Cpath d='M3 1.5h7l-2 2.5 2 2.5H3z' fill='%235e1f8c'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
+}
+body.arrive .spot-marker {
+  background: #fff;
+  border: 4px solid var(--accent);
 }
 /* While a new map is computed, the place's old minutes and trip fade. */
 #readout.stale #readout-text {
@@ -804,15 +824,19 @@ dialog.menu[open] {
   padding: 0;
   font-size: 20px;
 }
+/* "Details ▾": the arrow stays on the word's line. */
 #readout .details-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
   white-space: nowrap;
 }
 #readout .details-btn::after {
-  content: ' ▾';
+  content: '▾';
 }
 #readout.details .details-btn::after {
-  content: ' ▴';
+  content: '▴';
 }
 #readout:not(.details) .stops {
   display: none;
@@ -840,6 +864,32 @@ dialog.menu[open] {
 }
 
 /* Favourite places: score chip, star markers and the list in the menu. */
+/* "Rückgängig" for a few seconds after a start moved. */
+.undo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding-left: 14px;
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+}
+.undo[hidden] {
+  display: none;
+}
+.undo button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .fav-score {
   border: 0;
   font: inherit;
@@ -1133,8 +1183,10 @@ body.special .legend {
   color: var(--ink);
   cursor: pointer;
 }
+/* Wide enough for "05:40 PM" on 12-hour phones. */
 .when-time input {
   width: 6.2em;
+  min-width: 7.5em;
   border: 0;
   background: transparent;
   color: inherit;
