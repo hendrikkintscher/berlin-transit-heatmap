@@ -53,9 +53,15 @@ export function initMenu(deps: MenuDeps) {
   const limitToggle = $<HTMLInputElement>('limit-toggle');
   const limitButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-limit]')];
 
-  const version = $('app-version');
-  version.textContent = `Version ${__APP_VERSION__}`;
-  if (__APP_COMMIT__) version.title = __APP_COMMIT__;
+  // The version line in the menu's language, the short commit as visible text (no tooltip on a phone).
+  const versionLine = $('app-version');
+  function renderVersion() {
+    versionLine.textContent = t(__APP_COMMIT__ ? 'appVersion' : 'appVersionNoCommit', {
+      version: __APP_VERSION__,
+      commit: __APP_COMMIT__,
+    });
+  }
+  renderVersion();
 
   const menuBtn = $('menu-btn');
   menuBtn.addEventListener('click', () => {
@@ -227,6 +233,7 @@ export function initMenu(deps: MenuDeps) {
     for (const b of langButtons) b.setAttribute('aria-checked', String(b.dataset.lang === l));
     deps.langChanged();
     renderLimit();
+    renderVersion();
   }
   for (const b of langButtons)
     b.addEventListener('click', () => {

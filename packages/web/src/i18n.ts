@@ -207,6 +207,8 @@ const de = {
     'Für den Weg zur ersten Haltestelle und vom Ausstieg zum Ziel. Umsteigen rechnet mit 4 km/h.',
   dataNote:
     'Typischer Tag: Fahrplan vom {date}. Baustellen an anderen Tagen sind nicht berücksichtigt.',
+  appVersion: 'App-Version {version} · Stand {commit}',
+  appVersionNoCommit: 'App-Version {version}',
   aboutData:
     'Für heute und die nächsten sechs Tage nutzt die Karte den echten Fahrplan jedes Tages aus dem VBB-Datensatz, der täglich neu geladen wird: Baustellen, Ersatzverkehr und Feiertage sind an genau den Tagen drin, an denen sie stattfinden. Kurzfristige Störungen und Ausfälle stehen nicht im Fahrplan und fehlen deshalb. Zum Planen gibt es außerdem einen typischen Werktag (Dienstag bis Donnerstag) und einen typischen Samstag.',
   tipClose: 'Hinweis schließen',
@@ -508,6 +510,8 @@ const en: Record<Key, string> = {
   walkHelp:
     'For the walk to the first stop and from the last stop to the spot. Changing trains assumes 4 km/h.',
   dataNote: 'Typical day: timetable of {date}. Engineering works on other days are not included.',
+  appVersion: 'App version {version} · build {commit}',
+  appVersionNoCommit: 'App version {version}',
   aboutData:
     "For today and the next six days the map uses each day's real timetable from the VBB feed, which is reloaded daily: engineering works, replacement services and holidays show on exactly the days they happen. Short-notice disruptions and cancellations aren't in the timetable, so they are missing. For planning there is also a typical weekday (Tuesday to Thursday) and a typical Saturday.",
   tipClose: 'Close hint',
