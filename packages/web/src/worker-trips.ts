@@ -48,10 +48,26 @@ type TripRun = Pick<Run, 'result' | 'best'> & { seconds?: number };
  */
 function nowRun(last: LastTrip, r: Run, at: { lat: number; lon: number }): TripRun {
   if (last.leaveAt === null || last.travel === 'bikeonly') return r;
+  return nearRun(last.tt, nowPass(last, last.leaveAt, r), at, travelOptions(last.travel));
+}
+
+/** The pass from now for one start of the last map (made once, on tap or ahead of it). */
+function nowPass(last: LastTrip, leaveAt: number, r: Run): TravelTimeResult {
   const w = travelOptions(last.travel);
-  const o = r.result.origin!;
-  r.now ??= travelTimes(last.tt, o, { trackLegs: true, leaveAt: last.leaveAt, ...w });
-  return nearRun(last.tt, r.now, at, w);
+  return (r.now ??= travelTimes(last.tt, r.result.origin!, { trackLegs: true, leaveAt, ...w }));
+}
+
+/**
+ * Makes the next start's pass from now ahead of a tap, so the first tap's trip is as quick
+ * as the ones after it. Returns false once every start has its pass (or none needs one).
+ */
+export function warmNextTrip(): boolean {
+  const last = lastTrip;
+  if (!last || last.leaveAt === null || last.travel === 'bikeonly') return false;
+  const r = last.runs.find((x) => !x.now);
+  if (!r) return false;
+  nowPass(last, last.leaveAt, r);
+  return true;
 }
 
 /** As nowRun, leaving at `last.leaveAt` instead of the map's moment; not kept. */

@@ -310,7 +310,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (!loadbar.classList.contains('indeterminate')) loadbar.hidden = true;
     if (state.status() === t('walkLoading')) setStatus(() => '');
     // Footpaths arrived: redo what was computed with straight-line walks.
-    if (m.type === 'walk') redoWalks();
+    if (m.type === 'walk') refineWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
     if (m.living || m.home) special.done(m);
@@ -392,6 +392,23 @@ function redoWalks() {
   if (state.origin || state.special) tap.keepSpot();
   compute();
 }
+
+/**
+ * The footpaths arrived: the map is redone with them, but not right after a tap (its trip
+ * would wait behind the map), and a place's card keeps its trip until the refined one is
+ * in, so nothing jumps when the minutes stay the same.
+ */
+function refineWalks() {
+  const wait = lastCardAt + PRELOAD_DELAY_MS - performance.now();
+  if (wait > 0) return void setTimeout(refineWalks, wait);
+  if (state.special) return redoWalks();
+  state.layers = {};
+  layersRequested.clear();
+  showLayers();
+  compute();
+}
+/** When the last card was drawn (a tap, a search pick). */
+let lastCardAt = 0;
 
 /** The timetable file the map is computed from (arriving uses the hour before). */
 const computedWindow = () => computeWindow(state.when, state.direction);
@@ -1178,6 +1195,7 @@ const tap = initTap(
     toggleFavourite: favPlaces.toggle,
     writeUrl,
     onCard: () => {
+      lastCardAt = performance.now();
       if (tipKey === 'tap') hideTip();
     },
     favouriteLabels: () => favPlaces.list().map((f) => f.label),
