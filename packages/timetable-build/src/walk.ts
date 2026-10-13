@@ -11,6 +11,7 @@ import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { createGunzip } from 'node:zlib';
 import { REGION } from '../../routing/src/regions.ts';
+import { encodeWalkBin } from '../../routing/src/walkbin.ts';
 import { inBBox, toBBox, type BBox } from './geo.ts';
 
 /** Walking speed for transfers between stops, 4 km/h (the router's default walking speed). */
@@ -20,9 +21,6 @@ export const NODE_SPACING_M = 100;
 /** Dead ends shorter than this are left out. */
 const SHORT_DEAD_END_M = 30;
 /** Coordinates are stored in units of 1e-5 degrees (about 1 m). */
-const COORD_SCALE = 1e5;
-const MAGIC = 0x57485442; // "BTHW" little-endian
-const VERSION = 1;
 
 const M_PER_DEG_LAT = 111_320;
 
@@ -386,73 +384,9 @@ function morton(x: number, y: number): number {
   return z;
 }
 
-/**
- * Encodes the graph as `walk.bin` (Contract 3):
- * u32 magic "BTHW", u8 version, then unsigned LEB128 varints:
- * nodeCount, edgeCount; per node the zig-zag delta of lon and lat in 1e-5 degrees
- * from the previous node; per node a, the number of edges (a, b) with b > a,
- * then for each such edge (b - a) and its length in whole metres (at least 1).
- */
+/** Encodes the graph as `walk.bin` (Contract 3, format in routing's walkbin.ts). */
 export function encodeWalkGraph(g: WalkGraph): Uint8Array {
-  const out = new VarintWriter();
-  out.u32(MAGIC);
-  out.byte(VERSION);
-  const n = g.lat.length;
-  out.uvar(n);
-  out.uvar(g.edgeA.length);
-  let px = 0;
-  let py = 0;
-  for (let i = 0; i < n; i++) {
-    const x = Math.round(g.lon[i]! * COORD_SCALE);
-    const y = Math.round(g.lat[i]! * COORD_SCALE);
-    out.svar(x - px);
-    out.svar(y - py);
-    px = x;
-    py = y;
-  }
-  let e = 0;
-  for (let a = 0; a < n; a++) {
-    let k = e;
-    while (k < g.edgeA.length && g.edgeA[k] === a) k++;
-    out.uvar(k - e);
-    for (; e < k; e++) {
-      out.uvar(g.edgeB[e]! - a);
-      out.uvar(Math.max(1, Math.round(g.edgeM[e]!)));
-    }
-  }
-  return out.finish();
-}
-
-class VarintWriter {
-  private buf = new Uint8Array(1 << 20);
-  private len = 0;
-  private ensure(extra: number) {
-    if (this.len + extra <= this.buf.length) return;
-    const next = new Uint8Array(Math.max(this.buf.length * 2, this.len + extra));
-    next.set(this.buf.subarray(0, this.len));
-    this.buf = next;
-  }
-  byte(v: number) {
-    this.ensure(1);
-    this.buf[this.len++] = v;
-  }
-  u32(v: number) {
-    for (let i = 0; i < 4; i++) this.byte((v >>> (8 * i)) & 0xff);
-  }
-  uvar(v: number) {
-    this.ensure(10);
-    while (v >= 0x80) {
-      this.buf[this.len++] = (v % 0x80) | 0x80;
-      v = Math.floor(v / 0x80);
-    }
-    this.buf[this.len++] = v;
-  }
-  svar(v: number) {
-    this.uvar(v < 0 ? -2 * v - 1 : 2 * v);
-  }
-  finish(): Uint8Array {
-    return this.buf.slice(0, this.len);
-  }
+  return encodeWalkBin(g);
 }
 
 /** A point attached to the walking graph: edge index, position along it from edgeA (0..1), metres off it. */

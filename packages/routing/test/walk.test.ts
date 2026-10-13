@@ -4,6 +4,8 @@ import {
   heatGrid,
   journeyTo,
   loadTimetable,
+  decodeWalkBin,
+  encodeWalkBin,
   loadWalkNetwork,
   NETWORK_WALK_SPEED_MPS,
   nodeLonLat,
@@ -314,5 +316,42 @@ describe('walkPath', () => {
     expect(pauses).toBeGreaterThan(0);
     // Cached: the one-go version hands back the same snaps.
     expect(snapCells(net, bbox, 30, 10)).toBe(s.value);
+  });
+});
+
+describe('walk.bin version 2', () => {
+  it('reads back the same network as version 1', () => {
+    const sorted = edges
+      .map(([a, b, m]) => (a < b ? [a, b, m] : [b, a, m]))
+      .sort((p, q) => p[0] - q[0]);
+    const v1 = decodeWalkBin(encode(nodes, edges));
+    const bin = encodeWalkBin({
+      lat: nodes.map(([, lat]) => lat),
+      lon: nodes.map(([lon]) => lon),
+      edgeA: sorted.map((e) => e[0]),
+      edgeB: sorted.map((e) => e[1]),
+      edgeM: sorted.map((e) => e[2]),
+    });
+    expect(bin[4]).toBe(2);
+    expect(decodeWalkBin(bin)).toEqual(v1);
+    const again = loadWalkNetwork(bin);
+    expect(again.edgeMetres).toEqual(net.edgeMetres);
+    expect(again.x).toEqual(net.x);
+  });
+
+  it('keeps detours and crooked edges exact', () => {
+    // Edges far longer and a little shorter (rounding) than the straight line.
+    const lat = [52.5, 52.50001, 52.51234, 52.4];
+    const lon = [13.4, 13.40002, 13.45678, 13.3];
+    const g = {
+      lat,
+      lon,
+      edgeA: [0, 0, 1, 2],
+      edgeB: [1, 3, 2, 3],
+      edgeM: [1, 20000, 5000, 1],
+    };
+    const back = decodeWalkBin(encodeWalkBin(g));
+    expect([...back.edgeM]).toEqual([1, 20000, 5000, 1]);
+    expect([...back.lat]).toEqual(lat);
   });
 });

@@ -1,16 +1,11 @@
 import { M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 import type { PreparedTimetable } from './prepare';
+import { decodeWalkBin } from './walkbin';
 
 /**
- * Contract 3: the walking network (`walk.bin`), built by timetable-build from
- * OpenStreetMap footpaths and streets. Little-endian:
- * u32 magic "BTHW", u8 version 1, then unsigned LEB128 varints: nodeCount,
- * edgeCount; per node the zig-zag delta of lon and lat in 1e-5 degrees from the
- * previous node; per node a, the number of edges (a, b) with b > a, then for each
- * such edge (b - a) and its length in whole metres.
+ * Contract 3: the walking network (`walk.bin`, format in walkbin.ts), built by
+ * timetable-build from OpenStreetMap footpaths and streets.
  */
-const MAGIC = 0x57485442;
-const COORD_SCALE = 1e5;
 
 /** Default walking speed on the footpath network, 4 km/h (Hendrik's choice; the app lets people change it). */
 export const NETWORK_WALK_SPEED_MPS = 4 / 3.6;
@@ -63,66 +58,24 @@ export interface WalkNetwork {
 
 export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
   const buf = data instanceof Uint8Array ? data : new Uint8Array(data);
-  let p = 0;
-  const magic = (buf[0] | (buf[1] << 8) | (buf[2] << 16) | (buf[3] << 24)) >>> 0;
-  if (magic !== MAGIC) throw new Error('Not a walking network file');
-  if (buf[4] !== 1) throw new Error(`Unsupported walking network version ${buf[4]}`);
-  p = 5;
-  const uvar = (): number => {
-    let v = 0;
-    let mul = 1;
-    for (;;) {
-      const b = buf[p++];
-      if (b === undefined) throw new Error('Walking network file is truncated');
-      v += (b & 0x7f) * mul;
-      if (b < 0x80) return v;
-      mul *= 0x80;
-    }
-  };
-  const svar = (): number => {
-    const u = uvar();
-    return u % 2 ? -(u + 1) / 2 : u / 2;
-  };
-
-  const n = uvar();
-  const m = uvar();
-  const lat = new Float64Array(n);
-  const lon = new Float64Array(n);
-  let px = 0;
-  let py = 0;
+  const { lat, lon, edgeA: ea, edgeB: eb, edgeM: em } = decodeWalkBin(buf);
+  const n = lat.length;
+  const m = ea.length;
   let minLat = Infinity;
   let maxLat = -Infinity;
   let minLon = Infinity;
   let maxLon = -Infinity;
   for (let i = 0; i < n; i++) {
-    px += svar();
-    py += svar();
-    lon[i] = px / COORD_SCALE;
-    lat[i] = py / COORD_SCALE;
     if (lat[i] < minLat) minLat = lat[i];
     if (lat[i] > maxLat) maxLat = lat[i];
     if (lon[i] < minLon) minLon = lon[i];
     if (lon[i] > maxLon) maxLon = lon[i];
   }
-  const ea = new Int32Array(m);
-  const eb = new Int32Array(m);
-  const em = new Float32Array(m);
   const degree = new Int32Array(n + 1);
-  let e = 0;
-  for (let a = 0; a < n; a++) {
-    const k = uvar();
-    for (let j = 0; j < k; j++) {
-      const b = a + uvar();
-      if (e >= m || b >= n) throw new Error('Walking network file is inconsistent');
-      ea[e] = a;
-      eb[e] = b;
-      em[e] = uvar();
-      degree[a + 1]++;
-      degree[b + 1]++;
-      e++;
-    }
+  for (let k = 0; k < m; k++) {
+    degree[ea[k] + 1]++;
+    degree[eb[k] + 1]++;
   }
-  if (e !== m) throw new Error('Walking network file is inconsistent');
 
   const offset = degree;
   for (let v = 0; v < n; v++) offset[v + 1] += offset[v];
