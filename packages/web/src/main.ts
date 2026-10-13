@@ -261,11 +261,31 @@ function setStatus(render: () => string, fade = false) {
 
 // ---------- worker ----------
 /**
- * The footpath network (walk.bin, the biggest download) is fetched only once the first
- * map is on screen, or once the base map is up when there is no start yet, so it never
- * slows the first map down. While it streams, the bar and a note say so.
+ * The footpath network (walk.bin, the biggest download) is fetched only once the base map
+ * is up (and the first map on screen, when there is a start), so it never slows either
+ * down. While it streams, the bar and a note say so.
  */
 let walkAsked = false;
+/**
+ * The base map has drawn its first tiles (or BASEMAP_WAIT_MS passed since the first map):
+ * the background downloads (footpaths, lines, the next hour) may start.
+ */
+let basemapUp = false;
+let basemapTimer = 0;
+const BASEMAP_WAIT_MS = 4000;
+/** Starts the background downloads once both the first map and the base map are up. */
+function afterFirstMap() {
+  if (!basemapUp) {
+    basemapTimer ||= window.setTimeout(() => {
+      basemapUp = true;
+      afterFirstMap();
+    }, BASEMAP_WAIT_MS);
+    return;
+  }
+  if (!state.result) return;
+  askWalk();
+  preloadNextHour();
+}
 let walkLoading = false;
 function askWalk() {
   if (walkAsked) return;
@@ -318,12 +338,12 @@ listen((ev: MessageEvent<FromWorker>) => {
     // A switch changed while it was computing.
     syncImage();
     tap.onResult();
-    // The first map is on screen: now the footpaths, while it is being looked at.
-    askWalk();
+    // The first map is on screen: once the base map is too, the footpaths, while it is
+    // being looked at, and the next hour.
+    afterFirstMap();
     loadbar.hidden = !walkLoading;
     setStatus(walkLoading ? () => t('walkLoading') : () => '');
     showTips();
-    preloadNextHour();
   } else if (m.type === 'image') {
     const r = state.result;
     // Only the image the switches still want (they may have changed while it was painted).
@@ -614,9 +634,11 @@ if (attrib) {
   }).observe(attrib, { attributes: true, attributeFilter: ['class'] });
 }
 
-// No start to compute yet: the footpaths come once the base map is up.
+// The base map is up: the footpaths come now (no start yet) or once the first map is there.
 map.once('idle', () => {
+  basemapUp = true;
   if (!state.origin && !state.special) askWalk();
+  else afterFirstMap();
 });
 map.on('load', () => {
   state.mapReady = true;

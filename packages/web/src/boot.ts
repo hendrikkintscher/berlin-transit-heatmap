@@ -1,13 +1,14 @@
 // The app's entry: takes over the routing worker that the start page's inline script
-// started (see vite.config.ts; it already asked for the first map's timetable), or starts
-// it here, then loads the rest of the app (most of it the map library) next to them.
-// main.ts takes the worker over.
+// started (see vite.config.ts; with a start in the link it already asked for the first
+// map's timetable), or starts it here, then loads the rest of the app (most of it the map
+// library) next to them. main.ts takes the worker over. Without a start the timetable
+// waits until the app has loaded, so it does not hold up the map.
 // Styles come with the entry, so the page never shows unstyled while main.ts loads.
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import type { FromWorker, ToWorker } from './protocol';
 import { dataBase } from './region';
-import { earlyLoad } from './early';
+import { earlyLoad, linkHasStart } from './early';
 
 declare global {
   interface Window {
@@ -25,8 +26,8 @@ export const send = (m: ToWorker) => worker.postMessage(m);
 const early: MessageEvent<FromWorker>[] = started?.early ?? [];
 worker.onmessage = (ev: MessageEvent<FromWorker>) => early.push(ev);
 
-if (!started) {
-  send({ type: 'init', dataBase: dataBase() });
+/** Asks for the first map's timetable, prepared as the link and the device's settings say. */
+function loadFirst() {
   let stored = { stepFree: null as string | null, travel: null as string | null };
   try {
     stored = {
@@ -36,8 +37,13 @@ if (!started) {
   } catch {
     // Storage blocked: the defaults.
   }
-  const first = earlyLoad(location.search, stored);
-  send({ type: 'load', ...first });
+  send({ type: 'load', ...earlyLoad(location.search, stored) });
+}
+
+const withStart = linkHasStart(location.search);
+if (!started) {
+  send({ type: 'init', dataBase: dataBase() });
+  if (withStart) loadFirst();
 }
 
 /** Hands the worker's messages to `handler`, the early ones first, once main.ts has run. */
@@ -48,4 +54,6 @@ export function listen(handler: (ev: MessageEvent<FromWorker>) => void): void {
   });
 }
 
-void import('./main');
+void import('./main').then(() => {
+  if (!withStart) loadFirst();
+});
