@@ -1,7 +1,7 @@
 // Small text and number helpers for the cards and controls.
 
 import { lang, t } from './i18n';
-import type { RasterLayer } from './protocol';
+import type { Measure, RasterLayer } from './protocol';
 import {
   addDays,
   isDate,
@@ -58,6 +58,34 @@ export function pillText(w: When, arrive: boolean, hour: string, short = false) 
   return t(weekday ? (arrive ? 'weekdayArr' : 'weekdayAt') : arrive ? 'weekendArr' : 'weekendAt', {
     hour,
   });
+}
+
+/**
+ * The Zeit chip, kept short so the chip row fits a 360 px phone: a clock time goes
+ * without "Uhr" ("ab 17:40") and the Reisezeit is one mark ("· Ø"). `full` is the same
+ * spelled out, for screen readers. Cycling alone has no timetable and adds nothing (the
+ * Bahn chip says "Nur Rad").
+ */
+export function whenChipText(
+  w: When,
+  arrive: boolean,
+  minute: number | undefined,
+  measure: Measure,
+  full = false,
+) {
+  const hour =
+    minute === undefined
+      ? hourLabel(w.hour)
+      : full
+        ? clockLabel(w.hour, minute)
+        : `${String(w.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  const mark =
+    measure === 'next'
+      ? ''
+      : full
+        ? t(measure === 'typical' ? 'measureTypical' : 'measureBest')
+        : t(measure === 'typical' ? 'measureMarkTypical' : 'measureMarkBest');
+  return pillText(w, arrive, hour, true) + (mark ? ` · ${mark}` : '');
 }
 
 /** "in der Nacht Mi 14. auf Do 15." / "unter der Woche", for the home map. */

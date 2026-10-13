@@ -65,7 +65,16 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && open) show(null);
   });
-  // Mehr (the last chip) opens the menu: closing it scrolls the row back too.
+  // When the chips do not all fit, the row fades out at its end, so it reads as scrollable.
+  const fade = () => {
+    const more = scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 2;
+    scroller.classList.toggle('scrolls-on', more);
+  };
+  scroller.addEventListener('scroll', fade, { passive: true });
+  const sizes = new ResizeObserver(fade);
+  for (const chip of scroller.children) sizes.observe(chip);
+  sizes.observe(scroller);
+  // Mehr opens the menu: closing it scrolls the row back too.
   $('menu').addEventListener('close', scrollHome);
 
   /** Chip labels and which ones differ from the default. */

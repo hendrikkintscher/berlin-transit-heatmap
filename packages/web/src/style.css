@@ -1090,8 +1090,15 @@ body.special .legend {
   scrollbar-width: none;
   /* Edge to edge; the chips start and end at the usual margin. Room for their shadows. */
   margin: -2px 0 -6px;
-  padding: 2px calc(var(--sr) + 10px) 6px calc(var(--sl) + 10px);
+  padding: 2px 0 6px calc(var(--sl) + 10px);
   pointer-events: auto;
+}
+/* Mehr, outside the scrolling chips, so it is always on screen. */
+.chips > .menu-chip {
+  margin: 0 calc(var(--sr) + 8px) 0 -2px;
+}
+.chip-scroll.scrolls-on {
+  mask-image: linear-gradient(to left, transparent, #000 24px);
 }
 .chip-scroll::-webkit-scrollbar {
   display: none;

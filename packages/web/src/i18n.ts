@@ -211,6 +211,8 @@ const de = {
   measureTitle: 'Reisezeit',
   measureTypical: 'Typisch',
   measureBest: 'Bestfall',
+  measureMarkTypical: 'Ø',
+  measureMarkBest: 'best',
   measureNext: 'Nächste',
   measureNoteTypical: 'Durchschnitt über die Stunde, Warten auf die Abfahrt eingerechnet.',
   measureNoteTypicalArr:
@@ -488,6 +490,8 @@ const en: Record<Key, string> = {
   measureTitle: 'Travel time',
   measureTypical: 'Typical',
   measureBest: 'Best case',
+  measureMarkTypical: 'Ø',
+  measureMarkBest: 'best',
   measureNext: 'Next',
   measureNoteTypical: 'Average over the hour, including the wait for the departure.',
   measureNoteTypicalArr: 'Average over the hour: how early you need to leave to get there in time.',
