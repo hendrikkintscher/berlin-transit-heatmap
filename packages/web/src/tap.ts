@@ -49,6 +49,13 @@ export interface TapDeps {
   focusChanges: (rides: { name: string; mode: string }[] | null) => void;
 }
 
+/**
+ * Another place's trip slower than this dims the shown trip; SWAP_WAIT_MS after that the
+ * new card shows without its trip (it follows when it comes).
+ */
+const SWAP_DIM_MS = 250;
+const SWAP_WAIT_MS = 2500;
+
 export function initTap(deps: TapDeps, initial: Point | null) {
   const { map, state, send } = deps;
   const readout = $('readout');
@@ -69,6 +76,11 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   /** The shown trip's first vehicle, for its live status (today only), and the last check. */
   let board: Board | null = null;
   let liveAt = 0;
+  /**
+   * The card for a newly tapped place, held back while the shown trip stays until the new
+   * trip arrives (see tapAt).
+   */
+  let deferred: { id: number; render: () => void; timer: number } | null = null;
   /** The rides of the connection on the card, for its "Heute anders" notes. */
   let shownRides: { name: string; mode: string }[] = [];
 
@@ -102,6 +114,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const data = state.layers[state.window];
     const station = state.freq && data ? near([STATIONS_LAYER])[0] : undefined;
     let html: string;
+    /** A trip to the place is on its way (not the where-to-live or home map's lines). */
+    let tripAsked = false;
     if (station) {
       setSpot(null);
       const p = station.properties as StationProps;
@@ -160,6 +174,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
               : { type: 'trip', id: tripId, lat, lon: lng },
         );
         tripAt = r.living || r.home ? null : { lat, lon: lng, askedLater: false };
+        tripAsked = tripAt !== null;
         tripSlot = '<span id="trip" class="trip"></span>';
       }
       if (state.desert && data) {
@@ -172,31 +187,54 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       setSpot({ lat, lon: lng, title, searched });
     }
     if (title) html = `<b class="spot-name">${escapeHtml(title)}</b>${html}`;
-    showCard(html, false, searched);
     pending = { lat, lon: lng };
-    const count = state.origin ? 1 + state.others.length : 0;
-    secondBtn.hidden = !count || count >= MAX_STARTS || !!state.special;
-    const second = t('secondHere', { n: count + 1 });
-    secondBtn.setAttribute('aria-label', second);
-    secondBtn.title = second;
-    if (!title && map.getZoom() >= 15) void showAddress(pending);
-    // One start and a trip to the place: from the start to it, or from it to the start.
-    dirBtn.hidden = !(
-      state.origin &&
-      !state.others.length &&
-      !state.special &&
-      !state.compare &&
-      html.includes('id="trip"')
-    );
-    if (!dirBtn.hidden) {
-      placeDir();
-      // The set place's role in the trip: Start or Ziel, the current one marked.
-      const arrive = state.direction === 'arrive';
-      dirBtn.innerHTML = `<b${arrive ? '' : ' class="on"'}>${t('dirThere')}</b> ⇄ <b${arrive ? ' class="on"' : ''}>${t('dirBack')}</b>`;
-      dirBtn.setAttribute('aria-label', t('dirSwap'));
-      dirBtn.title = t('dirSwap');
-    }
-    deps.onCard();
+    const at0 = pending;
+    // Another place while a trip is on the card: the card keeps the shown trip until the
+    // new one is in, then both change at once (no empty card in between).
+    const swap =
+      tripAsked && !readout.hidden && !!document.getElementById('trip')?.firstElementChild;
+    clearTimeout(deferred?.timer);
+    deferred = null;
+    const render = () => {
+      deferred = null;
+      readout.classList.remove('stale');
+      showCard(html, false, searched);
+      const count = state.origin ? 1 + state.others.length : 0;
+      secondBtn.hidden = !count || count >= MAX_STARTS || !!state.special;
+      const second = t('secondHere', { n: count + 1 });
+      secondBtn.setAttribute('aria-label', second);
+      secondBtn.title = second;
+      if (!title && map.getZoom() >= 15) void showAddress(at0);
+      // One start and a trip to the place: from the start to it, or from it to the start.
+      dirBtn.hidden = !(
+        state.origin &&
+        !state.others.length &&
+        !state.special &&
+        !state.compare &&
+        html.includes('id="trip"')
+      );
+      if (!dirBtn.hidden) {
+        placeDir();
+        // The set place's role in the trip: Start or Ziel, the current one marked.
+        const arrive = state.direction === 'arrive';
+        dirBtn.innerHTML = `<b${arrive ? '' : ' class="on"'}>${t('dirThere')}</b> ⇄ <b${arrive ? ' class="on"' : ''}>${t('dirBack')}</b>`;
+        dirBtn.setAttribute('aria-label', t('dirSwap'));
+        dirBtn.title = t('dirSwap');
+      }
+      deps.onCard();
+    };
+    if (!swap) return render();
+    const id = tripId;
+    deferred = {
+      id,
+      render,
+      // A slow answer dims the shown trip after a moment; a lost one still shows the card.
+      timer: window.setTimeout(() => {
+        if (deferred?.id !== id) return;
+        readout.classList.add('stale');
+        deferred.timer = window.setTimeout(() => deferred?.id === id && render(), SWAP_WAIT_MS);
+      }, SWAP_DIM_MS),
+    };
   }
 
   /**
@@ -265,12 +303,19 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   }
 
   function hideReadout() {
+    clearDeferred();
     readout.hidden = true;
     tripId++;
     setTrip(null);
     setSpot(null);
     shownRides = [];
     deps.focusChanges(null);
+  }
+
+  function clearDeferred() {
+    clearTimeout(deferred?.timer);
+    deferred = null;
+    readout.classList.remove('stale');
   }
 
   function setSpot(p: Spot | null) {
@@ -288,6 +333,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
    */
   function keepSpot() {
     if (!spot) return hideReadout();
+    clearDeferred();
     tripId++;
     setTrip(null);
     readout.classList.add('stale');
@@ -343,6 +389,10 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   /** The journey to the tapped spot arrived from the worker. */
   function onTrip(m: Trip) {
     if (m.id !== tripId || readout.hidden) return;
+    if (deferred?.id === m.id) {
+      clearTimeout(deferred.timer);
+      deferred.render();
+    }
     const el = document.getElementById('trip');
     if (!el) return;
     // On the home map the trip runs from the place to home.
