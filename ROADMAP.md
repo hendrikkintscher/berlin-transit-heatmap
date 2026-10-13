@@ -1,4 +1,4 @@
-# Roadmap V1.6
+# Roadmap V1.7
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.1** (through PR #277). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
@@ -42,8 +42,19 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 
 Hendrik's wishes given without a pick land here: one dated line each, in his words. They are moved to their milestone in the next roadmap version.
 
-- 2026-10-13 15:12 (from step 0.10.0): after the full hour, the card's countdown still says the connection is gone instead of moving on to the next one; the data for it is already loaded.
-- 2026-10-13 15:12 (from step 0.10.0): when the earliest connection uses a different line (e.g. a faster S-Bahn), the drawer doesn't show it, because it only lists later trips of the shown route.
+## 0.10 Trip drawer and changes, follow-ups
+
+Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1. Next in order.
+
+- **0.10.2 Countdown moves on after the full hour** (from step 0.10.0, 2026-10-13 15:12: "after the full hour, the card's countdown still says the connection is gone instead of moving on to the next one; the data for it is already loaded").
+  - a. When the shown connection leaves, the card moves on to the next one from the already loaded timetable, also across the full hour.
+  - b. Nothing extra loads; check that the countdown tick stays cheap.
+- **0.10.3 Faster other lines in the drawer** (from step 0.10.0, 2026-10-13 15:12: "when the earliest connection uses a different line (e.g. a faster S-Bahn), the drawer doesn't show it, because it only lists later trips of the shown route").
+  - a. The drawer list also holds connections on other lines that arrive earlier or are faster than the next trip of the shown route.
+  - b. Each row shows its line so a switch is visible; the list stays as quick to fill as in 0.10.0.
+- **0.10.4 Shorter "Heute anders" box** (from step 0.10.1, 2026-10-13 15:51: "on days with many changes, the "Heute anders" box opened from Mehr gets long, and the explanation note at its bottom only shows after scrolling").
+  - a. The explanation note moves to the top of the box (or stays pinned in view).
+  - b. Long days stay readable, for example grouped by line with each group folded.
 
 ## 0.11 Easier map reading
 
@@ -101,6 +112,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.7** (2026-10-13): the three Inbox notes from steps 0.10.0 and 0.10.1 placed as 0.10.2 Countdown moves on after the full hour, 0.10.3 Faster other lines in the drawer and 0.10.4 Shorter "Heute anders" box; milestone 0.10 reopened for them, next in order; Inbox emptied.
 - **V1.6** (2026-10-13): 0.10.1 "Heute anders" into Mehr done (#277): the notice above the card is gone; Mehr has a "Heute anders" entry that opens the day's full list, and a change note on the trip card opens its line's changes; milestone 0.10 closed.
 - **V1.5** (2026-10-13): 0.10.0 Later connections while pulling done (#276): the list fills in as the pull starts and runs for the hour after the shown connection (the hour's file already holds the next hours' trips, so nothing extra loads).
 - **V1.4** (2026-10-13): 0.9.2 Version line in German and English done (#275, tag `v0.9.2`); milestone 0.9 closed.
