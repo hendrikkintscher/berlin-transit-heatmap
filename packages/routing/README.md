@@ -1,6 +1,6 @@
 # @berlin-transit-heatmap/routing
 
-Range-RAPTOR travel-time engine and heatmap grid (Contract 2 of the alpha plan). Pure TypeScript,
+Range-RAPTOR travel-time engine and heatmap grid. Pure TypeScript,
 no DOM, zero runtime dependencies: it runs in a browser Web Worker and in Node.
 
 ```ts

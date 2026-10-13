@@ -28,7 +28,8 @@ const web = webDir
     ]).catch(() => null)
   : null;
 
-// As in packages/web/src/worker.ts: 50 m cells, 4 km/h, typical times, lines on.
+// As in the app (worker-runs.ts): 50 m cells, typical times, lines on; walking at 4 km/h
+// (the app defaults to 5 km/h, which does not matter for comparing timings).
 const CELL_M = 50;
 const WALK_MPS = 4 / 3.6;
 const ORIGINS = {
