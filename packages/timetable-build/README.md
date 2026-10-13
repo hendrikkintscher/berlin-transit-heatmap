@@ -1,6 +1,6 @@
 # @bth/timetable-build
 
-Turns the VBB GTFS feed into the small timetable files the browser router loads (Contract 1 in the alpha plan; types in [`src/types.ts`](src/types.ts)).
+Turns the VBB GTFS feed into the small timetable files the browser router loads (types in [`src/types.ts`](src/types.ts)).
 
 ```sh
 pnpm build-timetable --gtfs data/GTFS.zip --out work/out

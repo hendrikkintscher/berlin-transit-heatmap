@@ -1,6 +1,5 @@
-// Contract 1 of the alpha plan: the timetable file format produced by this
-// package and consumed by `packages/routing`. Do not change without telling
-// the routing and web threads.
+// The timetable file format produced by this package and read by `packages/routing`:
+// change both together.
 
 export type Mode = 'sbahn' | 'ubahn' | 'tram' | 'bus' | 'ferry' | 'regional' | 'other';
 
