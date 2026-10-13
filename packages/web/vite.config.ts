@@ -1,3 +1,5 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build, defineConfig, type Plugin, type Rollup } from 'vite';
 
@@ -62,7 +64,27 @@ function earlyStart(): Plugin {
   };
 }
 
+/** The app's version (package.json) and short commit, baked in so the Mehr menu needs no request. */
+const APP_VERSION = (
+  JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  }
+).version;
+function shortCommit(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return (process.env.GITHUB_SHA ?? '').slice(0, 7);
+  }
+}
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_COMMIT__: JSON.stringify(shortCommit()),
+  },
   // Relative base so the same build works at https://<user>.github.io/berlin-transit-heatmap/ and locally.
   base: './',
   worker: { format: 'es' },
