@@ -2,7 +2,7 @@
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ (through PR #261). Everything built so far (groups 1–17, PRs #1–#263) is archived in archive/plan/roadmap-done-2026-10-13.md (project files); project memory's feature-history lists every PR.
 
-**How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal, not a queue.
+**How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The milestones and steps below are in the agreed order (Hendrik, 2026-10-13 08:11: "Change the roadmap to the suggestion"); each step still waits for his pick.
 
 **Ground rule: snappiness is the app's USP.** A tap must keep answering at once, on a phone too. No step may slow down taps, panning or the first map; anything heavy is precomputed in the build, loaded in the background, or optional. Every step reports its timings.
 
@@ -13,6 +13,8 @@ Hendrik's wishes given without a pick land here: one dated line each, in his wor
 _Empty._
 
 ## Milestone 1: Clear trips on the map
+
+**Next: 1.1**, waiting for Hendrik's go.
 
 Make it obvious where a trip starts, where it ends and which way it goes.
 
