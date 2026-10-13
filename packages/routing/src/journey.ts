@@ -1,3 +1,4 @@
+import { cellAt } from './grid';
 import type { PreparedTimetable } from './prepare';
 import { LEG_ORIGIN, LEG_WALK } from './raptor';
 import type { HeatGrid, RoundLegs, RouteMode, TravelTimeResult } from './types';
@@ -42,11 +43,8 @@ export function journeyTo(
 ): Journey | null {
   const legs = result.legs;
   if (!legs || !grid.stop) throw new Error('journeyTo needs trackLegs and trackStops results');
-  const [minLon, minLat, maxLon, maxLat] = grid.bbox;
-  const c = Math.floor(((lon - minLon) / (maxLon - minLon)) * grid.cols);
-  const r = Math.floor(((maxLat - lat) / (maxLat - minLat)) * grid.rows);
-  if (c < 0 || c >= grid.cols || r < 0 || r >= grid.rows) return null;
-  const k = r * grid.cols + c;
+  const k = cellAt(grid, lat, lon);
+  if (k < 0) return null;
   const total = grid.seconds[k];
   if (!(total < Infinity)) return null;
   const last = grid.stop[k];

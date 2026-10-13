@@ -610,11 +610,6 @@ export function t(key: Key, vars: Record<string, string | number> = {}): string 
 }
 
 export const formatNumber = (n: number) => n.toLocaleString(current === 'de' ? 'de-DE' : 'en-GB');
-export const formatDecimal = (n: number, digits: number) =>
-  n.toLocaleString(current === 'de' ? 'de-DE' : 'en-GB', {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
 
 const isLang = (v: unknown): v is Lang => LANGS.includes(v as Lang);
 

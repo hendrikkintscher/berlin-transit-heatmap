@@ -9,9 +9,11 @@ import {
   travelTimes,
   heatGrid,
   gridToGeoJSON,
+  decodeTimetable,
 } from '@berlin-transit-heatmap/routing';
 
-const tt = loadTimetable(await (await fetch('./data/timetable-day.json')).json()); // once per file
+const bin = await (await fetch('./data/timetable-weekday-10.bin')).arrayBuffer();
+const tt = loadTimetable(decodeTimetable(bin)); // once per file
 const result = travelTimes(tt, { lat: 52.5219, lon: 13.4132 }); // per tap
 const grid = heatGrid(tt, result); // 250 m cells over Berlin
 const geojson = gridToGeoJSON(grid); // one square per reachable cell, properties { band, seconds }
@@ -84,9 +86,14 @@ pnpm --filter @berlin-transit-heatmap/routing test:slow  # also the real VBB tim
 pnpm --filter @berlin-transit-heatmap/routing bench day  # or: bench night [maxRounds]
 ```
 
-The slow tests and the benchmark download `timetable-day.json` and `timetable-night.json` from
-release `timetable-latest` into `.data/` (set `GITHUB_TOKEN` while the repository is private, or
-drop the files there yourself; `ROUTING_DATA_DIR` overrides the folder).
+The slow tests and the benchmark download `timetable-weekday-10.bin` (day) and
+`timetable-weekday-02.bin` (night) from release `timetable-latest` into `.data/`
+(`pnpm --filter @berlin-transit-heatmap/routing fetch-data` also gets `walk.bin`, which
+`smoke` then walks on; `ROUTING_DATA_DIR` overrides the folder).
+
+`bench/speed.ts` is the CI speed probe (see `scripts/speed/check.mjs`): the worker's map
+computation per start, colours and outlines (from the web app's source), loading and
+snapping the cells to the footpaths.
 
 The correctness test compares range-RAPTOR with an independent brute-force Connection Scan over
 every candidate departure on random networks with overtaking trips.

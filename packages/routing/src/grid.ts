@@ -262,11 +262,30 @@ export function gridLayout(opts: Pick<HeatGridOptions, 'cellSizeM' | 'bbox'> = {
 
 /** Travel time in seconds of the grid cell containing (lat, lon); Infinity if unreachable or outside the grid. */
 export function gridValueAt(grid: HeatGrid, lat: number, lon: number): number {
-  const [minLon, minLat, maxLon, maxLat] = grid.bbox;
-  const c = Math.floor(((lon - minLon) / (maxLon - minLon)) * grid.cols);
-  const r = Math.floor(((maxLat - lat) / (maxLat - minLat)) * grid.rows);
-  if (c < 0 || c >= grid.cols || r < 0 || r >= grid.rows) return Infinity;
-  return grid.seconds[r * grid.cols + c];
+  const k = cellAt(grid, lat, lon);
+  return k < 0 ? Infinity : grid.seconds[k]!;
+}
+
+/** A grid's shape: its bounds [west, south, east, north] and size in cells. */
+export interface GridShape {
+  bbox: readonly [number, number, number, number];
+  cols: number;
+  rows: number;
+}
+
+/** Column and row of the cell at a position; outside the grid they are out of range. */
+export function cellColRow(grid: GridShape, lat: number, lon: number): [number, number] {
+  const [w, s, e, n] = grid.bbox;
+  return [
+    Math.floor(((lon - w) / (e - w)) * grid.cols),
+    Math.floor(((n - lat) / (n - s)) * grid.rows),
+  ];
+}
+
+/** Index of the cell at a position (row by row from the north-west); -1 outside the grid. */
+export function cellAt(grid: GridShape, lat: number, lon: number): number {
+  const [c, r] = cellColRow(grid, lat, lon);
+  return c < 0 || c >= grid.cols || r < 0 || r >= grid.rows ? -1 : r * grid.cols + c;
 }
 
 /**

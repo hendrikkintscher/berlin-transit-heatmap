@@ -1,5 +1,6 @@
 // Small text and number helpers for the cards and controls.
 
+import { cellAt } from '@berlin-transit-heatmap/routing';
 import { lang, t } from './i18n';
 import type { Measure, RasterLayer } from './protocol';
 import {
@@ -132,10 +133,6 @@ export function gridSeconds(
   lon: number,
   values = r.grid.seconds,
 ): number {
-  const [w, s, e, n] = r.bbox;
-  const { cols, rows } = r.grid;
-  const c = Math.floor(((lon - w) / (e - w)) * cols);
-  const row = Math.floor(((n - lat) / (n - s)) * rows);
-  if (c < 0 || c >= cols || row < 0 || row >= rows) return Infinity;
-  return values[row * cols + c];
+  const k = cellAt({ bbox: r.bbox, cols: r.grid.cols, rows: r.grid.rows }, lat, lon);
+  return k < 0 ? Infinity : values[k];
 }

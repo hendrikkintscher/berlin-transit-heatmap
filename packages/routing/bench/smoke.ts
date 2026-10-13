@@ -1,16 +1,19 @@
 // Alpha smoke test: three origins in both windows, minutes to a few well-known places.
-// Usage: pnpm --filter @berlin-transit-heatmap/routing smoke <dir with timetable-*.json>
+// Usage: pnpm --filter @berlin-transit-heatmap/routing smoke [dir, default .data; see bench/data.ts]
 // Walks on the footpath network when the folder also holds walk.bin.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  decodeTimetable,
   gridValueAt,
   gridToGeoJSON,
   heatGrid,
   loadTimetable,
   loadWalkNetwork,
   travelTimes,
+  type Timetable,
 } from '../src/index';
+import { TIMETABLE_FILES } from './data';
 
 const dir = process.argv[2] ?? '.data';
 const ORIGINS = {
@@ -31,7 +34,9 @@ const walk = existsSync(walkFile) ? loadWalkNetwork(readFileSync(walkFile)) : un
 console.log(walk ? 'Walking on the footpath network' : 'Walking in straight lines');
 
 for (const w of ['day', 'night'] as const) {
-  const tt = loadTimetable(JSON.parse(readFileSync(join(dir, `timetable-${w}.json`), 'utf8')));
+  const tt = loadTimetable(
+    decodeTimetable(readFileSync(join(dir, TIMETABLE_FILES[w]))) as Timetable,
+  );
   console.log(`\n== ${w}`);
   for (const [name, [lat, lon]] of Object.entries(ORIGINS)) {
     const t0 = performance.now();

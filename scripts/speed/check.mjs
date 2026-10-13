@@ -9,6 +9,8 @@
 //   the real data (<dir> holds timetable-weekday-10.bin and walk.bin). With --base, the
 //   same probe runs main's routing code in turns with this one on the same machine, and
 //   this one may not be slower than the tolerance, nor write a bigger timetable file.
+//   It also times drawing the maps (colours and outlines, from packages/web/src) and
+//   snapping the grid cells to the footpaths.
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -67,19 +69,23 @@ for (const [key, size] of Object.entries(sizes)) {
 
 // ---------- routing ----------
 if (args.data) {
-  const probe = (src) => {
+  const probe = ({ routing, web }) => {
     const run = spawnSync(
       join(root, 'packages/routing/node_modules/.bin/tsx'),
-      ['bench/speed.ts', src, resolve(args.data)],
+      ['bench/speed.ts', routing, resolve(args.data), web],
       { cwd: join(root, 'packages/routing'), encoding: 'utf8' },
     );
-    if (run.status !== 0) throw new Error(`Speed probe failed for ${src}:\n${run.stderr}`);
+    if (run.status !== 0) throw new Error(`Speed probe failed for ${routing}:\n${run.stderr}`);
     return JSON.parse(run.stdout.trim().split('\n').pop());
   };
-  const sides = { pr: join(root, 'packages/routing/src') };
+  const sources = (dir) => ({
+    routing: join(dir, 'packages/routing/src'),
+    web: join(dir, 'packages/web/src'),
+  });
+  const sides = { pr: sources(root) };
   if (args.base) {
-    const src = join(resolve(args.base), 'packages/routing/src');
-    if (existsSync(src)) sides.main = src;
+    const src = sources(resolve(args.base));
+    if (existsSync(src.routing)) sides.main = src;
   }
   // Turns (main, this, main, this, …) so a busy moment on the machine hits both alike;
   // each side keeps its fastest run per measure.
@@ -95,8 +101,12 @@ if (args.data) {
         delete sides.main;
         continue;
       }
-      const b = (best[side] ??= { loadMs: Infinity, origins: {}, binGzip: r.binGzip });
+      const b = (best[side] ??= { loadMs: Infinity, origins: {}, draw: {}, binGzip: r.binGzip });
       b.loadMs = Math.min(b.loadMs, r.loadMs);
+      // Older probes did not time these.
+      if (r.snapMs !== undefined) b.snapMs = Math.min(b.snapMs ?? Infinity, r.snapMs);
+      for (const [d, v] of Object.entries(r.draw ?? {}))
+        b.draw[d] = Math.min(b.draw[d] ?? Infinity, v);
       for (const [o, v] of Object.entries(r.origins))
         b.origins[o] = Math.min(b.origins[o] ?? Infinity, v);
     }
@@ -128,15 +138,15 @@ if (args.data) {
       b === undefined ? 0 : b * (1 + tol.percent / 100) + tol.ms,
     );
   }
+  const limit = (b) => (b === undefined ? 0 : b * (1 + tol.percent / 100) + tol.ms);
   const tb = main && total(main);
-  row('All maps', total(pr), tb, ms, tb === undefined ? 0 : tb * (1 + tol.percent / 100) + tol.ms);
-  row(
-    'Load timetable and footpaths',
-    pr.loadMs,
-    main?.loadMs,
-    ms,
-    main ? main.loadMs * (1 + tol.percent / 100) + tol.ms : 0,
-  );
+  row('All maps', total(pr), tb, ms, limit(tb));
+  const DRAW = { colours: 'Colours, all maps', outlines: 'Outlines, all maps' };
+  for (const [d, name] of Object.entries(DRAW))
+    if (pr.draw[d] !== undefined) row(name, pr.draw[d], main?.draw[d], ms, limit(main?.draw[d]));
+  row('Load timetable and footpaths', pr.loadMs, main?.loadMs, ms, limit(main?.loadMs));
+  if (pr.snapMs !== undefined)
+    row('of which snapping cells', pr.snapMs, main?.snapMs, ms, limit(main?.snapMs));
   // The file size is exact, so any growth beyond a few bytes counts.
   row('Timetable file (gzipped)', pr.binGzip, main?.binGzip, kb, main ? main.binGzip * 1.005 : 0);
   if (!main) lines.push('', '_No main checkout given: routing times are shown, not compared._');
