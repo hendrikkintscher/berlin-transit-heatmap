@@ -14,14 +14,17 @@ State on 2026-10-12, live through PR #205. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); not live yet; the 23:19 timetable build failed while uploading. The publish fix (PR #201) is merged, and the data goes live with the next timetable build.
 2. **Next:** No flicker when tapping another destination (group 6, from the Inbox)
-3. Smaller Wohnlage-Karte memory (B7, group 15)
-4. Typical timetable when offline (B8, group 15)
-5. Notice, search and favourites polish (C5–C8, group 15)
-6. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
-7. Default view readability: two variants to compare (C9, group 15)
-8. Named starts in meeting mode (D2, group 15)
-9. Code health, no change in behaviour (E1, group 15)
-10. Smaller walking network file (P8, group 15)
+3. Ringbahn on the map follows the same course as in trips (group 7, from the Inbox)
+4. Colour scale: green up to 20 min, yellow from 25 (group 7, from the Inbox)
+5. "Bis wann heim?" limits of 1 h and 1 h 30 (group 6, from the Inbox)
+6. Smaller Wohnlage-Karte memory (B7, group 15)
+7. Typical timetable when offline (B8, group 15)
+8. Notice, search and favourites polish (C5–C8, group 15)
+9. Broader CI checks and a sturdier timetable build (B9 + B10, group 15)
+10. Default view readability: two variants to compare (C9, group 15)
+11. Named starts in meeting mode (D2, group 15)
+12. Code health, no change in behaviour (E1, group 15)
+13. Smaller walking network file (P8, group 15)
 
 From Hendrik on 2026-10-12, to be built now. After these, Hendrik picks the next step before anything starts. Items from the third suggestions list (plan/suggestions-3.md) are added here as he picks them.
 
@@ -139,6 +142,10 @@ Hendrik, 2026-10-12 (roadmap only, not to be started until he picks it): "instea
 
 Hendrik, 2026-10-12 (roadmap only, not to be started until he picks it): "when tapping on a connection, we get a more detailed description of the connection: wait time at stops in between etc." Tapping a connection opens a detailed view: each leg with its stops, times, the wait at each change, and walking minutes. Pairs with the trip drawer and with real arrival times at stops.
 
+### "Bis wann heim?" limits of 1 h and 1 h 30
+
+Hendrik, 2026-10-13 00:24 (Inbox): "'Bis wann heim' sollte unter 1h oder unter 1h 30min sein." The last-connection-home map (C3, PR #66) colours each place by the latest departure that still gets you home within a chosen limit, and the limits offered are "unter 1 h" and "unter 1 h 30".
+
 ## 7. Reading the map
 
 From Hendrik's review of group 6: the tapped route looks too much like the Lines layer, the colours still hide too much of the base map to tell which part of Berlin you are looking at, and at street level it should be easy to pick an exact street or address. These continue the blending work from group 5. Each is small to medium and helps every visit, so they come before the footpath work. Order: smallest and most visible first.
@@ -153,6 +160,14 @@ From Hendrik's review of group 6: the tapped route looks too much like the Lines
 - **Heatmap colours off by default**: Done (PR #71): the map opens with the outlines only, each in its legend colour on a white edge and every line labelled with its minutes.
 - **Fainter default outlines: one colour, 10-minute steps**: Done (PR #76): without the colour fill, outlines come every 10 minutes in a single hue, darkest near the start, thinner and partly transparent, each labelled.
 - **Outlines view: dashed lines, more labels, clearer gradient, no legend**: Done (PR #81): with the colour fill off, the 10-minute outlines are dashed, their minutes repeat about twice as often, the single hue runs from near-black purple to pale lilac, and the ….
+
+### Ringbahn on the map follows the same course as in trips
+
+Hendrik, 2026-10-13 00:24 (Inbox): "Die Ringbahn, die auf der Karte eingezeichnet ist, sollte dem gleichen Verlauf wie die bei Verbindungen angezeigte Ringbahn haben." The S41/S42 line drawn on the map and the Ringbahn drawn for a trip use the same track geometry (real tracks since PR #99), so they never run side by side or cut corners differently.
+
+### Colour scale: green up to 20 min, yellow from 25
+
+Hendrik, 2026-10-13 00:24 (Inbox): "Color scale: 20 min should still be a shade of green, yellow starting at 25 min; what to do with the color around 5 min?" The heatmap and outline colours keep 20 minutes in a shade of green and start yellow at 25 minutes. The colour around 5 minutes goes to Hendrik as a short multiple-choice question; until he answers, the builder keeps 0–5 minutes as the darkest green of the same scale (recommended). C9 builds on this scale.
 
 ## 8. Realistic walking on real footpaths
 
@@ -344,7 +359,7 @@ Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existi
 
 ## 17. Review track
 
-Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). Hendrik picked "Tap and Back" first, then the rest in the order of plan/reviews/README.md (2026-10-13). Done: U1 (PR #203: a tap that closes a panel or the search no longer sets a start or opens a trip card). Order: U3 in progress, then V1+U14, V2+U11+V4, docs cleanup (K items, including the roadmap slimming K14–K19, which the editor applies), U2, U4, V3.
+Hendrik, 2026-10-12: four reviews, handled by a new "Review negotiator" thread (agrees each step with the roadmap) and a "Review builder" thread, separate from the main builder queue. Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). Hendrik picked "Tap and Back" first, then the rest in the order of plan/reviews/README.md (2026-10-13). From the Inbox (Hendrik, 2026-10-13 00:24), handed to the Review negotiator: "Hier starten" keeps the old start as the destination (with U12); the trip card names the start and the destination (with U8/U4); the destination marker stands out more and transfer stops less (with the marker item in visual-consistency.md). Done: U1 (PR #203: a tap that closes a panel or the search no longer sets a start or opens a trip card). Order: U3 in progress, then V1+U14, V2+U11+V4, docs cleanup (K items, including the roadmap slimming K14–K19, which the editor applies), U2, U4, V3.
 
 - **UI intuitiveness**: check where the interface is intuitive and where it is not, and what could be handled more smartly or more obviously.
 - **Visual consistency**: check map elements, colours, layout, symbols and text for consistency.
