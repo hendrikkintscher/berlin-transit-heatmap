@@ -274,6 +274,7 @@ export type FromWorker =
       /** The journeys drawn on the map: rides coloured by mode, walks dashed. */
       lines: FeatureCollection<LineString, { mode: string; walk: boolean }>;
       /** Where the journeys get on, change and get off. */
-      stops: FeatureCollection<Point, { name: string }>;
+      /** Where rides start and end; `end` marks getting on first and off last (not a change). */
+      stops: FeatureCollection<Point, { name: string; mode: string; end: boolean }>;
     }
   | { type: 'error'; message: string };

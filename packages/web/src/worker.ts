@@ -1070,11 +1070,20 @@ function tripMessage(
     number,
     Extract<FromWorker, { type: 'trip' }>['stops']['features'][number]
   >();
-  const stopPoint = (s: number) => {
-    if (!tt || stops.has(s)) return;
+  const stopPoint = (s: number, mode: string, end: boolean) => {
+    if (!tt) return;
+    const have = stops.get(s);
+    if (have) {
+      if (end) have.properties.end = true;
+      return;
+    }
     stops.set(s, {
       type: 'Feature',
-      properties: { name: tt.stops[s].name.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, '') },
+      properties: {
+        name: tt.stops[s].name.replace(/ \(Berlin\)$/, '').replace(/^Berlin, /, ''),
+        mode,
+        end,
+      },
       geometry: { type: 'Point', coordinates: [tt.stopLon[s], tt.stopLat[s]] },
     });
   };
@@ -1096,8 +1105,8 @@ function tripMessage(
       }
       walkLine(at, pos(l.from), i === firstRide && cycling);
       line(course(tt, l.stops), l.mode, false);
-      stopPoint(l.from);
-      stopPoint(l.to);
+      stopPoint(l.from, l.mode, i === firstRide);
+      stopPoint(l.to, l.mode, i === lastRide);
       at = pos(l.to);
       legs.push({
         type: 'ride',

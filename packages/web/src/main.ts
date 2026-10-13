@@ -446,6 +446,11 @@ let computedMinute = 0;
 
 function compute() {
   clearTimeout(preloadTimer);
+  // Arriving, the set place is where trips end: its marker shows a flag (style.css).
+  document.body.classList.toggle(
+    'arrive',
+    state.direction === 'arrive' && !state.others.length && !state.special,
+  );
   if (state.special) return special.compute();
   if (!state.origin) return;
   state.requestId++;
@@ -557,17 +562,47 @@ function startsChanged() {
   else clearResult();
 }
 
-function setOrigin(p: Point) {
+/** `spot` is the tapped place before the change, for "Rückgängig". */
+function setOrigin(p: Point, spot = tap.spot()) {
+  offerUndo(spot);
   state.origin = p;
   startsChanged();
 }
 
 /** Moves start i (0 = the first) to p. */
 function moveStart(i: number, p: Point) {
+  offerUndo(tap.spot());
   if (i === 0) state.origin = p;
   else state.others[i - 1] = p;
   startsChanged();
 }
+
+/** How long "Rückgängig" stays after a start moved. */
+const UNDO_MS = 5000;
+const undoEl = $('undo');
+let undoTo: { starts: Point[]; spot: Point | null } | null = null;
+let undoTimer = 0;
+/** A start is about to move: for a few seconds, one tap brings the starts and place back. */
+function offerUndo(spot: Point | null) {
+  if (!state.origin) return;
+  undoTo = { starts: starts(), spot };
+  $('undo-text').textContent = t(state.direction === 'arrive' ? 'undoGoal' : 'undoStart');
+  undoEl.hidden = false;
+  clearTimeout(undoTimer);
+  undoTimer = window.setTimeout(hideUndo, UNDO_MS);
+}
+function hideUndo() {
+  clearTimeout(undoTimer);
+  undoEl.hidden = true;
+  undoTo = null;
+}
+$('undo-btn').addEventListener('click', () => {
+  const to = undoTo;
+  hideUndo();
+  if (!to) return;
+  tap.placeSpot(to.spot);
+  setStarts(to.starts);
+});
 
 /** Removes start i; without the first, the next one becomes the start. */
 function removeStart(i: number) {
@@ -647,6 +682,7 @@ map.on('load', () => {
   addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
   showHeat();
   if (state.result) showResult(state.result);
+  tap.onMapReady();
   showLayers();
 });
 
