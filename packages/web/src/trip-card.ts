@@ -19,6 +19,8 @@ export interface TripContext {
   changeNote?: (ride: { name: string; mode: string }) => string | null;
   /** Under Typisch, the hour's average minutes the map shows for the place (one start). */
   avg?: number;
+  /** A meeting point's start names, by start ("" for none). */
+  names?: readonly string[];
 }
 
 /**
@@ -47,7 +49,8 @@ export function tripHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string {
 function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
   const two = m.journeys.length > 1;
   return m.journeys.map((j, i) => {
-    const mark = two ? `<i class="p${i + 1}"></i>` : '';
+    const name = two && c.names?.[i] ? `<b class="trip-who">${escapeHtml(c.names[i]!)}</b> ` : '';
+    const mark = two ? `<i class="p${i + 1}"></i>${name}` : '';
     if (!j) return `<span class="trip-sum">${mark}${t('tripNone')}</span>`;
     const walk = j.legs.reduce((a, l) => a + (l.type === 'walk' && !l.bike ? l.minutes : 0), 0);
     const bike = j.legs.reduce((a, l) => a + (l.type === 'walk' && l.bike ? l.minutes : 0), 0);

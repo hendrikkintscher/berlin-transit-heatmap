@@ -40,6 +40,8 @@ export interface LinkState {
   origin: Point | null;
   /** Meeting point: the other people's starts (up to four). */
   others: Point[];
+  /** Meeting point: each start's name, by position (the first start first); "" for none. */
+  names: string[];
   /** The tapped place, kept through settings changes. */
   to: Point | null;
   when: When;
@@ -64,6 +66,28 @@ export function parsePoint(v: string | null): Point | null {
 }
 export const pointParam = (o: Point) => `${o.lat.toFixed(5)},${o.lon.toFixed(5)}`;
 
+/** Longest name a start keeps. */
+export const MAX_NAME = 24;
+/** A start's name as typed: one line, trimmed, at most MAX_NAME characters. */
+export const cleanName = (v: string) =>
+  v
+    .replace(/[\s|]+/g, ' ')
+    .trim()
+    .slice(0, MAX_NAME);
+
+/** "Anna|Ben||Cem" -> one name per start ("" for none). */
+export function parseNames(v: string | null, count: number): string[] {
+  const names = (v ?? '').split('|').slice(0, count).map(cleanName);
+  return names.some(Boolean) ? names : [];
+}
+
+/** The link's names: one per start, joined by |, trailing empty ones left out. */
+export function namesParam(names: readonly string[], count: number): string {
+  const list = Array.from({ length: count }, (_, i) => cleanName(names[i] ?? ''));
+  while (list.length && !list[list.length - 1]) list.pop();
+  return list.join('|');
+}
+
 /** The state a link describes, on top of `base` (the device's settings and the current hour). */
 export function readLink(search: string, base: LinkState): LinkState {
   const p = new URLSearchParams(search);
@@ -84,6 +108,7 @@ export function readLink(search: string, base: LinkState): LinkState {
         .filter((o): o is Point => o !== null)
         .slice(0, MAX_STARTS - 1)
     : [];
+  s.names = s.others.length ? parseNames(p.get('names'), s.others.length + 1) : [];
   s.to = s.origin ? parsePoint(p.get('to')) : null;
   s.when = whenFromParams(p, base.when);
   if (p.get('dir') === 'arr') s.direction = 'arrive';
@@ -107,6 +132,8 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
   const p = new URLSearchParams();
   if (s.origin) p.set('from', pointParam(s.origin));
   for (const o of s.others) p.append('with', pointParam(o));
+  const names = s.others.length ? namesParam(s.names, s.others.length + 1) : '';
+  if (names) p.set('names', names);
   if (s.to) p.set('to', pointParam(s.to));
   if (whenParam(s.when) !== windowName(now)) p.set('t', whenParam(s.when));
   if (s.direction === 'arrive') p.set('dir', 'arr');

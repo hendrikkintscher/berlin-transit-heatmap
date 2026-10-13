@@ -51,6 +51,8 @@ export interface State {
   origin: Point | null;
   /** Meeting point: the other people's starts (up to four). */
   others: Point[];
+  /** Meeting point: each start's name, by position ("" for none). */
+  names: string[];
   /**
    * A map shown instead of the start's: "where can I live?" from the favourites, or
    * "Bis wann komme ich heim?" to `at` (a start or a favourite, named `name`).
@@ -95,6 +97,7 @@ export function createState(): State {
     compare: null,
     origin: null,
     others: [],
+    names: [],
     special: null,
     requestId: 0,
     info: {},
