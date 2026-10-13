@@ -158,14 +158,19 @@ export function initTap(deps: TapDeps, initial: Point | null) {
         );
       } else if (secs === Infinity) parts.push(t('unreachable'));
       else if (secs >= 0 && r?.each) {
+        // One unbreakable piece per person (Ø with the first, "·" after each but the last, the
+        // unit with the last), so a narrow card wraps between people and never leaves "Min."
+        // or "·" alone. Under Typisch these are the hour's averages, not the trips below them.
+        const avgMark = state.measure === 'typical' ? 'Ø ' : '';
+        const last = r.each.length - 1;
         const each = r.each.map((v, i) => {
           const s = gridSeconds(r, lat, lng, v);
           const name = state.names[i] ? `${escapeHtml(state.names[i])} ` : '';
-          return `<i class="p${i + 1}"></i>${name}${s < Infinity ? Math.round(s / 60) : '–'}`;
+          const unit = i === last ? ` ${t('min')}` : ' ·';
+          const mark = i === 0 ? avgMark : '';
+          return `<span class="each">${mark}<i class="p${i + 1}"></i>${name}${s < Infinity ? Math.round(s / 60) : '–'}${unit}</span>`;
         });
-        // Under Typisch these are the hour's averages, not the trips shown below them.
-        const avgMark = state.measure === 'typical' ? 'Ø ' : '';
-        parts.push(`<b>${avgMark}${each.join(' · ')} ${t('min')}</b>`);
+        parts.push(`<b>${each.join(' ')}</b>`);
         // How much worse than the best spot, left out when it hardly is.
         const extra = r.extraBase !== undefined ? Math.round((secs - r.extraBase) / 60) : 0;
         if (extra > 2) parts.push(`<small>${t('extraMinutes', { n: extra })}</small>`);
