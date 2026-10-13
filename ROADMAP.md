@@ -1,4 +1,4 @@
-# Roadmap V1.8
+# Roadmap V1.9
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.2** (through PR #279). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
@@ -16,6 +16,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 - Versions below are guesses. If Hendrik reorders steps, they are renumbered in the next roadmap version.
 - **1.0.0** is the finished Berlin app: every V1 milestone live and the showcase refreshed. Other regions would start after it (1.x or 2.0).
 - Bug fixes between steps bump the patch of the milestone that is live.
+- Every step bumps the version in **both** package.json files, the root one and packages/web/package.json, so they always match (from the 0.10.2 thread, 2026-10-13: the root one had stayed on 0.10.0).
 - **Tags** are automatic: when a merge to main changes the version in packages/web/package.json, the workflow "Tag version" (.github/workflows/tag-version.yml) tags that merge `vX.Y.Z` if the tag does not exist yet. Nobody tags by hand; run the workflow by hand only to catch up a missing tag.
 
 **The roadmap** is versioned on its own: `V1.0`, `V1.1`, … Every edit that adds, removes, reorders or finishes a step bumps the second number. A full reorganisation makes `V2.0`. Each version gets a line in the changelog at the bottom.
@@ -81,7 +82,8 @@ Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1; 0.10.2 is don
 - **0.13.2 Timetable windows check** (Hendrik, 2026-10-13 11:03: "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?").
   - a. Measure today's windows: what each timetable file holds and how long each kind of map takes.
   - b. Try two-hour windows for Typisch and best connection and one hour for Nächste; compare speed, file size and trip accuracy against today.
-  - c. Hendrik gets the numbers and a recommendation; the change is built only on his yes.
+  - c. Include the extra hour's edge (from the 0.10.2 thread, 2026-10-13: late in the extra hour after the chosen one, trips longer than about an hour can come out slightly worse, because an hour's file stops holding trips two hours after its own hour). Measure how often and by how much, and whether a longer tail fixes it at a fair file-size cost.
+  - d. Hendrik gets the numbers and a recommendation; the change is built only on his yes.
 
 ## 0.14 Showcase refresh
 
@@ -110,6 +112,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.9** (2026-10-13): the two Inbox notes from step 0.10.2 placed: "bump both package.json versions" as a rule under Versioning, and "slightly worse long trips late in the extra hour" as substep 0.13.2 c (Timetable windows check); Inbox emptied. Next in order: 0.10.3 Faster other lines in the drawer.
 - **V1.8** (2026-10-13): 0.10.2 Countdown moves on after the full hour done (#279): when the shown connection leaves, the card takes the next one from the loaded hour file also after the full hour (up to an hour past it); before, the route search ignored departures after the file's hour.
 - **V1.7** (2026-10-13): the three Inbox notes from steps 0.10.0 and 0.10.1 placed as 0.10.2 Countdown moves on after the full hour, 0.10.3 Faster other lines in the drawer and 0.10.4 Shorter "Heute anders" box; milestone 0.10 reopened for them, next in order; Inbox emptied.
 - **V1.6** (2026-10-13): 0.10.1 "Heute anders" into Mehr done (#277): the notice above the card is gone; Mehr has a "Heute anders" entry that opens the day's full list, and a change note on the trip card opens its line's changes; milestone 0.10 closed.
