@@ -58,6 +58,7 @@ import {
   type Result,
 } from './state';
 import { initTap } from './tap';
+import { addPathLook, pathLook, type PathLookView } from './path-looks';
 import { cleanName, linkQuery, MAX_STARTS, type Point } from './url';
 import { computeWindow, desertThresholds, isDate, isoDay, catchUp, fullHour } from './when';
 import { initWhenSheet } from './when-sheet';
@@ -83,6 +84,10 @@ secondBtn.addEventListener('click', () => search.open('another'));
 
 // ---------- state, from the link (see url.ts) ----------
 const { state, link, outside: linkOutside } = linkState(location.search);
+/** A trial look for the trip on the map (roadmap 1.1); kept in the link while comparing. */
+const look = pathLook(location.search);
+if (look) document.body.classList.add(`path-${look}`);
+let lookView: PathLookView | null = null;
 const urlLang = new URLSearchParams(location.search).get('lang');
 setLang(initialLang(location.search, readStoredLang()), false);
 /** The "what's different today" notice, once the map exists. */
@@ -451,7 +456,8 @@ function writeUrl() {
     // Keep an explicit ?lang= so a shared English link stays English.
     urlLang && urlLang === lang() ? urlLang : null,
   );
-  replaceUrl(q ? `?${q}` : location.pathname);
+  const full = look ? [q, `path=${look}`].filter(Boolean).join('&') : q;
+  replaceUrl(full ? `?${full}` : location.pathname);
 }
 
 // ---------- map ----------
@@ -483,6 +489,8 @@ function startMarker(i: number): maplibregl.Marker {
   if (have) return have;
   const el = document.createElement('div');
   el.className = `origin-marker p${i + 1}`;
+  el.dataset.start = t('dirThere');
+  el.dataset.end = t('dirBack');
   // Above the suggested meeting points and the best-spot pins.
   el.style.zIndex = '6';
   const m = new maplibregl.Marker({ element: el, draggable: true });
@@ -673,6 +681,7 @@ map.on('load', () => {
   state.mapReady = true;
   attrib?.classList.remove('maplibregl-compact-show');
   addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
+  if (look) lookView = addPathLook(map, look);
   showHeat();
   if (state.result) showResult(state.result);
   tap.onMapReady();
@@ -1164,6 +1173,7 @@ const tap = initTap(
     favouriteLabels: () => favPlaces.list().map((f) => f.label),
     changeNote: (ride) => changes?.noteFor(ride) ?? null,
     focusChanges: (rides) => changes?.focus(rides),
+    pathLook: () => lookView,
     showHome: (i) => {
       const at = starts()[i];
       if (at)
