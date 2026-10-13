@@ -46,8 +46,11 @@ for (const [name, origin] of Object.entries(ORIGINS)) {
     t = performance.now();
     const w = { walk, walkSpeedMps: WALK_MPS };
     const result = r.travelTimes(tt, origin, { trackLegs: true, typical: true, ...w });
-    const grid = r.heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: true, ...w });
-    r.heatGrid(tt, { ...result, stopSeconds: result.typicalSeconds! }, { cellSizeM: CELL_M, ...w });
+    const grid = r.heatGrid(
+      tt,
+      { ...result, stopSeconds: result.typicalSeconds! },
+      { cellSizeM: CELL_M, trackStops: true, ...w },
+    );
     r.routeUsage(tt, result, grid, { minShare: 0.01 });
     if (rep > 0) best = Math.min(best, performance.now() - t);
   }

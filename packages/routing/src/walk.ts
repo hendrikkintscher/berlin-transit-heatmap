@@ -378,6 +378,32 @@ export function sharedLabels(net: WalkNetwork): WalkLabels {
   return l;
 }
 
+interface WalkQueue {
+  head: Int32Array;
+  next: Int32Array;
+  entry: Int32Array;
+}
+const queues = new WeakMap<WalkNetwork, WalkQueue>();
+
+/**
+ * The bucket queue's arrays, kept per network between walks (a walk allocates nothing):
+ * `buckets` heads set to empty, room for `size` entries.
+ */
+function queueFor(net: WalkNetwork, buckets: number, size: number): WalkQueue {
+  let q = queues.get(net);
+  if (!q || q.head.length < buckets || q.next.length < size) {
+    const old = q;
+    q = {
+      head: old && old.head.length >= buckets ? old.head : new Int32Array(buckets),
+      next: old && old.next.length >= size ? old.next : new Int32Array(size),
+      entry: old && old.entry.length >= size ? old.entry : new Int32Array(size),
+    };
+    queues.set(net, q);
+  }
+  q.head.fill(-1, 0, buckets);
+  return q;
+}
+
 /**
  * Multi-source Dijkstra on the walking network. Source i starts at node
  * `nodes[i]` at time `times[i]` having walked `walked[i]` metres already; a node
@@ -415,23 +441,13 @@ export function walkFrom(
     if (end > maxEnd) maxEnd = end;
   }
   const bucketCount = Math.floor(maxEnd) + 2;
-  const head = new Int32Array(bucketCount).fill(-1);
-  let next = new Int32Array(Math.max(1024, n));
-  let entry = new Int32Array(next.length);
+  // Every source is pushed at most once and every arc at most once (a node is expanded
+  // once), so the queue never outgrows sources + arcs: no growth check per push.
+  const q = queueFor(net, bucketCount, nodes.length + target.length);
+  const head = q.head;
+  const next = q.next;
+  const entry = q.entry;
   let used = 0;
-  const push = (b: number, v: number) => {
-    if (used === next.length) {
-      const nn = new Int32Array(used * 2);
-      nn.set(next);
-      next = nn;
-      const ne = new Int32Array(used * 2);
-      ne.set(entry);
-      entry = ne;
-    }
-    entry[used] = v;
-    next[used] = head[b];
-    head[b] = used++;
-  };
   for (let i = 0; i < nodes.length; i++) {
     const v = nodes[i];
     const t = times[i];
@@ -439,7 +455,10 @@ export function walkFrom(
     time[v] = t;
     walk[v] = walked[i];
     source[v] = tags[i];
-    push(Math.floor(t), v);
+    const b = Math.floor(t);
+    entry[used] = v;
+    next[used] = head[b];
+    head[b] = used++;
   }
   for (let b = 0; b < bucketCount; b++) {
     while (head[b] !== -1) {
@@ -461,7 +480,10 @@ export function walkFrom(
           time[u] = nt;
           walk[u] = nw;
           source[u] = src;
-          push(Math.floor(nt), u);
+          const nb = Math.floor(nt);
+          entry[used] = u;
+          next[used] = head[nb];
+          head[nb] = used++;
         }
       }
     }

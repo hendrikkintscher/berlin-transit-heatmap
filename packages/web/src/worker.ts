@@ -812,7 +812,10 @@ interface Run {
   result: TravelTimeResult;
   /** The pass from now that trips on tap follow (see nowRun), made on the first tap. */
   now?: TravelTimeResult;
-  /** Best-case grid with the stop each cell is reached from (lines and trips follow it). */
+  /**
+   * Grid with the stop each cell is reached from (lines and trips follow it): the shown
+   * one (under Typisch the typical grid; trips on tap then follow their own pass).
+   */
   best: HeatGrid;
   /** The grid the map shows: best case, or typical with waiting included. */
   shown: HeatGrid;
@@ -841,13 +844,16 @@ function run(
   }
   const w = travelOptions(travel);
   const result = travelTimes(tt, origin, { trackLegs: usage, typical, leaveAt, ...w });
-  const best = heatGrid(tt, result, { cellSizeM: CELL_M, trackStops: usage, ...w });
-  const shown =
-    typical && result.typicalSeconds
-      ? heatGrid(tt, { ...result, stopSeconds: result.typicalSeconds }, { cellSizeM: CELL_M, ...w })
-      : best;
-  const used = usage ? routeUsage(tt, result, best, { minShare: MIN_ROUTE_SHARE }) : [];
-  return { result, best, shown, used };
+  // Typisch: one grid only, the typical one the map shows. Its cells' stops are good
+  // enough for the lines (trips on tap make their own pass from now, see nowRun), so no
+  // best-case grid is built next to it.
+  const grid = heatGrid(
+    tt,
+    typical && result.typicalSeconds ? { ...result, stopSeconds: result.typicalSeconds } : result,
+    { cellSizeM: CELL_M, trackStops: usage, ...w },
+  );
+  const used = usage ? routeUsage(tt, result, grid, { minShare: MIN_ROUTE_SHARE }) : [];
+  return { result, best: grid, shown: grid, used };
 }
 
 /** Routing and grid options for walking, or cycling to and from the stations. */

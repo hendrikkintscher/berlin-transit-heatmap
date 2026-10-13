@@ -22,6 +22,8 @@ export function contours(
   bbox: readonly [number, number, number, number],
   minutes: readonly number[] = CONTOUR_MINUTES,
   minPoints = MIN_POINTS,
+  /** Points closer than this (in cells) to the simplified line are dropped; 0 keeps all. */
+  toleranceCells = 0,
 ): FeatureCollection<LineString, ContourProps> {
   const [w, s, e, n] = bbox;
   const lon = (x: number) => round(w + ((x + 0.5) / cols) * (e - w));
@@ -40,7 +42,7 @@ export function contours(
         properties: { min },
         geometry: {
           type: 'LineString' as const,
-          coordinates: line.map(([x, y]) => [lon(x), lat(y)]),
+          coordinates: simplify(line, toleranceCells).map(([x, y]) => [lon(x), lat(y)]),
         },
       })),
   );
@@ -65,7 +67,64 @@ export function outlines(
   const half = halve(seconds, cols, rows, bbox);
   if (offset) for (let i = 0; i < half.seconds.length; i++) half.seconds[i] += offset;
   const blurred = blurSeconds(half.seconds, half.cols, half.rows, Math.round(blurCells / 2));
-  return contours(blurred, half.cols, half.rows, half.bbox, minutes, MIN_POINTS / 2);
+  // A cell's height in metres (cells are square), for the simplification's tolerance.
+  const cellM = ((half.bbox[3] - half.bbox[1]) / half.rows) * 111_320;
+  return contours(
+    blurred,
+    half.cols,
+    half.rows,
+    half.bbox,
+    minutes,
+    MIN_POINTS / 2,
+    SIMPLIFY_M / cellM,
+  );
+}
+
+/**
+ * Outline points closer than this to the line without them are dropped: about half the
+ * points go (a lighter message and map source); MapLibre simplifies further per zoom, and
+ * more than a few metres would show as corners when zoomed far in.
+ */
+const SIMPLIFY_M = 5;
+
+/** Douglas–Peucker: the points of `line` that keep it within `tolerance` of the original. */
+export function simplify(line: [number, number][], tolerance: number): [number, number][] {
+  const n = line.length;
+  if (tolerance <= 0 || n < 3) return line;
+  const keep = new Uint8Array(n);
+  keep[0] = keep[n - 1] = 1;
+  const t2 = tolerance * tolerance;
+  const stack = [0, n - 1];
+  while (stack.length) {
+    const j = stack.pop()!;
+    const i = stack.pop()!;
+    const [ax, ay] = line[i]!;
+    const [bx, by] = line[j]!;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let far = -1;
+    let farD = t2;
+    for (let k = i + 1; k < j; k++) {
+      const [px, py] = line[k]!;
+      // Squared distance to the segment a-b (to the point a when a ring closes on itself).
+      let d: number;
+      if (len2 === 0) d = (px - ax) ** 2 + (py - ay) ** 2;
+      else {
+        const f = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2));
+        d = (px - ax - f * dx) ** 2 + (py - ay - f * dy) ** 2;
+      }
+      if (d > farD) {
+        farD = d;
+        far = k;
+      }
+    }
+    if (far >= 0) {
+      keep[far] = 1;
+      stack.push(i, far, far, j);
+    }
+  }
+  return line.filter((_, k) => keep[k]);
 }
 
 /** The grid at half the resolution: each cell the mean of the reachable cells in its 2x2 block. */
@@ -131,15 +190,11 @@ export function traceLevels(
   const lowest = sorted[0];
   const highest = sorted[sorted.length - 1];
   // Edge ids: the horizontal edge from (x,y) to (x+1,y) is 2*(y*cols+x), the vertical
-  // edge from (x,y) to (x,y+1) is that plus 1. Each segment links two edges.
-  const links = levels.map(() => new Map<number, number[]>());
-  const link = (m: Map<number, number[]>, p: number, q: number) => {
-    const a = m.get(p);
-    if (a) a.push(q);
-    else m.set(p, [q]);
-    const b = m.get(q);
-    if (b) b.push(p);
-    else m.set(q, [p]);
+  // edge from (x,y) to (x,y+1) is that plus 1. Each segment links two edges; per level
+  // the segments are kept as pairs of edge ids.
+  const segs = levels.map((): number[] => []);
+  const link = (m: number[], p: number, q: number) => {
+    m.push(p, q);
   };
   for (let y = 0; y < rows - 1; y++) {
     for (let x = 0; x < cols - 1; x++) {
@@ -155,7 +210,7 @@ export function traceLevels(
       for (let l = 0; l < levels.length; l++) {
         const level = levels[l];
         if (!(lo < level && hi >= level)) continue;
-        const m = links[l];
+        const m = segs[l]!;
         const code =
           (a < level ? 8 : 0) | (b < level ? 4 : 0) | (c < level ? 2 : 0) | (d < level ? 1 : 0);
         const top = 2 * i;
@@ -204,45 +259,70 @@ export function traceLevels(
       }
     }
   }
-  return levels.map((level, l) => join(links[l], v, cols, level));
+  const slots = slotsFor(2 * v.length);
+  return levels.map((level, l) => join(segs[l]!, slots, v, cols, level));
 }
 
-/** Joins linked edge crossings into polylines: line ends first, then the closed rings. */
+/**
+ * An edge's two neighbours along the line (-1: none): a level crosses an edge at most
+ * once in each of its two cells, so two slots are enough. Kept between calls, all -1.
+ */
+let slotCache: Int32Array = new Int32Array(0);
+function slotsFor(edges: number): Int32Array {
+  if (slotCache.length < 2 * edges) slotCache = new Int32Array(2 * edges).fill(-1);
+  return slotCache;
+}
+
+/**
+ * Joins linked edge crossings into polylines: line ends first, then the closed rings.
+ * `segs` holds the links as pairs of edge ids; `slots` is all -1 and left so.
+ */
 function join(
-  links: Map<number, number[]>,
+  segs: number[],
+  slots: Int32Array,
   v: Float32Array,
   cols: number,
   level: number,
 ): [number, number][][] {
+  const add = (e: number, x: number) => {
+    if (slots[2 * e] === -1) slots[2 * e] = x;
+    else slots[2 * e + 1] = x;
+  };
+  const remove = (e: number, x: number) => {
+    if (slots[2 * e] === x) slots[2 * e] = -1;
+    else if (slots[2 * e + 1] === x) slots[2 * e + 1] = -1;
+  };
+  const degree = (e: number) => (slots[2 * e] !== -1 ? 1 : 0) + (slots[2 * e + 1] !== -1 ? 1 : 0);
+  for (let k = 0; k < segs.length; k += 2) {
+    add(segs[k]!, segs[k + 1]!);
+    add(segs[k + 1]!, segs[k]!);
+  }
   const point = (edge: number): [number, number] => {
     const i = edge >> 1;
     const x = i % cols;
     const y = (i - x) / cols;
-    const a = v[i];
-    const b = edge & 1 ? v[i + cols] : v[i + 1];
+    const a = v[i]!;
+    const b = edge & 1 ? v[i + cols]! : v[i + 1]!;
     const f = a === b ? 0.5 : (level - a) / (b - a);
     return edge & 1 ? [x, y + f] : [x + f, y];
   };
   const lines: [number, number][][] = [];
   const take = (start: number) => {
     const line = [point(start)];
-    let prev = -1;
     let cur = start;
     for (;;) {
-      const next = (links.get(cur) ?? []).find((e) => e !== prev);
-      const ends = links.get(cur);
-      if (ends && next !== undefined) ends.splice(ends.indexOf(next), 1);
-      if (next === undefined) break;
-      const back = links.get(next)!;
-      back.splice(back.indexOf(cur), 1);
+      // The link it came along is already gone: what is left leads on.
+      const next = slots[2 * cur] !== -1 ? slots[2 * cur]! : slots[2 * cur + 1]!;
+      if (next === -1) break;
+      remove(cur, next);
+      remove(next, cur);
       line.push(point(next));
-      prev = cur;
       cur = next;
       if (cur === start) break;
     }
     lines.push(line);
   };
-  for (const [edge, l] of links) if (l.length === 1) take(edge);
-  for (const [edge, l] of links) if (l.length > 0) take(edge);
+  for (const e of segs) if (degree(e) === 1) take(e);
+  for (const e of segs) if (degree(e) > 0) take(e);
   return lines;
 }
