@@ -384,7 +384,8 @@ export function travelTimes(
           lastValue[s] = tauStar[s];
         }
         const t = tauStar[s] - dep;
-        if (dep <= we && t < best[s]) {
+        // Leaving at a set time counts past the window too: the file holds the next trips.
+        if ((leaveAt !== undefined || dep <= we) && t < best[s]) {
           best[s] = t;
           if (track) {
             legKind[s] = starKind[s];

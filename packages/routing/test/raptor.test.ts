@@ -54,6 +54,14 @@ describe('travelTimes on the mini network', () => {
       expect(next.stopSeconds[s]).toBeGreaterThanOrEqual(fromA.stopSeconds[s]);
   });
 
+  it('leaves at a set time past the window, on the trips the file still holds', () => {
+    // The window ends at 12:00; the trips run on to 13:00 with the same timetable.
+    const inside = travelTimes(day, STOP_POS[A], { leaveAt: day.windowStart + 1800 });
+    const after = travelTimes(day, STOP_POS[A], { leaveAt: day.windowEnd + 1800 });
+    expect(minutes(after.stopSeconds[H])).toBeLessThan(60);
+    expect(Array.from(after.stopSeconds)).toEqual(Array.from(inside.stopSeconds));
+  });
+
   it('leaves stops without service unreachable', () => {
     expect(fromA.stopSeconds[I]).toBe(Infinity);
   });
