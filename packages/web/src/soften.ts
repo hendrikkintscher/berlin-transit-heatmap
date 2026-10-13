@@ -10,12 +10,26 @@
 export class BlurScratch {
   private out = new Float32Array(0);
   private tmp = new Float32Array(0);
+  private sum = new Float64Array(0);
+  private cnt = new Int32Array(0);
   buffers(n: number): [Float32Array, Float32Array] {
     if (this.out.length < n) {
       this.out = new Float32Array(n);
       this.tmp = new Float32Array(n);
     }
     return [this.out.subarray(0, n), this.tmp.subarray(0, n)];
+  }
+  /** Running sums and counts for `cols` columns, zeroed. */
+  sums(cols: number): [Float64Array, Int32Array] {
+    if (this.sum.length < cols) {
+      this.sum = new Float64Array(cols);
+      this.cnt = new Int32Array(cols);
+    }
+    const sum = this.sum.subarray(0, cols);
+    const cnt = this.cnt.subarray(0, cols);
+    sum.fill(0);
+    cnt.fill(0);
+    return [sum, cnt];
   }
 }
 
@@ -34,26 +48,20 @@ export function blurSeconds(
 ): Float32Array {
   const n = cols * rows;
   const [out, tmp] = scratch ? scratch.buffers(n) : [new Float32Array(n), new Float32Array(n)];
-  const line = (
-    from: Float32Array,
-    to: Float32Array,
-    start: number,
-    stride: number,
-    n: number,
-  ): void => {
+  const rowLine = (from: Float32Array, to: Float32Array, start: number): void => {
     let sum = 0;
     let cnt = 0;
-    for (let i = 0; i < Math.min(radius, n); i++) {
-      const v = from[start + i * stride];
+    for (let i = 0; i < Math.min(radius, cols); i++) {
+      const v = from[start + i]!;
       if (v < Infinity) {
         sum += v;
         cnt++;
       }
     }
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < cols; i++) {
       const add = i + radius;
-      if (add < n) {
-        const v = from[start + add * stride];
+      if (add < cols) {
+        const v = from[start + add]!;
         if (v < Infinity) {
           sum += v;
           cnt++;
@@ -61,22 +69,51 @@ export function blurSeconds(
       }
       const drop = i - radius - 1;
       if (drop >= 0) {
-        const v = from[start + drop * stride];
+        const v = from[start + drop]!;
         if (v < Infinity) {
           sum -= v;
           cnt--;
         }
       }
-      const k = start + i * stride;
-      to[k] = from[k] < Infinity && cnt > 0 ? sum / cnt : Infinity;
+      const k = start + i;
+      to[k] = from[k]! < Infinity && cnt > 0 ? sum / cnt : Infinity;
+    }
+  };
+  /**
+   * The same window down every column, walked row by row (running sums per column), so
+   * memory is read in order: the same sums as column by column, about twice as fast.
+   */
+  const columns = (from: Float32Array, to: Float32Array): void => {
+    const [sum, cnt] = scratch
+      ? scratch.sums(cols)
+      : [new Float64Array(cols), new Int32Array(cols)];
+    const take = (r: number, sign: 1 | -1): void => {
+      const o = r * cols;
+      for (let c = 0; c < cols; c++) {
+        const v = from[o + c]!;
+        if (v < Infinity) {
+          sum[c] += sign * v;
+          cnt[c] += sign;
+        }
+      }
+    };
+    for (let r = 0; r < Math.min(radius, rows); r++) take(r, 1);
+    for (let r = 0; r < rows; r++) {
+      if (r + radius < rows) take(r + radius, 1);
+      if (r - radius - 1 >= 0) take(r - radius - 1, -1);
+      const o = r * cols;
+      for (let c = 0; c < cols; c++) {
+        const k = o + c;
+        to[k] = from[k]! < Infinity && cnt[c]! > 0 ? sum[c]! / cnt[c]! : Infinity;
+      }
     }
   };
   // Rows into tmp, then columns back into out (each pass reads only what the last wrote).
   let from = seconds;
   if (passes < 1) out.set(seconds);
   for (let p = 0; p < passes; p++) {
-    for (let r = 0; r < rows; r++) line(from, tmp, r * cols, 1, cols);
-    for (let c = 0; c < cols; c++) line(tmp, out, c, cols, rows);
+    for (let r = 0; r < rows; r++) rowLine(from, tmp, r * cols);
+    columns(tmp, out);
     from = out;
   }
   return out;
