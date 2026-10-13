@@ -10,14 +10,14 @@ _Empty._
 
 ## Up next
 
-State on 2026-10-13, live through PR #206. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
+State on 2026-10-13, live through PR #210. **Plan for everything noted** (Hendrik, 2026-10-13 00:31: "make a plan for when all of the fixes and features will be worked into the app and begin working on it, take the best decisions, try to implement everything noted down, don't do android app and beta testing and declutter docs and threads afterwards"). Ordered by dependency and visibility; the trip-card items are bundled so the card is rebuilt once. Build in this order, one step per PR:
 
 1. Shorter platform changes (group 6): built and merged (PR #184); goes live with the next timetable build (publish fix PR #201 merged).
 2. **Next:** No flicker when tapping another destination (group 6, Inbox)
 3. Small map fixes: the Ringbahn on the map follows the same course as in trips, colour scale green up to 20 min and yellow from 25, "Bis wann heim?" limits of 1 h and 1 h 30 (groups 6 and 7, Inbox; one PR or three)
-4. Trip card round (group 6): the card becomes a drawer with more connections when pulled up; tapping a connection opens the detailed view with the wait at each change; the card names the start and the destination; the destination marker stands out and transfer stops step back; "Hier starten" keeps the old start as the destination. Takes in the review's card findings (V1, U4, U8, U12) so the card is built once.
-5. Review fixes for the rest of the app (group 17): U14 (pairs with V1), then V2 + U11 + V4, U2, V3, then U5–U13 and V5–V13, in the order of plan/reviews/README.md (project files)
-6. Smaller Wohnlage-Karte memory (B7 + P9, group 15)
+4. Trip card round (group 6): the card becomes a drawer with more connections when pulled up; tapping a connection opens the detailed view with the wait at each change; the card names the start and the destination; the destination marker stands out and transfer stops step back; "Hier starten" keeps the old start as the destination. Takes in the review's card and marker findings so the card is built once: Hier starten with U12, markers with V6, V1 + U14 (card and time field fit at 360 px), names with U7 + U8, then U4.
+5. Review fixes for the rest of the app (group 17): V2 + U11 + V4 (its paint part after the colour scale in step 3), U2, V3, then U5–U13 and V5–V13, in the order of plan/reviews/README.md (project files)
+6. Smaller Wohnlage-Karte memory (B7 + P9, group 15): Done (PR #210)
 7. Typical timetable when offline, cache-first data after a deploy (B8 + P3, group 15)
 8. Notice, search and favourites polish (C5–C8, group 15)
 9. Less walking on equal arrival (group 6, from the connection test)
@@ -292,9 +292,7 @@ Items keep their ids from plan/suggestions-3.md (A1, B1 …), where each is desc
 - **Sturdier timetable publish**: Done (PR #201): uploads retry up to 3 times on network errors and 5xx, half-uploaded assets are removed first, and a failed run deletes its fresh "-next-" release.
 - **Faster map passes (P4–P7)**: Done (PR #205): Typisch builds one grid, faster walkFrom, simpler outlines, row-wise blur. Live: Typisch 451 ms (was about 665 locally), meeting with two starts 693 ms (was about 1010). Under Typisch the lines now follow the typical grid, so some come out thinner at night.
 
-### Smaller Wohnlage-Karte memory (B7)
-
-The Wohnlage-Karte keeps a full-precision grid per favourite for the last two maps. Keep one map and store minutes compactly (16-bit tenths of a minute, or only cells that are reached). From the code review, also P9 (about −30 MB worker memory).
+- **Smaller Wohnlage-Karte memory (B7 + P9)**: Done (PR #210): compact Wohnlage grids (three favourites 39 → 10 MB) and a leaner walk network (95 → 72.5 MB); the map and the minutes on tap are unchanged.
 
 ### Typical timetable when offline (B8)
 
@@ -354,7 +352,7 @@ Added by Hendrik on 2026-10-12 as two roadmap steps, after the threads on existi
 
 ## 17. Review track
 
-Hendrik, 2026-10-12: four reviews, first handled by a "Review negotiator" and a "Review builder" thread; since 2026-10-13 00:34 its open items are in the main plan (Up next steps 4, 5 and 16). Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). Hendrik picked "Tap and Back" first, then the rest in the order of plan/reviews/README.md (2026-10-13). From the Inbox (Hendrik, 2026-10-13 00:24), placed in the trip card round: "Hier starten" keeps the old start as the destination (with U12); the trip card names the start and the destination (with U8/U4); the destination marker stands out more and transfer stops less (with the marker item in visual-consistency.md). Done: U1 (PR #203: a tap that closes a panel or the search no longer sets a start or opens a trip card), U3 (PR #206: Back closes the open panel, menu, search or trip card instead of leaving the app). Order: V1+U14, V2+U11+V4, docs cleanup (K items, including the roadmap slimming K14–K19, which the editor applies), U2, U4, V3.
+Hendrik, 2026-10-12: four reviews, first handled by a "Review negotiator" and a "Review builder" thread; since 2026-10-13 00:34 its open items are in the main plan (Up next steps 4, 5 and 16). Status: reviews done (U1–U14, V1–V13, P1–P10, K1–K26), findings in plan/reviews/ (project files, README.md is the index). The code findings are folded into the main queue (P1+P2 as a B4 follow-up; P4–P7 as their own step after B6; P3 into B8, P9 into B7, P10 into B9, P8 last). Hendrik picked "Tap and Back" first, then the rest in the order of plan/reviews/README.md (2026-10-13). From the Inbox (Hendrik, 2026-10-13 00:24), placed in the trip card round: "Hier starten" keeps the old start as the destination (with U12); the trip card names the start and the destination (with U8/U4); the destination marker stands out more and transfer stops less (with the marker item in visual-consistency.md). Done: U1 (PR #203: a tap that closes a panel or the search no longer sets a start or opens a trip card), U3 (PR #206: Back closes the open panel, menu, search or trip card instead of leaving the app). Order: the card items in Up next step 4, then V2+U11+V4, U2, V3 and the rest in step 5; the docs cleanup (K items, including the roadmap slimming K14–K19) is step 16.
 
 - **UI intuitiveness**: check where the interface is intuitive and where it is not, and what could be handled more smartly or more obviously.
 - **Visual consistency**: check map elements, colours, layout, symbols and text for consistency.
