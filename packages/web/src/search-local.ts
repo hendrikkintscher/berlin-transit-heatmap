@@ -13,7 +13,10 @@ export interface LocalPlace extends Place {
 
 const RECENT_MAX = 8;
 
-/** Lower case, no accents, ß as ss, "straße" as "str", so "Muller" finds "Müllerstr.". */
+/**
+ * Lower case, no accents, ß as ss, "straße" as "str", so "Muller" finds "Müllerstr.";
+ * "Hbf" and "Bhf" in full, so "Potsdam Hbf" finds "S Potsdam Hauptbahnhof".
+ */
 export function fold(s: string): string {
   return s
     .toLowerCase()
@@ -21,7 +24,9 @@ export function fold(s: string): string {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ß/g, 'ss')
     .replace(/strasse\b/g, 'str')
-    .replace(/str\./g, 'str');
+    .replace(/str\./g, 'str')
+    .replace(/\bhbf\b\.?/g, 'hauptbahnhof')
+    .replace(/\bbhf\b\.?/g, 'bahnhof');
 }
 
 /** Word starts of a name, for prefix matching ("S+U Alexanderplatz" -> s, u, alexanderplatz). */
@@ -79,7 +84,7 @@ export function localMatches(query: string, pool: LocalPlace[], limit = 4): Loca
 const core = (name: string) =>
   fold(name)
     .replace(/^(s\+u|s|u)\s+/, '')
-    .replace(/\s+bhf\b.*$/, '')
+    .replace(/\s+bahnhof\b.*$/, '')
     .replace(/\/.*$/, '')
     .trim();
 

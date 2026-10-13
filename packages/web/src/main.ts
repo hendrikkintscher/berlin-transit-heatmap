@@ -23,7 +23,7 @@ import {
   escapeHtml,
   whenText,
 } from './format';
-import { reversePlace, searchPlaces, SEARCH_BBOX, streetHouses, type Place } from './search';
+import { reverseStreet, searchPlaces, SEARCH_BBOX, streetHouses, type Place } from './search';
 import {
   loadRecent,
   localMatches,
@@ -1154,7 +1154,27 @@ function houseQuery(): string | null {
   return v.slice(streetPick.street.name.length).trim();
 }
 
+/** The search's title and placeholder for what it is for (C6): a start, a favourite, another start. */
+function labelSearch(purpose = searchFor) {
+  const title = $('search-title');
+  title.hidden = purpose === 'start';
+  title.textContent =
+    purpose === 'favourite'
+      ? t('searchFavTitle')
+      : purpose === 'another'
+        ? t('searchAnotherTitle', { n: starts().length + 1 })
+        : '';
+  searchInput.placeholder = t(
+    purpose === 'favourite'
+      ? 'searchFavPlaceholder'
+      : purpose === 'another'
+        ? 'searchAnotherPlaceholder'
+        : 'searchPlaceholder',
+  );
+}
+
 function openSearch() {
+  labelSearch();
   chips.close();
   searchPanel.classList.add('open');
   searchClose.hidden = false;
@@ -1229,6 +1249,8 @@ function showSuggestions(remote = lastRemote) {
   if (list.length) showMsg('');
 }
 function closeSearch() {
+  // Closed, the bar reads as the start search again (what a picked result does is kept).
+  labelSearch('start');
   searchPanel.classList.remove('open');
   searchClose.hidden = true;
   searchInput.setAttribute('aria-expanded', 'false');
@@ -1355,6 +1377,13 @@ searchInput.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
+/** The zoom that shows about 7 km around a point across the map's narrow side. */
+function reachZoom(lat: number): number {
+  const side = Math.min(map.getContainer().clientWidth, map.getContainer().clientHeight);
+  const metresPerPixelZ0 = 156543 * Math.cos((lat * Math.PI) / 180);
+  return Math.min(13, Math.log2(((side / 2) * metresPerPixelZ0) / 7000));
+}
+
 /** What a picked search result does: set the start, add a favourite place or one more start. */
 let searchFor: 'start' | 'favourite' | 'another' = 'start';
 function pickPlace(p: Place) {
@@ -1391,7 +1420,8 @@ function pickPlace(p: Place) {
     frameView([...starts(), p], true);
     tap.tapAt(p.lat, p.lon, undefined, p.label, true);
   } else {
-    map.flyTo({ center: [p.lon, p.lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
+    // Far enough out for about the 45-minute ring around the new start (C8).
+    map.flyTo({ center: [p.lon, p.lat], zoom: reachZoom(p.lat), essential: true });
     setOrigin(p);
   }
 }
@@ -1573,9 +1603,20 @@ function renderFavourites() {
   favList.replaceChildren(
     ...favourites.map((f, i) => {
       const li = document.createElement('li');
-      const name = document.createElement('span');
+      // The name is a text field: tap it to rename the place (C7).
+      const name = document.createElement('input');
       name.className = 'fav-name';
-      name.textContent = f.label;
+      name.value = f.label;
+      name.enterKeyHint = 'done';
+      name.setAttribute('aria-label', t('favName'));
+      name.addEventListener('keydown', (e) => e.key === 'Enter' && name.blur());
+      name.addEventListener('change', () => {
+        const label = name.value.trim();
+        if (label && label !== f.label) {
+          f.label = label;
+          favouritesChanged();
+        } else name.value = f.label;
+      });
       const min = document.createElement('span');
       min.className = 'fav-min';
       const m = times?.minutes[i];
@@ -1724,7 +1765,7 @@ const tap = initTap(
       }
       // In the list at once, under its coordinates; the street name follows when Photon answers.
       const [f] = addFavourites([{ label: `${at.lat.toFixed(4)}, ${at.lon.toFixed(4)}`, ...at }]);
-      reversePlace(at, lang())
+      reverseStreet(at, lang())
         .then((label) => {
           if (label && f && favourites.includes(f)) {
             f.label = label;

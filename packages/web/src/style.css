@@ -502,8 +502,17 @@ body:not(.no-legend) .maplibregl-ctrl-bottom-right {
   box-shadow: var(--shadow-2);
 }
 .search:not(.open) .search-results,
-.search:not(.open) .search-msg {
+.search:not(.open) .search-msg,
+.search:not(.open) .search-title {
   display: none;
+}
+.search-title {
+  padding: 10px 16px 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 .search-icon {
   flex: none;
@@ -1042,9 +1051,20 @@ body.arrive .origin-marker.p1.numbered {
 .fav-name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  min-height: 36px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.fav-name:focus {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  outline: none;
 }
 .fav-min {
   font-weight: 600;
