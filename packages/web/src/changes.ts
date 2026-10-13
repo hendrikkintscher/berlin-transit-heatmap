@@ -1,8 +1,9 @@
-// "What's different today": a small notice listing the U-Bahn, S-Bahn and tram lines that
-// run differently on the shown date (changes.json, made by the timetable build): those of
-// the shown connection, or without one those on the visible map. Tapping a line shows its
-// stretch on the map. The file is small (about 3 KB gzipped) and fetched only
-// once the first timetable is in, so it never holds up the first map.
+// "What's different today": the U-Bahn, S-Bahn and tram lines that run differently on the
+// shown date (changes.json, made by the timetable build). Never a popup of its own (Hendrik,
+// 2026-10-13): Mehr has a "Heute anders" entry that opens a box with the whole day's list,
+// and a change note on the trip card opens the same box for its line. Tapping a line in
+// the box shows its stretch on the map. The file is small (about 3 KB gzipped) and fetched
+// only once the first timetable is in, so it never holds up the first map.
 
 import type maplibregl from 'maplibre-gl';
 import type { GeoJSONSource } from 'maplibre-gl';
@@ -62,14 +63,6 @@ export function linesText(lines: string[], most = 3): string {
     : `${lines.slice(0, most).join(', ')} +${lines.length - most}`;
 }
 
-/** [west, south, east, north] */
-export type Bounds = [number, number, number, number];
-
-/** The changes with part of their stretch inside the bounds. */
-export function inBounds(list: Change[], [w, s, e, n]: Bounds): Change[] {
-  return list.filter((c) => c.path.some(([x, y]) => x >= w && x <= e && y >= s && y <= n));
-}
-
 /** A ride of the shown connection: its line name and mode. */
 export interface Ride {
   name: string;
@@ -108,27 +101,26 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
   const chip = $<HTMLButtonElement>('changes-chip');
   const panel = $('changes-panel');
   const list = $<HTMLUListElement>('changes-list');
+  const menuDialog = $<HTMLDialogElement>('menu');
+  const menuBtn = $<HTMLButtonElement>('changes-btn');
   let file: ChangesFile | null = null;
   let loading = false;
-  let open = false;
-  let shown: Change | null = null;
-  const closed = new Set<string>();
   /**
-   * With a connection shown, the notice lists what touches its lines; without one, what
-   * runs differently on the visible map (C5, Hendrik 2026-10-12: "N Linien anders" whenever
-   * the day has changes in view). The picked stretch stays listed while the map moves.
+   * The open box: what it lists, on which day, and the ride it was opened for from the
+   * trip card (null: from Mehr, the whole day). Null while closed.
    */
-  let focus: Ride[] | null = null;
+  let opened: { day: string; ride: Ride | null } | null = null;
+  /** The list folds to one line while a stretch is on the map; a tap on it unfolds it. */
+  let folded = false;
+  let shown: Change | null = null;
   /** The entries the list shows, for its taps. */
   let listed: Change[] = [];
 
   const allToday = () => (isDate(state.when.day) ? (file?.days[state.when.day] ?? []) : []);
-  function today(): Change[] {
+  function items(): Change[] {
+    if (!opened) return [];
     const all = allToday();
-    if (focus) return touching(all, focus);
-    const b = map.getBounds();
-    const view = inBounds(all, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
-    return shown && all.includes(shown) && !view.includes(shown) ? [shown, ...view] : view;
+    return opened.ride ? touching(all, [opened.ride]) : all;
   }
 
   function load() {
@@ -187,7 +179,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
         [Math.max(...lons), Math.max(...lats)],
       ],
       {
-        // Clear of the header and of everything at the bottom, the notice included.
+        // Clear of the header and of everything at the bottom, the box included.
         padding: {
           top: 90,
           bottom: Math.max(60, innerHeight - box.getBoundingClientRect().top + 20),
@@ -200,31 +192,47 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     );
   }
 
+  /** Mehr's entry: the day's lines, or that all runs as usual; hidden without a dated day. */
+  function renderMenu() {
+    const all = allToday();
+    menuBtn.hidden = !file || !isDate(state.when.day);
+    if (menuBtn.hidden) return;
+    const label = noticeDay(state.when.day);
+    menuBtn.disabled = !all.length;
+    menuBtn.textContent = all.length
+      ? t('changesChip', { day: label, lines: linesText(changedLines(all)) })
+      : t('changesNone', { day: label });
+  }
+
   function render() {
+    renderMenu();
+    // Another day shown: the box was about the old one.
+    if (opened && opened.day !== state.when.day) opened = null;
     const day = state.when.day;
-    const items = today();
-    const hide = !items.length || closed.has(day);
-    box.hidden = hide;
-    if (hide) {
-      open = false;
+    const now = items();
+    if (!now.length) opened = null;
+    box.hidden = !opened;
+    if (!opened) {
+      folded = false;
       if (shown) draw(null);
       return;
     }
-    if (shown && !items.includes(shown)) draw(null);
-    const label = noticeDay(day);
-    // With a stretch on the map the notice names it; tapped, it opens the list again.
-    chip.textContent = shown
-      ? `${shown.line}: ${changeText(shown, day)}`
-      : t('changesChip', { day: label, lines: linesText(changedLines(items)) });
+    if (shown && !now.includes(shown)) draw(null);
+    if (!shown) folded = false;
+    // With a stretch on the map the box folds to its line; tapped, it opens the list again.
+    chip.textContent = shown ? `${shown.line}: ${changeText(shown, day)}` : '';
     chip.classList.toggle('picked', !!shown);
-    chip.setAttribute('aria-expanded', String(open));
-    chip.hidden = open;
-    panel.hidden = !open;
-    if (!open) return;
-    $('changes-title').textContent = t('changesTitle', { day: label });
+    chip.setAttribute('aria-expanded', String(!folded));
+    chip.hidden = !folded;
+    panel.hidden = folded;
+    if (folded) return;
+    const label = noticeDay(day);
+    $('changes-title').textContent = opened.ride
+      ? t('changesLineTitle', { line: opened.ride.name, day: label })
+      : t('changesTitle', { day: label });
     $('changes-note').textContent = t('changesNote');
-    listed = items;
-    list.innerHTML = items
+    listed = now;
+    list.innerHTML = now
       .map(
         (c, i) =>
           `<li><button type="button" data-i="${i}" aria-pressed="${c === shown}"><span class="line-badge" style="background:${MODE_COLORS[c.mode] ?? '#444'}">${escapeHtml(c.line)}</span> <span>${escapeHtml(changeText(c, day))}</span></button></li>`,
@@ -232,15 +240,24 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
       .join('');
   }
 
+  function open(ride: Ride | null) {
+    if (shown) draw(null);
+    opened = { day: state.when.day, ride };
+    folded = false;
+    render();
+  }
+
+  function close() {
+    opened = null;
+    render();
+  }
+
+  menuBtn.addEventListener('click', () => {
+    menuDialog.close();
+    open(null);
+  });
   chip.addEventListener('click', () => {
-    // One entry: show it at once.
-    const items = today();
-    if (items.length === 1 && !shown) {
-      draw(items[0]!);
-      render();
-      return;
-    }
-    open = true;
+    folded = false;
     render();
   });
   list.addEventListener('click', (e) => {
@@ -248,24 +265,14 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     if (!b) return;
     const c = listed[Number(b.dataset.i)] ?? null;
     if (c === shown) return;
-    // The list closes to one line so the map shows the stretch.
-    open = false;
+    // The list folds to one line so the map shows the stretch.
+    folded = true;
+    shown = c;
     render();
     draw(c);
     render();
   });
-  // ✕ steps back: the list, then the stretch, then the notice for this day.
-  $('changes-close').addEventListener('click', () => {
-    if (open) open = false;
-    else if (shown) draw(null);
-    else closed.add(state.when.day);
-    render();
-  });
-
-  // Without a connection the notice follows the visible map.
-  map.on('moveend', () => {
-    if (file && !focus) render();
-  });
+  $('changes-close').addEventListener('click', close);
 
   return {
     /**
@@ -276,12 +283,17 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
       const c = touching(allToday(), [ride])[0];
       return c ? `${c.line}: ${changeText(c, state.when.day)}` : null;
     },
-    /** A connection is shown (its rides) or closed (null): the notice follows it. */
-    focus(rides: Ride[] | null) {
-      focus = rides;
-      open = false;
-      render();
+    /** A change note on the trip card was tapped: the box with that line's changes. */
+    openFor(ride: Ride) {
+      open(ride);
     },
+    /** A connection is shown (its rides) or closed (null): a box opened from its card follows. */
+    focus(rides: Ride[] | null) {
+      const r = opened?.ride;
+      if (r && !rides?.some((x) => x.name === r.name && x.mode === r.mode)) close();
+    },
+    isOpen: () => !!opened,
+    close,
     /** The shown day changed, or the language; loads the file the first time. */
     update() {
       // Not before the first timetable is in: the map comes first.

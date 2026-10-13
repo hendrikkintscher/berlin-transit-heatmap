@@ -16,7 +16,7 @@ import {
 import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
-import { hhmm, leaveText, tripHtml, type Trip } from './trip-card';
+import { changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
 import { icon } from './icons';
 import { MAX_NAME, MAX_STARTS, type Point } from './url';
@@ -61,8 +61,10 @@ export interface TapDeps {
   showHome: (i: number) => void;
   /** Today's change on a ride's line, for the card ("Heute anders"). */
   changeNote: (ride: { name: string; mode: string }) => string | null;
-  /** The shown connection's rides (null: none); the changes notice keeps to them. */
+  /** The shown connection's rides (null: none); a changes box opened from the card keeps to them. */
   focusChanges: (rides: { name: string; mode: string }[] | null) => void;
+  /** A change note was tapped: the day's changes on that ride's line. */
+  openChanges: (ride: { name: string; mode: string }) => void;
   /** Draws the trip's direction arrows (null: none). */
   showArrows: (lines: GeoJSON.FeatureCollection | null) => void;
 }
@@ -622,11 +624,12 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   function addChangeNotes() {
     const el = document.getElementById('trip');
     if (!el || !shownRides.length || el.querySelector('.trip-change')) return;
-    for (const n of new Set(shownRides.map((r) => deps.changeNote(r)).filter(Boolean))) {
-      const s = document.createElement('small');
-      s.className = 'trip-change';
-      s.textContent = n;
-      el.append(s);
+    const seen = new Set<string>();
+    for (const r of shownRides) {
+      const n = deps.changeNote(r);
+      if (!n || seen.has(n)) continue;
+      seen.add(n);
+      el.insertAdjacentHTML('beforeend', changeNoteHtml(n, r));
     }
   }
 
@@ -742,14 +745,30 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     listInView = false;
     document.getElementById('trip-more')?.scrollIntoView({ block: 'nearest' });
   }
+  // A change note opens the day's changes on its line ("Heute anders"), not the details.
+  function noteRide(target: EventTarget | null) {
+    const n = (target as Element).closest<HTMLElement>('.trip-change[data-line]');
+    return n ? { name: n.dataset.line!, mode: n.dataset.mode ?? '' } : null;
+  }
   readoutText.addEventListener('click', (e) => {
+    const ride = noteRide(e.target);
+    if (ride) {
+      if (!justPulled()) deps.openChanges(ride);
+      return;
+    }
     const head = (e.target as Element).closest('.trip-head.opens');
     if (!head || justPulled()) return;
     setExpanded(!readout.classList.contains('expanded'));
   });
   readoutText.addEventListener('keydown', (e) => {
-    if ((e.key !== 'Enter' && e.key !== ' ') || !(e.target as Element).matches('.trip-head.opens'))
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const ride = noteRide(e.target);
+    if (ride) {
+      e.preventDefault();
+      deps.openChanges(ride);
       return;
+    }
+    if (!(e.target as Element).matches('.trip-head.opens')) return;
     e.preventDefault();
     setExpanded(!readout.classList.contains('expanded'));
   });

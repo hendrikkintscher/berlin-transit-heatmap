@@ -31,6 +31,11 @@ export interface TripContext {
   rows?: { anchorTitle: string };
 }
 
+/** A change note on the card, a button that opens the day's changes on its line. */
+export function changeNoteHtml(note: string, ride: { name: string; mode: string }): string {
+  return `<small class="trip-change" role="button" tabindex="0" data-line="${escapeHtml(ride.name)}" data-mode="${escapeHtml(ride.mode)}">${escapeHtml(note)}</small>`;
+}
+
 /**
  * "los in 5 Min.", "jetzt los", or "los um 10:07" when it is not today, over an hour off
  * or already gone (an hour earlier today).
@@ -113,7 +118,12 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
       ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
       : [];
     // What runs differently today on the lines of this connection.
-    const notes = [...new Set(rides.map((l) => c.changeNote?.(l)).filter(Boolean))];
+    // Each note opens the day's changes on its line (changes.ts).
+    const notes = new Map<string, { name: string; mode: string }>();
+    for (const l of rides) {
+      const n = c.changeNote?.(l);
+      if (n && !notes.has(n)) notes.set(n, l);
+    }
     // The summary (minutes, times, lines, changes and walking): a tap on it opens the
     // detailed connection below it (#readout.expanded), when there is one.
     const opens = !!timeline || stops.length > 0;
@@ -131,7 +141,7 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
           ? `<span class="stops">${sum.length ? ' · ' : ''}${stops.join(' → ')}</span>`
           : ''
       }</small>` +
-      notes.map((n) => `<small class="trip-change">${escapeHtml(n!)}</small>`).join('') +
+      [...notes].map(([n, l]) => changeNoteHtml(n, l)).join('') +
       '</span>' +
       timeline
     );
