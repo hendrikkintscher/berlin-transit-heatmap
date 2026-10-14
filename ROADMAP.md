@@ -1,6 +1,6 @@
-# Roadmap V1.17
+# Roadmap V1.18
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.6** (through PR #289). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.7** (through PR #292). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
 **How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal.
 
@@ -23,26 +23,27 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 
 **Past versions**, assigned afterwards from the PR history:
 
-| Version | Live      | What                                                                                            | PRs       |
-| ------- | --------- | ----------------------------------------------------------------------------------------------- | --------- |
-| 0.1     | 10-11     | Alpha: web app, timetable build, routing, Pages, search                                         | #1–#10    |
-| 0.2     | 10-11     | Menu, German UI, meeting point, favourites, trip on tap, footpaths, bike modes                  | #15–#47   |
-| 0.3     | 10-12     | Binary timetables, speed budget, Wohnlage, real dates, Heute anders, live status                | #50–#90   |
-| 0.4     | 10-12     | UI overhaul: chips, top bar, calm map, rename "Wohin jetzt?", search bar, street list           | #92–#145  |
-| 0.5     | 10-12     | Faster loading, time panel and trip card redesign, real arrivals, Start ⇄ Ziel, Bis N Min.      | #151–#197 |
-| 0.6     | 10-13     | Review track: first open, lighter maps, looks, data versions, smoke test, Rings as default look | #199–#254 |
-| 0.7     | 10-13     | Faster first trip and first map                                                                 | #257–#261 |
-| 0.8.0   | 10-13     | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                           | #266–#270 |
-| 0.9.0   | 10-13     | App shows its version in the Mehr menu; git tag per step                                        | #272      |
-| 0.9.1   | 10-13     | Automatic tag `vX.Y.Z` for each merge that bumps the version                                    | #274      |
-| 0.9.2   | 10-13     | Version line in German and English, short commit shown as text                                  | #275      |
-| 0.10.0  | 10-13     | Later connections fill in while pulling the drawer and reach an hour ahead                      | #276      |
-| 0.10.1  | 10-13     | "Heute anders" only in Mehr; change notes on the trip card open their line's changes            | #277      |
-| 0.10.2  | 10-13     | The countdown moves on to the next connection past the full hour, from the loaded file          | #279      |
-| 0.10.3  | 10-13     | The drawer also lists faster connections on other lines, found in the background                | #281      |
-| 0.10.4  | 10-13     | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap       | #283      |
-| 0.10.5  | 10-14     | The drawer keeps its list when the card refreshes with the same trip (about 12 searches saved)  | #286      |
-| 0.10.6  | 10-14 now | "Heute anders": two-line note on top, one-change rows always show their end date                | #289      |
+| Version | Live      | What                                                                                              | PRs       |
+| ------- | --------- | ------------------------------------------------------------------------------------------------- | --------- |
+| 0.1     | 10-11     | Alpha: web app, timetable build, routing, Pages, search                                           | #1–#10    |
+| 0.2     | 10-11     | Menu, German UI, meeting point, favourites, trip on tap, footpaths, bike modes                    | #15–#47   |
+| 0.3     | 10-12     | Binary timetables, speed budget, Wohnlage, real dates, Heute anders, live status                  | #50–#90   |
+| 0.4     | 10-12     | UI overhaul: chips, top bar, calm map, rename "Wohin jetzt?", search bar, street list             | #92–#145  |
+| 0.5     | 10-12     | Faster loading, time panel and trip card redesign, real arrivals, Start ⇄ Ziel, Bis N Min.        | #151–#197 |
+| 0.6     | 10-13     | Review track: first open, lighter maps, looks, data versions, smoke test, Rings as default look   | #199–#254 |
+| 0.7     | 10-13     | Faster first trip and first map                                                                   | #257–#261 |
+| 0.8.0   | 10-13     | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                             | #266–#270 |
+| 0.9.0   | 10-13     | App shows its version in the Mehr menu; git tag per step                                          | #272      |
+| 0.9.1   | 10-13     | Automatic tag `vX.Y.Z` for each merge that bumps the version                                      | #274      |
+| 0.9.2   | 10-13     | Version line in German and English, short commit shown as text                                    | #275      |
+| 0.10.0  | 10-13     | Later connections fill in while pulling the drawer and reach an hour ahead                        | #276      |
+| 0.10.1  | 10-13     | "Heute anders" only in Mehr; change notes on the trip card open their line's changes              | #277      |
+| 0.10.2  | 10-13     | The countdown moves on to the next connection past the full hour, from the loaded file            | #279      |
+| 0.10.3  | 10-13     | The drawer also lists faster connections on other lines, found in the background                  | #281      |
+| 0.10.4  | 10-13     | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap         | #283      |
+| 0.10.5  | 10-14     | The drawer keeps its list when the card refreshes with the same trip (about 12 searches saved)    | #286      |
+| 0.10.6  | 10-14     | "Heute anders": two-line note on top, one-change rows always show their end date                  | #289      |
+| 0.10.7  | 10-14 now | The drawer's kept list re-searches other lines with the footpaths; no list cut off by the refresh | #292      |
 
 ## Inbox
 
@@ -50,12 +51,8 @@ Hendrik's wishes given without a pick land here: one dated line each, in his wor
 
 ## 0.10 Trip drawer and changes, follow-ups
 
-Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 to 0.10.6; 0.10.2 to 0.10.6 are done. Next in order.
+Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 to 0.10.6; 0.10.2 to 0.10.7 are done. Next in order.
 
-- **0.10.7 Kept drawer list after the footpaths load** (from step 0.10.5, 2026-10-14).
-  - a. Fresh other-line rows: "in a kept drawer list, other-line rows boarding at a different platform keep older walking times (can be ~1 min off); a fresh search after footpaths load may also find a slightly different other-line row". Option: keep the list but quietly redo only the other-line search.
-  - b. Early pull: "pulling the drawer open within ~1 s of the first map can lose the race with the footpath redraw, so the list cuts off and is asked for again". Option: load footpaths a little earlier, or hold the redraw while the drawer is open. Measure the first map and tap timings before and after.
-  - c. Slow "Heute anders" right after the first map (from step 0.10.6, 2026-10-14): "opening 'Heute anders' from Mehr while the first map is still loading can take ~2 s (local and live); after that it opens in <0.1 s". Same busy moment as b; find what it waits for (the changes file, the worker or the footpath redraw) and let it open at once.
 - **0.10.8 Start card lines overlap while footpaths load** (from step 0.10.6, 2026-10-14): "in one local test, while footpaths were loading, the 'Fußwege werden geladen…' line on the start card was drawn on top of 'Oder tippe irgendwo auf die Karte.' Not confirmed on the live site."
   - a. Try to reproduce at phone size 360×740, locally and on the live site, with a slow footpath load.
   - b. If it shows, give the loading line its own row so nothing overlaps; if it never shows, close the step with the screenshots.
@@ -117,6 +114,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.18** (2026-10-14): 0.10.7 Kept drawer list after the footpaths load done (#292): a kept list quietly searches the other lines again with the new walks and swaps in the finished list; the footpath refresh waits (up to 4 s) for a list still being searched, and a pull during the refresh asks once, right after it (pull to full list 1.2–1.3 s → 0.5 s, one search instead of two); "Heute anders" needed no change (it opens 3–90 ms after the tap; the ~2 s was the test tool waiting for software-drawn map frames). Next in order: 0.10.8 Start card lines overlap while footpaths load.
 - **V1.17** (2026-10-14): the two Inbox notes from step 0.10.6 placed: "Heute anders slow while the first map loads" as substep 0.10.7 c (same busy moment as b), "footpath loading line drawn over the start card hint" as new step 0.10.8 Start card lines overlap while footpaths load; Inbox emptied. Next in order: 0.10.7 Kept drawer list after the footpaths load.
 - **V1.16** (2026-10-14): 0.10.6 "Heute anders" box polish done (#289): the note at the top is two short sentences (5 lines down to 2 at phone size), and a one-change row cuts the stretch short instead of its end date, so "bis 18.10." stays in view. Next in order: 0.10.7 Kept drawer list after the footpaths load.
 - **V1.15** (2026-10-14): the two Inbox notes from step 0.10.5 placed as 0.10.7 Kept drawer list after the footpaths load (a. other-line rows redone with fresh walks, b. early pull no longer loses the race with the footpath redraw); Inbox emptied. Next in order: 0.10.6 "Heute anders" box polish.
