@@ -99,6 +99,8 @@ export type ToWorker =
   | { type: 'paint'; id: number; limit?: number }
   /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
   | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
+  /** The worker's own downloads so far, for the timing box (?timing in the link). */
+  | { type: 'downloads' }
   /**
    * The connections after the shown one (arriving: before it), which left at `leave` and
    * arrives at `arrive`, to the same place; for the drawer. `quiet`: the list is on screen
@@ -325,4 +327,13 @@ export type FromWorker =
       /** Where rides start and end; `end` marks getting on first and off last (not a change). */
       stops: FeatureCollection<Point, { name: string; mode: string; end: boolean }>;
     }
+  | { type: 'downloads'; list: Download[] }
   | { type: 'error'; message: string };
+
+/** A finished download: its address, when it started and ended (ms since 1970), bytes. */
+export interface Download {
+  name: string;
+  start: number;
+  end: number;
+  bytes: number;
+}

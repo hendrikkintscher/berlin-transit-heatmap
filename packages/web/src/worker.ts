@@ -274,6 +274,17 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
           return msg.id === latestMore && trips === latestTrip && compute === latestCompute;
         },
       );
+    } else if (msg.type === 'downloads') {
+      // (Clock times: the timing box turns them into the page's own.)
+      const list = (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).map(
+        (e) => ({
+          name: e.name,
+          start: e.startTime + performance.timeOrigin,
+          end: e.responseEnd + performance.timeOrigin,
+          bytes: e.transferSize,
+        }),
+      );
+      post({ type: 'downloads', list });
     } else if (msg.type === 'placeName') {
       const tt = lastTimetable;
       post({ type: 'placeName', id: msg.id, name: tt && nearestStopName(tt, msg.lat, msg.lon) });

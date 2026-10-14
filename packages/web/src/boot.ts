@@ -59,3 +59,6 @@ export function listen(handler: (ev: MessageEvent<FromWorker>) => void): void {
 void import('./main').then(() => {
   if (!withStart) loadFirst();
 });
+// "?timing" in the link: a box with the first load's and the taps' timings, for checks on a
+// phone (roadmap 0.13.0); its code loads only then. (Read here: the app rewrites the link.)
+if (new URLSearchParams(location.search).has('timing')) void import('./timing');
