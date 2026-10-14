@@ -1,6 +1,6 @@
-# Roadmap V1.33
+# Roadmap V1.34
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.12.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
 ## How to use this roadmap
 
@@ -19,10 +19,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.12
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.0 First map under 1.5 s on a fresh visit**. The start page already fetches the first timetable and the worker draws the first map ahead. Repeat visits open in about 0.75 s live; fresh visits measured 1.4–2.1 s.
-  - a. Shrink or split the app bundle (MapLibre is about 320 KB gzipped) and the setup before the first map.
-  - b. Check whether Safari downloads the first timetable twice when the page's and the worker's requests overlap.
-  - c. Tap delay while the first maps draw: in the headless browser, map frames take 250–400 ms each for the first ~7 s. Measure tap-to-trip time in those first seconds at phone size with a slowed CPU, and ask Hendrik for one real-phone check; if busy frames delay taps, spread or defer that work.
 - **0.13.1 Footpaths start downloading sooner**. Noted after 0.10.10: the footpath download starts about 3–5 s after the first map because it waits for the base map to finish; on a slow line that pushes the more exact times back further.
   - a. Measure when the footpaths start and arrive today, on a normal and a slowed line.
   - b. Start the download earlier (for example once the first map is drawn, not when the base map is idle), as long as it does not slow the first map or taps.
@@ -71,6 +67,7 @@ Not needed for 1.0.0. Design ideas and add-ons Hendrik calls optional for now li
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.34** (2026-10-14): 0.13.0 First map under 1.5 s on a fresh visit done (#315): the app's layers go on the map once its style is in, not after every base-map tile and label font, so the time rings show about a second sooner. Live at 360×740 (headless, 10 fresh visits): first map 1.36 s median (1.21–1.65 s), was 2.53 s (2.29–3.26 s); with 9 Mbit/s 1.39 s, was 2.41 s. A link with `?timing` shows a small box with the first map, base map, the first timetable's downloads (page and worker) and tap-to-trip times, for a check on a phone: in Chrome the timetable comes down once; Safari was not testable here. Taps in the first seconds: 150–500 ms against about 220 ms later, peaks while the footpaths arrive. The bundle stays (main.js is almost all MapLibre). Next in order: 0.13.1 Footpaths start downloading sooner.
 - **V1.33** (2026-10-14): Hendrik's wish "long press moves the anchor point to the chosen location" placed as new milestone 0.14 Map handling, step 0.14.0 Long press moves the anchor (0.14 Showcase refresh now 0.15, still last). The Inbox side note from 0.12.0 (the floating Treffpunkt button brings back the closed person until all starts are cleared; a new person needs "+ Person" after that) moved to the optional list as D10c, since D10 removes that button; the Inbox is empty. Next in order: 0.13.0 First map under 1.5 s on a fresh visit.
 - **V1.32** (2026-10-14): 0.12.0 Closing Treffpunkt keeps the second place done (#312): the banner's ✕ keeps the second place as the pin (Ziel), so the card shows the trip between the two places; Treffpunkt on the card or the floating button brings that person back, names included. Measured at 360×740: ✕ to trip card about 0.8 s (the same map recompute as before). Milestone 0.12 is finished. Next in order: 0.13.0 First map under 1.5 s on a fresh visit.
 - **V1.31** (2026-10-14): Hendrik reviewed the steps on cards: 0.11.1 Status lines keep the map clear moved to the optional list as D8 (milestone 0.11 is finished with 0.11.0); the Treffpunkt looks 0.12.0, 0.12.1 and 0.12.3 moved there as D9–D11; 0.12.2 Closing Treffpunkt keeps the second place stays and is now 0.12.0; 0.14 Showcase refresh stays. 0.13 and 1.0 are not design and stay. Next in order: 0.12.0 Closing Treffpunkt keeps the second place.
