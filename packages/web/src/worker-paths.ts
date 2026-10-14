@@ -37,15 +37,31 @@ export function setWalkKmh(kmh: number) {
   walkSpeedMps = kmh / 3.6;
 }
 
+/**
+ * Unpacking the footpaths and snapping the map grid to them holds the worker for about 0.5 s
+ * (more on a phone), and a tap meanwhile waits. So when the download starts with the first
+ * map (0.13.1), the unpacking still waits, as before, until the base map is up, past the
+ * first taps on the first map.
+ */
+let unpackOk: () => void;
+const mayUnpack = new Promise<void>((r) => (unpackOk = r));
+/** The bar moves at most this often, so a fast download does not keep the page busy. */
+const PROGRESS_MS = 100;
+
 export async function loadWalk(): Promise<void> {
   if (walkStarted) return;
   walkStarted = true;
   try {
     const res = await fetch(dataUrl(dataBase, 'walk.bin'));
     if (!res.ok || !res.body) throw new Error(`walk.bin: ${res.status}`);
-    const buf = await readWithProgress(res.body, res, (loaded, total) =>
-      post({ type: 'walkProgress', loaded, total }),
-    );
+    let reportedAt = -Infinity;
+    const buf = await readWithProgress(res.body, res, (loaded, total) => {
+      const now = performance.now();
+      if (now - reportedAt < PROGRESS_MS) return;
+      reportedAt = now;
+      post({ type: 'walkProgress', loaded, total });
+    });
+    await mayUnpack;
     const net = loadWalkNetwork(buf);
     // Snapping the map grid to the network takes a moment; do it now rather than on a
     // tap, a slice at a time with pauses for any messages that queued up.
@@ -70,8 +86,8 @@ export async function loadWalk(): Promise<void> {
 let lineShapes: LineShapes | null = null;
 let linesStarted = false;
 /**
- * The app asked for the footpaths (the base map is up): the lines' courses may come too.
- * Until then they wait, so they do not hold up the base map's tiles.
+ * The base map is up: the lines' courses may come now. Until then they wait, so they do not
+ * hold up the base map's tiles (the footpaths come sooner, once the first map is out).
  */
 let backgroundOk = false;
 /** The last map's timetable, for the lines' courses once they may load. */
@@ -79,9 +95,10 @@ export let lastTimetable: PreparedTimetable | null = null;
 /** The last map's lines, redrawn along their courses when lines.bin arrives. */
 let lastRoutes: { id: number; tt: PreparedTimetable; used: Segments } | null = null;
 
-/** The app asked for the footpaths: they load now, and the lines' courses with them. */
+/** The base map is up: the lines' courses load now, and the footpaths if not yet asked for. */
 export function startBackground() {
   backgroundOk = true;
+  unpackOk();
   void loadWalk();
   if (lastTimetable) void loadLines(lastTimetable);
 }

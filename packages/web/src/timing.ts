@@ -1,7 +1,7 @@
 // The timing box ("?timing" in the link, roadmap 0.13.0): how long the first map, the base
-// map and each tap's trip took on this device, and whether the first timetable came down
-// once or twice (the start page and the worker both ask for it). Loaded only with the link
-// key, so it costs nothing otherwise. Times in ms since the page opened.
+// map, the footpaths (0.13.1) and each tap's trip took on this device, and whether the first
+// timetable came down once or twice (the start page and the worker both ask for it). Loaded
+// only with the link key, so it costs nothing otherwise. Times in ms since the page opened.
 import { send, worker } from './boot';
 import type { Download, FromWorker } from './protocol';
 
@@ -68,6 +68,7 @@ function render() {
   box.textContent = [
     `first map ${ms(mark('first-map'))}`,
     `base map ${ms(mark('basemap-loaded'))}`,
+    `footpaths ${ms(mark('footpaths'))}`,
     ...downloads(),
     ...taps(),
   ].join('\n');

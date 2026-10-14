@@ -1,6 +1,6 @@
-# Roadmap V1.38
+# Roadmap V1.39
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.0**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.1**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -20,10 +20,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.1 Footpaths start downloading sooner**. Noted after 0.10.10: the footpath download starts about 3–5 s after the first map because it waits for the base map to finish; on a slow line that pushes the more exact times back further.
-  - a. Measure when the footpaths start and arrive today, on a normal and a slowed line.
-  - b. Start the download earlier (for example once the first map is drawn, not when the base map is idle), as long as it does not slow the first map or taps.
-  - c. Side note from 0.13.0 (2026-10-14): base map labels finish last at about 2.3–2.8 s because a second font range is only requested once tiles are in. Measure whether preloading that font range after the first map saves a few hundred ms without competing with the first map or the footpaths on a slow line; keep it only if it does.
 - **0.13.2 Same trip whichever end is the anchor**. Hendrik (2026-10-13): "switching between anchor and pin causes recalculation and sometimes gives different routes depending on which one is anchor and pin while it should give the same since start and Ziel does not change".
   - a. Collect trip pairs that differ when anchor and pin swap.
   - b. Find why the forward and backward searches pick different trips (tie-breaks, transfer rules, time windows).

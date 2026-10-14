@@ -19,6 +19,7 @@ import {
   labelLines,
   lastTimetable,
   linesSettled,
+  loadWalk,
   mapShown,
   NO_LINES,
   setLastRoutes,
@@ -260,6 +261,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const p = prepared(msg.window, msg.direction ?? 'depart', variant);
       await (msg.quiet ? p.catch(() => undefined) : p);
     } else if (msg.type === 'loadWalk') {
+      void loadWalk();
+    } else if (msg.type === 'background') {
       startBackground();
     } else if (msg.type === 'moreTrips') {
       latestMore = msg.id;
