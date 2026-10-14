@@ -122,6 +122,8 @@ export type ToWorker =
   | { type: 'stations'; window: Window }
   /** Fetch the footpath network now (the first map is on screen, or there is none to wait for). */
   | { type: 'loadWalk' }
+  /** The base map is up too: the lines' courses may load now (and the footpaths, if not yet). */
+  | { type: 'background' }
   /**
    * "Where can I live?": one Typisch pass arriving at each favourite place, combined into
    * the weighted average per cell (see favourites.ts). Answered with progress and a result
