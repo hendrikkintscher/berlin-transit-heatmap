@@ -9,9 +9,10 @@
   },
   "bundle": {
     "index.css": 16222,
-    "index.js": 3207,
-    "main.js": 328165,
-    "worker.js": 27917,
+    "index.js": 3267,
+    "main.js": 332359,
+    "timing.js": 944,
+    "worker.js": 28912,
     "index.html": 7265
   }
 }

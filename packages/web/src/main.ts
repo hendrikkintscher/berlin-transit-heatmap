@@ -367,6 +367,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     showHeat();
   } else if (m.type === 'trip') {
     tap.onTrip(m);
+    performance.mark('trip');
   } else if (m.type === 'routes') {
     const r = state.result;
     if (!r || r.id !== m.id) return;
@@ -753,9 +754,15 @@ $('meet-close').addEventListener('click', () => {
 // MapLibre opens it when the style's sources arrive; until the map has loaded, it is
 // closed again before it is painted (observer callbacks run before the next frame).
 const attrib = map.getContainer().querySelector('.maplibregl-ctrl-attrib');
+let basemapLoaded = false;
+map.once('load', () => {
+  basemapLoaded = true;
+  performance.mark('basemap-loaded');
+  attrib?.classList.remove('maplibregl-compact-show');
+});
 if (attrib) {
   new MutationObserver((_, obs) => {
-    if (state.mapReady) obs.disconnect();
+    if (basemapLoaded) obs.disconnect();
     // (Only when set: removing a missing class still writes the attribute, and loops.)
     else if (attrib.classList.contains('maplibregl-compact-show'))
       attrib.classList.remove('maplibregl-compact-show');
@@ -768,9 +775,11 @@ map.once('idle', () => {
   if (!state.origin && !state.special) askWalk();
   else afterFirstMap();
 });
-map.on('load', () => {
+// The style is in: the app's layers go on now, so the first map's colours and time rings show
+// while the base map's tiles and labels still stream in ('load' waits for all of them, which
+// held the first map back by about a second on a fresh visit, roadmap 0.13.0).
+map.once('style.load', () => {
   state.mapReady = true;
-  attrib?.classList.remove('maplibregl-compact-show');
   addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
   showArrows = addTripArrows(map);
   showHeat();
@@ -912,6 +921,7 @@ const showMeetNames = () =>
 map.on('zoomend', showMeetNames);
 showMeetNames();
 
+let firstMapShown = false;
 function showResult(r: Result) {
   renderMeet(r.meet);
   renderBest(r);
@@ -925,6 +935,11 @@ function showResult(r: Result) {
   (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
   showHeat();
   map.triggerRepaint();
+  // For timing the first load (roadmap 0.13.0): the first map is on its way to the screen.
+  if (!firstMapShown) {
+    firstMapShown = true;
+    performance.mark('first-map');
+  }
 }
 
 /** Puts the result's colour image on the map (an empty one while it is unpainted). */
@@ -1042,6 +1057,7 @@ map.on('click', (e: MapMouseEvent) => {
     ignoreClick = false;
     return;
   }
+  performance.mark('tap');
   tap.tapAt(e.lngLat.lat, e.lngLat.lng, e.point);
 });
 
