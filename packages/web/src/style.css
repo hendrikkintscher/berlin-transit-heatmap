@@ -871,7 +871,8 @@ dialog.menu::backdrop {
   font-weight: 500;
   cursor: default;
 }
-.menu-changes:disabled::before {
+.menu-changes:disabled::before,
+.menu-changes.pending::before {
   content: '';
 }
 .menu-changes[hidden] {

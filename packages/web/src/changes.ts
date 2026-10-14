@@ -131,11 +131,14 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
   const menuBtn = $<HTMLButtonElement>('changes-btn');
   let file: ChangesFile | null = null;
   let loading = false;
+  /** The file could not be had: the entry goes, an open box says so. */
+  let failed = false;
   /**
    * The open box: what it lists, on which day, and the ride it was opened for from the
-   * trip card (null: from Mehr, the whole day). Null while closed.
+   * trip card (null: from Mehr, the whole day). Null while closed. `early`: opened from Mehr
+   * before the file was in, so the box waits for it and then says if all runs as usual.
    */
-  let opened: { day: string; ride: Ride | null } | null = null;
+  let opened: { day: string; ride: Ride | null; early?: boolean } | null = null;
   /** The list folds to one line while a stretch is on the map; a tap on it unfolds it. */
   let folded = false;
   let shown: Change | null = null;
@@ -151,21 +154,29 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     return opened.ride ? touching(all, [opened.ride]) : all;
   }
 
-  function load() {
+  let fetching = false;
+  function fetchFile() {
+    if (file || fetching) return;
+    fetching = true;
+    fetch(dataUrl(dataBase, 'changes.json'))
+      .then((r) => (r.ok ? (r.json() as Promise<ChangesFile>) : null))
+      .catch(() => null)
+      .then((f) => {
+        if (f?.version === 1) file = f;
+        else failed = true;
+        render();
+        loaded?.();
+      });
+  }
+
+  /** `now`: Mehr's entry was tapped, so fetch at once instead of when the browser is idle. */
+  function load(now = false) {
+    if (now) return fetchFile();
     if (file || loading) return;
     loading = true;
     // When the browser is idle; the routing runs in the worker meanwhile.
-    const go = () =>
-      fetch(dataUrl(dataBase, 'changes.json'))
-        .then((r) => (r.ok ? (r.json() as Promise<ChangesFile>) : null))
-        .then((f) => {
-          if (f?.version === 1) file = f;
-          render();
-          loaded?.();
-        })
-        .catch(() => {});
-    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2000 });
-    else setTimeout(go, 300);
+    if ('requestIdleCallback' in window) requestIdleCallback(fetchFile, { timeout: 2000 });
+    else setTimeout(fetchFile, 300);
   }
 
   function draw(c: Change | null) {
@@ -220,16 +231,33 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     );
   }
 
-  /** Mehr's entry: the day's lines, or that all runs as usual; hidden without a dated day. */
+  /**
+   * Mehr's entry: the day's lines, or that all runs as usual; hidden without a dated day.
+   * It is there from the start, so it never pops in while Mehr is open: until the file is
+   * in it reads "Heute anders als sonst", and a tap opens the box with a loading line.
+   */
   function renderMenu() {
     const all = allToday();
-    menuBtn.hidden = !file || !isDate(state.when.day);
+    menuBtn.hidden = failed || !isDate(state.when.day);
     if (menuBtn.hidden) return;
     const label = noticeDay(state.when.day);
-    menuBtn.disabled = !all.length;
-    menuBtn.textContent = all.length
-      ? t('changesChip', { day: label, lines: linesText(changedLines(all)) })
-      : t('changesNone', { day: label });
+    menuBtn.disabled = !!file && !all.length;
+    menuBtn.classList.toggle('pending', !file);
+    menuBtn.textContent = !file
+      ? t('changesTitle', { day: label })
+      : all.length
+        ? t('changesChip', { day: label, lines: linesText(changedLines(all)) })
+        : t('changesNone', { day: label });
+  }
+
+  /** The box opened early, before the file: loading, or nothing to list after all. */
+  function renderWaiting(label: string) {
+    chip.hidden = true;
+    panel.hidden = false;
+    $('changes-title').textContent = t(file ? 'changesNone' : 'changesTitle', { day: label });
+    $('changes-note').textContent = file ? '' : t(failed ? 'changesFailed' : 'changesLoading');
+    list.innerHTML = '';
+    listed = [];
   }
 
   function render() {
@@ -238,11 +266,19 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     if (opened && opened.day !== state.when.day) opened = null;
     const day = state.when.day;
     const now = items();
-    if (!now.length) opened = null;
+    // Opened early: it waits for the file, then lists the day or says all runs as usual.
+    const waiting = !!opened?.early && !now.length;
+    if (!now.length && !waiting) opened = null;
     box.hidden = !opened;
     if (!opened) {
       folded = false;
       if (shown) draw(null);
+      return;
+    }
+    if (waiting) {
+      if (shown) draw(null);
+      folded = false;
+      renderWaiting(noticeDay(day));
       return;
     }
     if (shown && !now.includes(shown)) draw(null);
@@ -287,7 +323,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
 
   function open(ride: Ride | null) {
     if (shown) draw(null);
-    opened = { day: state.when.day, ride };
+    opened = { day: state.when.day, ride, early: !file };
     folded = false;
     unfolded = new Set();
     render();
@@ -300,6 +336,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
 
   menuBtn.addEventListener('click', () => {
     menuDialog.close();
+    load(true);
     open(null);
   });
   chip.addEventListener('click', () => {
@@ -326,6 +363,7 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     render();
   });
   $('changes-close').addEventListener('click', close);
+  renderMenu();
 
   return {
     /**
