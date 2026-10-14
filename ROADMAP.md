@@ -1,6 +1,6 @@
-# Roadmap V1.28
+# Roadmap V1.29
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.11**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.11.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
 ## How to use this roadmap
 
@@ -17,12 +17,14 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 
 ## Inbox
 
-## 0.11 Easier map reading
+- (2026-10-14, from 'Why people don't get the map') First screen shows a finished, coloured example map (e.g. from Alexanderplatz) before any tap.
+- (2026-10-14, from 'Why people don't get the map') Trial colour fill on by default for first-time visitors (same repaint path, no extra routing).
+- (2026-10-14, from 'Why people don't get the map') Start screen offers 2–3 question entries ("Wo treffen wir uns?", "Was erreiche ich in 30 Min.?", "Wo soll ich wohnen?") besides "Von meinem Standort".
+- (2026-10-14, from 'Why people don't get the map') Places layer: lakes, pools, parks etc. with their minutes, answering "Wohin jetzt?".
+- (2026-10-14, from 'Why people don't get the map') Side-by-side comparison of two start points (flat hunting).
+- (2026-10-14, from 'Why people don't get the map') Sharepic per use case (one picture, one question) instead of one feature list.
 
-- **0.11.0 Darker time rings**. Ring labels already pass (10 : 1 or better everywhere), but the 60-min ring line (#d6c8f2) is only 1.4 : 1 against the map.
-  - a. New ring colours 15 #1a0848, 30 #3b1d86, 45 #6440b4, 60 #7a58c4 (all 3 : 1 or better, water included).
-  - b. Check whether the chip bar or the trip card hides rings.
-  - c. Open question for Hendrik, asked with the screenshots: should 0–5 min stay the darkest green in the colour fill?
+## 0.11 Easier map reading
 
 - **0.11.1 Status lines keep the map clear**. Noted after 0.10.10: while footpaths load, the status line covers the map strip between the tip card and the bottom buttons (y 661–680 at 360×740). Fine for its 5 s, but other status lines may stay longer.
   - a. List every status line, where it sits and how long it can stay.
@@ -84,6 +86,7 @@ Last, so the pictures show the finished looks.
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.29** (2026-10-14): 0.11.0 Darker time rings done (#308): rings 15 #1a0848, 30 #3b1d86, 45 #6440b4, 60 #7553c0 (a touch darker than planned so the 60-min ring is 3 : 1 on the app's water too), all opaque; a test checks 3 : 1 on land and water. The chip bar hides only the top strip and the trip card the bottom quarter; nothing moved. Hendrik asked on a card whether 0–5 min stays the darkest green in the colour fill. Timings unchanged (colour only). Next in order: 0.11.1 Status lines keep the map clear.
 - **V1.28** (2026-10-14): Hendrik's wish "changing direction should not switch to Ankunftszeit mode" placed as 0.13.3 Changing direction keeps the departure time, next to the anchor/pin swap step (old 0.13.3 Timetable windows check now 0.13.4). Next in order: 0.11.0 Darker time rings.
 - **V1.27** (2026-10-14): 0.10.11 "Heute anders" retries a failed changes download done (#305): after a failed load, each Mehr open fetches changes.json once more, quietly; on success the entry shows (87 ms after the tap, local test). Nothing runs on the first map or on taps. Milestone 0.10 is finished. Next in order: 0.11.0 Darker time rings.
 - **V1.26** (2026-10-14): two Inbox notes from 0.10.10 placed as 0.11.1 Status lines keep the map clear and 0.13.1 Footpaths start downloading sooner (old 0.13.1–0.13.2 now 0.13.2–0.13.3); Hendrik's two Treffpunkt wishes placed as 0.12.2 Closing Treffpunkt keeps the second place and 0.12.3 Treffpunkt opens in its own map look. Next in order: 0.10.11 "Heute anders" retries a failed changes download.
