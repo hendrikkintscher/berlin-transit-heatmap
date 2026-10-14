@@ -220,24 +220,29 @@ function showHint(on: boolean) {
 let statusTimer = 0;
 /** How long the status line fades out (style.css .status). */
 const STATUS_FADE_MS = 600;
+/** How long a fading status line stays before it fades. */
+const STATUS_SHOW_MS = 5000;
 /**
- * Sets the status line; `fade` hides it again after a few seconds and then clears it, so
- * it leaves the layout and screen readers do not find it again.
+ * Sets the status line; `fade` hides it again after a few seconds (or after `fade` ms) and
+ * then clears it, so it leaves the layout and screen readers do not find it again.
  */
-function setStatus(render: () => string, fade = false) {
+function setStatus(render: () => string, fade: boolean | number = false) {
   state.status = render;
   statusEl.textContent = render();
   statusEl.classList.remove('faded');
   clearTimeout(statusTimer);
   if (fade)
-    statusTimer = window.setTimeout(() => {
-      statusEl.classList.add('faded');
-      statusTimer = window.setTimeout(() => {
-        state.status = () => '';
-        statusEl.textContent = '';
-        statusEl.classList.remove('faded');
-      }, STATUS_FADE_MS);
-    }, 5000);
+    statusTimer = window.setTimeout(
+      () => {
+        statusEl.classList.add('faded');
+        statusTimer = window.setTimeout(() => {
+          state.status = () => '';
+          statusEl.textContent = '';
+          statusEl.classList.remove('faded');
+        }, STATUS_FADE_MS);
+      },
+      fade === true ? STATUS_SHOW_MS : fade,
+    );
 }
 
 // ---------- worker ----------
@@ -268,6 +273,22 @@ function afterFirstMap() {
   preloadNextHour();
 }
 let walkLoading = false;
+/**
+ * When the footpath line first went up (0: not yet). It shows for WALK_LINE_MS at most:
+ * the map works without footpaths, so on a slow download the line gives way and only the
+ * thin bar keeps going; a short note says when they arrive and the map is redone.
+ */
+let walkLineAt = 0;
+const WALK_LINE_MS = STATUS_SHOW_MS;
+/** The footpaths arrived after their line gave way: the map redone with them says so. */
+let walkNoteDue = false;
+const walkLineLeft = () => WALK_LINE_MS - (performance.now() - walkLineAt);
+/** Shows the footpath line for what is left of its time, or clears the status line. */
+function walkLine() {
+  walkLineAt ||= performance.now();
+  const left = walkLineLeft();
+  setStatus(left > 0 ? () => t('walkLoading') : () => '', left > 0 && left);
+}
 function askWalk() {
   if (walkAsked) return;
   walkAsked = true;
@@ -304,15 +325,17 @@ listen((ev: MessageEvent<FromWorker>) => {
     (loadbar.firstElementChild as HTMLElement).style.width = m.total
       ? `${Math.min(100, (100 * m.loaded) / m.total)}%`
       : '';
-    if (!state.status()) setStatus(() => t('walkLoading'));
+    if (!state.status() && (!walkLineAt || walkLineLeft() > 0)) walkLine();
   } else if (m.type === 'walk' || m.type === 'walkFailed') {
     walkLoading = false;
     if (!loadbar.classList.contains('indeterminate')) loadbar.hidden = true;
     if (state.status() === t('walkLoading')) setStatus(() => '');
+    walkNoteDue = m.type === 'walk' && walkLineAt > 0 && walkLineLeft() <= 0;
     // Footpaths arrived: redo what was computed with straight-line walks.
     if (m.type === 'walk') refineWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
+    const refined = refining;
     refining = false;
     if (m.living || m.home) special.done(m);
     state.result = m;
@@ -324,7 +347,10 @@ listen((ev: MessageEvent<FromWorker>) => {
     // being looked at, and the next hour.
     afterFirstMap();
     loadbar.hidden = !walkLoading;
-    setStatus(walkLoading ? () => t('walkLoading') : () => '');
+    const note = refined && walkNoteDue;
+    if (refined) walkNoteDue = false;
+    if (walkLoading) walkLine();
+    else setStatus(note ? () => t('walkReady') : () => '', note);
     showTips();
   } else if (m.type === 'image') {
     const r = state.result;
