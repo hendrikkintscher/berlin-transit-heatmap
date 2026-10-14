@@ -268,7 +268,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       // Stops as soon as a newer list, a tap or a map is asked for: they go first.
       await moreTrips(
         msg,
-        (list) => post({ type: 'moreTrips', id: msg.id, trips: list }),
+        (list, done) => post({ type: 'moreTrips', id: msg.id, trips: list, done }),
         async () => {
           await nextTask();
           return msg.id === latestMore && trips === latestTrip && compute === latestCompute;

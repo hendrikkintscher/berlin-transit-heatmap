@@ -406,23 +406,27 @@ const rowMessages = (b: MoreBase, rows: MoreRow[]) =>
 /**
  * The drawer's connections after the shown one (arriving: before it), in steps: first
  * the shown connection's own rides later on, at once; then, one search at a time, the
- * ones on other lines that arrive earlier. Each list that changed goes out whole;
+ * ones on other lines that arrive earlier. Each list that changed goes out whole, and
+ * once the searches are through, `done` says so (a list cut short stays not done);
  * `fresh` (awaited before each search) says whether it is still wanted.
  */
 export async function moreTrips(
   msg: Extract<ToWorker, { type: 'moreTrips' }>,
-  send: (trips: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[]) => void,
+  send: (
+    trips: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[],
+    done: boolean,
+  ) => void,
   fresh: () => Promise<boolean>,
 ): Promise<void> {
   const b = moreBase(msg);
-  if (!b) return send([]);
+  if (!b) return send([], true);
   const rows = sameRides(b);
-  send(rowMessages(b, rows));
+  send(rowMessages(b, rows), false);
   const others = otherLines(b);
   let seen = bestRows(rows, MORE_TRIPS);
   while ((await fresh()) && lastFound === b.f0) {
     const step = others.next();
-    if (step.done) return;
+    if (step.done) return send(rowMessages(b, rows), true);
     const row = step.value;
     // The shown connection's own rides found again (the walks a few seconds apart).
     const near = (r: MoreRow) =>
@@ -432,7 +436,7 @@ export async function moreTrips(
     const best = bestRows(rows, MORE_TRIPS);
     if (best.length === seen.length && best.every((r, i) => r === seen[i])) continue;
     seen = best;
-    send(rowMessages(b, rows));
+    send(rowMessages(b, rows), false);
   }
 }
 
