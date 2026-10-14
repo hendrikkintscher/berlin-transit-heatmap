@@ -1,4 +1,4 @@
-# Optional design decisions V1.1
+# Optional design decisions V1.2
 
 Design ideas and add-ons that are optional for now (Hendrik, 2026-10-14: "All of the current roadmaps are part of something I would call optional design decisions for now, lump them together in a separate document and make a milestone in the roadmap for those"). None of them is needed for the 1.0.0 release.
 
@@ -42,11 +42,13 @@ One package: D10 needs D9, D11 needs D10.
   - b. Each shown as a screenshot of the same meeting at phone size, with the Treffpunkt button gone from the home screen and the "+ Person" button styled as in the trip drawer.
   - c. Nothing changes in the live app in this step.
 - **D10 Treffpunkt mode built** (was roadmap step 0.12.1): the option Hendrik picks from D9 becomes the meeting map; the home-screen button goes and "+ Person" matches the drawer.
+  - c. Side note from roadmap step 0.12.0 (2026-10-14): today the floating Treffpunkt button brings back the closed person even after other places are tapped, until all starts are cleared; to add someone new instead, you tap "+ Person" once the first person is back. When the button goes, make sure there is still a direct way to start a meeting with someone new.
 - **D11 Treffpunkt opens in its own map look** (was roadmap step 0.12.3). Hendrik (2026-10-14): "when Treffpunkt mode is started change map style to it's specific heatmap mode". Today the meeting map keeps whatever look was on (rings or the Heatmap switch).
   - a. Starting Treffpunkt switches the map to the meeting colouring built in D10 (time and fairness); closing it returns to the look that was on before.
   - b. One repaint, no extra routing on the switch.
 
 ## Changelog
 
+- **V1.2** (2026-10-14): the roadmap Inbox side note from 0.12.0 (floating Treffpunkt button brings back the closed person) added to D10 as c.
 - **V1.1** (2026-10-14): Hendrik moved roadmap step 0.11.1 here as D8 and the Treffpunkt looks 0.12.0, 0.12.1, 0.12.3 as D9–D11. He kept 0.12.2 (now 0.12.0) and 0.14 in the roadmap; 0.13 and 1.0 are not design. The review of the roadmap is complete.
 - **V1.0** (2026-10-14): list started with the seven roadmap Inbox items (D1–D7). Other roadmap steps are being reviewed with Hendrik one at a time; each one he moves here is added with a new id.
