@@ -33,8 +33,8 @@ interface ChangesFile {
   days: Record<string, Change[]>;
 }
 
-/** "kein Verkehr Am Kupfergraben – Mollstr./Prenzlauer Allee · bis 21.10." */
-export function changeText(c: Change, day: string): string {
+/** An entry's two parts: what is different, and until when ("bis 21.10."), if known. */
+export function changeParts(c: Change, day: string): { what: string; until: string } {
   const from = shortStop(c.from);
   const to = shortStop(c.to);
   const what =
@@ -43,12 +43,18 @@ export function changeText(c: Change, day: string): string {
       : c.kind === 'skip'
         ? t('changeSkip', { stop: from })
         : t(c.replacement ? 'changeSev' : 'changeGap', { from, to });
-  if (!c.until) return what;
+  if (!c.until) return { what, until: '' };
   const until =
     c.until === isoDay(day)
       ? t('changeOneDay')
       : t('changeUntil', { date: formatDate(c.until).replace(/\s?\d{4}$/, '') });
-  return `${what} · ${until}`;
+  return { what, until };
+}
+
+/** "kein Verkehr Am Kupfergraben – Mollstr./Prenzlauer Allee · bis 21.10." */
+export function changeText(c: Change, day: string): string {
+  const { what, until } = changeParts(c, day);
+  return until ? `${what} · ${until}` : what;
 }
 
 /** The lines, each once, in the file's order: "M2, M5, M8". */
@@ -256,8 +262,13 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     listed = now;
     const badge = (c: { line: string; mode: string }) =>
       `<span class="line-badge" style="background:${MODE_COLORS[c.mode] ?? '#444'}">${escapeHtml(c.line)}</span>`;
+    // A one-line row cuts the stretch short, never the end date.
+    const text = (c: Change) => {
+      const { what, until } = changeParts(c, day);
+      return `<span class="what">${escapeHtml(what)}</span>${until ? `<span class="until">· ${escapeHtml(until)}</span>` : ''}`;
+    };
     const entry = (c: Change, cls = '') =>
-      `<li><button type="button"${cls} data-i="${now.indexOf(c)}" aria-pressed="${c === shown}">${badge(c)} <span>${escapeHtml(changeText(c, day))}</span></button></li>`;
+      `<li><button type="button"${cls} data-i="${now.indexOf(c)}" aria-pressed="${c === shown}">${badge(c)} ${text(c)}</button></li>`;
     // From the trip card: that line's entries in full. The whole day: one row per line, so
     // a long day stays short; a line with several changes unfolds on a tap.
     list.innerHTML = opened.ride

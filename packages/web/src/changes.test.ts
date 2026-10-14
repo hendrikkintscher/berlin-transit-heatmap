@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { byLine, changedLines, changeText, linesText, touching, type Change } from './changes';
+import {
+  byLine,
+  changedLines,
+  changeParts,
+  changeText,
+  linesText,
+  touching,
+  type Change,
+} from './changes';
 
 const change = (c: Partial<Change>): Change => ({
   line: 'M2',
@@ -41,6 +49,17 @@ describe('what is different today', () => {
         '20261012',
       ),
     ).toBe('hält nicht an Oranienburger Tor · nur an diesem Tag');
+  });
+
+  it('keeps the end date apart, so a one-line row can always show it', () => {
+    expect(changeParts(change({}), '20261012')).toEqual({
+      what: 'kein Verkehr Am Kupfergraben – Mollstr./Prenzlauer Allee',
+      until: 'bis 21.10.',
+    });
+    expect(changeParts(change({ kind: 'off', until: undefined }), '20261012')).toEqual({
+      what: 'fährt nicht',
+      until: '',
+    });
   });
 
   it('names each line once', () => {
