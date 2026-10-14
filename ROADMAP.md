@@ -1,4 +1,4 @@
-# Roadmap V1.16
+# Roadmap V1.17
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.6** (through PR #289). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
@@ -50,11 +50,15 @@ Hendrik's wishes given without a pick land here: one dated line each, in his wor
 
 ## 0.10 Trip drawer and changes, follow-ups
 
-Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3, 0.10.4 and 0.10.5; 0.10.2 to 0.10.6 are done. Next in order.
+Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 to 0.10.6; 0.10.2 to 0.10.6 are done. Next in order.
 
 - **0.10.7 Kept drawer list after the footpaths load** (from step 0.10.5, 2026-10-14).
   - a. Fresh other-line rows: "in a kept drawer list, other-line rows boarding at a different platform keep older walking times (can be ~1 min off); a fresh search after footpaths load may also find a slightly different other-line row". Option: keep the list but quietly redo only the other-line search.
   - b. Early pull: "pulling the drawer open within ~1 s of the first map can lose the race with the footpath redraw, so the list cuts off and is asked for again". Option: load footpaths a little earlier, or hold the redraw while the drawer is open. Measure the first map and tap timings before and after.
+  - c. Slow "Heute anders" right after the first map (from step 0.10.6, 2026-10-14): "opening 'Heute anders' from Mehr while the first map is still loading can take ~2 s (local and live); after that it opens in <0.1 s". Same busy moment as b; find what it waits for (the changes file, the worker or the footpath redraw) and let it open at once.
+- **0.10.8 Start card lines overlap while footpaths load** (from step 0.10.6, 2026-10-14): "in one local test, while footpaths were loading, the 'Fußwege werden geladen…' line on the start card was drawn on top of 'Oder tippe irgendwo auf die Karte.' Not confirmed on the live site."
+  - a. Try to reproduce at phone size 360×740, locally and on the live site, with a slow footpath load.
+  - b. If it shows, give the loading line its own row so nothing overlaps; if it never shows, close the step with the screenshots.
 
 ## 0.11 Easier map reading
 
@@ -113,6 +117,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.17** (2026-10-14): the two Inbox notes from step 0.10.6 placed: "Heute anders slow while the first map loads" as substep 0.10.7 c (same busy moment as b), "footpath loading line drawn over the start card hint" as new step 0.10.8 Start card lines overlap while footpaths load; Inbox emptied. Next in order: 0.10.7 Kept drawer list after the footpaths load.
 - **V1.16** (2026-10-14): 0.10.6 "Heute anders" box polish done (#289): the note at the top is two short sentences (5 lines down to 2 at phone size), and a one-change row cuts the stretch short instead of its end date, so "bis 18.10." stays in view. Next in order: 0.10.7 Kept drawer list after the footpaths load.
 - **V1.15** (2026-10-14): the two Inbox notes from step 0.10.5 placed as 0.10.7 Kept drawer list after the footpaths load (a. other-line rows redone with fresh walks, b. early pull no longer loses the race with the footpath redraw); Inbox emptied. Next in order: 0.10.6 "Heute anders" box polish.
 - **V1.14** (2026-10-14): 0.10.5 Drawer list asked for only once done (#286): the second ask came from the map being redone with the footpaths, which re-taps the place; the drawer now keeps its list and picked row when the vehicles stay the same (rows at the same stops take the new walks) and asks again only when the trip changes, a setting changed or the first search was cut short; saves about 12 route searches per opening in that case. Next in order: 0.10.6 "Heute anders" box polish.
