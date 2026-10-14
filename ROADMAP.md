@@ -1,6 +1,6 @@
-# Roadmap V1.31
+# Roadmap V1.32
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.11.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.12.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
 ## How to use this roadmap
 
@@ -18,12 +18,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.11
 ## Inbox
 
 Empty.
-
-## 0.12 Treffpunkt mode
-
-- **0.12.0 Closing Treffpunkt keeps the second place**. Hendrik (2026-10-14): "after closing Treffpunkt mode the second location should be retained". Today the banner's ✕ drops every start but the first, so the second place is lost.
-  - a. On close, the second place stays on the map as the trip's other end (the pin), so the card shows the trip between the two places.
-  - b. Opening Treffpunkt again, or "+ Person", brings it back as the second person.
 
 ## 0.13 Faster and steadier routing
 
@@ -71,6 +65,7 @@ Not needed for 1.0.0. Design ideas and add-ons Hendrik calls optional for now li
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.32** (2026-10-14): 0.12.0 Closing Treffpunkt keeps the second place done (#312): the banner's ✕ keeps the second place as the pin (Ziel), so the card shows the trip between the two places; Treffpunkt on the card or the floating button brings that person back, names included. Measured at 360×740: ✕ to trip card about 0.8 s (the same map recompute as before). Milestone 0.12 is finished. Next in order: 0.13.0 First map under 1.5 s on a fresh visit.
 - **V1.31** (2026-10-14): Hendrik reviewed the steps on cards: 0.11.1 Status lines keep the map clear moved to the optional list as D8 (milestone 0.11 is finished with 0.11.0); the Treffpunkt looks 0.12.0, 0.12.1 and 0.12.3 moved there as D9–D11; 0.12.2 Closing Treffpunkt keeps the second place stays and is now 0.12.0; 0.14 Showcase refresh stays. 0.13 and 1.0 are not design and stay. Next in order: 0.12.0 Closing Treffpunkt keeps the second place.
 - **V1.30** (2026-10-14): new milestone Optional design decisions with its own list OPTIONAL-DESIGN.md (plan/optional-design.md). Hendrik: "All of the current roadmaps are part of something I would call optional design decisions for now, lump them together in a separate document". The seven Inbox items (example map on the first screen, colour fill for first-time visitors, question entries, places layer, two start points side by side, sharepic per use case, ring widths) moved there as D1–D7; the Inbox is empty. Other steps are reviewed with Hendrik one at a time. Next in order: 0.11.1 Status lines keep the map clear.
 - **V1.29** (2026-10-14): 0.11.0 Darker time rings done (#308): rings 15 #1a0848, 30 #3b1d86, 45 #6440b4, 60 #7553c0 (a touch darker than planned so the 60-min ring is 3 : 1 on the app's water too), all opaque; a test checks 3 : 1 on land and water. The chip bar hides only the top strip and the trip card the bottom quarter; nothing moved. Hendrik asked on a card whether 0–5 min stays the darkest green in the colour fill. Timings unchanged (colour only). Next in order: 0.11.1 Status lines keep the map clear.
