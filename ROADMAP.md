@@ -1,4 +1,4 @@
-# Roadmap V1.27
+# Roadmap V1.28
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.11**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
@@ -55,7 +55,11 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
   - a. Collect trip pairs that differ when anchor and pin swap.
   - b. Find why the forward and backward searches pick different trips (tie-breaks, transfer rules, time windows).
   - c. Fix so both give the same trip, with a test over the pairs from a.
-- **0.13.3 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
+- **0.13.3 Changing direction keeps the departure time**. Hendrik (2026-10-14): "changing direction should not switch to Ankunftszeit mode". Today the trip card's ⇅, moving the map to the other end of the trip and the Zeit panel's Losfahren/Ankommen are one switch: when the map's place becomes the Ziel, the time turns into an arrival time ("Ankommen um …", and on "Jetzt" it even moves an hour on). So Start/Ziel and departure/arrival time are tied together.
+  - a. Make them two separate choices: ⇅ and moving the map only change which place is Start and which is Ziel; the time stays a departure time ("Losfahren") unless Ankommen is picked in the Zeit panel.
+  - b. A map to a Ziel with a departure time needs the trips from every place leaving at that time. Measure whether that is as fast as today's arrival map; if not, find a quick way (for example from the hour's timetable already loaded) and report the timings before building.
+  - c. "Rückgängig" and links (dir=arr) keep working; the trip on the card stays the same when only the direction changes.
+- **0.13.4 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
   - a. Measure today's windows: what each timetable file holds and how long each kind of map takes.
   - b. Try two-hour windows for Typisch and best connection and one hour for Nächste; compare speed, file size and trip accuracy against today.
   - c. Include the extra hour's edge: late in the extra hour after the chosen one, trips longer than about an hour can come out slightly worse, because an hour's file stops holding trips two hours after its own hour. Measure how often and by how much, and whether a longer tail fixes it at a fair file-size cost.
@@ -80,6 +84,7 @@ Last, so the pictures show the finished looks.
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.28** (2026-10-14): Hendrik's wish "changing direction should not switch to Ankunftszeit mode" placed as 0.13.3 Changing direction keeps the departure time, next to the anchor/pin swap step (old 0.13.3 Timetable windows check now 0.13.4). Next in order: 0.11.0 Darker time rings.
 - **V1.27** (2026-10-14): 0.10.11 "Heute anders" retries a failed changes download done (#305): after a failed load, each Mehr open fetches changes.json once more, quietly; on success the entry shows (87 ms after the tap, local test). Nothing runs on the first map or on taps. Milestone 0.10 is finished. Next in order: 0.11.0 Darker time rings.
 - **V1.26** (2026-10-14): two Inbox notes from 0.10.10 placed as 0.11.1 Status lines keep the map clear and 0.13.1 Footpaths start downloading sooner (old 0.13.1–0.13.2 now 0.13.2–0.13.3); Hendrik's two Treffpunkt wishes placed as 0.12.2 Closing Treffpunkt keeps the second place and 0.12.3 Treffpunkt opens in its own map look. Next in order: 0.10.11 "Heute anders" retries a failed changes download.
 - **V1.25** (2026-10-14): 0.10.10 Footpath loading line on a slow download done (#302): the line shows for 5 s at most, the thin bar keeps the download's progress, and when the footpaths arrive later the redone map brings a short note ("Fußwege geladen, die Zeiten sind jetzt genauer."). Measured at 150 KB/s: line 23 s → 5 s; a fast download looks as before. Next in order: 0.10.11 "Heute anders" retries a failed changes download.
