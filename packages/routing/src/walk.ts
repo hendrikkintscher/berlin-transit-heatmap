@@ -1,6 +1,6 @@
 import { M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 import type { PreparedTimetable } from './prepare';
-import { decodeWalkBinInSteps } from './walkbin';
+import { decodeWalkBinInSteps, inPieces } from './walkbin';
 
 /**
  * Contract 3: the walking network (`walk.bin`, format in walkbin.ts), built by
@@ -68,10 +68,6 @@ function finish<T>(steps: Generator<void, T>): T {
   }
 }
 
-/** Nodes, edges or stops handled between pauses in the *InSteps functions (about 1 ms). */
-const STEP = 1 << 14;
-const pause = (i: number) => (i & (STEP - 1)) === STEP - 1;
-
 /**
  * loadWalkNetwork in steps: the generator pauses every millisecond or so, so a worker can
  * answer other messages in between (see snapCellsInSteps).
@@ -87,19 +83,23 @@ export function* loadWalkNetworkInSteps(
   let maxLat = -Infinity;
   let minLon = Infinity;
   let maxLon = -Infinity;
-  for (let i = 0; i < n; i++) {
-    if (lat[i] < minLat) minLat = lat[i];
-    if (lat[i] > maxLat) maxLat = lat[i];
-    if (lon[i] < minLon) minLon = lon[i];
-    if (lon[i] > maxLon) maxLon = lon[i];
-    if (pause(i)) yield;
-  }
+  yield* inPieces(n, (from, to) => {
+    let [a, b, c, d] = [minLat, maxLat, minLon, maxLon];
+    for (let i = from; i < to; i++) {
+      if (lat[i] < a) a = lat[i];
+      if (lat[i] > b) b = lat[i];
+      if (lon[i] < c) c = lon[i];
+      if (lon[i] > d) d = lon[i];
+    }
+    [minLat, maxLat, minLon, maxLon] = [a, b, c, d];
+  });
   const degree = new Int32Array(n + 1);
-  for (let k = 0; k < m; k++) {
-    degree[ea[k] + 1]++;
-    degree[eb[k] + 1]++;
-    if (pause(k)) yield;
-  }
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) {
+      degree[ea[k] + 1]++;
+      degree[eb[k] + 1]++;
+    }
+  });
 
   const offset = degree;
   for (let v = 0; v < n; v++) offset[v + 1] += offset[v];
@@ -107,26 +107,28 @@ export function* loadWalkNetworkInSteps(
   const target = new Int32Array(2 * m);
   const metres = new Float32Array(2 * m);
   const edgeMetres = new Float32Array(m);
-  for (let k = 0; k < m; k++) {
-    const s = em[k];
-    edgeMetres[k] = s;
-    target[fill[ea[k]]] = eb[k];
-    metres[fill[ea[k]]++] = s;
-    target[fill[eb[k]]] = ea[k];
-    metres[fill[eb[k]]++] = s;
-    if (pause(k)) yield;
-  }
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) {
+      const s = em[k];
+      edgeMetres[k] = s;
+      target[fill[ea[k]]] = eb[k];
+      metres[fill[ea[k]]++] = s;
+      target[fill[eb[k]]] = ea[k];
+      metres[fill[eb[k]]++] = s;
+    }
+  });
 
   const lat0 = n ? minLat : 0;
   const lon0 = n ? minLon : 0;
   const mPerLon = metresPerDegLon((minLat + maxLat) / 2 || 52.5);
   const x = new Float32Array(n);
   const y = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    x[i] = (lon[i] - lon0) * mPerLon;
-    y[i] = (lat[i] - lat0) * M_PER_DEG_LAT;
-    if (pause(i)) yield;
-  }
+  yield* inPieces(n, (from, to) => {
+    for (let i = from; i < to; i++) {
+      x[i] = (lon[i] - lon0) * mPerLon;
+      y[i] = (lat[i] - lat0) * M_PER_DEG_LAT;
+    }
+  });
   const bucketCols = n ? Math.floor(((maxLon - lon0) * mPerLon) / BUCKET_M) + 1 : 1;
   const bucketRows = n ? Math.floor(((maxLat - lat0) * M_PER_DEG_LAT) / BUCKET_M) + 1 : 1;
   const bucketOffset = new Int32Array(bucketCols * bucketRows + 1);
@@ -137,18 +139,15 @@ export function* loadWalkNetworkInSteps(
     const r1 = Math.floor(Math.max(y[ea[k]], y[eb[k]]) / BUCKET_M);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) visit(r * bucketCols + c);
   };
-  const count = (b: number) => bucketOffset[b + 1]++;
-  for (let k = 0; k < m; k++) {
-    eachBucket(k, count);
-    if (pause(k)) yield;
-  }
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) eachBucket(k, (b) => bucketOffset[b + 1]++);
+  });
   for (let b = 0; b < bucketCols * bucketRows; b++) bucketOffset[b + 1] += bucketOffset[b];
   const bfill = bucketOffset.slice(0, bucketCols * bucketRows);
   const bucketEdges = new Int32Array(bucketOffset[bucketCols * bucketRows]);
-  for (let k = 0; k < m; k++) {
-    eachBucket(k, (b) => (bucketEdges[bfill[b]++] = k));
-    if (pause(k)) yield;
-  }
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) eachBucket(k, (b) => (bucketEdges[bfill[b]++] = k));
+  });
 
   return {
     nodeCount: n,
@@ -282,18 +281,19 @@ function* cellEnds(net: WalkNetwork, cells: Snaps): Generator<void, CellSnaps> {
   const b = new Int32Array(n).fill(-1);
   const da = new Float32Array(n);
   const db = new Float32Array(n);
-  for (let k = 0; k < n; k++) {
-    if (pause(k)) yield;
-    const e = cells.edge[k];
-    if (e < 0) continue;
-    const len = net.edgeMetres[e];
-    const off = cells.metres[k];
-    const d = cells.along[k] * len + off;
-    a[k] = net.edgeA[e];
-    b[k] = net.edgeB[e];
-    da[k] = d;
-    db[k] = len + 2 * off - d;
-  }
+  yield* inPieces(n, (from, to) => {
+    for (let k = from; k < to; k++) {
+      const e = cells.edge[k];
+      if (e < 0) continue;
+      const len = net.edgeMetres[e];
+      const off = cells.metres[k];
+      const d = cells.along[k] * len + off;
+      a[k] = net.edgeA[e];
+      b[k] = net.edgeB[e];
+      da[k] = d;
+      db[k] = len + 2 * off - d;
+    }
+  });
   return { edge: cells.edge, a, b, da, db };
 }
 
@@ -327,10 +327,13 @@ export function* snapStopsInSteps(net: WalkNetwork, tt: PreparedTimetable): Gene
   const cached = byTt.get(tt);
   if (cached) return cached;
   const snap = makeSnaps(tt.stopCount);
-  for (let s = 0; s < tt.stopCount; s++) {
-    snapPoint(net, tt.stopLat[s], tt.stopLon[s], snap, s);
-    if (s % 256 === 255) yield;
-  }
+  yield* inPieces(
+    tt.stopCount,
+    (from, to) => {
+      for (let s = from; s < to; s++) snapPoint(net, tt.stopLat[s], tt.stopLon[s], snap, s);
+    },
+    256,
+  );
   byTt.set(tt, snap);
   return snap;
 }
@@ -588,35 +591,37 @@ export function* snapCellsInSteps(
   // Scatter every edge onto the cells within `reach` metres of it; that settles most cells.
   const reach = 1.5 * Math.max(cw, ch);
   const { x, y, edgeA, edgeB } = net;
-  for (let e = 0; e < net.edgeCount; e++) {
-    if (e % SNAP_STEP_EDGES === SNAP_STEP_EDGES - 1) yield;
-    const ax = x[edgeA[e]];
-    const ay = y[edgeA[e]];
-    const vx = x[edgeB[e]] - ax;
-    const vy = y[edgeB[e]] - ay;
-    const len2 = vx * vx + vy * vy;
-    const c0 = Math.max(0, Math.ceil((Math.min(ax, ax + vx) - reach - cx0) / cw));
-    const c1 = Math.min(cols - 1, Math.floor((Math.max(ax, ax + vx) + reach - cx0) / cw));
-    const r0 = Math.max(0, Math.ceil((cy0 - Math.max(ay, ay + vy) - reach) / ch));
-    const r1 = Math.min(rows - 1, Math.floor((cy0 - Math.min(ay, ay + vy) + reach) / ch));
-    for (let r = r0; r <= r1; r++) {
-      const py = cy0 - r * ch;
-      for (let c = c0; c <= c1; c++) {
-        const px = cx0 + c * cw;
-        let f = len2 > 0 ? ((px - ax) * vx + (py - ay) * vy) / len2 : 0;
-        f = f < 0 ? 0 : f > 1 ? 1 : f;
-        const dx = ax + f * vx - px;
-        const dy = ay + f * vy - py;
-        const d2 = dx * dx + dy * dy;
-        const k = r * cols + c;
-        if (d2 < dist[k]) {
-          dist[k] = d2;
-          edge[k] = e;
-          along[k] = f;
+  const scatter = (from: number, to: number) => {
+    for (let e = from; e < to; e++) {
+      const ax = x[edgeA[e]];
+      const ay = y[edgeA[e]];
+      const vx = x[edgeB[e]] - ax;
+      const vy = y[edgeB[e]] - ay;
+      const len2 = vx * vx + vy * vy;
+      const c0 = Math.max(0, Math.ceil((Math.min(ax, ax + vx) - reach - cx0) / cw));
+      const c1 = Math.min(cols - 1, Math.floor((Math.max(ax, ax + vx) + reach - cx0) / cw));
+      const r0 = Math.max(0, Math.ceil((cy0 - Math.max(ay, ay + vy) - reach) / ch));
+      const r1 = Math.min(rows - 1, Math.floor((cy0 - Math.min(ay, ay + vy) + reach) / ch));
+      for (let r = r0; r <= r1; r++) {
+        const py = cy0 - r * ch;
+        for (let c = c0; c <= c1; c++) {
+          const px = cx0 + c * cw;
+          let f = len2 > 0 ? ((px - ax) * vx + (py - ay) * vy) / len2 : 0;
+          f = f < 0 ? 0 : f > 1 ? 1 : f;
+          const dx = ax + f * vx - px;
+          const dy = ay + f * vy - py;
+          const d2 = dx * dx + dy * dy;
+          const k = r * cols + c;
+          if (d2 < dist[k]) {
+            dist[k] = d2;
+            edge[k] = e;
+            along[k] = f;
+          }
         }
       }
     }
-  }
+  };
+  yield* inPieces(net.edgeCount, scatter, SNAP_STEP_EDGES);
   // Cells further than `reach` from every edge (lakes, fields, rail yards): take the
   // best edge of a neighbouring cell, sweeping down and then up the grid. That is a
   // close approximation of the nearest edge there, and far cheaper than a search.
@@ -645,8 +650,7 @@ export function* snapCellsInSteps(
       along[k] = segF;
     }
   };
-  for (let r = 0; r < rows; r++) {
-    if (r % SNAP_STEP_ROWS === SNAP_STEP_ROWS - 1) yield;
+  const down = (r: number) => {
     for (let c = 0; c < cols; c++) {
       const k = r * cols + c;
       if (dist[k] <= exact) continue;
@@ -659,9 +663,8 @@ export function* snapCellsInSteps(
         if (c < cols - 1) tryFrom(k, k - cols + 1, px, py);
       }
     }
-  }
-  for (let r = rows - 1; r >= 0; r--) {
-    if (r % SNAP_STEP_ROWS === 0) yield;
+  };
+  const up = (r: number) => {
     for (let c = cols - 1; c >= 0; c--) {
       const k = r * cols + c;
       if (dist[k] <= exact) continue;
@@ -674,16 +677,31 @@ export function* snapCellsInSteps(
         if (c < cols - 1) tryFrom(k, k + cols + 1, px, py);
       }
     }
-  }
+  };
+  yield* inPieces(
+    rows,
+    (from, to) => {
+      for (let r = from; r < to; r++) down(r);
+    },
+    SNAP_STEP_ROWS,
+  );
+  yield* inPieces(
+    rows,
+    (from, to) => {
+      for (let i = from; i < to; i++) up(rows - 1 - i);
+    },
+    SNAP_STEP_ROWS,
+  );
   const maxD2 = MAX_CELL_SNAP_M * MAX_CELL_SNAP_M;
-  for (let k = 0; k < cols * rows; k++) {
-    if (dist[k] <= maxD2) metres[k] = Math.sqrt(dist[k]);
-    else {
-      edge[k] = -1;
-      metres[k] = Infinity;
+  yield* inPieces(cols * rows, (from, to) => {
+    for (let k = from; k < to; k++) {
+      if (dist[k] <= maxD2) metres[k] = Math.sqrt(dist[k]);
+      else {
+        edge[k] = -1;
+        metres[k] = Infinity;
+      }
     }
-    if (pause(k)) yield;
-  }
+  });
   // Only the cell ends are kept: along and metres follow from them.
   const ends = yield* cellEnds(net, snap);
   byLayout.set(key, ends);
