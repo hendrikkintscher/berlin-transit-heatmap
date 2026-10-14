@@ -162,8 +162,11 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
       .then((r) => (r.ok ? (r.json() as Promise<ChangesFile>) : null))
       .catch(() => null)
       .then((f) => {
-        if (f?.version === 1) file = f;
-        else failed = true;
+        fetching = false;
+        if (f?.version === 1) {
+          file = f;
+          failed = false;
+        } else failed = true;
         render();
         loaded?.();
       });
@@ -385,6 +388,13 @@ export function initChanges({ map, state, dataBase, loaded }: ChangesDeps) {
     },
     isOpen: () => !!opened,
     close,
+    /**
+     * Mehr opened: a changes file that failed to load (offline at the start, say) is fetched
+     * once more, quietly; on success the entry shows. Nothing is fetched otherwise.
+     */
+    menuOpened() {
+      if (failed) fetchFile();
+    },
     /** The shown day changed, or the language; loads the file the first time. */
     update() {
       // Not before the first timetable is in: the map comes first.

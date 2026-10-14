@@ -15,6 +15,8 @@ export interface MenuDeps {
   state: State;
   writeUrl: () => void;
   closeSearch: () => void;
+  /** Mehr opened (a failed changes file is fetched again). */
+  opened?: () => void;
   /** Unterwegs or Stufenlos changed: the pill, the tapped place and the map follow. */
   travelChanged: () => void;
   /** The walking speed changed: walks and the walk-based layers are redone. */
@@ -63,10 +65,14 @@ export function initMenu(deps: MenuDeps) {
   }
   renderVersion();
 
+  function openMenu() {
+    menuDialog.showModal();
+    deps.opened?.();
+  }
   const menuBtn = $('menu-btn');
   menuBtn.addEventListener('click', () => {
     deps.closeSearch();
-    menuDialog.showModal();
+    openMenu();
     menuBtn.setAttribute('aria-expanded', 'true');
   });
   menuDialog.addEventListener('close', () => menuBtn.setAttribute('aria-expanded', 'false'));
@@ -243,7 +249,7 @@ export function initMenu(deps: MenuDeps) {
 
   return {
     applyLang,
-    open: () => menuDialog.showModal(),
+    open: openMenu,
     close: () => menuDialog.close(),
   };
 }

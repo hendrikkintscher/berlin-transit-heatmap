@@ -1281,6 +1281,7 @@ const menu = initMenu({
   state,
   writeUrl,
   closeSearch: search.close,
+  opened: () => changes?.menuOpened(),
   travelChanged: () => {
     whenSheet.renderWhen();
     tap.keepSpot();
