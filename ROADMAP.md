@@ -1,4 +1,4 @@
-# Roadmap V1.35
+# Roadmap V1.36
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
@@ -17,13 +17,12 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## Inbox
 
-- 2026-10-14 (side note from 0.13.0): base map labels finish last at about 2.3–2.8 s because a second font range is only requested once tiles are in; preloading fonts could save a few hundred ms but would compete with the first map on a slow line.
-
 ## 0.13 Faster and steadier routing
 
 - **0.13.1 Footpaths start downloading sooner**. Noted after 0.10.10: the footpath download starts about 3–5 s after the first map because it waits for the base map to finish; on a slow line that pushes the more exact times back further.
   - a. Measure when the footpaths start and arrive today, on a normal and a slowed line.
   - b. Start the download earlier (for example once the first map is drawn, not when the base map is idle), as long as it does not slow the first map or taps.
+  - c. Side note from 0.13.0 (2026-10-14): base map labels finish last at about 2.3–2.8 s because a second font range is only requested once tiles are in. Measure whether preloading that font range after the first map saves a few hundred ms without competing with the first map or the footpaths on a slow line; keep it only if it does.
 - **0.13.2 Same trip whichever end is the anchor**. Hendrik (2026-10-13): "switching between anchor and pin causes recalculation and sometimes gives different routes depending on which one is anchor and pin while it should give the same since start and Ziel does not change".
   - a. Collect trip pairs that differ when anchor and pin swap.
   - b. Find why the forward and backward searches pick different trips (tie-breaks, transfer rules, time windows).
@@ -77,6 +76,10 @@ Hendrik (2026-10-14) put the optional design list back on the roadmap before 1.0
   - b. One repaint, no extra routing on the switch.
 - **0.15.9 Places layer** (D4). Lakes, pools, parks and similar places shown with their minutes, answering "Wohin jetzt?".
 - **0.15.10 Two start points side by side** (D5). Compare the maps of two start points (flat hunting).
+- **0.15.11 Layout check on devices and browsers**. Hendrik (2026-10-14): "add making a layout and UI consistency check on different devices and browsers to the roadmap". Last in the milestone, so it checks the finished looks.
+  - a. Screenshots of the main screens (first screen, map with rings, trip card and drawer, Zeit panel, search, Treffpunkt) on small and large phones (for example 360×740, 390×844, 430×932), a tablet and a desktop window, in Chrome, Safari (WebKit) and Firefox, in German and English.
+  - b. List what differs or breaks (overlaps, cut-off text, wrong gaps, safe areas, fonts, touch targets under 44 px) and fix the small ones in this step; anything bigger goes to the Inbox.
+  - c. Timings on each browser stay as before; the screenshots go to the project files for Hendrik.
 
 ## 0.16 Showcase refresh
 
@@ -98,6 +101,7 @@ Last, so the pictures show the finished looks.
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.36** (2026-10-14): Hendrik's wish "a layout and UI consistency check on different devices and browsers" placed as 0.15.11 Layout check on devices and browsers, last in 0.15 Design decisions so it checks the finished looks before the showcase refresh and 1.0. The Inbox side note from 0.13.0 (base map label fonts) moved to 0.13.1c; the Inbox is empty. Next in order: 0.13.1 Footpaths start downloading sooner.
 - **V1.35** (2026-10-14): Hendrik's two wishes placed: "a link option like [URL]/fresh" as 0.13.5 Fresh-start link, and "give them a tiny bit more room" (UI elements at the left and right edges) as 0.15.0, first step of the new milestone 0.15 Design decisions. That milestone brings the optional design list back before 1.0 (Hendrik: "Put back the optional Design choices again on the roadmap somewhere before version 1"): D8 → 0.15.1, D7 → 0.15.2, D2 → 0.15.3, D1 → 0.15.4, D3 → 0.15.5, D9–D11 → 0.15.6–0.15.8, D4 → 0.15.9, D5 → 0.15.10, D6 → 0.16.1. OPTIONAL-DESIGN.md is removed; its last version is archived as archive/plan/optional-design-v1.2-2026-10-14.md. Showcase refresh is now 0.16, still last. A side note from 0.13.0 (base map label fonts) added to the Inbox. Next in order: 0.13.1 Footpaths start downloading sooner.
 - **V1.34** (2026-10-14): 0.13.0 First map under 1.5 s on a fresh visit done (#315): the app's layers go on the map once its style is in, not after every base-map tile and label font, so the time rings show about a second sooner. Live at 360×740 (headless, 10 fresh visits): first map 1.36 s median (1.21–1.65 s), was 2.53 s (2.29–3.26 s); with 9 Mbit/s 1.39 s, was 2.41 s. A link with `?timing` shows a small box with the first map, base map, the first timetable's downloads (page and worker) and tap-to-trip times, for a check on a phone: in Chrome the timetable comes down once; Safari was not testable here. Taps in the first seconds: 150–500 ms against about 220 ms later, peaks while the footpaths arrive. The bundle stays (main.js is almost all MapLibre). Next in order: 0.13.1 Footpaths start downloading sooner.
 - **V1.33** (2026-10-14): Hendrik's wish "long press moves the anchor point to the chosen location" placed as new milestone 0.14 Map handling, step 0.14.0 Long press moves the anchor (0.14 Showcase refresh now 0.15, still last). The Inbox side note from 0.12.0 (the floating Treffpunkt button brings back the closed person until all starts are cleared; a new person needs "+ Person" after that) moved to the optional list as D10c, since D10 removes that button; the Inbox is empty. Next in order: 0.13.0 First map under 1.5 s on a fresh visit.
