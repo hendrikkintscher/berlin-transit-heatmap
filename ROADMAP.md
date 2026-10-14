@@ -1,6 +1,6 @@
-# Roadmap V1.40
+# Roadmap V1.41
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.1**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.2**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -20,9 +20,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.2 Footpaths ready right after their download**. Side note from 0.13.1 (2026-10-14): "Once footpaths are downloaded, unpacking them takes ~1 s of background work (more on a phone) and a tap during it waits. Splitting that work into smaller pieces, or doing it in advance at data build time, could make footpaths ready ~1 s after the first map and remove that tap wait." Hendrik (2026-10-14): "Let's work on the side note first".
-  - a. Unpack the footpaths in small slices, so a tap meanwhile does not wait.
-  - b. Start the unpacking as soon as the download is done, not once the base map is up; keep the first map, the base map and taps as fast.
 - **0.13.3 Same trip whichever end is the anchor**. Hendrik (2026-10-13): "switching between anchor and pin causes recalculation and sometimes gives different routes depending on which one is anchor and pin while it should give the same since start and Ziel does not change".
   - a. Collect trip pairs that differ when anchor and pin swap.
   - b. Find why the forward and backward searches pick different trips (tie-breaks, transfer rules, time windows).
