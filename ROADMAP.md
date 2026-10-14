@@ -1,6 +1,6 @@
-# Roadmap V1.13
+# Roadmap V1.14
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.4** (through PR #283). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.5** (through PR #286). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
 **How work runs** (Hendrik, 2026-10-13): Hendrik picks each step. One thread builds that one step (PR, CI green, merge), reports, and stops. Nothing else is built without his pick. The order below is a proposal.
 
@@ -40,7 +40,8 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 | 0.10.1  | 10-13     | "Heute anders" only in Mehr; change notes on the trip card open their line's changes            | #277      |
 | 0.10.2  | 10-13     | The countdown moves on to the next connection past the full hour, from the loaded file          | #279      |
 | 0.10.3  | 10-13     | The drawer also lists faster connections on other lines, found in the background                | #281      |
-| 0.10.4  | 10-13 now | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap       | #283      |
+| 0.10.4  | 10-13     | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap       | #283      |
+| 0.10.5  | 10-14 now | The drawer keeps its list when the card refreshes with the same trip (about 12 searches saved)  | #286      |
 
 ## Inbox
 
@@ -48,12 +49,8 @@ Hendrik's wishes given without a pick land here: one dated line each, in his wor
 
 ## 0.10 Trip drawer and changes, follow-ups
 
-Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 and 0.10.4; 0.10.2, 0.10.3 and 0.10.4 are done. Next in order.
+Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 and 0.10.4; 0.10.2 to 0.10.5 are done. Next in order.
 
-- **0.10.5 Drawer list asked for only once** (from step 0.10.3, 2026-10-13: "the drawer's list gets asked for a second time about 1–2 s after it opens, when the trip card refreshes. This already happened in 0.10.0. It costs one extra round of searches but the list doesn't visibly change").
-  - a. Find why the card's refresh requests the list again while the drawer is open.
-  - b. Keep the open drawer's list when the refresh shows the same trip; ask again only when the trip changes.
-  - c. Measure the searches saved per drawer opening.
 - **0.10.6 "Heute anders" box polish** (from step 0.10.4, 2026-10-13).
   - a. Trim the explanation note at the top: "the explanation note at the top is still three lines long and could be trimmed".
   - b. Show the end date on one-change rows: "on a line with one change, the one-line row cuts off the end date (e.g. "bis 18.10.") until tapped".
@@ -115,6 +112,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.14** (2026-10-14): 0.10.5 Drawer list asked for only once done (#286): the second ask came from the map being redone with the footpaths, which re-taps the place; the drawer now keeps its list and picked row when the vehicles stay the same (rows at the same stops take the new walks) and asks again only when the trip changes, a setting changed or the first search was cut short; saves about 12 route searches per opening in that case. Next in order: 0.10.6 "Heute anders" box polish.
 - **V1.13** (2026-10-14): the two Inbox notes from step 0.10.4 placed as 0.10.6 "Heute anders" box polish (a. shorter note at the top, b. end date visible on one-change rows); Inbox emptied. Next in order: 0.10.5 Drawer list asked for only once.
 - **V1.12** (2026-10-13): 0.10.4 Shorter "Heute anders" box done (#283): the explanation note is at the top; the whole day lists one row per line, cut to one line, and a line with several changes unfolds on a tap (Sa 17.10.: list 733 → 401 px). Next in order: 0.10.5 Drawer list asked for only once.
 - **V1.11** (2026-10-13): the two Inbox notes from step 0.10.3 sorted: "drawer list asked for a second time" placed as 0.10.5 Drawer list asked for only once; "two rows with the same arrival minute" discarded (Hendrik). Inbox emptied. Next in order: 0.10.4 Shorter "Heute anders" box.
