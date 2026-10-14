@@ -1,4 +1,4 @@
-# Roadmap V1.41
+# Roadmap V1.42
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.2**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
@@ -38,6 +38,11 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
   - a. Opening the app's address with `/fresh` (GitHub Pages serves only files, so a small page at fresh/ or a `?fresh` link) removes the app's service worker, its caches and stored data, then opens the app as on a new device.
   - b. Favourites and names live only on the device, so the page says they will go and asks once before deleting them (or offers to keep them); nothing is deleted without that tap.
   - c. The normal address loads exactly as before; the fresh page adds nothing to the first map.
+
+- **0.13.7 Footpaths on the map a second sooner**. Side note from 0.13.2 (2026-10-14): "Handing footpaths to the map right after unpacking would make them ready ~1 s sooner again (2.8 s), but redoing the map with them then delayed base map labels by ~1 s, so it wasn't kept. A cheaper map redo would unlock that second." Plan from the 0.13.2 thread; expected gain about 1 s (footpaths ready around 2.8 s instead of 3.76 s at 360×740).
+  - a. Measure which part of the map redo costs the base map time: the new colours (one picture), the time rings, or the line courses with their name labels. Same 360×740 setup as 0.13.2.
+  - b. Hand the footpaths over right after unpacking: put the new colours on the map at once; send rings, line courses and labels only once the base map is up, and skip them when they did not change. If a shows the rings are cheap, they go with the colours, so colours and rings never disagree.
+  - c. Keep it only if the base map stays within noise and taps stay as fast; otherwise drop it and report the numbers.
 
 ## 0.14 Map handling
 
