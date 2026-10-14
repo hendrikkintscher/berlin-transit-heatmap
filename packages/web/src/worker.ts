@@ -29,7 +29,7 @@ import {
   walk,
   walkSpeedMps,
 } from './worker-paths';
-import { ctx, post } from './worker-post';
+import { ctx, nextTask, post } from './worker-post';
 import { cellSeconds, meetCandidates, minFinite, run, slowestOf } from './worker-runs';
 import { ensure, prepared, setDataBase } from './worker-timetables';
 import {
@@ -56,18 +56,6 @@ let latestCompute = 0;
 let latestTrip = 0;
 /** The drawer's last list asked for (see moreTrips). */
 let latestMore = 0;
-/**
- * Lets the messages queued meanwhile in, so their ids are known: a message to itself is
- * queued behind them (a timer can run ahead of them).
- */
-const tick = new MessageChannel();
-const ticks: (() => void)[] = [];
-tick.port1.onmessage = () => ticks.shift()?.();
-const nextTask = () =>
-  new Promise<void>((r) => {
-    ticks.push(r);
-    tick.port2.postMessage(0);
-  });
 
 type ComputeMsg = Extract<ToWorker, { type: 'compute' }>;
 type Made = NonNullable<Awaited<ReturnType<typeof makeMap>>>;

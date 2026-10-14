@@ -253,9 +253,9 @@ function setStatus(render: () => string, fade: boolean | number = false) {
  * The footpath network (walk.bin, the biggest download) is fetched once the first map is on
  * screen when the line is fast (roadmap 0.13.1), else once the base map is up as well: on a
  * slower line it would share the line with the base map's tiles and labels and hold them up.
- * With no start, it comes once the base map is up. Either way the worker unpacks it only once
- * the base map is up, so taps on the first map are not held up. While it streams, the bar and
- * a note say so.
+ * With no start, it comes once the base map is up. The worker unpacks it as soon as it is in,
+ * in slices of a few milliseconds, so taps meanwhile are not held up, and hands it over once
+ * the base map is up (0.13.2). While it streams, the bar and a note say so.
  */
 let walkAsked = false;
 /** The lines' courses may load (the base map is up), told to the worker once. */
@@ -810,7 +810,7 @@ if (attrib) {
 
 // The base map is up (its tiles and labels are in; 'idle' also waits for the map to stop
 // moving, which a first tap can hold off): the footpaths and lines come now (no start yet),
-// or the lines and the next hour once the first map is there, and the footpaths get unpacked.
+// or the lines and the next hour once the first map is there.
 map.once('load', () => {
   basemapUp = true;
   if (!state.origin && !state.special) askBackground();
@@ -981,7 +981,7 @@ function showResult(r: Result) {
     firstMapShown = true;
     performance.mark('first-map');
     // On a fast line the footpaths start downloading once this frame is painted, not with the
-    // base map (the worker unpacks them once that is up).
+    // base map.
     if (fastLine()) requestAnimationFrame(() => setTimeout(askWalk));
   }
 }

@@ -102,6 +102,22 @@ export function encodeWalkBin(g: {
 
 /** Reads walk.bin, version 1 or 2. */
 export function decodeWalkBin(buf: Uint8Array): WalkData {
+  const steps = decodeWalkBinInSteps(buf);
+  for (;;) {
+    const s = steps.next();
+    if (s.done) return s.value;
+  }
+}
+
+/** Nodes or edges read between pauses when decoding in steps (about a millisecond's work). */
+const STEP = 1 << 15;
+const pause = (i: number) => (i & (STEP - 1)) === STEP - 1;
+
+/**
+ * decodeWalkBin in steps: the generator pauses every STEP nodes or edges, so a worker can
+ * answer other messages in between.
+ */
+export function* decodeWalkBinInSteps(buf: Uint8Array): Generator<void, WalkData> {
   const magic = (buf[0]! | (buf[1]! << 8) | (buf[2]! << 16) | (buf[3]! << 24)) >>> 0;
   if (magic !== MAGIC) throw new Error('Not a walking network file');
   const version = buf[4];
@@ -139,9 +155,15 @@ export function decodeWalkBin(buf: Uint8Array): WalkData {
     }
   } else {
     let prev = 0;
-    for (let i = 0; i < n; i++) x[i] = prev += svar();
+    for (let i = 0; i < n; i++) {
+      x[i] = prev += svar();
+      if (pause(i)) yield;
+    }
     prev = 0;
-    for (let i = 0; i < n; i++) y[i] = prev += svar();
+    for (let i = 0; i < n; i++) {
+      y[i] = prev += svar();
+      if (pause(i)) yield;
+    }
   }
   const edgeA = new Int32Array(m);
   const edgeB = new Int32Array(m);
@@ -165,15 +187,18 @@ export function decodeWalkBin(buf: Uint8Array): WalkData {
       if (e + k > m) throw inconsistent();
       edgeA.fill(a, e, e + k);
       e += k;
+      if (pause(a)) yield;
     }
     for (let k = 0; k < e; k++) {
       const b = (edgeB[k] = edgeA[k]! + uvar());
       if (b >= n) throw inconsistent();
+      if (pause(k)) yield;
     }
     for (let k = 0; k < e; k++) {
       const a = edgeA[k]!;
       const b = edgeB[k]!;
       edgeM[k] = straightM(x[b]! - x[a]!, y[b]! - y[a]!, xM) + svar();
+      if (pause(k)) yield;
     }
   }
   if (e !== m) throw inconsistent();
@@ -182,6 +207,7 @@ export function decodeWalkBin(buf: Uint8Array): WalkData {
   for (let i = 0; i < n; i++) {
     lon[i] = x[i]! / COORD_SCALE;
     lat[i] = y[i]! / COORD_SCALE;
+    if (pause(i)) yield;
   }
   return { lat, lon, edgeA, edgeB, edgeM };
 }

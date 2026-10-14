@@ -1,6 +1,6 @@
 import { M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 import type { PreparedTimetable } from './prepare';
-import { decodeWalkBin } from './walkbin';
+import { decodeWalkBinInSteps } from './walkbin';
 
 /**
  * Contract 3: the walking network (`walk.bin`, format in walkbin.ts), built by
@@ -57,8 +57,30 @@ export interface WalkNetwork {
 }
 
 export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
+  return finish(loadWalkNetworkInSteps(data));
+}
+
+/** Runs a generator made of steps to its end. */
+function finish<T>(steps: Generator<void, T>): T {
+  for (;;) {
+    const s = steps.next();
+    if (s.done) return s.value;
+  }
+}
+
+/** Nodes, edges or stops handled between pauses in the *InSteps functions (about 1 ms). */
+const STEP = 1 << 14;
+const pause = (i: number) => (i & (STEP - 1)) === STEP - 1;
+
+/**
+ * loadWalkNetwork in steps: the generator pauses every millisecond or so, so a worker can
+ * answer other messages in between (see snapCellsInSteps).
+ */
+export function* loadWalkNetworkInSteps(
+  data: ArrayBuffer | Uint8Array,
+): Generator<void, WalkNetwork> {
   const buf = data instanceof Uint8Array ? data : new Uint8Array(data);
-  const { lat, lon, edgeA: ea, edgeB: eb, edgeM: em } = decodeWalkBin(buf);
+  const { lat, lon, edgeA: ea, edgeB: eb, edgeM: em } = yield* decodeWalkBinInSteps(buf);
   const n = lat.length;
   const m = ea.length;
   let minLat = Infinity;
@@ -70,11 +92,13 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
     if (lat[i] > maxLat) maxLat = lat[i];
     if (lon[i] < minLon) minLon = lon[i];
     if (lon[i] > maxLon) maxLon = lon[i];
+    if (pause(i)) yield;
   }
   const degree = new Int32Array(n + 1);
   for (let k = 0; k < m; k++) {
     degree[ea[k] + 1]++;
     degree[eb[k] + 1]++;
+    if (pause(k)) yield;
   }
 
   const offset = degree;
@@ -90,6 +114,7 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
     metres[fill[ea[k]]++] = s;
     target[fill[eb[k]]] = ea[k];
     metres[fill[eb[k]]++] = s;
+    if (pause(k)) yield;
   }
 
   const lat0 = n ? minLat : 0;
@@ -100,6 +125,7 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
   for (let i = 0; i < n; i++) {
     x[i] = (lon[i] - lon0) * mPerLon;
     y[i] = (lat[i] - lat0) * M_PER_DEG_LAT;
+    if (pause(i)) yield;
   }
   const bucketCols = n ? Math.floor(((maxLon - lon0) * mPerLon) / BUCKET_M) + 1 : 1;
   const bucketRows = n ? Math.floor(((maxLat - lat0) * M_PER_DEG_LAT) / BUCKET_M) + 1 : 1;
@@ -111,11 +137,18 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
     const r1 = Math.floor(Math.max(y[ea[k]], y[eb[k]]) / BUCKET_M);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) visit(r * bucketCols + c);
   };
-  for (let k = 0; k < m; k++) eachBucket(k, (b) => bucketOffset[b + 1]++);
+  const count = (b: number) => bucketOffset[b + 1]++;
+  for (let k = 0; k < m; k++) {
+    eachBucket(k, count);
+    if (pause(k)) yield;
+  }
   for (let b = 0; b < bucketCols * bucketRows; b++) bucketOffset[b + 1] += bucketOffset[b];
   const bfill = bucketOffset.slice(0, bucketCols * bucketRows);
   const bucketEdges = new Int32Array(bucketOffset[bucketCols * bucketRows]);
-  for (let k = 0; k < m; k++) eachBucket(k, (b) => (bucketEdges[bfill[b]++] = k));
+  for (let k = 0; k < m; k++) {
+    eachBucket(k, (b) => (bucketEdges[bfill[b]++] = k));
+    if (pause(k)) yield;
+  }
 
   return {
     nodeCount: n,
@@ -243,13 +276,14 @@ export interface CellSnaps {
   db: Float32Array;
 }
 
-function cellEnds(net: WalkNetwork, cells: Snaps): CellSnaps {
+function* cellEnds(net: WalkNetwork, cells: Snaps): Generator<void, CellSnaps> {
   const n = cells.edge.length;
   const a = new Int32Array(n).fill(-1);
   const b = new Int32Array(n).fill(-1);
   const da = new Float32Array(n);
   const db = new Float32Array(n);
   for (let k = 0; k < n; k++) {
+    if (pause(k)) yield;
     const e = cells.edge[k];
     if (e < 0) continue;
     const len = net.edgeMetres[e];
@@ -283,12 +317,20 @@ const stopSnaps = new WeakMap<WalkNetwork, WeakMap<PreparedTimetable, Snaps>>();
 
 /** Every stop snapped to the network, cached per network and timetable. */
 export function snapStops(net: WalkNetwork, tt: PreparedTimetable): Snaps {
+  return stopSnaps.get(net)?.get(tt) ?? finish(snapStopsInSteps(net, tt));
+}
+
+/** snapStops in steps, cached as snapStops caches it. */
+export function* snapStopsInSteps(net: WalkNetwork, tt: PreparedTimetable): Generator<void, Snaps> {
   let byTt = stopSnaps.get(net);
   if (!byTt) stopSnaps.set(net, (byTt = new WeakMap()));
-  let snap = byTt.get(tt);
-  if (snap) return snap;
-  snap = makeSnaps(tt.stopCount);
-  for (let s = 0; s < tt.stopCount; s++) snapPoint(net, tt.stopLat[s], tt.stopLon[s], snap, s);
+  const cached = byTt.get(tt);
+  if (cached) return cached;
+  const snap = makeSnaps(tt.stopCount);
+  for (let s = 0; s < tt.stopCount; s++) {
+    snapPoint(net, tt.stopLat[s], tt.stopLon[s], snap, s);
+    if (s % 256 === 255) yield;
+  }
   byTt.set(tt, snap);
   return snap;
 }
@@ -497,8 +539,10 @@ export function walkFrom(
 
 const cellSnaps = new WeakMap<WalkNetwork, Map<string, CellSnaps>>();
 
-/** Edges scattered between pauses when snapping in steps (a few tens of ms each). */
-const SNAP_STEP_EDGES = 40_000;
+/** Edges scattered between pauses when snapping in steps (about a millisecond's work). */
+const SNAP_STEP_EDGES = 2048;
+/** Grid rows swept between pauses when snapping in steps. */
+const SNAP_STEP_ROWS = 16;
 
 /**
  * Snaps the centres of a grid (as heatGrid lays it out) to the network. Cached per
@@ -510,17 +554,13 @@ export function snapCells(
   cols: number,
   rows: number,
 ): CellSnaps {
-  const steps = snapCellsInSteps(net, bbox, cols, rows);
-  for (;;) {
-    const s = steps.next();
-    if (s.done) return s.value;
-  }
+  return finish(snapCellsInSteps(net, bbox, cols, rows));
 }
 
 /**
- * snapCells in steps: the generator pauses every few tens of milliseconds, so a worker
- * can answer other messages in between (await a timeout after each `next()`). The result
- * is cached as snapCells caches it.
+ * snapCells in steps: the generator pauses every millisecond or so, so a worker can answer
+ * other messages in between (it runs a few steps, then lets queued messages in). The
+ * result is cached as snapCells caches it.
  */
 export function* snapCellsInSteps(
   net: WalkNetwork,
@@ -606,6 +646,7 @@ export function* snapCellsInSteps(
     }
   };
   for (let r = 0; r < rows; r++) {
+    if (r % SNAP_STEP_ROWS === SNAP_STEP_ROWS - 1) yield;
     for (let c = 0; c < cols; c++) {
       const k = r * cols + c;
       if (dist[k] <= exact) continue;
@@ -619,8 +660,8 @@ export function* snapCellsInSteps(
       }
     }
   }
-  yield;
   for (let r = rows - 1; r >= 0; r--) {
+    if (r % SNAP_STEP_ROWS === 0) yield;
     for (let c = cols - 1; c >= 0; c--) {
       const k = r * cols + c;
       if (dist[k] <= exact) continue;
@@ -641,9 +682,10 @@ export function* snapCellsInSteps(
       edge[k] = -1;
       metres[k] = Infinity;
     }
+    if (pause(k)) yield;
   }
   // Only the cell ends are kept: along and metres follow from them.
-  const ends = cellEnds(net, snap);
+  const ends = yield* cellEnds(net, snap);
   byLayout.set(key, ends);
   return ends;
 }

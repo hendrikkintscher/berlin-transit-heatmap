@@ -4,9 +4,9 @@ import {
   decodeLines,
   gridLayout,
   hopCourse,
-  loadWalkNetwork,
+  loadWalkNetworkInSteps,
   snapCellsInSteps,
-  snapStops,
+  snapStopsInSteps,
   type LineShapes,
   type PreparedTimetable,
   type routeUsage,
@@ -15,7 +15,7 @@ import {
 import type { FeatureCollection, LineString } from 'geojson';
 import { dataUrl } from './data-url';
 import type { RouteProps } from './protocol';
-import { post } from './worker-post';
+import { inSlices, post } from './worker-post';
 import { CELL_M } from './worker-runs';
 import { dataBase, readWithProgress } from './worker-timetables';
 
@@ -26,8 +26,7 @@ const MIN_LABEL_SHARE = 0.03;
  * The footpath network, fetched in the background when the UI asks (once the first map
  * is on screen), so the first map never shares the connection with it. Until it is ready,
  * walks are straight lines; the UI recomputes the map when it arrives. Its download
- * reports progress, and the grid snapping runs in steps, so taps in the meantime are
- * answered.
+ * reports progress.
  */
 export let walk: WalkNetwork | undefined;
 let walkStarted = false;
@@ -37,16 +36,16 @@ export function setWalkKmh(kmh: number) {
   walkSpeedMps = kmh / 3.6;
 }
 
-/**
- * Unpacking the footpaths and snapping the map grid to them holds the worker for about 0.5 s
- * (more on a phone), and a tap meanwhile waits. So when the download starts with the first
- * map (0.13.1), the unpacking still waits, as before, until the base map is up, past the
- * first taps on the first map.
- */
-let unpackOk: () => void;
-const mayUnpack = new Promise<void>((r) => (unpackOk = r));
 /** The bar moves at most this often, so a fast download does not keep the page busy. */
 const PROGRESS_MS = 100;
+
+/**
+ * The footpaths are handed to the app (which then redoes its map with them) only once the
+ * base map is up: redone earlier, the map's redraw held the base map's labels up by about
+ * 1 s with a slow phone's main thread (0.13.2).
+ */
+let handOverOk: () => void;
+const mayHandOver = new Promise<void>((r) => (handOverOk = r));
 
 export async function loadWalk(): Promise<void> {
   if (walkStarted) return;
@@ -61,15 +60,16 @@ export async function loadWalk(): Promise<void> {
       reportedAt = now;
       post({ type: 'walkProgress', loaded, total });
     });
-    await mayUnpack;
-    const net = loadWalkNetwork(buf);
-    // Snapping the map grid to the network takes a moment; do it now rather than on a
-    // tap, a slice at a time with pauses for any messages that queued up.
+    // Unpacking the footpaths and snapping the map grid and the stops to them takes about
+    // 0.6 s of work (more on a phone). It runs in slices of a few milliseconds, so it starts
+    // as soon as the download is done, even before the base map is up (0.13.2), and a tap
+    // meanwhile waits one slice at most. The grid and stops are snapped now rather than on
+    // the next map or tap.
+    const net = await inSlices(loadWalkNetworkInSteps(buf));
     const layout = gridLayout({ cellSizeM: CELL_M });
-    const steps = snapCellsInSteps(net, layout.bbox, layout.cols, layout.rows);
-    while (!steps.next().done) await new Promise((r) => setTimeout(r, 0));
-    // The stops too, for the shown timetable, so the next map or tap does not pay for it.
-    if (lastTimetable) snapStops(net, lastTimetable);
+    await inSlices(snapCellsInSteps(net, layout.bbox, layout.cols, layout.rows));
+    if (lastTimetable) await inSlices(snapStopsInSteps(net, lastTimetable));
+    await mayHandOver;
     walk = net;
     post({ type: 'walk' });
   } catch (err) {
@@ -98,7 +98,7 @@ let lastRoutes: { id: number; tt: PreparedTimetable; used: Segments } | null = n
 /** The base map is up: the lines' courses load now, and the footpaths if not yet asked for. */
 export function startBackground() {
   backgroundOk = true;
-  unpackOk();
+  handOverOk();
   void loadWalk();
   if (lastTimetable) void loadLines(lastTimetable);
 }

@@ -40,13 +40,14 @@ export type { Journey, JourneyLeg } from './journey';
 export { departureAt, journeyTo, laterStart } from './journey';
 export type { TimetableData } from './ttbin';
 export { decodeTimetable, encodeTimetable } from './ttbin';
-export { decodeWalkBin, encodeWalkBin, type WalkData } from './walkbin';
+export { decodeWalkBin, decodeWalkBinInSteps, encodeWalkBin, type WalkData } from './walkbin';
 export type { Hop, LineShapes } from './linesbin';
 export { decodeLines, encodeLines, hopCourse } from './linesbin';
 export { BIKE_ONLY_MAX_SECONDS, BIKE_SPEED_MPS, BIKE_STATION_SECONDS, bikeTimetable } from './bike';
 export type { CellSnaps, Snaps, WalkLabels, WalkNetwork } from './walk';
 export {
   loadWalkNetwork,
+  loadWalkNetworkInSteps,
   nodeLonLat,
   NETWORK_WALK_SPEED_MPS,
   sameEdgeMetres,
@@ -55,6 +56,7 @@ export {
   snapOrigin,
   snapPoint,
   snapStops,
+  snapStopsInSteps,
   timeAt,
   walkFrom,
   walkPath,
