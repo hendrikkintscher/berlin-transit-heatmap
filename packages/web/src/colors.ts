@@ -241,20 +241,15 @@ export function homeLut(): Uint8Array {
   return lut;
 }
 
+/** The base map's land (OpenFreeMap positron) and the water drawn on top of it. */
+export const LAND = '#f2f3f0';
+export const WATER = '#a9c7dc';
 /**
- * The time scale without the colour fill, in a single hue from near-black purple at the start
- * to a pale lilac far out, so the order reads at a glance; the rings at 15, 30, 45 and 60 min
- * take their colours from it (map-layers.ts).
+ * The rings at 15, 30, 45 and 60 min without the colour fill: one purple hue, darkest first,
+ * each at least 3 : 1 against land and water, so even the 60-min ring stays clear.
  */
-export const OUTLINE_STEP_MINUTES = [10, 20, 30, 40, 50, 60];
-export const OUTLINE_STEP_COLORS = [
-  '#1a0848',
-  '#3b1d86',
-  '#6440b4',
-  '#8f6dd0',
-  '#b69ce3',
-  '#d6c8f2',
-];
+export const RING_MINUTES = [15, 30, 45, 60];
+export const RING_COLORS = ['#1a0848', '#3b1d86', '#6440b4', '#7553c0'];
 
 /** Line colours, roughly following the usual Berlin map conventions. */
 export const MODE_COLORS: Record<string, string> = {

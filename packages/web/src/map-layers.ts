@@ -10,7 +10,9 @@ import {
   LIMIT_VEIL_ALPHA,
   MAP_TEXT,
   MODE_COLORS,
-  OUTLINE_STEP_COLORS,
+  RING_COLORS,
+  RING_MINUTES,
+  WATER,
 } from './colors';
 import { bezirke, landmarks, ringLine } from './orientation';
 import { region } from './region';
@@ -44,7 +46,6 @@ const MAJOR_OUTLINES = [15, 30, 45];
 export const ROUTES_OPACITY = 0.55;
 export const ROUTES_CASING_OPACITY = 0.4;
 const AREA_SOURCE = 'area';
-const WATER = '#a9c7dc';
 export const TRIP_SOURCE = 'trip';
 export const TRIP_STOPS_SOURCE = 'trip-stops';
 /** "What's different today": the stretch of a line that does not run, from changes.json. */
@@ -642,21 +643,15 @@ export function styleOutlines(
 }
 
 /** Without the colour fill: four crisp rings with a white edge, each labelled (C9). */
-const RING_MINUTES = [15, 30, 45, 60];
 function styleRings(map: maplibregl.Map, kind: OutlineKind, unit: string): void {
   const rings: maplibregl.FilterSpecification = ['in', ['get', 'min'], ['literal', RING_MINUTES]];
   map.setPaintProperty('outlines-line', 'line-color', [
     'match',
     ['get', 'min'],
-    15,
-    OUTLINE_STEP_COLORS[0],
-    30,
-    OUTLINE_STEP_COLORS[2],
-    45,
-    OUTLINE_STEP_COLORS[3],
-    OUTLINE_STEP_COLORS[5],
+    ...RING_MINUTES.slice(0, -1).flatMap((m, i) => [m, RING_COLORS[i]]),
+    RING_COLORS[RING_MINUTES.length - 1],
   ] as never);
-  map.setPaintProperty('outlines-line', 'line-opacity', 0.9);
+  map.setPaintProperty('outlines-line', 'line-opacity', 1);
   map.setPaintProperty('outlines-line', 'line-blur', 0);
   map.setPaintProperty('outlines-line', 'line-width', [
     'interpolate',
