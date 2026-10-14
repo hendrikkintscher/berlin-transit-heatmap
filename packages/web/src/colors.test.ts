@@ -18,8 +18,10 @@ import {
   diffLut,
   MAX_BAND,
   oklab,
-  OUTLINE_STEP_COLORS,
-  OUTLINE_STEP_MINUTES,
+  LAND,
+  RING_COLORS,
+  RING_MINUTES,
+  WATER,
 } from './colors';
 
 describe('colour bands', () => {
@@ -112,12 +114,32 @@ describe('difference colours', () => {
   });
 });
 
-describe('single-hue outlines', () => {
-  it('has one colour per 10-minute step, darkest first', () => {
-    expect(OUTLINE_STEP_MINUTES).toEqual([10, 20, 30, 40, 50, 60]);
-    expect(OUTLINE_STEP_COLORS).toHaveLength(OUTLINE_STEP_MINUTES.length);
-    const light = OUTLINE_STEP_COLORS.map((c) => oklab(c)[0]);
+describe('time rings', () => {
+  /** WCAG contrast ratio of two sRGB hex colours. */
+  const contrast = (a: string, b: string) => {
+    const lum = (h: string) => {
+      const [r, g, bl] = [1, 3, 5].map((i) => {
+        const c = parseInt(h.slice(i, i + 2), 16) / 255;
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+    };
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  it('has one colour per ring, darkest first', () => {
+    expect(RING_MINUTES).toEqual([15, 30, 45, 60]);
+    expect(RING_COLORS).toHaveLength(RING_MINUTES.length);
+    const light = RING_COLORS.map((c) => oklab(c)[0]);
     for (let i = 1; i < light.length; i++) expect(light[i]).toBeGreaterThan(light[i - 1]);
+  });
+
+  it('keeps every ring at 3 : 1 or better on land and water', () => {
+    for (const c of RING_COLORS) {
+      expect(contrast(c, LAND), c).toBeGreaterThanOrEqual(3);
+      expect(contrast(c, WATER), c).toBeGreaterThanOrEqual(3);
+    }
   });
 });
 
