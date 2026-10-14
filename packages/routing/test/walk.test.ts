@@ -7,6 +7,7 @@ import {
   decodeWalkBin,
   encodeWalkBin,
   loadWalkNetwork,
+  loadWalkNetworkInSteps,
   NETWORK_WALK_SPEED_MPS,
   nodeLonLat,
   snapCells,
@@ -316,6 +317,41 @@ describe('walkPath', () => {
     expect(pauses).toBeGreaterThan(0);
     // Cached: the one-go version hands back the same snaps.
     expect(snapCells(net, bbox, 30, 10)).toBe(s.value);
+  });
+});
+
+describe('unpacking in steps', () => {
+  it('pauses often and gives the same network', () => {
+    // A 200 x 200 street grid: 40 000 nodes, 79 600 edges, more than a step's worth.
+    const side = 200;
+    const lat: number[] = [];
+    const lon: number[] = [];
+    for (let r = 0; r < side; r++)
+      for (let c = 0; c < side; c++) {
+        lat.push(52.5 + r * 0.0005);
+        lon.push(13.4 + c * 0.0008);
+      }
+    const edgeA: number[] = [];
+    const edgeB: number[] = [];
+    const edgeM: number[] = [];
+    for (let v = 0; v < side * side; v++) {
+      for (const [b, m] of [
+        [v % side < side - 1 ? v + 1 : -1, 55],
+        [v + side < side * side ? v + side : -1, 56],
+      ]) {
+        if (b < 0) continue;
+        edgeA.push(v);
+        edgeB.push(b!);
+        edgeM.push(m!);
+      }
+    }
+    const bin = encodeWalkBin({ lat, lon, edgeA, edgeB, edgeM });
+    const steps = loadWalkNetworkInSteps(bin);
+    let pauses = 0;
+    let s = steps.next();
+    for (; !s.done; s = steps.next()) pauses++;
+    expect(pauses).toBeGreaterThan(10);
+    expect(s.value).toEqual(loadWalkNetwork(bin));
   });
 });
 

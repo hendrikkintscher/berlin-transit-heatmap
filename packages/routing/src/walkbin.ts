@@ -102,6 +102,36 @@ export function encodeWalkBin(g: {
 
 /** Reads walk.bin, version 1 or 2. */
 export function decodeWalkBin(buf: Uint8Array): WalkData {
+  const steps = decodeWalkBinInSteps(buf);
+  for (;;) {
+    const s = steps.next();
+    if (s.done) return s.value;
+  }
+}
+
+/** Items handled between pauses by the *InSteps generators (about a millisecond's work). */
+const STEP = 1 << 13;
+
+/**
+ * Runs `part(from, to)` over 0 … n in pieces of `step`, pausing after each: the loops stay
+ * plain functions, as fast as without pauses, and the generator only goes between them.
+ */
+export function* inPieces(
+  n: number,
+  part: (from: number, to: number) => void,
+  step = STEP,
+): Generator<void, void> {
+  for (let i = 0; i < n; i += step) {
+    part(i, Math.min(n, i + step));
+    yield;
+  }
+}
+
+/**
+ * decodeWalkBin in steps: the generator pauses every STEP nodes or edges, so a worker can
+ * answer other messages in between.
+ */
+export function* decodeWalkBinInSteps(buf: Uint8Array): Generator<void, WalkData> {
   const magic = (buf[0]! | (buf[1]! << 8) | (buf[2]! << 16) | (buf[3]! << 24)) >>> 0;
   if (magic !== MAGIC) throw new Error('Not a walking network file');
   const version = buf[4];
@@ -138,10 +168,14 @@ export function decodeWalkBin(buf: Uint8Array): WalkData {
       y[i] = py += svar();
     }
   } else {
-    let prev = 0;
-    for (let i = 0; i < n; i++) x[i] = prev += svar();
-    prev = 0;
-    for (let i = 0; i < n; i++) y[i] = prev += svar();
+    for (const col of [x, y]) {
+      let prev = 0;
+      yield* inPieces(n, (from, to) => {
+        let v = prev;
+        for (let i = from; i < to; i++) col[i] = v += svar();
+        prev = v;
+      });
+    }
   }
   const edgeA = new Int32Array(m);
   const edgeB = new Int32Array(m);
@@ -160,29 +194,39 @@ export function decodeWalkBin(buf: Uint8Array): WalkData {
       }
     }
   } else {
-    for (let a = 0; a < n; a++) {
-      const k = uvar();
-      if (e + k > m) throw inconsistent();
-      edgeA.fill(a, e, e + k);
-      e += k;
-    }
-    for (let k = 0; k < e; k++) {
-      const b = (edgeB[k] = edgeA[k]! + uvar());
-      if (b >= n) throw inconsistent();
-    }
-    for (let k = 0; k < e; k++) {
-      const a = edgeA[k]!;
-      const b = edgeB[k]!;
-      edgeM[k] = straightM(x[b]! - x[a]!, y[b]! - y[a]!, xM) + svar();
-    }
+    yield* inPieces(n, (from, to) => {
+      let f = e;
+      for (let a = from; a < to; a++) {
+        const k = uvar();
+        if (f + k > m) throw inconsistent();
+        edgeA.fill(a, f, f + k);
+        f += k;
+      }
+      e = f;
+    });
+    yield* inPieces(e, (from, to) => {
+      for (let k = from; k < to; k++) {
+        const b = (edgeB[k] = edgeA[k]! + uvar());
+        if (b >= n) throw inconsistent();
+      }
+    });
+    yield* inPieces(e, (from, to) => {
+      for (let k = from; k < to; k++) {
+        const a = edgeA[k]!;
+        const b = edgeB[k]!;
+        edgeM[k] = straightM(x[b]! - x[a]!, y[b]! - y[a]!, xM) + svar();
+      }
+    });
   }
   if (e !== m) throw inconsistent();
   const lat = new Float64Array(n);
   const lon = new Float64Array(n);
-  for (let i = 0; i < n; i++) {
-    lon[i] = x[i]! / COORD_SCALE;
-    lat[i] = y[i]! / COORD_SCALE;
-  }
+  yield* inPieces(n, (from, to) => {
+    for (let i = from; i < to; i++) {
+      lon[i] = x[i]! / COORD_SCALE;
+      lat[i] = y[i]! / COORD_SCALE;
+    }
+  });
   return { lat, lon, edgeA, edgeB, edgeM };
 }
 

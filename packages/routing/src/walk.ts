@@ -1,6 +1,6 @@
 import { M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 import type { PreparedTimetable } from './prepare';
-import { decodeWalkBin } from './walkbin';
+import { decodeWalkBinInSteps, inPieces } from './walkbin';
 
 /**
  * Contract 3: the walking network (`walk.bin`, format in walkbin.ts), built by
@@ -57,25 +57,49 @@ export interface WalkNetwork {
 }
 
 export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
+  return finish(loadWalkNetworkInSteps(data));
+}
+
+/** Runs a generator made of steps to its end. */
+function finish<T>(steps: Generator<void, T>): T {
+  for (;;) {
+    const s = steps.next();
+    if (s.done) return s.value;
+  }
+}
+
+/**
+ * loadWalkNetwork in steps: the generator pauses every millisecond or so, so a worker can
+ * answer other messages in between (see snapCellsInSteps).
+ */
+export function* loadWalkNetworkInSteps(
+  data: ArrayBuffer | Uint8Array,
+): Generator<void, WalkNetwork> {
   const buf = data instanceof Uint8Array ? data : new Uint8Array(data);
-  const { lat, lon, edgeA: ea, edgeB: eb, edgeM: em } = decodeWalkBin(buf);
+  const { lat, lon, edgeA: ea, edgeB: eb, edgeM: em } = yield* decodeWalkBinInSteps(buf);
   const n = lat.length;
   const m = ea.length;
   let minLat = Infinity;
   let maxLat = -Infinity;
   let minLon = Infinity;
   let maxLon = -Infinity;
-  for (let i = 0; i < n; i++) {
-    if (lat[i] < minLat) minLat = lat[i];
-    if (lat[i] > maxLat) maxLat = lat[i];
-    if (lon[i] < minLon) minLon = lon[i];
-    if (lon[i] > maxLon) maxLon = lon[i];
-  }
+  yield* inPieces(n, (from, to) => {
+    let [a, b, c, d] = [minLat, maxLat, minLon, maxLon];
+    for (let i = from; i < to; i++) {
+      if (lat[i] < a) a = lat[i];
+      if (lat[i] > b) b = lat[i];
+      if (lon[i] < c) c = lon[i];
+      if (lon[i] > d) d = lon[i];
+    }
+    [minLat, maxLat, minLon, maxLon] = [a, b, c, d];
+  });
   const degree = new Int32Array(n + 1);
-  for (let k = 0; k < m; k++) {
-    degree[ea[k] + 1]++;
-    degree[eb[k] + 1]++;
-  }
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) {
+      degree[ea[k] + 1]++;
+      degree[eb[k] + 1]++;
+    }
+  });
 
   const offset = degree;
   for (let v = 0; v < n; v++) offset[v + 1] += offset[v];
@@ -83,24 +107,28 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
   const target = new Int32Array(2 * m);
   const metres = new Float32Array(2 * m);
   const edgeMetres = new Float32Array(m);
-  for (let k = 0; k < m; k++) {
-    const s = em[k];
-    edgeMetres[k] = s;
-    target[fill[ea[k]]] = eb[k];
-    metres[fill[ea[k]]++] = s;
-    target[fill[eb[k]]] = ea[k];
-    metres[fill[eb[k]]++] = s;
-  }
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) {
+      const s = em[k];
+      edgeMetres[k] = s;
+      target[fill[ea[k]]] = eb[k];
+      metres[fill[ea[k]]++] = s;
+      target[fill[eb[k]]] = ea[k];
+      metres[fill[eb[k]]++] = s;
+    }
+  });
 
   const lat0 = n ? minLat : 0;
   const lon0 = n ? minLon : 0;
   const mPerLon = metresPerDegLon((minLat + maxLat) / 2 || 52.5);
   const x = new Float32Array(n);
   const y = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    x[i] = (lon[i] - lon0) * mPerLon;
-    y[i] = (lat[i] - lat0) * M_PER_DEG_LAT;
-  }
+  yield* inPieces(n, (from, to) => {
+    for (let i = from; i < to; i++) {
+      x[i] = (lon[i] - lon0) * mPerLon;
+      y[i] = (lat[i] - lat0) * M_PER_DEG_LAT;
+    }
+  });
   const bucketCols = n ? Math.floor(((maxLon - lon0) * mPerLon) / BUCKET_M) + 1 : 1;
   const bucketRows = n ? Math.floor(((maxLat - lat0) * M_PER_DEG_LAT) / BUCKET_M) + 1 : 1;
   const bucketOffset = new Int32Array(bucketCols * bucketRows + 1);
@@ -111,11 +139,15 @@ export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
     const r1 = Math.floor(Math.max(y[ea[k]], y[eb[k]]) / BUCKET_M);
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) visit(r * bucketCols + c);
   };
-  for (let k = 0; k < m; k++) eachBucket(k, (b) => bucketOffset[b + 1]++);
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) eachBucket(k, (b) => bucketOffset[b + 1]++);
+  });
   for (let b = 0; b < bucketCols * bucketRows; b++) bucketOffset[b + 1] += bucketOffset[b];
   const bfill = bucketOffset.slice(0, bucketCols * bucketRows);
   const bucketEdges = new Int32Array(bucketOffset[bucketCols * bucketRows]);
-  for (let k = 0; k < m; k++) eachBucket(k, (b) => (bucketEdges[bfill[b]++] = k));
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) eachBucket(k, (b) => (bucketEdges[bfill[b]++] = k));
+  });
 
   return {
     nodeCount: n,
@@ -243,23 +275,25 @@ export interface CellSnaps {
   db: Float32Array;
 }
 
-function cellEnds(net: WalkNetwork, cells: Snaps): CellSnaps {
+function* cellEnds(net: WalkNetwork, cells: Snaps): Generator<void, CellSnaps> {
   const n = cells.edge.length;
   const a = new Int32Array(n).fill(-1);
   const b = new Int32Array(n).fill(-1);
   const da = new Float32Array(n);
   const db = new Float32Array(n);
-  for (let k = 0; k < n; k++) {
-    const e = cells.edge[k];
-    if (e < 0) continue;
-    const len = net.edgeMetres[e];
-    const off = cells.metres[k];
-    const d = cells.along[k] * len + off;
-    a[k] = net.edgeA[e];
-    b[k] = net.edgeB[e];
-    da[k] = d;
-    db[k] = len + 2 * off - d;
-  }
+  yield* inPieces(n, (from, to) => {
+    for (let k = from; k < to; k++) {
+      const e = cells.edge[k];
+      if (e < 0) continue;
+      const len = net.edgeMetres[e];
+      const off = cells.metres[k];
+      const d = cells.along[k] * len + off;
+      a[k] = net.edgeA[e];
+      b[k] = net.edgeB[e];
+      da[k] = d;
+      db[k] = len + 2 * off - d;
+    }
+  });
   return { edge: cells.edge, a, b, da, db };
 }
 
@@ -283,12 +317,23 @@ const stopSnaps = new WeakMap<WalkNetwork, WeakMap<PreparedTimetable, Snaps>>();
 
 /** Every stop snapped to the network, cached per network and timetable. */
 export function snapStops(net: WalkNetwork, tt: PreparedTimetable): Snaps {
+  return stopSnaps.get(net)?.get(tt) ?? finish(snapStopsInSteps(net, tt));
+}
+
+/** snapStops in steps, cached as snapStops caches it. */
+export function* snapStopsInSteps(net: WalkNetwork, tt: PreparedTimetable): Generator<void, Snaps> {
   let byTt = stopSnaps.get(net);
   if (!byTt) stopSnaps.set(net, (byTt = new WeakMap()));
-  let snap = byTt.get(tt);
-  if (snap) return snap;
-  snap = makeSnaps(tt.stopCount);
-  for (let s = 0; s < tt.stopCount; s++) snapPoint(net, tt.stopLat[s], tt.stopLon[s], snap, s);
+  const cached = byTt.get(tt);
+  if (cached) return cached;
+  const snap = makeSnaps(tt.stopCount);
+  yield* inPieces(
+    tt.stopCount,
+    (from, to) => {
+      for (let s = from; s < to; s++) snapPoint(net, tt.stopLat[s], tt.stopLon[s], snap, s);
+    },
+    256,
+  );
   byTt.set(tt, snap);
   return snap;
 }
@@ -497,8 +542,10 @@ export function walkFrom(
 
 const cellSnaps = new WeakMap<WalkNetwork, Map<string, CellSnaps>>();
 
-/** Edges scattered between pauses when snapping in steps (a few tens of ms each). */
-const SNAP_STEP_EDGES = 40_000;
+/** Edges scattered between pauses when snapping in steps (about a millisecond's work). */
+const SNAP_STEP_EDGES = 2048;
+/** Grid rows swept between pauses when snapping in steps. */
+const SNAP_STEP_ROWS = 16;
 
 /**
  * Snaps the centres of a grid (as heatGrid lays it out) to the network. Cached per
@@ -510,17 +557,13 @@ export function snapCells(
   cols: number,
   rows: number,
 ): CellSnaps {
-  const steps = snapCellsInSteps(net, bbox, cols, rows);
-  for (;;) {
-    const s = steps.next();
-    if (s.done) return s.value;
-  }
+  return finish(snapCellsInSteps(net, bbox, cols, rows));
 }
 
 /**
- * snapCells in steps: the generator pauses every few tens of milliseconds, so a worker
- * can answer other messages in between (await a timeout after each `next()`). The result
- * is cached as snapCells caches it.
+ * snapCells in steps: the generator pauses every millisecond or so, so a worker can answer
+ * other messages in between (it runs a few steps, then lets queued messages in). The
+ * result is cached as snapCells caches it.
  */
 export function* snapCellsInSteps(
   net: WalkNetwork,
@@ -548,35 +591,37 @@ export function* snapCellsInSteps(
   // Scatter every edge onto the cells within `reach` metres of it; that settles most cells.
   const reach = 1.5 * Math.max(cw, ch);
   const { x, y, edgeA, edgeB } = net;
-  for (let e = 0; e < net.edgeCount; e++) {
-    if (e % SNAP_STEP_EDGES === SNAP_STEP_EDGES - 1) yield;
-    const ax = x[edgeA[e]];
-    const ay = y[edgeA[e]];
-    const vx = x[edgeB[e]] - ax;
-    const vy = y[edgeB[e]] - ay;
-    const len2 = vx * vx + vy * vy;
-    const c0 = Math.max(0, Math.ceil((Math.min(ax, ax + vx) - reach - cx0) / cw));
-    const c1 = Math.min(cols - 1, Math.floor((Math.max(ax, ax + vx) + reach - cx0) / cw));
-    const r0 = Math.max(0, Math.ceil((cy0 - Math.max(ay, ay + vy) - reach) / ch));
-    const r1 = Math.min(rows - 1, Math.floor((cy0 - Math.min(ay, ay + vy) + reach) / ch));
-    for (let r = r0; r <= r1; r++) {
-      const py = cy0 - r * ch;
-      for (let c = c0; c <= c1; c++) {
-        const px = cx0 + c * cw;
-        let f = len2 > 0 ? ((px - ax) * vx + (py - ay) * vy) / len2 : 0;
-        f = f < 0 ? 0 : f > 1 ? 1 : f;
-        const dx = ax + f * vx - px;
-        const dy = ay + f * vy - py;
-        const d2 = dx * dx + dy * dy;
-        const k = r * cols + c;
-        if (d2 < dist[k]) {
-          dist[k] = d2;
-          edge[k] = e;
-          along[k] = f;
+  const scatter = (from: number, to: number) => {
+    for (let e = from; e < to; e++) {
+      const ax = x[edgeA[e]];
+      const ay = y[edgeA[e]];
+      const vx = x[edgeB[e]] - ax;
+      const vy = y[edgeB[e]] - ay;
+      const len2 = vx * vx + vy * vy;
+      const c0 = Math.max(0, Math.ceil((Math.min(ax, ax + vx) - reach - cx0) / cw));
+      const c1 = Math.min(cols - 1, Math.floor((Math.max(ax, ax + vx) + reach - cx0) / cw));
+      const r0 = Math.max(0, Math.ceil((cy0 - Math.max(ay, ay + vy) - reach) / ch));
+      const r1 = Math.min(rows - 1, Math.floor((cy0 - Math.min(ay, ay + vy) + reach) / ch));
+      for (let r = r0; r <= r1; r++) {
+        const py = cy0 - r * ch;
+        for (let c = c0; c <= c1; c++) {
+          const px = cx0 + c * cw;
+          let f = len2 > 0 ? ((px - ax) * vx + (py - ay) * vy) / len2 : 0;
+          f = f < 0 ? 0 : f > 1 ? 1 : f;
+          const dx = ax + f * vx - px;
+          const dy = ay + f * vy - py;
+          const d2 = dx * dx + dy * dy;
+          const k = r * cols + c;
+          if (d2 < dist[k]) {
+            dist[k] = d2;
+            edge[k] = e;
+            along[k] = f;
+          }
         }
       }
     }
-  }
+  };
+  yield* inPieces(net.edgeCount, scatter, SNAP_STEP_EDGES);
   // Cells further than `reach` from every edge (lakes, fields, rail yards): take the
   // best edge of a neighbouring cell, sweeping down and then up the grid. That is a
   // close approximation of the nearest edge there, and far cheaper than a search.
@@ -605,7 +650,7 @@ export function* snapCellsInSteps(
       along[k] = segF;
     }
   };
-  for (let r = 0; r < rows; r++) {
+  const down = (r: number) => {
     for (let c = 0; c < cols; c++) {
       const k = r * cols + c;
       if (dist[k] <= exact) continue;
@@ -618,9 +663,8 @@ export function* snapCellsInSteps(
         if (c < cols - 1) tryFrom(k, k - cols + 1, px, py);
       }
     }
-  }
-  yield;
-  for (let r = rows - 1; r >= 0; r--) {
+  };
+  const up = (r: number) => {
     for (let c = cols - 1; c >= 0; c--) {
       const k = r * cols + c;
       if (dist[k] <= exact) continue;
@@ -633,17 +677,33 @@ export function* snapCellsInSteps(
         if (c < cols - 1) tryFrom(k, k + cols + 1, px, py);
       }
     }
-  }
+  };
+  yield* inPieces(
+    rows,
+    (from, to) => {
+      for (let r = from; r < to; r++) down(r);
+    },
+    SNAP_STEP_ROWS,
+  );
+  yield* inPieces(
+    rows,
+    (from, to) => {
+      for (let i = from; i < to; i++) up(rows - 1 - i);
+    },
+    SNAP_STEP_ROWS,
+  );
   const maxD2 = MAX_CELL_SNAP_M * MAX_CELL_SNAP_M;
-  for (let k = 0; k < cols * rows; k++) {
-    if (dist[k] <= maxD2) metres[k] = Math.sqrt(dist[k]);
-    else {
-      edge[k] = -1;
-      metres[k] = Infinity;
+  yield* inPieces(cols * rows, (from, to) => {
+    for (let k = from; k < to; k++) {
+      if (dist[k] <= maxD2) metres[k] = Math.sqrt(dist[k]);
+      else {
+        edge[k] = -1;
+        metres[k] = Infinity;
+      }
     }
-  }
+  });
   // Only the cell ends are kept: along and metres follow from them.
-  const ends = cellEnds(net, snap);
+  const ends = yield* cellEnds(net, snap);
   byLayout.set(key, ends);
   return ends;
 }
