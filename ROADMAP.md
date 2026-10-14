@@ -1,4 +1,4 @@
-# Roadmap V1.14
+# Roadmap V1.15
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.5** (through PR #286). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
@@ -49,11 +49,14 @@ Hendrik's wishes given without a pick land here: one dated line each, in his wor
 
 ## 0.10 Trip drawer and changes, follow-ups
 
-Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 and 0.10.4; 0.10.2 to 0.10.5 are done. Next in order.
+Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3, 0.10.4 and 0.10.5; 0.10.2 to 0.10.5 are done. Next in order.
 
 - **0.10.6 "Heute anders" box polish** (from step 0.10.4, 2026-10-13).
   - a. Trim the explanation note at the top: "the explanation note at the top is still three lines long and could be trimmed".
   - b. Show the end date on one-change rows: "on a line with one change, the one-line row cuts off the end date (e.g. "bis 18.10.") until tapped".
+- **0.10.7 Kept drawer list after the footpaths load** (from step 0.10.5, 2026-10-14).
+  - a. Fresh other-line rows: "in a kept drawer list, other-line rows boarding at a different platform keep older walking times (can be ~1 min off); a fresh search after footpaths load may also find a slightly different other-line row". Option: keep the list but quietly redo only the other-line search.
+  - b. Early pull: "pulling the drawer open within ~1 s of the first map can lose the race with the footpath redraw, so the list cuts off and is asked for again". Option: load footpaths a little earlier, or hold the redraw while the drawer is open. Measure the first map and tap timings before and after.
 
 ## 0.11 Easier map reading
 
@@ -112,6 +115,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.15** (2026-10-14): the two Inbox notes from step 0.10.5 placed as 0.10.7 Kept drawer list after the footpaths load (a. other-line rows redone with fresh walks, b. early pull no longer loses the race with the footpath redraw); Inbox emptied. Next in order: 0.10.6 "Heute anders" box polish.
 - **V1.14** (2026-10-14): 0.10.5 Drawer list asked for only once done (#286): the second ask came from the map being redone with the footpaths, which re-taps the place; the drawer now keeps its list and picked row when the vehicles stay the same (rows at the same stops take the new walks) and asks again only when the trip changes, a setting changed or the first search was cut short; saves about 12 route searches per opening in that case. Next in order: 0.10.6 "Heute anders" box polish.
 - **V1.13** (2026-10-14): the two Inbox notes from step 0.10.4 placed as 0.10.6 "Heute anders" box polish (a. shorter note at the top, b. end date visible on one-change rows); Inbox emptied. Next in order: 0.10.5 Drawer list asked for only once.
 - **V1.12** (2026-10-13): 0.10.4 Shorter "Heute anders" box done (#283): the explanation note is at the top; the whole day lists one row per line, cut to one line, and a line with several changes unfolds on a tap (Sa 17.10.: list 733 → 401 px). Next in order: 0.10.5 Drawer list asked for only once.
