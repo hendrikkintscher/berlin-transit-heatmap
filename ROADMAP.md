@@ -1,4 +1,4 @@
-# Roadmap V1.29
+# Roadmap V1.30
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.11.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
@@ -17,12 +17,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.11
 
 ## Inbox
 
-- (2026-10-14, from 'Why people don't get the map') First screen shows a finished, coloured example map (e.g. from Alexanderplatz) before any tap.
-- (2026-10-14, from 'Why people don't get the map') Trial colour fill on by default for first-time visitors (same repaint path, no extra routing).
-- (2026-10-14, from 'Why people don't get the map') Start screen offers 2–3 question entries ("Wo treffen wir uns?", "Was erreiche ich in 30 Min.?", "Wo soll ich wohnen?") besides "Von meinem Standort".
-- (2026-10-14, from 'Why people don't get the map') Places layer: lakes, pools, parks etc. with their minutes, answering "Wohin jetzt?".
-- (2026-10-14, from 'Why people don't get the map') Side-by-side comparison of two start points (flat hunting).
-- (2026-10-14, from 'Why people don't get the map') Sharepic per use case (one picture, one question) instead of one feature list.
+Empty.
 
 ## 0.11 Easier map reading
 
@@ -77,15 +72,20 @@ Last, so the pictures show the finished looks.
 
 ## 1.0 Berlin app finished
 
-- **1.0.0 Release**: every milestone above is live.
+- **1.0.0 Release**: every milestone above is live (the optional design list below is not needed).
   - a. Final check at phone size 360×740 on the live site, with timings.
   - b. Version 1.0.0 and tag `v1.0.0`; a short "what's in 1.0" list in README.md.
   - c. Hendrik's projects overview row updated.
+
+## Optional design decisions
+
+Not needed for 1.0.0. Design ideas and add-ons Hendrik calls optional for now live in their own list, **OPTIONAL-DESIGN.md** (project copy plan/optional-design.md), with ids D1, D2 …. An item he picks moves back into a numbered milestone above and gets its version there.
 
 ## Changelog
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.30** (2026-10-14): new milestone Optional design decisions with its own list OPTIONAL-DESIGN.md (plan/optional-design.md). Hendrik: "All of the current roadmaps are part of something I would call optional design decisions for now, lump them together in a separate document". The seven Inbox items (example map on the first screen, colour fill for first-time visitors, question entries, places layer, two start points side by side, sharepic per use case, ring widths) moved there as D1–D7; the Inbox is empty. Other steps are reviewed with Hendrik one at a time. Next in order: 0.11.1 Status lines keep the map clear.
 - **V1.29** (2026-10-14): 0.11.0 Darker time rings done (#308): rings 15 #1a0848, 30 #3b1d86, 45 #6440b4, 60 #7553c0 (a touch darker than planned so the 60-min ring is 3 : 1 on the app's water too), all opaque; a test checks 3 : 1 on land and water. The chip bar hides only the top strip and the trip card the bottom quarter; nothing moved. Hendrik asked on a card whether 0–5 min stays the darkest green in the colour fill. Timings unchanged (colour only). Next in order: 0.11.1 Status lines keep the map clear.
 - **V1.28** (2026-10-14): Hendrik's wish "changing direction should not switch to Ankunftszeit mode" placed as 0.13.3 Changing direction keeps the departure time, next to the anchor/pin swap step (old 0.13.3 Timetable windows check now 0.13.4). Next in order: 0.11.0 Darker time rings.
 - **V1.27** (2026-10-14): 0.10.11 "Heute anders" retries a failed changes download done (#305): after a failed load, each Mehr open fetches changes.json once more, quietly; on success the entry shows (87 ms after the tap, local test). Nothing runs on the first map or on taps. Milestone 0.10 is finished. Next in order: 0.11.0 Darker time rings.
