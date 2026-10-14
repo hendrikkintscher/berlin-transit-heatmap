@@ -1,6 +1,6 @@
-# Roadmap V1.26
+# Roadmap V1.27
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.10**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.11**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
 ## How to use this roadmap
 
@@ -16,12 +16,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 - **Roadmap**: `V1.x`. Every edit that adds, removes, reorders or finishes a step bumps x and adds a changelog line at the bottom; a full reorganisation makes `V2.0`. ROADMAP.md and the project copy plan/roadmap.md stay identical (docs-only PR, `npx prettier --write ROADMAP.md`).
 
 ## Inbox
-
-## 0.10 Trip drawer and changes, follow-ups
-
-- **0.10.11 "Heute anders" retries a failed changes download**. Noted after 0.10.9: if changes.json fails to load (for example offline at the moment of opening), the "Heute anders" entry stays hidden until the app is reopened, because nothing tries again.
-  - a. When Mehr opens and the changes file is missing after a failed load, fetch it once more quietly in the background; on success the entry shows as usual.
-  - b. No extra work on the first map or on taps: the retry runs only on a Mehr open and at most once per open.
 
 ## 0.11 Easier map reading
 
@@ -86,6 +80,7 @@ Last, so the pictures show the finished looks.
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.27** (2026-10-14): 0.10.11 "Heute anders" retries a failed changes download done (#305): after a failed load, each Mehr open fetches changes.json once more, quietly; on success the entry shows (87 ms after the tap, local test). Nothing runs on the first map or on taps. Milestone 0.10 is finished. Next in order: 0.11.0 Darker time rings.
 - **V1.26** (2026-10-14): two Inbox notes from 0.10.10 placed as 0.11.1 Status lines keep the map clear and 0.13.1 Footpaths start downloading sooner (old 0.13.1–0.13.2 now 0.13.2–0.13.3); Hendrik's two Treffpunkt wishes placed as 0.12.2 Closing Treffpunkt keeps the second place and 0.12.3 Treffpunkt opens in its own map look. Next in order: 0.10.11 "Heute anders" retries a failed changes download.
 - **V1.25** (2026-10-14): 0.10.10 Footpath loading line on a slow download done (#302): the line shows for 5 s at most, the thin bar keeps the download's progress, and when the footpaths arrive later the redone map brings a short note ("Fußwege geladen, die Zeiten sind jetzt genauer."). Measured at 150 KB/s: line 23 s → 5 s; a fast download looks as before. Next in order: 0.10.11 "Heute anders" retries a failed changes download.
 - **V1.24** (2026-10-14): the Inbox note from step 0.10.9 placed as new step 0.10.11 "Heute anders" retries a failed changes download. Next in order: 0.10.10 Footpath loading line on a slow download.
