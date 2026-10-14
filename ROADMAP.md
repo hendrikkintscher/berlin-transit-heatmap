@@ -1,4 +1,4 @@
-# Roadmap V1.32
+# Roadmap V1.33
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.12.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
@@ -16,8 +16,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.12
 - **Roadmap**: `V1.x`. Every edit that adds, removes, reorders or finishes a step bumps x and adds a changelog line at the bottom; a full reorganisation makes `V2.0`. ROADMAP.md and the project copy plan/roadmap.md stay identical (docs-only PR, `npx prettier --write ROADMAP.md`).
 
 ## Inbox
-
-Empty.
 
 ## 0.13 Faster and steadier routing
 
@@ -42,11 +40,19 @@ Empty.
   - c. Include the extra hour's edge: late in the extra hour after the chosen one, trips longer than about an hour can come out slightly worse, because an hour's file stops holding trips two hours after its own hour. Measure how often and by how much, and whether a longer tail fixes it at a fair file-size cost.
   - d. Hendrik gets the numbers and a recommendation; the change is built only on his yes.
 
-## 0.14 Showcase refresh
+## 0.14 Map handling
+
+- **0.14.0 Long press moves the anchor**. Hendrik (2026-10-14): "long press moves the anchor point to the chosen location". Today the first map touch sets the anchor and every other tap moves the pin; moving the anchor needs the grey rings button on the trip card.
+  - a. A long press on the map (about 0.5 s, finger held still) moves the anchor there, keeping its role (Start or Ziel), with one compute, the same path as the rings button; before any anchor exists it sets the first one, like the first tap. The pin and its trip card stay where they are, so the card then shows the trip from the new anchor.
+  - b. "Rückgängig" (5 s) brings the old anchor back, as for the rings button; links update as usual.
+  - c. A short tap, panning and pinch zoom work exactly as before; a long press on a start marker still shows its name. On a computer, a right-click does the same as a long press.
+  - d. Check at phone size 360×740 that a normal tap is not delayed by the long-press wait.
+
+## 0.15 Showcase refresh
 
 Last, so the pictures show the finished looks.
 
-- **0.14.0 New screenshots and sharepics**.
+- **0.15.0 New screenshots and sharepics**.
   - a. Retake the showcase screenshots (showcase/screens/) with the current default map.
   - b. Re-render the German sharepics if they show the default map.
 
@@ -65,6 +71,7 @@ Not needed for 1.0.0. Design ideas and add-ons Hendrik calls optional for now li
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.33** (2026-10-14): Hendrik's wish "long press moves the anchor point to the chosen location" placed as new milestone 0.14 Map handling, step 0.14.0 Long press moves the anchor (0.14 Showcase refresh now 0.15, still last). The Inbox side note from 0.12.0 (the floating Treffpunkt button brings back the closed person until all starts are cleared; a new person needs "+ Person" after that) moved to the optional list as D10c, since D10 removes that button; the Inbox is empty. Next in order: 0.13.0 First map under 1.5 s on a fresh visit.
 - **V1.32** (2026-10-14): 0.12.0 Closing Treffpunkt keeps the second place done (#312): the banner's ✕ keeps the second place as the pin (Ziel), so the card shows the trip between the two places; Treffpunkt on the card or the floating button brings that person back, names included. Measured at 360×740: ✕ to trip card about 0.8 s (the same map recompute as before). Milestone 0.12 is finished. Next in order: 0.13.0 First map under 1.5 s on a fresh visit.
 - **V1.31** (2026-10-14): Hendrik reviewed the steps on cards: 0.11.1 Status lines keep the map clear moved to the optional list as D8 (milestone 0.11 is finished with 0.11.0); the Treffpunkt looks 0.12.0, 0.12.1 and 0.12.3 moved there as D9–D11; 0.12.2 Closing Treffpunkt keeps the second place stays and is now 0.12.0; 0.14 Showcase refresh stays. 0.13 and 1.0 are not design and stay. Next in order: 0.12.0 Closing Treffpunkt keeps the second place.
 - **V1.30** (2026-10-14): new milestone Optional design decisions with its own list OPTIONAL-DESIGN.md (plan/optional-design.md). Hendrik: "All of the current roadmaps are part of something I would call optional design decisions for now, lump them together in a separate document". The seven Inbox items (example map on the first screen, colour fill for first-time visitors, question entries, places layer, two start points side by side, sharepic per use case, ring widths) moved there as D1–D7; the Inbox is empty. Other steps are reviewed with Hendrik one at a time. Next in order: 0.11.1 Status lines keep the map clear.
