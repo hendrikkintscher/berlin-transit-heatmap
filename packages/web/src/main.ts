@@ -88,7 +88,10 @@ const tipText = $('tip-text');
 const tipAction = $<HTMLButtonElement>('tip-action');
 const installBtn = $<HTMLButtonElement>('install-btn');
 const secondBtn = $<HTMLButtonElement>('second-btn');
-secondBtn.addEventListener('click', () => search.open('another'));
+// With one start, a person closed out of Treffpunkt comes back first (see 'meet-close').
+secondBtn.addEventListener('click', () =>
+  closedMeet && starts().length === 1 ? addStart(closedMeet.second) : search.open('another'),
+);
 
 // ---------- state, from the link (see url.ts) ----------
 const { state, link, outside: linkOutside } = linkState(location.search);
@@ -603,7 +606,10 @@ function startsChanged() {
   else tap.hideReadout();
   writeUrl();
   if (state.origin) compute();
-  else clearResult();
+  else {
+    closedMeet = null;
+    clearResult();
+  }
 }
 
 /** `spot` is the tapped place before the change, for "Rückgängig". */
@@ -707,9 +713,20 @@ function clearResult() {
     (map.getSource(id) as GeoJSONSource | undefined)?.setData(empty);
 }
 
+/**
+ * The Treffpunkt the banner's ✕ closed: its second place (kept on the map as the pin) and
+ * the names, so opening Treffpunkt again brings that person back.
+ */
+let closedMeet: { second: Point; names: string[] } | null = null;
+
 /** Meeting point: one more start, up to MAX_STARTS. */
 function addStart(p: Point) {
   if (!state.origin || starts().length >= MAX_STARTS) return;
+  const back = closedMeet;
+  closedMeet = null;
+  // The closed Treffpunkt's second person comes back with their names.
+  if (back && !state.others.length && p.lat === back.second.lat && p.lon === back.second.lon)
+    state.names = back.names;
   // A meeting point compares on Typisch; the choice before comes back without it.
   if (!state.others.length && state.measure !== 'typical') {
     state.measureBefore = state.measure;
@@ -721,10 +738,15 @@ function addStart(p: Point) {
   state.others = [...state.others, p];
   startsChanged();
 }
-// The banner's ✕ ends the meeting point: only the first start stays.
+// The banner's ✕ ends the meeting point: the first start stays, and the second place stays
+// as the pin, so the card shows the trip between the two (0.12.0).
 $('meet-close').addEventListener('click', () => {
+  const [first, second] = starts();
+  if (!first) return;
+  closedMeet = second ? { second, names: state.names.slice(0, 2) } : null;
+  if (second) tap.placeSpot(second);
   state.names = [];
-  setStarts(starts().slice(0, 1));
+  setStarts([first]);
 });
 
 // Start with the attribution collapsed to its (i) button so it does not cover the legend:
