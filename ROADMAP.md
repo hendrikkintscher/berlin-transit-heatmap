@@ -1,4 +1,4 @@
-# Roadmap V1.20
+# Roadmap V1.21
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.8** (through PR #295). Everything built so far is archived in archive/plan/roadmap-done-2026-10-13.md (project files); the roadmap before V1 is in archive/plan/roadmap-v0-2026-10-13.md.
 
@@ -43,7 +43,8 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 | 0.10.4  | 10-13     | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap         | #283      |
 | 0.10.5  | 10-14     | The drawer keeps its list when the card refreshes with the same trip (about 12 searches saved)    | #286      |
 | 0.10.6  | 10-14     | "Heute anders": two-line note on top, one-change rows always show their end date                  | #289      |
-| 0.10.7  | 10-14 now | The drawer's kept list re-searches other lines with the footpaths; no list cut off by the refresh | #292      |
+| 0.10.7  | 10-14     | The drawer's kept list re-searches other lines with the footpaths; no list cut off by the refresh | #292      |
+| 0.10.8  | 10-14 now | The footpath loading line no longer overlaps the start card on a short screen                     | #295      |
 
 ## Inbox
 
@@ -51,11 +52,14 @@ Hendrik's wishes given without a pick land here: one dated line each, in his wor
 
 ## 0.10 Trip drawer and changes, follow-ups
 
-Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 to 0.10.7; 0.10.2 to 0.10.7 are done. Next in order.
+Reopened for the three notes Hendrik gave after 0.10.0 and 0.10.1, plus notes from steps 0.10.3 to 0.10.8; 0.10.2 to 0.10.8 are done. Next in order.
 
 - **0.10.9 "Heute anders" entry in Mehr from the start** (from step 0.10.7, 2026-10-14): "The 'Heute anders' entry in Mehr appears only once the changes file is loaded; if Mehr is opened very early the entry can appear a moment later (seen once live, ~0.1 s)."
   - a. Show the entry as soon as Mehr can open; until the changes file is in, a tap shows a short loading line and fills the list when it arrives.
   - b. On a day without changes the entry still goes away (or says so) once the file is loaded; check at phone size 360×740 with a slow changes file.
+- **0.10.10 Footpath loading line on a slow download** (Hendrik, from 0.10.8, 2026-10-14): "Footpath loading line: on the live site it shows only briefly (~4–5 s after a fresh open), but with a slow footpath download it stays up until the download finishes."
+  - a. Measure at phone size 360×740 with a slowed footpath file how long the line stays and what it covers.
+  - b. Make a long wait calmer: for example show progress, or let the line go after a few seconds since the map already works without footpaths, and bring a short note back when they arrive. Keep the fast case as it is.
 
 ## 0.11 Easier map reading
 
@@ -115,6 +119,7 @@ Last, so the pictures show the finished looks.
 
 ## Changelog
 
+- **V1.21** (2026-10-14): the Inbox note from step 0.10.8 (footpath loading line stays up during a slow download) placed as new step 0.10.10 Footpath loading line on a slow download; 0.10.8 added to the past versions table; Inbox emptied. Next in order: 0.10.9 "Heute anders" entry in Mehr from the start.
 - **V1.20** (2026-10-14): 0.10.8 Start card lines overlap while footpaths load done (#295): it showed only on a short screen (phone held sideways, 740×360), never at 360×740; while the start card is up, the "Fußwege werden geladen…" line is now its last row, and it goes back to the bottom panel when the card goes. Next in order: 0.10.9 "Heute anders" entry in Mehr from the start.
 - **V1.19** (2026-10-14): the two Inbox notes from step 0.10.7 placed: "Heute anders entry in Mehr appears late" as new step 0.10.9 "Heute anders" entry in Mehr from the start, "map frames take 250–400 ms in the first ~7 s, measure tap delay on a real phone" as substep 0.13.0 c (First map under 1.5 s); Inbox emptied. Next in order: 0.10.8 Start card lines overlap while footpaths load.
 - **V1.18** (2026-10-14): 0.10.7 Kept drawer list after the footpaths load done (#292): a kept list quietly searches the other lines again with the new walks and swaps in the finished list; the footpath refresh waits (up to 4 s) for a list still being searched, and a pull during the refresh asks once, right after it (pull to full list 1.2–1.3 s → 0.5 s, one search instead of two); "Heute anders" needed no change (it opens 3–90 ms after the tap; the ~2 s was the test tool waiting for software-drawn map frames). Next in order: 0.10.8 Start card lines overlap while footpaths load.
