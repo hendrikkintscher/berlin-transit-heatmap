@@ -18,6 +18,7 @@ import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
 import { changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
+import { refitRows, ridesKey } from './more-rows';
 import { icon } from './icons';
 import { MAX_NAME, MAX_STARTS, type Point } from './url';
 import { liveStatus, liveText, type Board } from './live';
@@ -407,6 +408,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   function keepSpot() {
     if (!spot) return hideReadout();
     clearDeferred();
+    listStale = true;
     tripId++;
     setTrip(null);
     readout.classList.add('stale');
@@ -472,6 +474,22 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       deferred.render();
     }
     if (!document.getElementById('trip')) return;
+    // The same vehicles again (the map was redone with the footpaths, the place tapped
+    // again): the drawer keeps its list, fitted to the new walks, and the picked row; only
+    // a list cut short by the refresh is asked for again.
+    const key = ridesKey(m);
+    if (key && !listStale && key === ridesKey(connections[0])) {
+      connections = [m, ...refitRows(connections.slice(1), m)];
+      showTrip(connections[shownConnection] ?? m);
+      if (moreState === 'done' && moreComplete) return renderMore();
+      // The rows shown so far stay while the rest comes again.
+      moreAsked = false;
+      askMore();
+      if (moreAsked) return;
+      moreState = 'idle';
+      return renderMore();
+    }
+    listStale = false;
     showTrip(m);
     // The drawer's list starts again from this connection.
     connections = [m];
@@ -529,7 +547,10 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   let moreId = 0;
   /** The drawer's list: "loading" until the worker answers, then the connections. */
   let moreState: 'idle' | 'loading' | 'done' = 'idle';
-
+  /** Whether the worker's searches for the list went through (not cut short). */
+  let moreComplete = false;
+  /** A setting changed: the list was for the old one, even if the connection is the same. */
+  let listStale = false;
   function askMore() {
     const j = connections[0]?.journeys;
     const one = j?.length === 1 ? j[0] : null;
@@ -545,6 +566,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       return;
     moreAsked = true;
     moreState = 'loading';
+    moreComplete = false;
     moreId++;
     send({
       type: 'moreTrips',
@@ -557,20 +579,16 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     renderMore();
   }
 
-  function onMoreTrips(m: { id: number; trips: Omit<Trip, 'type' | 'id'>[] }) {
+  function onMoreTrips(m: { id: number; trips: Omit<Trip, 'type' | 'id'>[]; done: boolean }) {
     if (m.id !== moreId || !connections.length) return;
+    moreComplete = m.done;
     // The list may come again, longer (other lines found later): the picked row stays picked.
     const picked = connections[shownConnection];
     connections = [
       connections[0]!,
       ...m.trips.map((x) => ({ ...x, type: 'trip' as const, id: connections[0]!.id })),
     ];
-    const key = (c: Trip | undefined) => {
-      const j = c?.journeys[0];
-      const lines = (j?.legs ?? []).map((l) => (l.type === 'ride' ? l.name : '')).join();
-      return j ? `${j.leave} ${j.arrive} ${lines}` : '';
-    };
-    const k = connections.findIndex((c) => key(c) === key(picked));
+    const k = connections.findIndex((c) => ridesKey(c) === ridesKey(picked));
     if (k >= 0) shownConnection = k;
     else if (shownConnection && picked) {
       // Beaten by a row found later, it stays in the list while it is on the card.

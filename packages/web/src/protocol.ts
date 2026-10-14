@@ -266,12 +266,14 @@ export type FromWorker =
   | { type: 'stations'; list: SearchStation[] }
   /**
    * More connections for the drawer, each drawn as a trip would be; the same `id` may come
-   * again with a longer list (connections on other lines, found one search at a time).
+   * again with a longer list (connections on other lines, found one search at a time);
+   * `done` once the searches are through (a list cut short by a tap or a map never is).
    */
   | {
       type: 'moreTrips';
       id: number;
       trips: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>[];
+      done: boolean;
     }
   /** The nearest stop's name (null: none close or no timetable yet). */
   | { type: 'placeName'; id: number; name: string | null }
