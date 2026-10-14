@@ -408,7 +408,8 @@ const rowMessages = (b: MoreBase, rows: MoreRow[]) =>
  * the shown connection's own rides later on, at once; then, one search at a time, the
  * ones on other lines that arrive earlier. Each list that changed goes out whole, and
  * once the searches are through, `done` says so (a list cut short stays not done);
- * `fresh` (awaited before each search) says whether it is still wanted.
+ * `fresh` (awaited before each search) says whether it is still wanted. Quiet, only the
+ * finished list goes out (the drawer shows the old one meanwhile).
  */
 export async function moreTrips(
   msg: Extract<ToWorker, { type: 'moreTrips' }>,
@@ -419,9 +420,9 @@ export async function moreTrips(
   fresh: () => Promise<boolean>,
 ): Promise<void> {
   const b = moreBase(msg);
-  if (!b) return send([], true);
+  if (!b) return msg.quiet ? undefined : send([], true);
   const rows = sameRides(b);
-  send(rowMessages(b, rows), false);
+  if (!msg.quiet) send(rowMessages(b, rows), false);
   const others = otherLines(b);
   let seen = bestRows(rows, MORE_TRIPS);
   while ((await fresh()) && lastFound === b.f0) {
@@ -436,7 +437,7 @@ export async function moreTrips(
     const best = bestRows(rows, MORE_TRIPS);
     if (best.length === seen.length && best.every((r, i) => r === seen[i])) continue;
     seen = best;
-    send(rowMessages(b, rows), false);
+    if (!msg.quiet) send(rowMessages(b, rows), false);
   }
 }
 

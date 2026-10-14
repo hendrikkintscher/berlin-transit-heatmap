@@ -101,9 +101,18 @@ export type ToWorker =
   | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
   /**
    * The connections after the shown one (arriving: before it), which left at `leave` and
-   * arrives at `arrive`, to the same place; for the drawer.
+   * arrives at `arrive`, to the same place; for the drawer. `quiet`: the list is on screen
+   * already (redone for new walks), so only the finished list goes out.
    */
-  | { type: 'moreTrips'; id: number; lat: number; lon: number; leave: number; arrive: number }
+  | {
+      type: 'moreTrips';
+      id: number;
+      lat: number;
+      lon: number;
+      leave: number;
+      arrive: number;
+      quiet?: boolean;
+    }
   /** The nearest stop's name, to name a place ("bei S Südkreuz"). */
   | { type: 'placeName'; id: number; lat: number; lon: number }
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }

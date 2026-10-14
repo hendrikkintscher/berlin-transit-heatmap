@@ -68,6 +68,8 @@ export interface TapDeps {
   openChanges: (ride: { name: string; mode: string }) => void;
   /** Draws the trip's direction arrows (null: none). */
   showArrows: (lines: GeoJSON.FeatureCollection | null) => void;
+  /** The map is being redone with the footpaths: the place's trip comes again after it. */
+  refining: () => boolean;
 }
 
 /**
@@ -475,13 +477,17 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     }
     if (!document.getElementById('trip')) return;
     // The same vehicles again (the map was redone with the footpaths, the place tapped
-    // again): the drawer keeps its list, fitted to the new walks, and the picked row; only
+    // again): the drawer keeps its list, fitted to the new walks, and the picked row; a
+    // whole list quietly looks for the other lines again (their walks may be other ones),
     // a list cut short by the refresh is asked for again.
     const key = ridesKey(m);
     if (key && !listStale && key === ridesKey(connections[0])) {
       connections = [m, ...refitRows(connections.slice(1), m)];
       showTrip(connections[shownConnection] ?? m);
-      if (moreState === 'done' && moreComplete) return renderMore();
+      if (moreState === 'done' && moreComplete) {
+        renderMore();
+        return askMore(true);
+      }
       // The rows shown so far stay while the rest comes again.
       moreAsked = false;
       askMore();
@@ -551,12 +557,16 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   let moreComplete = false;
   /** A setting changed: the list was for the old one, even if the connection is the same. */
   let listStale = false;
-  function askMore() {
+  /**
+   * Asks the worker for the drawer's list, once the drawer opens. `quiet`: the whole list
+   * is on screen and stays there until the one for the new walks is through.
+   */
+  function askMore(quiet = false) {
     const j = connections[0]?.journeys;
     const one = j?.length === 1 ? j[0] : null;
     if (
-      moreAsked ||
-      !readout.matches('.drawer, .pull-list') ||
+      (moreAsked && !quiet) ||
+      (!quiet && !readout.matches('.drawer, .pull-list')) ||
       !tripAt ||
       !one ||
       one.leave === undefined ||
@@ -564,9 +574,14 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       state.special
     )
       return;
+    if (!quiet && deps.refining()) {
+      // The map is being redone with the footpaths: the worker is busy with it, and the
+      // place's trip comes again right after, so the list is asked for then (onTrip), not
+      // now only to be cut short.
+      moreState = 'loading';
+      return renderMore();
+    }
     moreAsked = true;
-    moreState = 'loading';
-    moreComplete = false;
     moreId++;
     send({
       type: 'moreTrips',
@@ -575,7 +590,11 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       lon: tripAt.lon,
       leave: one.leave,
       arrive: one.arrive,
+      ...(quiet ? { quiet } : {}),
     });
+    if (quiet) return;
+    moreState = 'loading';
+    moreComplete = false;
     renderMore();
   }
 
@@ -895,5 +914,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     addChangeNotes,
     /** The place kept in the link. */
     spot: (): Point | null => spot,
+    /** The drawer's list is being searched (the footpaths' refresh waits for it). */
+    listLoading: () => moreAsked && !moreComplete,
   };
 }
