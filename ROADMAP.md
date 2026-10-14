@@ -1,4 +1,4 @@
-# Roadmap V1.39
+# Roadmap V1.40
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.1**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
@@ -20,21 +20,24 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.2 Same trip whichever end is the anchor**. Hendrik (2026-10-13): "switching between anchor and pin causes recalculation and sometimes gives different routes depending on which one is anchor and pin while it should give the same since start and Ziel does not change".
+- **0.13.2 Footpaths ready right after their download**. Side note from 0.13.1 (2026-10-14): "Once footpaths are downloaded, unpacking them takes ~1 s of background work (more on a phone) and a tap during it waits. Splitting that work into smaller pieces, or doing it in advance at data build time, could make footpaths ready ~1 s after the first map and remove that tap wait." Hendrik (2026-10-14): "Let's work on the side note first".
+  - a. Unpack the footpaths in small slices, so a tap meanwhile does not wait.
+  - b. Start the unpacking as soon as the download is done, not once the base map is up; keep the first map, the base map and taps as fast.
+- **0.13.3 Same trip whichever end is the anchor**. Hendrik (2026-10-13): "switching between anchor and pin causes recalculation and sometimes gives different routes depending on which one is anchor and pin while it should give the same since start and Ziel does not change".
   - a. Collect trip pairs that differ when anchor and pin swap.
   - b. Find why the forward and backward searches pick different trips (tie-breaks, transfer rules, time windows).
   - c. Fix so both give the same trip, with a test over the pairs from a.
-- **0.13.3 Changing direction keeps the departure time**. Hendrik (2026-10-14): "changing direction should not switch to Ankunftszeit mode". Today the trip card's ⇅, moving the map to the other end of the trip and the Zeit panel's Losfahren/Ankommen are one switch: when the map's place becomes the Ziel, the time turns into an arrival time ("Ankommen um …", and on "Jetzt" it even moves an hour on). So Start/Ziel and departure/arrival time are tied together.
+- **0.13.4 Changing direction keeps the departure time**. Hendrik (2026-10-14): "changing direction should not switch to Ankunftszeit mode". Today the trip card's ⇅, moving the map to the other end of the trip and the Zeit panel's Losfahren/Ankommen are one switch: when the map's place becomes the Ziel, the time turns into an arrival time ("Ankommen um …", and on "Jetzt" it even moves an hour on). So Start/Ziel and departure/arrival time are tied together.
   - a. Make them two separate choices: ⇅ and moving the map only change which place is Start and which is Ziel; the time stays a departure time ("Losfahren") unless Ankommen is picked in the Zeit panel.
   - b. A map to a Ziel with a departure time needs the trips from every place leaving at that time. Measure whether that is as fast as today's arrival map; if not, find a quick way (for example from the hour's timetable already loaded) and report the timings before building.
   - c. "Rückgängig" and links (dir=arr) keep working; the trip on the card stays the same when only the direction changes.
-- **0.13.4 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
+- **0.13.5 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
   - a. Measure today's windows: what each timetable file holds and how long each kind of map takes.
   - b. Try two-hour windows for Typisch and best connection and one hour for Nächste; compare speed, file size and trip accuracy against today.
   - c. Include the extra hour's edge: late in the extra hour after the chosen one, trips longer than about an hour can come out slightly worse, because an hour's file stops holding trips two hours after its own hour. Measure how often and by how much, and whether a longer tail fixes it at a fair file-size cost.
   - d. Hendrik gets the numbers and a recommendation; the change is built only on his yes.
 
-- **0.13.5 Fresh-start link**. Hendrik (2026-10-14): "add a link option like [URL]/fresh to start from a fresh, non-cached start like from a new device".
+- **0.13.6 Fresh-start link**. Hendrik (2026-10-14): "add a link option like [URL]/fresh to start from a fresh, non-cached start like from a new device".
   - a. Opening the app's address with `/fresh` (GitHub Pages serves only files, so a small page at fresh/ or a `?fresh` link) removes the app's service worker, its caches and stored data, then opens the app as on a new device.
   - b. Favourites and names live only on the device, so the page says they will go and asks once before deleting them (or offers to keep them); nothing is deleted without that tap.
   - c. The normal address loads exactly as before; the fresh page adds nothing to the first map.
