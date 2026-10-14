@@ -187,6 +187,12 @@ body {
   color: var(--muted);
   font-size: 13px;
 }
+/* The status line as the card's last row while the card is up (main.ts showHint). */
+#hint .status {
+  margin-top: 4px;
+  padding: 0;
+  background: none;
+}
 
 .bottom {
   position: fixed;

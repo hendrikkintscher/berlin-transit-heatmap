@@ -208,6 +208,15 @@ function showLegend(kind: 'time' | 'diff' | 'home', extra = false, avg = false) 
   }
 }
 
+/**
+ * Shows or hides the first-open card. While it is up, the status line ("Fußwege werden
+ * geladen…") is its last row, so on a short screen it is not drawn over the card.
+ */
+function showHint(on: boolean) {
+  hint.hidden = !on;
+  if (on) hint.append(statusEl);
+  else if (statusEl.parentElement === hint) $('undo').before(statusEl);
+}
 let statusTimer = 0;
 /** How long the status line fades out (style.css .status). */
 const STATUS_FADE_MS = 600;
@@ -545,7 +554,7 @@ function showOrigin() {
     el.title = name;
   });
   meetChip.hidden = list.length < 2;
-  hint.hidden = list.length > 0 || !!state.special || search.isOpen();
+  showHint(!list.length && !state.special && !search.isOpen());
   // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
   secondBtn.hidden = !list.length || list.length >= MAX_STARTS || !!state.special;
   // With one start it starts a meeting (Treffpunkt); in one it adds a person.
@@ -1331,7 +1340,7 @@ menu.applyLang(lang(), false);
 // paints the HTML's placeholder time or German labels for an English link).
 $('chips').classList.remove('unrendered');
 search.panel.classList.remove('unrendered');
-hint.hidden = !!state.origin || !!state.special;
+showHint(!state.origin && !state.special);
 showHeat();
 if (linkOutside) setStatus(() => t('linkOutside'), true);
 
