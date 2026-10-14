@@ -304,6 +304,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (m.type === 'walk') refineWalks();
   } else if (m.type === 'result') {
     if (m.id !== state.requestId) return;
+    refining = false;
     if (m.living || m.home) special.done(m);
     state.result = m;
     showResult(m);
@@ -354,6 +355,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     state.layers[m.window] = m;
     if (m.window === state.window) showLayers();
   } else if (m.type === 'error') {
+    refining = false;
     loadbar.hidden = true;
     setStatus(() => t('failed', { message: m.message }));
   }
@@ -386,18 +388,32 @@ function redoWalks() {
 
 /**
  * The footpaths arrived: the map is redone with them, but not right after a tap (its trip
- * would wait behind the map), and a place's card keeps its trip until the refined one is
- * in, so nothing jumps when the minutes stay the same.
+ * would wait behind the map) nor while the drawer's list is being searched (the map would
+ * cut it short; up to LIST_HOLD_MS), and a place's card keeps its trip until the refined
+ * one is in, so nothing jumps when the minutes stay the same.
  */
 function refineWalks() {
   const wait = lastCardAt + PRELOAD_DELAY_MS - performance.now();
   if (wait > 0) return void setTimeout(refineWalks, wait);
+  if (tap.listLoading()) {
+    listHeldAt ||= performance.now();
+    if (performance.now() - listHeldAt < LIST_HOLD_MS)
+      return void setTimeout(refineWalks, LIST_POLL_MS);
+  }
+  listHeldAt = 0;
   if (state.special) return redoWalks();
   state.layers = {};
   layersRequested.clear();
   showLayers();
+  refining = true;
   compute();
 }
+/** When the refresh began to wait for the drawer's list (0: not waiting). */
+let listHeldAt = 0;
+const LIST_HOLD_MS = 4000;
+const LIST_POLL_MS = 100;
+/** The map is being redone with the footpaths (till its result is in). */
+let refining = false;
 /** When the last card was drawn (a tap, a search pick). */
 let lastCardAt = 0;
 
@@ -1194,6 +1210,7 @@ const tap = initTap(
     focusChanges: (rides) => changes?.focus(rides),
     openChanges: (ride) => changes?.openFor(ride),
     showArrows: (lines) => showArrows?.(lines),
+    refining: () => refining,
     showHome: (i) => {
       const at = starts()[i];
       if (at)
