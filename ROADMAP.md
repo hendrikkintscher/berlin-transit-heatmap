@@ -1,4 +1,4 @@
-# Roadmap V1.30
+# Roadmap V1.31
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.11.0**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
@@ -19,25 +19,11 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.11
 
 Empty.
 
-## 0.11 Easier map reading
-
-- **0.11.1 Status lines keep the map clear**. Noted after 0.10.10: while footpaths load, the status line covers the map strip between the tip card and the bottom buttons (y 661–680 at 360×740). Fine for its 5 s, but other status lines may stay longer.
-  - a. List every status line, where it sits and how long it can stay.
-  - b. Any that can stay over the map strip for more than about 5 s moves or shortens; the rest stay as they are.
-
 ## 0.12 Treffpunkt mode
 
-- **0.12.0 Treffpunkt looks, options only**. Hendrik (2026-10-13): "Treffpunkt does not need to be there as a button on the home screen, when we are in Treffpunkt mode the 3. person button should be the same as in the connection drawer and we need our own color coding for the Treffpunkt mode, ideally including both dimensions: total time and fairness. There should be 5 suggestions to decide from, before it gets build".
-  - a. Five colour codings for the meeting map that show both total time and fairness (for example two-tone fills, hatching for unfair places, or a combined score scale).
-  - b. Each shown as a screenshot of the same meeting at phone size, with the Treffpunkt button gone from the home screen and the "+ Person" button styled as in the trip drawer.
-  - c. Nothing changes in the live app in this step.
-- **0.12.1 Treffpunkt mode built**: the option Hendrik picks from 0.12.0 becomes the meeting map; the home-screen button goes and "+ Person" matches the drawer.
-- **0.12.2 Closing Treffpunkt keeps the second place**. Hendrik (2026-10-14): "after closing Treffpunkt mode the second location should be retained". Today the banner's ✕ drops every start but the first, so the second place is lost.
+- **0.12.0 Closing Treffpunkt keeps the second place**. Hendrik (2026-10-14): "after closing Treffpunkt mode the second location should be retained". Today the banner's ✕ drops every start but the first, so the second place is lost.
   - a. On close, the second place stays on the map as the trip's other end (the pin), so the card shows the trip between the two places.
   - b. Opening Treffpunkt again, or "+ Person", brings it back as the second person.
-- **0.12.3 Treffpunkt opens in its own map look**. Hendrik (2026-10-14): "when Treffpunkt mode is started change map style to it's specific heatmap mode". Today the meeting map keeps whatever look was on (rings or the Heatmap switch).
-  - a. Starting Treffpunkt switches the map to the meeting colouring built in 0.12.1 (time and fairness); closing it returns to the look that was on before.
-  - b. One repaint, no extra routing on the switch.
 
 ## 0.13 Faster and steadier routing
 
@@ -85,6 +71,7 @@ Not needed for 1.0.0. Design ideas and add-ons Hendrik calls optional for now li
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.31** (2026-10-14): Hendrik reviewed the steps on cards: 0.11.1 Status lines keep the map clear moved to the optional list as D8 (milestone 0.11 is finished with 0.11.0); the Treffpunkt looks 0.12.0, 0.12.1 and 0.12.3 moved there as D9–D11; 0.12.2 Closing Treffpunkt keeps the second place stays and is now 0.12.0; 0.14 Showcase refresh stays. 0.13 and 1.0 are not design and stay. Next in order: 0.12.0 Closing Treffpunkt keeps the second place.
 - **V1.30** (2026-10-14): new milestone Optional design decisions with its own list OPTIONAL-DESIGN.md (plan/optional-design.md). Hendrik: "All of the current roadmaps are part of something I would call optional design decisions for now, lump them together in a separate document". The seven Inbox items (example map on the first screen, colour fill for first-time visitors, question entries, places layer, two start points side by side, sharepic per use case, ring widths) moved there as D1–D7; the Inbox is empty. Other steps are reviewed with Hendrik one at a time. Next in order: 0.11.1 Status lines keep the map clear.
 - **V1.29** (2026-10-14): 0.11.0 Darker time rings done (#308): rings 15 #1a0848, 30 #3b1d86, 45 #6440b4, 60 #7553c0 (a touch darker than planned so the 60-min ring is 3 : 1 on the app's water too), all opaque; a test checks 3 : 1 on land and water. The chip bar hides only the top strip and the trip card the bottom quarter; nothing moved. Hendrik asked on a card whether 0–5 min stays the darkest green in the colour fill. Timings unchanged (colour only). Next in order: 0.11.1 Status lines keep the map clear.
 - **V1.28** (2026-10-14): Hendrik's wish "changing direction should not switch to Ankunftszeit mode" placed as 0.13.3 Changing direction keeps the departure time, next to the anchor/pin swap step (old 0.13.3 Timetable windows check now 0.13.4). Next in order: 0.11.0 Darker time rings.
