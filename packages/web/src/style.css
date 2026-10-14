@@ -1953,8 +1953,23 @@ body.special .legend {
 .changes-list .line-badge {
   vertical-align: 1px;
 }
-/* The whole day: one line per row, cut short; tapped, the stretch and its full text show. */
-.changes-list .one,
+/* The whole day: one line per row, cut short; tapped, the stretch and its full text show.
+   A one-change row cuts the stretch, so its end date stays in view. */
+.changes-list .one {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+}
+.changes-list .one .line-badge,
+.changes-list .one .until {
+  flex: none;
+}
+.changes-list .one .what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .changes-list .group {
   white-space: nowrap;
   overflow: hidden;
