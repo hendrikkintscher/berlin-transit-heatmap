@@ -1,6 +1,6 @@
-# Roadmap V1.24
+# Roadmap V1.25
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.9**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10.10**. Everything built so far, older changelog lines, held and not planned ideas are archived in archive/plan/ (project files), latest in roadmap-v1.21-full-2026-10-14.md.
 
 ## How to use this roadmap
 
@@ -19,9 +19,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.10
 
 ## 0.10 Trip drawer and changes, follow-ups
 
-- **0.10.10 Footpath loading line on a slow download**. On the live site the "Fußwege werden geladen…" line shows only briefly (~4–5 s after a fresh open), but with a slow footpath download it stays up until the download finishes.
-  - a. Measure at phone size with a slowed footpath file how long the line stays and what it covers.
-  - b. Make a long wait calmer: for example show progress, or let the line go after a few seconds since the map already works without footpaths, and bring a short note back when they arrive. Keep the fast case as it is.
 - **0.10.11 "Heute anders" retries a failed changes download**. Noted after 0.10.9: if changes.json fails to load (for example offline at the moment of opening), the "Heute anders" entry stays hidden until the app is reopened, because nothing tries again.
   - a. When Mehr opens and the changes file is missing after a failed load, fetch it once more quietly in the background; on success the entry shows as usual.
   - b. No extra work on the first map or on taps: the retry runs only on a Mehr open and at most once per open.
@@ -76,6 +73,7 @@ Last, so the pictures show the finished looks.
 
 Only the latest lines stay here; older ones are in the archived copies.
 
+- **V1.25** (2026-10-14): 0.10.10 Footpath loading line on a slow download done (#302): the line shows for 5 s at most, the thin bar keeps the download's progress, and when the footpaths arrive later the redone map brings a short note ("Fußwege geladen, die Zeiten sind jetzt genauer."). Measured at 150 KB/s: line 23 s → 5 s; a fast download looks as before. Next in order: 0.10.11 "Heute anders" retries a failed changes download.
 - **V1.24** (2026-10-14): the Inbox note from step 0.10.9 placed as new step 0.10.11 "Heute anders" retries a failed changes download. Next in order: 0.10.10 Footpath loading line on a slow download.
 - **V1.23** (2026-10-14): 0.10.9 "Heute anders" entry in Mehr from the start done (#299): the entry is there as soon as Mehr opens; before the changes file is in, a tap opens the box with a loading line that fills when the file arrives, or says all runs as usual. Next in order: 0.10.10 Footpath loading line on a slow download.
 - **V1.22** (2026-10-14): roadmap made lean (Hendrik: "only how to use it and detailed enough explanations for the steps"). Moved to archive/plan/roadmap-v1.21-full-2026-10-14.md: past versions table, changelog V1.0–V1.20, Held and Not planned, provenance notes. No step changed. Next in order: 0.10.9 "Heute anders" entry in Mehr from the start.
