@@ -8,7 +8,6 @@ import type { Measure } from './protocol';
 import { $, type State } from './state';
 import {
   arriveWhen,
-  exactWhen,
   fullHour,
   isNow,
   isPastHour,
@@ -16,6 +15,7 @@ import {
   laterWhen,
   leaveOffset,
   sameWhen,
+  tripWhen,
   upcomingDays,
   whenAt,
   whenParam,
@@ -192,8 +192,9 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
    * Losfahren or Ankommen (the trip card's ⇅ uses it too). `quiet` only sets it: the caller
    * recomputes the map itself, when the start moves in the same step. `at`, when the map
    * moves to the other end of the shown trip (seconds of the day): the trip's arrival when
-   * turning to Ankommen, its departure when turning to Losfahren, to the minute, so the map
-   * fits the trip (Nächste only); moving back brings the time before.
+   * turning to Ankommen, its departure when turning to Losfahren, to the minute (Typisch and
+   * Bestfall: the hour it falls in), so the map fits the trip; moving back brings the time
+   * before.
    */
   function setDirection(direction: Direction, quiet = false, at?: number) {
     const back = beforeMove;
@@ -204,8 +205,8 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
       return setWhen(back.when, { direction }, quiet);
     }
     const moved =
-      at !== undefined && state.measure === 'next' && direction !== state.direction
-        ? exactWhen(state.when.day, at, direction)
+      at !== undefined && direction !== state.direction
+        ? tripWhen(state.when.day, at, direction, state.measure === 'next')
         : null;
     if (moved) {
       beforeMove = { direction: state.direction, when: state.when, moved };

@@ -205,6 +205,23 @@ describe('trip card', () => {
     expect(html).toContain('los in 5 Min.');
   });
 
+  it('names the minute the trip arrives by, as the Zeit panel does', () => {
+    const html = tripHtml(
+      {
+        journeys: [
+          {
+            transfers: 0,
+            legs: [ride('M41', 'bus', 'A', 'B')],
+            leave: 10 * 3600 + 5 * 60,
+            arrive: 10 * 3600 + 23 * 60 + 30,
+          },
+        ],
+      },
+      { ...ctx, now: 10 * 3600 },
+    );
+    expect(html).toContain('an 10:24 Uhr');
+  });
+
   it('says jetzt los, counts down, or names the time on another day', () => {
     expect(leaveText(36000, 35990)).toBe('jetzt los');
     expect(leaveText(36000, 35000)).toBe('los in 16 Min.');

@@ -1,4 +1,4 @@
-// What a link carries: ?from=lat,lon&with=…[&with=…]&to=…&t=weekend-02&dir=arr&m=best&cmp=…
+// What a link carries: ?from=lat,lon&with=…[&with=…]&to=…&trip=…&t=weekend-02&dir=arr&m=best&cmp=…
 // &walk=5&sf=1&go=bike&routes=0&layers=heat,freq,desert,noiso&bis=30&lang=en. Reading a link only
 // changes what it names; the rest keeps the device's own settings. An exact time adds its
 // minutes to t (t=20261014-0835).
@@ -44,6 +44,11 @@ export interface LinkState {
   names: string[];
   /** The tapped place, kept through settings changes. */
   to: Point | null;
+  /**
+   * With `to`, once the map moved to the other end of a trip: that trip's departure and
+   * arrival (seconds of the service day), so the link opens on the same trip.
+   */
+  span: Span | null;
   when: When;
   direction: Direction;
   measure: Measure;
@@ -59,6 +64,20 @@ export interface LinkState {
   /** "Bis N Min." in minutes (one of LIMIT_MINUTES), 0 = off. */
   limit: number;
 }
+
+export interface Span {
+  leave: number;
+  arrive: number;
+}
+
+/** "37419-41203" (seconds of the day, as linkQuery writes it) -> a span; null if none. */
+export function parseSpan(v: string | null): Span | null {
+  const m = /^(\d{1,6})-(\d{1,6})$/.exec(v ?? '');
+  if (!m) return null;
+  const [leave, arrive] = [Number(m[1]), Number(m[2])];
+  return leave <= arrive ? { leave, arrive } : null;
+}
+export const spanParam = (s: Span) => `${Math.floor(s.leave)}-${Math.ceil(s.arrive)}`;
 
 export function parsePoint(v: string | null): Point | null {
   const [lat, lon] = (v ?? '').split(',').map(Number);
@@ -110,6 +129,7 @@ export function readLink(search: string, base: LinkState): LinkState {
     : [];
   s.names = s.others.length ? parseNames(p.get('names'), s.others.length + 1) : [];
   s.to = s.origin ? parsePoint(p.get('to')) : null;
+  s.span = s.to ? parseSpan(p.get('trip')) : null;
   s.when = whenFromParams(p, base.when);
   if (p.get('dir') === 'arr') s.direction = 'arrive';
   const m = p.get('m');
@@ -135,6 +155,7 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
   const names = s.others.length ? namesParam(s.names, s.others.length + 1) : '';
   if (names) p.set('names', names);
   if (s.to) p.set('to', pointParam(s.to));
+  if (s.to && s.span) p.set('trip', spanParam(s.span));
   if (whenParam(s.when) !== windowName(now)) p.set('t', whenParam(s.when));
   if (s.direction === 'arrive') p.set('dir', 'arr');
   if (s.measure !== defaultMeasure(s)) p.set('m', s.measure);

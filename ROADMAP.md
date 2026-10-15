@@ -1,6 +1,6 @@
-# Roadmap V1.43
+# Roadmap V1.44
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.3**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.4**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -20,22 +20,22 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.4 Changing direction keeps the departure time**. Hendrik (2026-10-14): "changing direction should not switch to Ankunftszeit mode". Today the trip card's ⇅, moving the map to the other end of the trip and the Zeit panel's Losfahren/Ankommen are one switch: when the map's place becomes the Ziel, the time turns into an arrival time ("Ankommen um …", and on "Jetzt" it even moves an hour on). So Start/Ziel and departure/arrival time are tied together.
+- **0.13.5 Changing direction keeps the departure time**. Hendrik (2026-10-14): "changing direction should not switch to Ankunftszeit mode". Today the trip card's ⇅, moving the map to the other end of the trip and the Zeit panel's Losfahren/Ankommen are one switch: when the map's place becomes the Ziel, the time turns into an arrival time ("Ankommen um …", and on "Jetzt" it even moves an hour on). So Start/Ziel and departure/arrival time are tied together.
   - a. Make them two separate choices: ⇅ and moving the map only change which place is Start and which is Ziel; the time stays a departure time ("Losfahren") unless Ankommen is picked in the Zeit panel.
   - b. A map to a Ziel with a departure time needs the trips from every place leaving at that time. Measure whether that is as fast as today's arrival map; if not, find a quick way (for example from the hour's timetable already loaded) and report the timings before building.
   - c. "Rückgängig" and links (dir=arr) keep working; the trip on the card stays the same when only the direction changes.
-- **0.13.5 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
+- **0.13.6 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
   - a. Measure today's windows: what each timetable file holds and how long each kind of map takes.
   - b. Try two-hour windows for Typisch and best connection and one hour for Nächste; compare speed, file size and trip accuracy against today.
   - c. Include the extra hour's edge: late in the extra hour after the chosen one, trips longer than about an hour can come out slightly worse, because an hour's file stops holding trips two hours after its own hour. Measure how often and by how much, and whether a longer tail fixes it at a fair file-size cost.
   - d. Hendrik gets the numbers and a recommendation; the change is built only on his yes.
 
-- **0.13.6 Fresh-start link**. Hendrik (2026-10-14): "add a link option like [URL]/fresh to start from a fresh, non-cached start like from a new device".
+- **0.13.7 Fresh-start link**. Hendrik (2026-10-14): "add a link option like [URL]/fresh to start from a fresh, non-cached start like from a new device".
   - a. Opening the app's address with `/fresh` (GitHub Pages serves only files, so a small page at fresh/ or a `?fresh` link) removes the app's service worker, its caches and stored data, then opens the app as on a new device.
   - b. Favourites and names live only on the device, so the page says they will go and asks once before deleting them (or offers to keep them); nothing is deleted without that tap.
   - c. The normal address loads exactly as before; the fresh page adds nothing to the first map.
 
-- **0.13.7 Footpaths on the map a second sooner**. Side note from 0.13.2 (2026-10-14): "Handing footpaths to the map right after unpacking would make them ready ~1 s sooner again (2.8 s), but redoing the map with them then delayed base map labels by ~1 s, so it wasn't kept. A cheaper map redo would unlock that second." Plan from the 0.13.2 thread; expected gain about 1 s (footpaths ready around 2.8 s instead of 3.76 s at 360×740).
+- **0.13.8 Footpaths on the map a second sooner**. Side note from 0.13.2 (2026-10-14): "Handing footpaths to the map right after unpacking would make them ready ~1 s sooner again (2.8 s), but redoing the map with them then delayed base map labels by ~1 s, so it wasn't kept. A cheaper map redo would unlock that second." Plan from the 0.13.2 thread; expected gain about 1 s (footpaths ready around 2.8 s instead of 3.76 s at 360×740).
   - a. Measure which part of the map redo costs the base map time: the new colours (one picture), the time rings, or the line courses with their name labels. Same 360×740 setup as 0.13.2.
   - b. Hand the footpaths over right after unpacking: put the new colours on the map at once; send rings, line courses and labels only once the base map is up, and skip them when they did not change. If a shows the rings are cheap, they go with the colours, so colours and rings never disagree.
   - c. Keep it only if the base map stays within noise and taps stay as fast; otherwise drop it and report the numbers.

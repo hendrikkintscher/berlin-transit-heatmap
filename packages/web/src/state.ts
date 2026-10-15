@@ -141,7 +141,7 @@ export function inArea({ lat, lon }: Point) {
  */
 export function linkState(search: string, read = readNumber, when = NOW_WHEN) {
   const state = createState(read, when);
-  const link = readLink(search, { ...state, to: null });
+  const link = readLink(search, { ...state, to: null, span: null });
   Object.assign(state, link, { window: windowName(link.when) });
   // A link's starts outside the area would compute an empty map: they are dropped (and a
   // note says why, once the page is up).
@@ -152,7 +152,7 @@ export function linkState(search: string, read = readNumber, when = NOW_WHEN) {
     state.origin = kept[0] ?? null;
     state.others = kept.slice(1);
   }
-  if (link.to && (!state.origin || !inArea(link.to))) link.to = null;
+  if (link.to && (!state.origin || !inArea(link.to))) [link.to, link.span] = [null, null];
   // A meeting-point link on Typisch goes back to "Nächste" without the other starts.
   if (state.others.length && state.measure === 'typical') state.measureBefore = 'next';
   return { state, link, outside };

@@ -62,13 +62,23 @@ export const sameWhen = (a: When, b: When) =>
   a.day === b.day && a.hour === b.hour && a.minute === b.minute;
 
 /**
- * The exact time `seconds` into the service day `day`, to the minute: rounded up for
- * arriving by it, down for leaving at it. Null past the day's midnight.
+ * The time a map takes from a trip's end `seconds` into the service day `day`, so the trip
+ * fits it: when `exact` (Nächste) its minute, rounded up for arriving by it and down for
+ * leaving at it; else (Typisch, Bestfall) the full hour it falls in, as those count
+ * arriving or leaving within the hour. Null past the day's midnight.
  */
-export function exactWhen(day: Day, seconds: number, direction: Direction): When | null {
-  const m = direction === 'arrive' ? Math.ceil(seconds / 60) : Math.floor(seconds / 60);
+export function tripWhen(
+  day: Day,
+  seconds: number,
+  direction: Direction,
+  exact = true,
+): When | null {
+  const m = exact
+    ? (direction === 'arrive' ? Math.ceil : Math.floor)(seconds / 60)
+    : Math.floor(seconds / 3600) * 60;
   if (!(m >= 0 && m < 24 * 60)) return null;
-  return { day, hour: Math.floor(m / 60), minute: m % 60 };
+  const w = { day, hour: Math.floor(m / 60) };
+  return exact ? { ...w, minute: m % 60 } : w;
 }
 
 /** The same time on the full hour. */
