@@ -15,6 +15,7 @@ import {
   type Journey,
   type PreparedTimetable,
   type TravelTimeResult,
+  type TripTime,
 } from '@berlin-transit-heatmap/routing';
 import type { Direction, FromWorker, ToWorker, Travel, TripLeg } from './protocol';
 import { bestRows } from './more-rows';
@@ -26,7 +27,13 @@ import { CELL_M, cellSeconds, travelOptions, type Run } from './worker-runs';
 export interface LastTrip {
   tt: PreparedTimetable;
   runs: Run[];
+  /** 'depart': the map runs from its place; 'arrive': to it, on the reversed timetable. */
   direction: Direction;
+  /**
+   * Leaving to the map's place: the moment the places leave (seconds of the service day). The
+   * map runs to its place ('arrive'), but its trips leave at this time (tripBetween).
+   */
+  leaving?: number;
   travel: Travel;
   /** When trips on tap leave, if not with the map's own pass. */
   leaveAt: number | null;
@@ -215,13 +222,15 @@ export function trip(
     .map((l) =>
       l.type === 'ride' ? { ...l, from: l.to, to: l.from, stops: [...l.stops].reverse() } : l,
     );
+  // (Cycling all the way to the Ziel leaving: the trip takes as long whenever it leaves.)
+  const leaves = last.leaving ?? -(last.from + total);
   return {
     journey: { ...j, legs },
     start: here,
     end: point,
     seconds,
-    leave: -(last.from + total),
-    arrive: -leave,
+    leave: leaves,
+    arrive: last.leaving !== undefined ? leaves + total : -leave,
     clocks: clocks.reverse(),
     raw: j,
   };
@@ -294,32 +303,43 @@ const MORE_TRIES = 40;
 /**
  * The trip to (arriving: from) the tapped place as both ends see it (tripBetween): the
  * same journey whether the map is made from this end or the other, so moving the map to
- * the other end of a trip keeps it. `pass` is the start's pass at the trip's moment. Null
- * without the timetable the other way round, by bike all the way, or out of reach (the
- * map's own grid then finds it, as before).
+ * the other end of a trip keeps it. `pass` is the start's pass at the trip's moment, `time`
+ * the trip's span or moment if not the map's own. Null without the timetable the other way
+ * round, by bike all the way, or out of reach (the map's own grid then finds it, as before).
+ * To the Ziel leaving, the map's place is the trip's end and the trip leaves at `leaving`.
  */
 function bothWays(
   last: LastTrip,
-  pass: TravelTimeResult,
+  origin: { lat: number; lon: number } | undefined,
+  pass: TravelTimeResult | undefined,
   at: { lat: number; lon: number },
-  span?: { leave: number; arrive: number },
+  time?: TripTime,
 ) {
   const other = last.otherTt;
-  if (!other || last.travel === 'bikeonly' || !pass.origin) return null;
+  if (!other || last.travel === 'bikeonly' || !origin) return null;
   const w = travelOptions(last.travel);
-  const depart = last.direction === 'depart';
-  const o = pass.origin;
+  // The map runs from its place on the forward timetable, or to it on the reversed one.
+  const mapFwd = last.direction === 'depart';
+  // The card tells a trip that leaves at a time: from a start, or to the Ziel leaving.
+  const depart = mapFwd || last.leaving !== undefined;
+  const o = origin;
   const place = { lat: at.lat, lon: at.lon };
-  const [fwd, back] = depart ? [last.tt, other] : [other, last.tt];
-  const [from, to] = depart ? [o, place] : [place, o];
+  const [fwd, back] = mapFwd ? [last.tt, other] : [other, last.tt];
+  const [from, to] = mapFwd ? [o, place] : [place, o];
+  const own: TripTime =
+    last.leaving !== undefined
+      ? { leave: last.leaving }
+      : depart
+        ? { leave: last.from }
+        : { arrive: -last.from };
   const f = tripBetween(
     fwd,
     back,
     from,
     to,
-    span ?? (depart ? { leave: last.from } : { arrive: -last.from }),
+    time ?? own,
     { ...w, ...('maxOriginSeconds' in w ? { directMaxSeconds: w.maxOriginSeconds } : {}) },
-    span ? undefined : pass,
+    time ? undefined : pass,
   );
   if (!f) return null;
   const j = f.journey;
@@ -334,7 +354,8 @@ function bothWays(
     if (dep !== null) board = { stop: ride.from, line: ride.name, at: dep };
   }
   // On the map's own timetable for the drawer's next connections: arriving, the reversed
-  // one, the journey turned round onto its routes.
+  // one, the journey turned round onto its routes. (To the Ziel leaving, the drawer runs on
+  // the forward timetable, as for any trip that leaves at a time.)
   const raw: Journey = depart
     ? j
     : {
@@ -351,7 +372,7 @@ function bothWays(
     start: [from.lon, from.lat] as [number, number],
     end: [to.lon, to.lat] as [number, number],
     // As the map counts: leaving, from the map's moment (waiting included); arriving, to it.
-    seconds: depart ? f.arrive - last.from : -last.from - f.leave,
+    seconds: depart ? f.arrive - (last.leaving ?? last.from) : -last.from - f.leave,
     leave: f.leave,
     arrive: f.arrive,
     board,
@@ -403,6 +424,8 @@ interface MoreRow {
 interface MoreBase {
   msg: Extract<ToWorker, { type: 'moreTrips' }>;
   last: LastTrip;
+  /** The timetable the connections run on (to the Ziel leaving: the forward one). */
+  tt: PreparedTimetable;
   f0: NonNullable<ReturnType<typeof trip>>;
   reversed: boolean;
   own: readonly [number, number];
@@ -414,9 +437,11 @@ function moreBase(msg: Extract<ToWorker, { type: 'moreTrips' }>): MoreBase | nul
   if (!last || !f0 || f0.leave !== msg.leave || f0.arrive !== msg.arrive) return null;
   if (!f0.journey.legs.some((l) => l.type === 'ride')) return null;
   // On the timetable's own clock: departing it is real time, arriving it runs backwards.
-  const reversed = last.direction === 'arrive';
+  const reversed = last.direction === 'arrive' && last.leaving === undefined;
+  const tt = last.leaving === undefined ? last.tt : last.otherTt;
+  if (!tt) return null;
   const own = reversed ? ([-msg.arrive, -msg.leave] as const) : ([msg.leave, msg.arrive] as const);
-  return { msg, last, f0, reversed, own };
+  return { msg, last, tt, f0, reversed, own };
 }
 
 /**
@@ -427,18 +452,18 @@ function moreBase(msg: Extract<ToWorker, { type: 'moreTrips' }>): MoreBase | nul
  * less waiting. No new search, so it costs next to nothing and never holds up a tap.
  */
 function sameRides(b: MoreBase): MoreRow[] {
-  const { last, f0, reversed, own } = b;
+  const { tt, f0, reversed, own } = b;
   const legs = f0.journey.legs;
   const first = legs.findIndex((l) => l.type === 'ride');
   const lastRide = legs.length - 1 - [...legs].reverse().findIndex((l) => l.type === 'ride');
   const walk = (ls: typeof legs) => ls.reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
   const before = walk(legs.slice(0, first));
   const after = walk(legs.slice(lastRide + 1));
-  const twins = f0.raw.legs.map((l) => (l.type === 'ride' ? twinRoutes(last.tt, l) : []));
+  const twins = f0.raw.legs.map((l) => (l.type === 'ride' ? twinRoutes(tt, l) : []));
   const rows: MoreRow[] = [];
   let from = own[0] + 60;
   for (let k = 0; k < MORE_TRIES; k++) {
-    const clocks = rideClocks(last.tt, f0.raw, from, reversed, twins);
+    const clocks = rideClocks(tt, f0.raw, from, reversed, twins);
     if (reversed) clocks.reverse();
     const a = clocks[first];
     const z = clocks[lastRide];
@@ -479,7 +504,11 @@ function* otherLines(b: MoreBase): Generator<MoreRow | null, void, void> {
   let from = own[0] + 60;
   for (let k = 0; k < OTHER_PASSES; k++) {
     const at = { ...last, leaveAt: from, from };
-    const f = trip(at, laterRun(at, r, msg, rounds), msg);
+    // To the Ziel leaving: the connection from the place to it that arrives earliest.
+    const f =
+      last.leaving !== undefined
+        ? bothWays({ ...at, leaving: from }, r.result.origin, undefined, msg, { leave: from })
+        : trip(at, laterRun(at, r, msg, rounds), msg);
     if (!f || f.leave === undefined || f.arrive === undefined) return;
     if (!f.journey.legs.some((l) => l.type === 'ride')) return;
     const [start, end] = reversed ? [-f.arrive, -f.leave] : [f.leave, f.arrive];
@@ -661,15 +690,31 @@ export function tripMessage(
 /** The trip to a tapped place from each start (one start: kept for the drawer's more). */
 export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>) {
   const last = lastTrip;
+  // To the Ziel leaving, a trip leaves the tapped place at the map's time (or, the shown
+  // connection missed, at a later one); each is its own search (tripBetween).
+  const toGoal = last?.leaving !== undefined && last.travel !== 'bikeonly';
   // A later moment (the shown connection was missed): a pass of its own from then.
   const later =
-    last && msg.leaveAt !== undefined && last.direction === 'depart' && last.travel !== 'bikeonly'
-      ? { ...last, leaveAt: msg.leaveAt, from: msg.leaveAt }
+    last &&
+    msg.leaveAt !== undefined &&
+    (last.direction === 'depart' || toGoal) &&
+    last.travel !== 'bikeonly'
+      ? {
+          ...last,
+          leaveAt: msg.leaveAt,
+          from: msg.leaveAt,
+          ...(toGoal ? { leaving: msg.leaveAt } : {}),
+        }
       : null;
   const journeys = (last?.runs ?? []).map((r) => {
     const at = later ?? last!;
+    if (toGoal)
+      return at.otherTt
+        ? bothWays(at, r.result.origin, undefined, msg, later ? { leave: msg.leaveAt! } : msg.span)
+        : null;
     const fixed =
-      at.otherTt && bothWays(at, passAt(at, r, !!later), msg, later ? undefined : msg.span);
+      at.otherTt &&
+      bothWays(at, r.result.origin, passAt(at, r, !!later), msg, later ? undefined : msg.span);
     if (fixed) return fixed;
     return later
       ? trip(later, laterRun(later, r, msg), msg)

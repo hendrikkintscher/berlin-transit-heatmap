@@ -1,6 +1,6 @@
-# Roadmap V1.45
+# Roadmap V1.46
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.4**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.5**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -23,10 +23,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.5 Changing direction keeps the departure time**. Hendrik (2026-10-14): "changing direction should not switch to Ankunftszeit mode". Today the trip card's ⇅, moving the map to the other end of the trip and the Zeit panel's Losfahren/Ankommen are one switch: when the map's place becomes the Ziel, the time turns into an arrival time ("Ankommen um …", and on "Jetzt" it even moves an hour on). So Start/Ziel and departure/arrival time are tied together.
-  - a. Make them two separate choices: ⇅ and moving the map only change which place is Start and which is Ziel; the time stays a departure time ("Losfahren") unless Ankommen is picked in the Zeit panel.
-  - b. A map to a Ziel with a departure time needs the trips from every place leaving at that time. Measure whether that is as fast as today's arrival map; if not, find a quick way (for example from the hour's timetable already loaded) and report the timings before building.
-  - c. "Rückgängig" and links (dir=arr) keep working; the trip on the card stays the same when only the direction changes.
 - **0.13.6 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
   - a. Measure today's windows: what each timetable file holds and how long each kind of map takes.
   - b. Try two-hour windows for Typisch and best connection and one hour for Nächste; compare speed, file size and trip accuracy against today.

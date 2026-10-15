@@ -46,8 +46,15 @@ export interface State {
   /** Weekday or weekend, and the departure hour; `window` names its timetable file. */
   when: When;
   window: Window;
-  /** Leave in the chosen hour, or arrive in it. */
+  /** Leave in the chosen hour, or arrive in it (the Zeit panel's Losfahren / Ankommen). */
   direction: Direction;
+  /**
+   * Leaving, the map's place is the Ziel (after ⇅ or the rings moved to the other end of a
+   * trip) and the map shows the trips to it: from every place, leaving at that time. Which
+   * place is Start and which Ziel is a choice of its own; arriving, the place is always the
+   * Ziel (see mapToGoal).
+   */
+  toGoal: boolean;
   /** Next connection from now (the default), typical (averaged over the hour, waiting included) or best-case minutes. */
   measure: Measure;
   /**
@@ -102,6 +109,7 @@ export function createState(read = readNumber, when = NOW_WHEN): State {
     when,
     window: windowName(when),
     direction: 'depart',
+    toGoal: false,
     measure: 'next',
     measureBefore: null,
     compare: null,
@@ -158,6 +166,17 @@ export function linkState(search: string, read = readNumber, when = NOW_WHEN) {
   return { state, link, outside };
 }
 
+/** Whether the map shows the trips to its place (the Ziel): arriving, or leaving to the Ziel. */
+export const mapToGoal = (s: Pick<State, 'direction' | 'toGoal'>) =>
+  s.direction === 'arrive' || s.toGoal;
+
+/**
+ * Which way the map runs, for what is computed: 'depart' from its place, 'arrive' to it (on
+ * the timetable run backwards). The time is a choice of its own (`direction`).
+ */
+export const mapDirection = (s: Pick<State, 'direction' | 'toGoal'>): Direction =>
+  mapToGoal(s) ? 'arrive' : 'depart';
+
 export type ComputeRequest = Omit<Extract<ToWorker, { type: 'compute' }>, 'type' | 'id'>;
 
 /** What the worker needs for the map of `s`'s start(s), leaving `now` on Nächste. */
@@ -165,6 +184,7 @@ export function computeRequest(s: State & { origin: Point }, now = new Date()): 
   return {
     window: computeWindow(s.when, s.direction),
     direction: s.direction,
+    ...(s.direction === 'depart' && s.toGoal ? { toGoal: true as const } : {}),
     measure: s.measure,
     leaveOffset: leaveOffset(s.when, now),
     ...(s.direction === 'arrive' && s.when.minute ? { arriveOffset: s.when.minute * 60 } : {}),

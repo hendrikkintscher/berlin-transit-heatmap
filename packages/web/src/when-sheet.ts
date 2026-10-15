@@ -151,10 +151,17 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
 
   function setWhen(
     w: When,
-    more: Partial<{ direction: Direction; measure: Measure; compare: When | null }> = {},
+    more: Partial<{
+      direction: Direction;
+      toGoal: boolean;
+      measure: Measure;
+      compare: When | null;
+    }> = {},
     quiet = false,
   ) {
     Object.assign(state, more);
+    // Arriving, the place is always the Ziel (a flag of its own is for leaving only).
+    if (state.direction === 'arrive') state.toGoal = false;
     state.when = w;
     state.window = windowName(w);
     renderWhen();
@@ -184,22 +191,26 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     pickDay((e.target as HTMLElement).closest<HTMLElement>('[data-day]')?.dataset.day),
   );
   for (const b of typicalButtons) b.addEventListener('click', () => pickDay(b.dataset.day));
-  /** Leaving's time before switching to Ankommen, and the time that switch gave it. */
-  let beforeArrive: { depart: When; arrive: When } | null = null;
+  /** Leaving's time (and which end the place was) before switching to Ankommen, and the time that switch gave it. */
+  let beforeArrive: { depart: When; arrive: When; toGoal: boolean } | null = null;
   /** The time before the map moved to the trip's other end, and the trip's time it took. */
-  let beforeMove: { direction: Direction; when: When; moved: When } | null = null;
+  let beforeMove: { direction: Direction; toGoal: boolean; when: When; moved: When } | null = null;
   /**
-   * Losfahren or Ankommen (the trip card's ⇅ uses it too). `quiet` only sets it: the caller
-   * recomputes the map itself, when the start moves in the same step. `at`, when the map
-   * moves to the other end of the shown trip (seconds of the day): the trip's arrival when
-   * turning to Ankommen, its departure when turning to Losfahren, to the minute (Typisch and
-   * Bestfall: the hour it falls in), so the map fits the trip; moving back brings the time
-   * before.
+   * Losfahren or Ankommen. `quiet` only sets it: the caller recomputes the map itself, when
+   * the start moves in the same step. `at`, when the map moves to the other end of the shown
+   * trip (seconds of the day): the trip's departure, to the minute (Typisch and Bestfall: the
+   * hour it falls in), so the map fits the trip; moving back brings the time before. Leaving
+   * after arriving makes the place the Start again (or what it was before Ankommen).
    */
   function setDirection(direction: Direction, quiet = false, at?: number) {
     const back = beforeMove;
     beforeMove = null;
-    if (back && back.direction === direction && sameWhen(back.moved, state.when)) {
+    if (
+      back &&
+      back.direction === direction &&
+      back.toGoal === (direction === 'depart' && state.toGoal) &&
+      sameWhen(back.moved, state.when)
+    ) {
       beforeArrive = null;
       arriveMoved = null;
       return setWhen(back.when, { direction }, quiet);
@@ -209,23 +220,69 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
         ? tripWhen(state.when.day, at, direction, state.measure === 'next')
         : null;
     if (moved) {
-      beforeMove = { direction: state.direction, when: state.when, moved };
+      beforeMove = { direction: state.direction, toGoal: state.toGoal, when: state.when, moved };
       beforeArrive = null;
       arriveMoved = null;
-      return setWhen(moved, { direction }, quiet);
+      return setWhen(moved, { direction, toGoal: false }, quiet);
     }
     let w = state.when;
+    let toGoal = state.toGoal;
     if (direction === 'arrive' && state.direction !== 'arrive') {
       w = arriveWhen(state.when);
-      beforeArrive = { depart: state.when, arrive: w };
+      beforeArrive = { depart: state.when, arrive: w, toGoal: state.toGoal };
     } else if (direction === 'depart' && state.direction === 'arrive') {
-      // Straight back (Ziel back to Start): leaving at the time it was before.
-      if (beforeArrive && whenParam(beforeArrive.arrive) === whenParam(state.when))
+      // Straight back (Ziel back to Start): leaving at the time, and from the end, it was before.
+      if (beforeArrive && whenParam(beforeArrive.arrive) === whenParam(state.when)) {
         w = beforeArrive.depart;
+        toGoal = beforeArrive.toGoal;
+      }
       beforeArrive = null;
     }
     arriveMoved = direction === 'arrive' && w.day !== state.when.day ? state.when.day : null;
-    setWhen(w, { direction }, quiet);
+    setWhen(w, { direction, toGoal: direction === 'depart' && toGoal }, quiet);
+  }
+  /**
+   * The map's place becomes the Ziel (`goal`) or the Start: the trip card's ⇅, or the map
+   * moving to the other end of the shown trip. The time stays a departure time, so the trips
+   * are the same trips; Ankommen is only the Zeit panel's. `at`, when the map moves to the
+   * other end of the shown trip: that trip's departure, so the trip on the card stays
+   * (moving back brings the time before). After Ankommen the place is the Ziel already, and
+   * making it the Start brings a departure time back (setDirection).
+   */
+  function setPlace(goal: boolean, quiet = false, at?: number) {
+    if (state.direction === 'arrive') return goal ? undefined : setDirection('depart', quiet, at);
+    const back = beforeMove;
+    beforeMove = null;
+    if (
+      back &&
+      back.direction === 'depart' &&
+      back.toGoal === goal &&
+      sameWhen(back.moved, state.when)
+    )
+      return setWhen(back.when, { toGoal: goal }, quiet);
+    const moved =
+      at !== undefined ? tripWhen(state.when.day, at, 'depart', state.measure === 'next') : null;
+    if (moved && !sameWhen(moved, state.when)) {
+      beforeMove = { direction: 'depart', toGoal: state.toGoal, when: state.when, moved };
+      return setWhen(moved, { toGoal: goal }, quiet);
+    }
+    setWhen(state.when, { toGoal: goal }, quiet);
+  }
+  /**
+   * Puts the place's end and the time back as they were (Rückgängig); the time only if it is
+   * still the one the move gave.
+   */
+  function restore(
+    back: { direction: Direction; toGoal: boolean; when: When },
+    keepsTime: boolean,
+  ) {
+    beforeMove = beforeArrive = null;
+    arriveMoved = null;
+    setWhen(
+      keepsTime ? back.when : state.when,
+      { direction: back.direction, toGoal: back.toGoal },
+      true,
+    );
   }
   for (const b of dirButtons)
     b.addEventListener('click', () => setDirection(b.dataset.dir as Direction));
@@ -278,5 +335,5 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   });
   cmpHour.addEventListener('change', () => setWhen(state.when, { compare: readCompare() }));
   $('cmp-close').addEventListener('click', () => setWhen(state.when, { compare: null }));
-  return { renderWhen, setWhen, setDirection };
+  return { renderWhen, setWhen, setDirection, setPlace, restore };
 }

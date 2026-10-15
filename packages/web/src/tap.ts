@@ -15,7 +15,7 @@ import {
 } from './map-layers';
 import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
-import { $, type State } from './state';
+import { $, mapDirection, mapToGoal, type State } from './state';
 import { arrivedBy, changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
 import { refitRows, ridesKey } from './more-rows';
@@ -38,8 +38,8 @@ export interface TapDeps {
   /** `spot`: the tapped place before the change, for "Rückgängig". */
   setOrigin: (p: Point, spot?: Point | null) => void;
   /**
-   * The map's place moves to p and keeps p's role (the direction turns round); `text`
-   * names it for "Rückgängig".
+   * The map's place moves to p and keeps p's role (the map turns round, the time stays a
+   * departure time, the trip's own); `text` names it for "Rückgängig".
    */
   moveAnchor: (
     p: Point,
@@ -47,6 +47,8 @@ export interface TapDeps {
     text: string,
     trip?: { leave: number; arrive: number },
   ) => void;
+  /** ⇅: the map's place and the tapped place swap Start and Ziel (the time stays). */
+  swapEnds: () => void;
   /** Meeting point: one more start. */
   addStart: (p: Point) => void;
   /** Removes start i (0 = the first). */
@@ -274,7 +276,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
         !state.compare
       );
       if (!anchorBtn.hidden) {
-        const label = t(state.direction === 'arrive' ? 'anchorFrom' : 'anchorTo');
+        const label = t(mapToGoal(state) ? 'anchorFrom' : 'anchorTo');
         anchorBtn.setAttribute('aria-label', label);
         anchorBtn.title = label;
         placeAnchor();
@@ -355,7 +357,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     hideReadout();
     removeWhich = i;
     const mark = state.others.length ? `<i class="p${i + 1}"></i>` : '';
-    const goal = state.direction === 'arrive' && !state.others.length;
+    const goal = mapToGoal(state) && !state.others.length;
     const title = i ? t('secondPoint', { n: i + 1 }) : t(goal ? 'goalPoint' : 'startPoint');
     // In a meeting point each start can carry a name (D2): the marker shows its initial.
     const field = state.others.length
@@ -524,7 +526,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     // A meeting point's other trips stay unfolded when the card refreshes.
     const open = el.querySelector<HTMLDetailsElement>('.trip-more')?.open;
     el.innerHTML = tripHtml(m, {
-      direction: home ? 'arrive' : state.direction,
+      direction: home ? 'arrive' : mapDirection(state),
       now: clockNow(state.when),
       place: spot?.title || undefined,
       changeNote: deps.changeNote,
@@ -742,6 +744,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
       state.others,
       state.when,
       state.direction,
+      state.toGoal,
       state.measure,
       state.travel,
       state.walkKmh,
@@ -772,7 +775,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     const old = state.origin;
     const before = spot;
     if (!at || !old) return;
-    const arrive = state.direction === 'arrive';
+    const arrive = mapToGoal(state);
     // The place's name from its row (the nearest stop or its search title), if the trip is in.
     const name = readoutText.querySelector('.trip-row:not(.anchor) .name')?.textContent;
     const text = name
@@ -816,14 +819,10 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   removeBtn.addEventListener('click', () => deps.removeStart(removeWhich));
   homeBtn.addEventListener('click', () => deps.showHome(removeWhich));
   $('readout-close').addEventListener('click', hideReadout);
-  // The same switch as Losfahren / Ankommen in the time panel: the map and the trip turn round.
+  // Start and Ziel swap: the map and the trip turn round, the time stays as it is.
   dirBtn.addEventListener('click', () => {
     flash = 'roles';
-    document
-      .querySelector<HTMLButtonElement>(
-        `#pop-when [data-dir="${state.direction === 'arrive' ? 'depart' : 'arrive'}"]`,
-      )
-      ?.click();
+    deps.swapEnds();
   });
   // Two steps, each staying for the next cards until closed again: a tap on the trip's
   // summary opens the detailed connection (#readout.expanded); pulling the card up opens

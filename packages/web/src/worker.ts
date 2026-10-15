@@ -12,7 +12,7 @@ import { earlyLoad, linkHasStart } from './early';
 import { computeRequest, linkState, readFrom, sameRequest, type ComputeRequest } from './state';
 import { whenAt } from './when';
 import { setDataVersions } from './data-url';
-import type { FromWorker, ToWorker } from './protocol';
+import type { Direction, FromWorker, ToWorker } from './protocol';
 import { cancelSpecial, home, homeTrip, living, livingAt } from './worker-home';
 import { paintDesert, paintDiff, paintShown, type Shown } from './worker-paint';
 import {
@@ -30,7 +30,15 @@ import {
   walkSpeedMps,
 } from './worker-paths';
 import { ctx, nextTask, post } from './worker-post';
-import { cellSeconds, meetCandidates, minFinite, run, slowestOf } from './worker-runs';
+import {
+  cellSeconds,
+  fileHourStart,
+  goalRun,
+  meetCandidates,
+  minFinite,
+  run,
+  slowestOf,
+} from './worker-runs';
 import { ensure, prepared, setDataBase } from './worker-timetables';
 import {
   moreTrips,
@@ -96,19 +104,29 @@ async function makeMap(msg: ComputeMsg, fresh: () => boolean) {
   setWalkKmh(msg.walkKmh);
   const travel = msg.travel ?? 'walk';
   const variant = { stepFree: msg.stepFree, bike: travel === 'bike' };
-  const tt = await prepared(msg.window, msg.direction, variant);
+  // A map to the place runs on the timetable backwards: arriving, or leaving (toGoal).
+  const goal = msg.toGoal === true;
+  const to: Direction = goal || msg.direction === 'arrive' ? 'arrive' : 'depart';
+  const tt = await prepared(msg.window, to, variant);
   if (!fresh()) return null;
   const starts = [{ lat: msg.lat, lon: msg.lon }, ...(msg.others ?? [])];
   const meeting = starts.length > 1;
   const typical = msg.measure === 'typical';
   // Next connection: plain RAPTOR from one moment (reversed files count backwards).
   const now = (t: PreparedTimetable) =>
-    msg.direction === 'depart'
-      ? t.windowStart + (msg.leaveOffset ?? 0)
-      : // Reversed files count backwards: later arrivals are further below windowEnd.
-        t.windowEnd - (msg.arriveOffset ?? 0);
+    goal
+      ? // Leaving to the place: the hour's start in real time, from the reversed file.
+        fileHourStart(t) + (msg.leaveOffset ?? 0)
+      : msg.direction === 'depart'
+        ? t.windowStart + (msg.leaveOffset ?? 0)
+        : // Reversed files count backwards: later arrivals are further below windowEnd.
+          t.windowEnd - (msg.arriveOffset ?? 0);
   const leaveAt = (t: PreparedTimetable) => (msg.measure === 'next' ? now(t) : undefined);
-  const runs = starts.map((o) => run(tt, o, typical, travel, true, leaveAt(tt)));
+  const make = (t: PreparedTimetable, o: { lat: number; lon: number }, usage: boolean) =>
+    goal
+      ? goalRun(t, o, msg.measure, now(t), travel, usage)
+      : run(t, o, typical, travel, usage, leaveAt(t));
+  const runs = starts.map((o) => make(tt, o, true));
   // A tap while this map was computed gets its trip first, from the map still shown;
   // the colours and outlines follow right after.
   const trips = latestTrip;
@@ -127,9 +145,9 @@ async function makeMap(msg: ComputeMsg, fresh: () => boolean) {
   let shown: Shown | null = null;
   let unpainted = false;
   if (msg.compare) {
-    const tt2 = await prepared(msg.compare, msg.direction, variant);
+    const tt2 = await prepared(msg.compare, to, variant);
     if (!fresh()) return null;
-    const other = starts.map((o) => run(tt2, o, typical, travel, false, leaveAt(tt2)).shown);
+    const other = starts.map((o) => make(tt2, o, false).shown);
     const g2 = slowestOf(other);
     compare = g2.seconds as Float32Array<ArrayBuffer>;
     image = paintDiff(grid, g2);
@@ -205,14 +223,16 @@ function sendMap(msg: ComputeMsg, made: Made, t0: number) {
   setLastTrip({
     tt,
     runs,
-    direction: msg.direction,
+    direction: msg.toGoal || msg.direction === 'arrive' ? 'arrive' : 'depart',
+    ...(msg.toGoal ? { leaving: from } : {}),
     travel: made.travel,
     // Trips on tap leave now (or, arriving, arrive by the end of the hour): the map's
-    // own pass for "Nächste", a pass of their own for Typisch and Bestfall.
-    leaveAt: msg.measure === 'next' ? null : from,
+    // own pass for "Nächste", a pass of their own for Typisch and Bestfall. To the Ziel
+    // leaving, each trip is found from its own place (tripBetween).
+    leaveAt: msg.measure === 'next' || msg.toGoal ? null : from,
     from,
     other: once(() =>
-      prepared(msg.window, msg.direction === 'depart' ? 'arrive' : 'depart', {
+      prepared(msg.window, msg.toGoal || msg.direction === 'arrive' ? 'depart' : 'arrive', {
         stepFree: msg.stepFree,
         bike: made.travel === 'bike',
       }).catch(() => null),
