@@ -20,6 +20,9 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 - 2026-10-15 (from 0.13.4): In Typisch/Bestfall with "Ankommen", a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
 - 2026-10-15 (from 0.13.4): Moving the map before footpaths load keeps a trip found with straight-line walks; once footpaths arrive it may not fit and the card falls back to the usual trip.
+- 2026-10-15 (from 0.13.5): A tap on a map to a Ziel with a departure time runs three searches for its trip (about 11 ms more than the arrival map's one in Node); the Ziel's walks to the stops could be kept per map.
+- 2026-10-15 (from 0.13.5): The lines drawn on a map to a Ziel with a departure time follow a pass arriving 40 minutes after leaving, not the departure trips themselves; fine for the picture, not exact.
+- 2026-10-15 (from 0.13.5): That map's minutes are 3 or more apart from the tapped trip for 10–17 % of places (a vehicle caught or missed by seconds; the arrival map: 8 %); two stop guesses per cell instead of one halve that for a second grid's cost (about +100 ms).
 
 ## 0.13 Faster and steadier routing
 

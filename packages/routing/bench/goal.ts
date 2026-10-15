@@ -10,6 +10,8 @@ import {
   directSeconds,
   goalCells,
   goalWindow,
+  gridLayout,
+  cellColRow,
   heatGrid,
   loadTimetable,
   loadWalkNetwork,
@@ -58,7 +60,24 @@ for (const Z of ZIELE) {
     const r = travelTimes(back, Z, { profile: { from: -(T + 4200), to: -T }, arriveBy: -T, ...w });
     const stopSeconds = goalWindow(r.profile!, T, T + 600, false);
     const grid = heatGrid(back, { ...r, stopSeconds }, { cellSizeM: 50, trackStops: true, ...w });
-    goalCells(grid, stopSeconds, r.profile!, T);
+    // Walking all the way, around the Ziel (as the worker's goalRun).
+    const [col, row] = cellColRow(gridLayout({ cellSizeM: 50 }), Z.lat, Z.lon);
+    const reach = Math.ceil((900 * w.walkSpeedMps) / 50) + 2;
+    const near = { c0: col - reach, r0: row - reach, cols: 2 * reach + 1, rows: 2 * reach + 1 };
+    const walkOnly = heatGrid(
+      back,
+      { ...r, stopSeconds: new Float32Array(stopSeconds.length).fill(Infinity) },
+      { cellSizeM: 50, window: near, ...w },
+    );
+    goalCells(
+      grid,
+      stopSeconds,
+      r.profile!,
+      T,
+      process.env.NOWALK
+        ? undefined
+        : { grid: walkOnly, c0: Math.max(0, near.c0), r0: Math.max(0, near.r0) },
+    );
     return grid;
   };
   const a = timed(arriving);
