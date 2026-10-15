@@ -1,4 +1,4 @@
-# Roadmap V1.44
+# Roadmap V1.45
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.4**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
@@ -17,6 +17,9 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 - **Roadmap**: `V1.x`. Every edit that adds, removes, reorders or finishes a step bumps x and adds a line at the top of "Roadmap versions" in CHANGELOG.md; a full reorganisation makes `V2.0`. ROADMAP.md, CHANGELOG.md and LATER.md stay identical to their project copies plan/roadmap.md, plan/changelog.md and plan/later.md (docs-only PR, `npx prettier --write` on the changed files).
 
 ## Inbox
+
+- 2026-10-15 (from 0.13.4): In Typisch/Bestfall with "Ankommen", a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
+- 2026-10-15 (from 0.13.4): Moving the map before footpaths load keeps a trip found with straight-line walks; once footpaths arrive it may not fit and the card falls back to the usual trip.
 
 ## 0.13 Faster and steadier routing
 
@@ -39,6 +42,11 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
   - a. Measure which part of the map redo costs the base map time: the new colours (one picture), the time rings, or the line courses with their name labels. Same 360×740 setup as 0.13.2.
   - b. Hand the footpaths over right after unpacking: put the new colours on the map at once; send rings, line courses and labels only once the base map is up, and skip them when they did not change. If a shows the rings are cheap, they go with the colours, so colours and rings never disagree.
   - c. Keep it only if the base map stays within noise and taps stay as fast; otherwise drop it and report the numbers.
+
+- **0.13.9 Map walk rule: fastest, even with a longer walk (decision)**. From 0.13.4 (2026-10-15, Hendrik's call): "should the map use the "fastest, even with a longer walk" rule like the trip on tap? Brings them closer but changes the map at the edges of town (ties in with #237)." Today the map uses its 15-minute walk rule and #237's less walking on equal arrival, so map minutes and the tapped trip are 3 or more minutes apart in 8 % of places (0.13.4 check over 386 places).
+  - a. Measure, with the same 386 places, how often map and trip agree under the "fastest, even with a longer walk" rule, and where the map changes (edges of town, long walks to a faster line), with before/after screenshots at 360×740.
+  - b. Measure first map and tap timings with the new rule; it must not slow either.
+  - c. Hendrik gets the numbers and a recommendation; the map changes only on his yes.
 
 ## 0.14 Map handling
 
