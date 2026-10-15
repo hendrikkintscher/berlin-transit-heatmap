@@ -661,12 +661,19 @@ function setOrigin(p: Point, spot = tap.spot()) {
 
 /**
  * The map's place moves to the tapped place and keeps that place's role: a Ziel stays the
- * Ziel, so the direction turns round and the trip stays as it is (only the map changes).
+ * Ziel, so the direction turns round and the trip stays as it is (only the map changes):
+ * the map then arrives when the shown trip `trip` arrives (or leaves when it leaves).
  * `text` names it for "Rückgängig".
  */
-function moveAnchor(p: Point, spot: Point | null, text: string) {
+function moveAnchor(
+  p: Point,
+  spot: Point | null,
+  text: string,
+  trip?: { leave: number; arrive: number },
+) {
   offerUndo(spot, text);
-  whenSheet.setDirection(state.direction === 'arrive' ? 'depart' : 'arrive', true);
+  const to = state.direction === 'arrive' ? 'depart' : 'arrive';
+  whenSheet.setDirection(to, true, trip && (to === 'arrive' ? trip.arrive : trip.leave));
   state.origin = p;
   startsChanged();
 }

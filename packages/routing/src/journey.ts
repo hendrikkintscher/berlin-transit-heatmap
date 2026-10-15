@@ -47,7 +47,21 @@ export function journeyTo(
   if (k < 0) return null;
   const total = grid.seconds[k];
   if (!(total < Infinity)) return null;
-  const last = grid.stop[k];
+  return journeyVia(tt, result, grid.stop[k], total);
+}
+
+/**
+ * The journey `total` seconds long whose last stop is `last` (-1: walking all the way),
+ * rebuilt from the leg tree; the walk from that stop takes the rest of the time.
+ */
+export function journeyVia(
+  tt: PreparedTimetable,
+  result: TravelTimeResult,
+  last: number,
+  total: number,
+): Journey | null {
+  const legs = result.legs;
+  if (!legs) throw new Error('journeyVia needs a trackLegs result');
   if (last < 0) return { legs: [{ type: 'walk', seconds: Math.round(total) }], transfers: 0 };
 
   const out: JourneyLeg[] = [
@@ -134,9 +148,12 @@ function followRounds(
     } else if (kind === LEG_WALK) {
       out.push({ type: 'walk', seconds: transferSeconds(tt, from, s), to: s });
       s = from;
-      kind = rounds.rideKind[k * S + s];
-      from = rounds.rideFrom[k * S + s];
-      to = rounds.rideTo[k * S + s];
+      // In round 0 a footpath follows the walk from the origin.
+      const legs =
+        k === 0 ? rounds : { kind: rounds.rideKind, from: rounds.rideFrom, to: rounds.rideTo };
+      kind = legs.kind[k * S + s];
+      from = legs.from[k * S + s];
+      to = legs.to[k * S + s];
     } else if (kind === LEG_ORIGIN) {
       out.push({ type: 'walk', seconds: Math.round(rounds.access[s]), to: s });
       return true;

@@ -107,6 +107,12 @@ export interface TravelTimeOptions {
   leaveAt?: number;
   /** With `typical`, how far past the window departures are scanned, in seconds. Default 2700. */
   typicalHorizonSeconds?: number;
+  /**
+   * Keep no arrival later than this (seconds of the service day): stops reached only later
+   * count as unreached, and the search does less. Arrivals up to it are the same as without
+   * it, though of two equally quick ways the one kept may differ. (Addition to Contract 2.)
+   */
+  arriveBy?: number;
 }
 
 /**
@@ -147,6 +153,12 @@ export interface RoundLegs {
   rideTo: Int32Array;
   /** Per stop: the walk from the origin in seconds (Infinity if out of reach). */
   access: Float32Array;
+  /**
+   * At round * stops + stop: the arrival there (seconds of the day) when that round made
+   * it earlier, else 0x3fffffff; the earliest arrival with at most k rides is the least
+   * over the rounds up to k. Absent with no rides searched.
+   */
+  arrivals?: Int32Array;
 }
 
 export interface TravelTimeResult {
