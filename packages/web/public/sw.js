@@ -44,6 +44,9 @@ self.addEventListener('fetch', (event) => {
   if (url.host === MAP_HOST) return event.respondWith(mapResponse(event, req, url));
   if (url.origin !== self.location.origin) return;
 
+  // Other pages (the fresh-start page, fresh/) go to the network: storing one as './' would
+  // open it in place of the app.
+  if (req.mode === 'navigate' && !isStartPage(url, self.location.href)) return;
   if (req.mode === 'navigate') {
     // Network first so new deploys show up, but a slow network doesn't hang the start:
     // after NAV_TIMEOUT_MS (or offline) the cached shell, while the fetch still refreshes it.
@@ -109,6 +112,12 @@ self.addEventListener('fetch', (event) => {
     );
   }
 });
+
+/** Whether a page address is the app's start page ('./' or './index.html' next to sw.js). */
+function isStartPage(url, swUrl) {
+  const root = new URL('./', swUrl).pathname;
+  return url.pathname === root || url.pathname === `${root}index.html`;
+}
 
 /**
  * A data file named with its version (`walk.bin?v=1a2b3c4d`, see data-url.ts): the same
