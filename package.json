@@ -1,7 +1,7 @@
 {
   "name": "berlin-transit-heatmap",
   "private": true,
-  "version": "0.13.3",
+  "version": "0.13.4",
   "description": "How long does it take to get anywhere in Berlin by public transport? A travel-time heatmap.",
   "type": "module",
   "packageManager": "pnpm@10.28.0",

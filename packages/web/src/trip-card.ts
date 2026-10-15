@@ -98,7 +98,7 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
       j.leave !== undefined && j.arrive !== undefined
         ? `<span class="trip-main">${mark}${t('tripMain', {
             n,
-            time: eveningClock(j.arrive),
+            time: eveningClock(arrivedBy(j.arrive)),
           })}</span><small class="trip-leave" data-leave="${j.leave}">${leaveText(j.leave, c.now)}</small>${j.board ? '<small class="trip-live" hidden></small>' : ''}${avg}`
         : j.minutes !== undefined
           ? `<span class="trip-now">${mark}${t(c.direction === 'depart' ? 'tripNext' : 'tripLast', { n: j.minutes })}</span>`
@@ -162,6 +162,12 @@ function endRows(start: string, end: string, direction: Direction, anchorTitle: 
   };
   return `<span class="trip-rows">${row('start', start)}${row('end', end)}</span>`;
 }
+
+/**
+ * An arrival as the minute it is reached by (11:54:30 is "11:55"), as an arrival time in
+ * the Zeit panel counts it: the map moved to the trip's other end then shows the same.
+ */
+export const arrivedBy = (s: number) => Math.ceil(s / 60) * 60;
 
 /** "10:02" (seconds of the day, past midnight too). */
 export const hhmm = (s: number) => {

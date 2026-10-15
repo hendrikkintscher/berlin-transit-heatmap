@@ -551,7 +551,7 @@ function compute() {
 
 function writeUrl() {
   const q = linkQuery(
-    { ...state, to: tap.spot() },
+    { ...state, to: tap.spot(), span: tap.span() },
     NOW_WHEN,
     // Keep an explicit ?lang= so a shared English link stays English.
     urlLang && urlLang === lang() ? urlLang : null,
@@ -1346,6 +1346,7 @@ const tap = initTap(
     },
   },
   link.to,
+  link.span,
 );
 
 const chips = initChips({ state, closeSearch: search.close });

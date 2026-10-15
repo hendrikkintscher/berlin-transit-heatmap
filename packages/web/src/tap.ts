@@ -16,11 +16,11 @@ import {
 import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, type State } from './state';
-import { changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
+import { arrivedBy, changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
 import { refitRows, ridesKey } from './more-rows';
 import { icon } from './icons';
-import { MAX_NAME, MAX_STARTS, type Point } from './url';
+import { MAX_NAME, MAX_STARTS, type Point, type Span } from './url';
 import { liveStatus, liveText, type Board } from './live';
 import { dataBase } from './region';
 import { clockNow, isDate, rollsOn } from './when';
@@ -84,7 +84,11 @@ export interface TapDeps {
 const SWAP_DIM_MS = 250;
 const SWAP_WAIT_MS = 2500;
 
-export function initTap(deps: TapDeps, initial: Point | null) {
+/** Seconds a link's trip span is widened by on each side. */
+const LINK_SLACK_S = 5;
+
+/** `initial` is the place in the link, `span` its trip's times (url.ts). */
+export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span | null = null) {
   const { map, state, send } = deps;
   const readout = $('readout');
   const readoutText = $('readout-text');
@@ -648,7 +652,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
         )
         .join('');
       const mins = Math.max(1, Math.round((j.arrive - j.leave) / 60));
-      return `<button type="button" class="more-row${k === shownConnection ? ' on' : ''}" data-k="${k}" aria-pressed="${k === shownConnection}"><time>${hhmm(j.leave)} → ${hhmm(j.arrive)}</time><span>${mins} ${t('min')}</span><span class="more-badges">${badges}</span></button>`;
+      return `<button type="button" class="more-row${k === shownConnection ? ' on' : ''}" data-k="${k}" aria-pressed="${k === shownConnection}"><time>${hhmm(j.leave)} → ${hhmm(arrivedBy(j.arrive))}</time><span>${mins} ${t('min')}</span><span class="more-badges">${badges}</span></button>`;
     });
     // Arriving, the earlier ones go above the shown one, in time order.
     const ordered = arrive ? rows.slice(1).reverse().concat(rows[0]!) : rows;
@@ -728,7 +732,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
   let kept: {
     lat: number;
     lon: number;
-    span: { leave: number; arrive: number };
+    span: Span;
     map: string;
   } | null = null;
   /** What the map is computed for, as far as the kept trip goes. */
@@ -743,9 +747,21 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       state.walkKmh,
       state.stepFree,
     ]);
+  // A link carries it (trip=), so it opens on the same trip; a little wider, as the places
+  // in a link are rounded to about a metre (the walks at the ends may take a moment longer).
+  if (initial && initialSpan)
+    kept = {
+      ...initial,
+      span: { leave: initialSpan.leave - LINK_SLACK_S, arrive: initialSpan.arrive + LINK_SLACK_S },
+      map: mapKey(),
+    };
+  /** The kept trip's span while it is for (lat, lon) and the map as it is. */
+  const keptFor = (lat: number, lon: number) =>
+    kept && kept.lat === lat && kept.lon === lon && kept.map === mapKey() ? kept.span : null;
   function keptSpan(lat: number, lon: number) {
-    if (kept && (kept.lat !== lat || kept.lon !== lon || kept.map !== mapKey())) kept = null;
-    return kept ? { span: kept.span } : {};
+    const span = keptFor(lat, lon);
+    if (!span) kept = null;
+    return span ? { span } : {};
   }
 
   // The rings move to the place, which keeps its role (a Ziel stays the Ziel: the direction
@@ -774,6 +790,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     setSpot({ lat: old.lat, lon: old.lon, title: '', searched: false });
     deps.moveAnchor(at, before, text, trip);
     kept = trip ? { lat: old.lat, lon: old.lon, span: trip, map: mapKey() } : null;
+    // The link keeps that trip too.
+    if (kept) deps.writeUrl();
   });
   secondBtn.addEventListener('click', () => {
     const at = pending;
@@ -954,6 +972,8 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     addChangeNotes,
     /** The place kept in the link. */
     spot: (): Point | null => spot,
+    /** The trip kept for that place in the link, once the map moved to its other end. */
+    span: (): Span | null => (spot ? keptFor(spot.lat, spot.lon) : null),
     /** The drawer's list is being searched (the footpaths' refresh waits for it). */
     listLoading: () => moreAsked && !moreComplete,
   };

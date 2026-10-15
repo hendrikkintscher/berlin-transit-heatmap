@@ -7,6 +7,7 @@ const BASE: LinkState = {
   others: [],
   names: [],
   to: null,
+  span: null,
   when: NOW,
   direction: 'depart',
   measure: 'next',
@@ -37,6 +38,7 @@ describe('links', () => {
       ],
       names: ['Anna', '', 'Cem'],
       to: { lat: 52.43915, lon: 13.47215 },
+      span: { leave: 37419, arrive: 41203 },
       when: { day: 'weekend', hour: 2 },
       direction: 'arrive',
       measure: 'best',
@@ -53,10 +55,29 @@ describe('links', () => {
     };
     const q = linkQuery(full, NOW, 'en');
     expect(q).toBe(
-      'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&names=Anna%7C%7CCem&to=52.43915%2C13.47215&t=weekend-02' +
+      'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&names=Anna%7C%7CCem&to=52.43915%2C13.47215&trip=37419-41203&t=weekend-02' +
         '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=heat%2Cfreq%2Cdesert%2Cnoiso&bis=45&lang=en',
     );
     expect(readLink(`?${q}`, BASE)).toEqual(full);
+  });
+
+  it('keeps a trip span only with its place', () => {
+    const from = 'from=52.5%2C13.4';
+    expect(readLink(`?${from}&to=52.51%2C13.41&trip=37419-41203`, BASE).span).toEqual({
+      leave: 37419,
+      arrive: 41203,
+    });
+    expect(readLink(`?${from}&trip=37419-41203`, BASE).span).toBeNull();
+    expect(readLink(`?${from}&to=52.51%2C13.41&trip=41203-37419`, BASE).span).toBeNull();
+    expect(readLink(`?${from}&to=52.51%2C13.41&trip=x`, BASE).span).toBeNull();
+    const s = {
+      ...BASE,
+      origin: { lat: 52.5, lon: 13.4 },
+      span: { leave: 37419.6, arrive: 41202.2 },
+    };
+    // Rounded outwards, so the trip still fits; left out without a place.
+    expect(linkQuery({ ...s, to: { lat: 52.51, lon: 13.41 } }, NOW)).toContain('trip=37419-41203');
+    expect(linkQuery(s, NOW)).not.toContain('trip=');
   });
 
   it('takes only the offered minutes for "Bis N Min."', () => {

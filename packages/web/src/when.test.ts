@@ -13,6 +13,7 @@ import {
   whenParam,
   leaveOffset,
   parseWhen,
+  tripWhen,
   typicalWindow,
   upcomingDays,
   whenAt,
@@ -177,6 +178,24 @@ describe('when', () => {
     expect(isNow({ day: '20261012', hour: 18, minute: 20 }, now)).toBe(false);
     expect(isNow({ day: 'weekday', hour: 18 }, now)).toBe(false);
     expect(isNow({ day: '20261012', hour: 19 }, now)).toBe(false);
+  });
+});
+
+describe('tripWhen', () => {
+  // A trip leaving 10:57:20 and arriving 11:54:30.
+  const [leave, arrive] = [10 * 3600 + 57 * 60 + 20, 11 * 3600 + 54 * 60 + 30];
+  it('takes the minute of the trip for Nächste: arriving by it, leaving at it', () => {
+    expect(tripWhen('weekday', arrive, 'arrive')).toEqual({ day: 'weekday', hour: 11, minute: 55 });
+    expect(tripWhen('weekday', leave, 'depart')).toEqual({ day: 'weekday', hour: 10, minute: 57 });
+  });
+  it('takes the hour the trip arrives or leaves in for Typisch and Bestfall', () => {
+    // "Ankunft 11 bis 12 Uhr", "ab 10 Uhr".
+    expect(tripWhen('weekday', arrive, 'arrive', false)).toEqual({ day: 'weekday', hour: 11 });
+    expect(tripWhen('weekday', leave, 'depart', false)).toEqual({ day: 'weekday', hour: 10 });
+  });
+  it('gives up past midnight', () => {
+    expect(tripWhen('weekday', 23 * 3600 + 59 * 60 + 1, 'arrive')).toBeNull();
+    expect(tripWhen('weekday', 24 * 3600 + 60, 'arrive', false)).toBeNull();
   });
 });
 
