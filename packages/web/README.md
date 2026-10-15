@@ -28,6 +28,9 @@ pnpm --dir packages/web build     # -> packages/web/dist
   (`when-sheet.ts`, `when.ts`), the top chips (`chips.ts`), the menu (`menu.ts`), taps and the
   trip card (`tap.ts`, `trip-card.ts`), meeting points (`meet.ts`), today's changes
   (`changes.ts`) and live delays (`live.ts`).
+- **Fresh start.** `fresh/index.html` with `src/fresh.ts` inline (`…/fresh/`): removes the
+  app's service worker, its caches and stored settings, asking first whether to keep favourite
+  places and recent searches, then opens the app (with the link's parameters) as on a new device.
 - **Link.** `url.ts` reads and writes every link parameter (start, more starts, destination,
   time, measure, direction, comparison, travel mode, layers, language); its tests list them.
 - **Text.** Interface text lives in `i18n.ts`, German by default with English. Static text in

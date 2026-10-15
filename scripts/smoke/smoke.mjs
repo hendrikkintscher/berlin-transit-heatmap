@@ -5,7 +5,7 @@
 // request is cut off, so the test needs no network.
 //
 //   node scripts/smoke/smoke.mjs [--dist packages/web/dist] [--shots <dir>]
-/* global window, document -- the page functions run in the browser */
+/* global window, document, caches -- the page functions run in the browser */
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -148,6 +148,53 @@ try {
     }
     await p.close();
   }
+
+  // The fresh-start page (fresh/): with the app's service worker running and a favourite
+  // stored, it asks once; "keep" removes the worker, its caches and the app's settings but
+  // keeps the favourite and other apps' keys, then opens the app with the link's start.
+  const fresh = await browser.newContext({ viewport: { width: 360, height: 740 } });
+  await fresh.route(
+    (url) => !url.href.startsWith(base),
+    (route) => route.abort(),
+  );
+  const f = await fresh.newPage();
+  f.on('pageerror', (e) => errors.push(`fresh: ${e.message}`));
+  await f.goto(base);
+  await f.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    await caches.open('data-v2');
+    localStorage.setItem(
+      'berlin:favourites',
+      JSON.stringify([{ label: 'A', lat: 52.5, lon: 13.4, weight: 2 }]),
+    );
+    localStorage.setItem('seen-tap', '1');
+    localStorage.setItem('walk-kmh', '5');
+    localStorage.setItem('other-app', 'x');
+  });
+  await f.goto(`${base}fresh/?from=52.52000,13.40000`);
+  await f.waitForSelector('#keep', { state: 'visible', timeout: 10000 });
+  const question = await f.locator('#personal').innerText();
+  if (!/: 1\s?Lieblingsort\./.test(question))
+    failures.push(`fresh: unexpected question "${question}"`);
+  if (args.shots) await f.screenshot({ path: join(args.shots, 'smoke-fresh.png') });
+  const tFresh = Date.now();
+  await f.click('#keep');
+  await f.waitForURL(`${base}?from=52.52000,13.40000`, { timeout: 10000 });
+  const after = await f.evaluate(async () => ({
+    controlled: !!navigator.serviceWorker.controller,
+    favourites: localStorage.getItem('berlin:favourites'),
+    seen: localStorage.getItem('seen-tap'),
+    walk: localStorage.getItem('walk-kmh'),
+    other: localStorage.getItem('other-app'),
+  }));
+  if (after.controlled) failures.push('fresh: the app opened under the old service worker');
+  if (!after.favourites) failures.push('fresh: the kept favourite is gone');
+  if (after.seen || after.walk) failures.push("fresh: the app's settings are still there");
+  if (after.other !== 'x') failures.push("fresh: another app's key was removed");
+  console.log(
+    `fresh: app reopened ${Date.now() - tFresh} ms after the tap; asked "${question.slice(0, 60)}…", ${JSON.stringify(after)}`,
+  );
+  await fresh.close();
 } finally {
   await browser.close();
   server.close();

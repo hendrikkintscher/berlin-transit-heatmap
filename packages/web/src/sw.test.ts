@@ -6,13 +6,13 @@ import { addDays } from './when';
 // sw.js is a plain script: run it in a sandbox and call its trim() on a fake cache.
 function load() {
   const src = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
-  const sandbox = { self: { addEventListener() {} }, Intl, Date, Promise } as Record<
+  const sandbox = { self: { addEventListener() {} }, Intl, Date, Promise, URL } as Record<
     string,
     unknown
   >;
   vm.createContext(sandbox);
   vm.runInContext(
-    `${src}\nthis.trim = trim; this.today = today; this.pruneAssets = pruneAssets; this.trimTiles = trimTiles;`,
+    `${src}\nthis.trim = trim; this.today = today; this.pruneAssets = pruneAssets; this.trimTiles = trimTiles; this.isStartPage = isStartPage;`,
     sandbox,
   );
   return sandbox as unknown as {
@@ -20,6 +20,7 @@ function load() {
     today: () => string;
     pruneAssets: (cache: unknown, html: string) => Promise<void>;
     trimTiles: (cache: unknown) => Promise<void>;
+    isStartPage: (url: URL, swUrl: string) => boolean;
   };
 }
 
@@ -185,5 +186,18 @@ describe('versioned data files', () => {
   it('offline, an older version stands in', async () => {
     const s = setup([`${walk}?v=aaaa`], null);
     expect(await s.get(`${walk}?v=bbbb`)).toBe('old');
+  });
+});
+
+describe('pages', () => {
+  it('handles only the start page; the fresh-start page goes to the network', () => {
+    const sw = load();
+    const swUrl = 'https://h.github.io/berlin-transit-heatmap/sw.js';
+    const page = (p: string) => sw.isStartPage(new URL(p, 'https://h.github.io'), swUrl);
+    expect(page('/berlin-transit-heatmap/')).toBe(true);
+    expect(page('/berlin-transit-heatmap/?from=52.5,13.4')).toBe(true);
+    expect(page('/berlin-transit-heatmap/index.html')).toBe(true);
+    expect(page('/berlin-transit-heatmap/fresh/')).toBe(false);
+    expect(page('/berlin-transit-heatmap/fresh/index.html')).toBe(false);
   });
 });
