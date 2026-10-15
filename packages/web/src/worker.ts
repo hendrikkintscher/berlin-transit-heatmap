@@ -43,6 +43,7 @@ import { ensure, prepared, setDataBase } from './worker-timetables';
 import {
   moreTrips,
   nearestStopName,
+  nextHour,
   setLastTrip,
   tripsReady,
   tapTrip,
@@ -226,6 +227,7 @@ function sendMap(msg: ComputeMsg, made: Made, t0: number) {
     direction: msg.toGoal || msg.direction === 'arrive' ? 'arrive' : 'depart',
     ...(msg.toGoal ? { leaving: from } : {}),
     travel: made.travel,
+    variant: { stepFree: msg.stepFree, bike: made.travel === 'bike' },
     // Trips on tap leave now (or, arriving, arrive by the end of the hour): the map's
     // own pass for "Nächste", a pass of their own for Typisch and Bestfall. To the Ziel
     // leaving, each trip is found from its own place (tripBetween).
@@ -383,8 +385,10 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       await nextTask();
       if (msg.id !== latestTrip) return;
       await tripsReady();
+      // A connection rolled on past the map's hour: the next hour's file has its trips.
+      const next = msg.window && msg.leaveAt !== undefined ? await nextHour(msg.window) : null;
       if (msg.id !== latestTrip) return;
-      post({ type: 'trip', id: msg.id, ...tapTrip(msg) });
+      post({ type: 'trip', id: msg.id, ...tapTrip(msg, next) });
     }
   } catch (err) {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });

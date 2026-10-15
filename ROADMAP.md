@@ -1,6 +1,6 @@
-# Roadmap V1.46
+# Roadmap V1.47
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.5**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.6**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -18,19 +18,10 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## Inbox
 
-- 2026-10-15 (from 0.13.4): In Typisch/Bestfall with "Ankommen", a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
-- 2026-10-15 (from 0.13.4): Moving the map before footpaths load keeps a trip found with straight-line walks; once footpaths arrive it may not fit and the card falls back to the usual trip.
-- 2026-10-15 (from 0.13.5): A tap on a map to a Ziel with a departure time runs three searches for its trip (about 11 ms more than the arrival map's one in Node); the Ziel's walks to the stops could be kept per map.
-- 2026-10-15 (from 0.13.5): The lines drawn on a map to a Ziel with a departure time follow a pass arriving 40 minutes after leaving, not the departure trips themselves; fine for the picture, not exact.
-- 2026-10-15 (from 0.13.5): That map's minutes are 3 or more apart from the tapped trip for 10–17 % of places (a vehicle caught or missed by seconds; the arrival map: 8 %); two stop guesses per cell instead of one halve that for a second grid's cost (about +100 ms).
+- 2026-10-15 (from 0.13.6): Most of every hourly timetable file is the stop list, the same in each: a night file with about 1,000 trips is 258 KB gzipped against 289–303 KB for 7,000–16,000 trips by day. A stop list loaded once (kept by the service worker) would make each further hour's file, the next-hour preload and Vergleich much smaller.
+- 2026-10-15 (from 0.13.6): A missed connection still rolls on only until two hours after the chosen hour (rollsOn), although the next hour's file it now uses holds trips further on; after 23 Uhr it stays on the chosen file (the next day's 0 Uhr is not used).
 
 ## 0.13 Faster and steadier routing
-
-- **0.13.6 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
-  - a. Measure today's windows: what each timetable file holds and how long each kind of map takes.
-  - b. Try two-hour windows for Typisch and best connection and one hour for Nächste; compare speed, file size and trip accuracy against today.
-  - c. Include the extra hour's edge: late in the extra hour after the chosen one, trips longer than about an hour can come out slightly worse, because an hour's file stops holding trips two hours after its own hour. Measure how often and by how much, and whether a longer tail fixes it at a fair file-size cost.
-  - d. Hendrik gets the numbers and a recommendation; the change is built only on his yes.
 
 - **0.13.7 Fresh-start link**. Hendrik (2026-10-14): "add a link option like [URL]/fresh to start from a fresh, non-cached start like from a new device".
   - a. Opening the app's address with `/fresh` (GitHub Pages serves only files, so a small page at fresh/ or a `?fresh` link) removes the app's service worker, its caches and stored data, then opens the app as on a new device.
@@ -41,11 +32,21 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
   - a. Measure which part of the map redo costs the base map time: the new colours (one picture), the time rings, or the line courses with their name labels. Same 360×740 setup as 0.13.2.
   - b. Hand the footpaths over right after unpacking: put the new colours on the map at once; send rings, line courses and labels only once the base map is up, and skip them when they did not change. If a shows the rings are cheap, they go with the colours, so colours and rings never disagree.
   - c. Keep it only if the base map stays within noise and taps stay as fast; otherwise drop it and report the numbers.
+  - d. Inbox note from 0.13.4 (2026-10-15): moving the map to the other end of a trip before the footpaths load keeps a trip found with straight-line walks; once the footpaths arrive it may not fit, and the card falls back to the usual trip. Ask for the kept trip again with the footpaths (its span a little wider), so the card keeps it.
 
 - **0.13.9 Map walk rule: fastest, even with a longer walk (decision)**. From 0.13.4 (2026-10-15, Hendrik's call): "should the map use the "fastest, even with a longer walk" rule like the trip on tap? Brings them closer but changes the map at the edges of town (ties in with #237)." Today the map uses its 15-minute walk rule and #237's less walking on equal arrival, so map minutes and the tapped trip are 3 or more minutes apart in 8 % of places (0.13.4 check over 386 places).
   - a. Measure, with the same 386 places, how often map and trip agree under the "fastest, even with a longer walk" rule, and where the map changes (edges of town, long walks to a faster line), with before/after screenshots at 360×740.
   - b. Measure first map and tap timings with the new rule; it must not slow either.
   - c. Hendrik gets the numbers and a recommendation; the map changes only on his yes.
+
+- **0.13.10 Ankommen under Typisch and Bestfall: trip and map agree**. Inbox note from 0.13.4 (2026-10-15): with Ankommen under Typisch or Bestfall, a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
+  - a. Count how often and by how much card and map differ today (random places, a few hours).
+  - b. Let the trip on tap arrive within the hour the map counts (for example by its end, or the one closest to the map's minutes), so card and map tell the same; tap timings stay as they are.
+
+- **0.13.11 Map to a Ziel with a departure time: follow-ups**. Inbox notes from 0.13.5 (2026-10-15) on the map built there (⇅ or the rings with Losfahren).
+  - a. A tap on that map runs three searches for its trip (about 11 ms more than the arrival map's one in Node); keep the Ziel's walks to the stops per map, and measure the tap before and after.
+  - b. Its lines follow a pass arriving 40 minutes after leaving, not the departure trips themselves; fine for the picture, not exact. Draw them from the trips the map's cells take, if that costs no more than today.
+  - c. Its minutes are 3 or more apart from the tapped trip for 10–17 % of places (a vehicle caught or missed by seconds; the arrival map: 8 %). Two stop guesses per cell instead of one would halve that for about +100 ms per map; Hendrik decides with the numbers.
 
 ## 0.14 Map handling
 

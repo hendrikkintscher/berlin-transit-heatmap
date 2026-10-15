@@ -113,6 +113,11 @@ export type ToWorker =
       lat: number;
       lon: number;
       leaveAt?: number;
+      /**
+       * With `leaveAt` past the map's hour: the next hour's timetable file, which holds the
+       * trips leaving then all the way (the map's own file stops two hours after its hour).
+       */
+      window?: Window;
       span?: { leave: number; arrive: number };
     }
   /** The worker's own downloads so far, for the timing box (?timing in the link). */
