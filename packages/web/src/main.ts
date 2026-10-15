@@ -258,8 +258,9 @@ function setStatus(render: () => string, fade: boolean | number = false) {
  * screen when the line is fast (roadmap 0.13.1), else once the base map is up as well: on a
  * slower line it would share the line with the base map's tiles and labels and hold them up.
  * With no start, it comes once the base map is up. The worker unpacks it as soon as it is in,
- * in slices of a few milliseconds, so taps meanwhile are not held up, and hands it over once
- * the base map is up (0.13.2). While it streams, the bar and a note say so.
+ * in slices of a few milliseconds, so taps meanwhile are not held up (0.13.2), and hands it
+ * over at once: the map is redone with it, its colours go on at once and its time rings and
+ * lines once the base map is up (0.13.8). While it streams, the bar and a note say so.
  */
 let walkAsked = false;
 /** The lines' courses may load (the base map is up), told to the worker once. */
@@ -276,6 +277,7 @@ function afterFirstMap() {
   if (!basemapUp) {
     basemapTimer ||= window.setTimeout(() => {
       basemapUp = true;
+      showHeld();
       afterFirstMap();
     }, BASEMAP_WAIT_MS);
     return;
@@ -286,6 +288,8 @@ function afterFirstMap() {
   preloadNextHour();
 }
 let walkLoading = false;
+/** The footpaths are in: walks follow them. */
+let footpathsIn = false;
 /**
  * When the footpath line first went up (0: not yet). It shows for WALK_LINE_MS at most:
  * the map works without footpaths, so on a slow download the line gives way and only the
@@ -377,6 +381,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     // Footpaths arrived: redo what was computed with straight-line walks.
     if (m.type === 'walk') {
       performance.mark('footpaths');
+      footpathsIn = true;
+      tap.onFootpaths();
       refineWalks();
     }
   } else if (m.type === 'result') {
@@ -385,7 +391,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     refining = false;
     if (m.living || m.home) special.done(m);
     state.result = m;
-    showResult(m);
+    if (refined && !basemapUp) holdRings(m);
+    else showResult(m);
     // A switch changed while it was computing.
     syncImage();
     tap.onResult();
@@ -847,6 +854,7 @@ if (attrib) {
 // or the lines and the next hour once the first map is there.
 map.once('load', () => {
   basemapUp = true;
+  showHeld();
   if (!state.origin && !state.special) askBackground();
   else afterFirstMap();
 });
@@ -998,6 +1006,7 @@ showMeetNames();
 
 let firstMapShown = false;
 function showResult(r: Result) {
+  held = null;
   renderMeet(r.meet);
   renderBest(r);
   frameResult(r);
@@ -1018,6 +1027,23 @@ function showResult(r: Result) {
     // base map.
     if (fastLine()) requestAnimationFrame(() => setTimeout(askWalk));
   }
+}
+
+/**
+ * The map redone with the footpaths before the base map is up: its colours go on at once,
+ * its time rings, lines and labels (and pins) once the base map is up (showHeld). Put on
+ * earlier, the rings held the base map up by about 1 s with the page CPU slowed 4×, while
+ * the colours and the redo itself did not (0.13.8).
+ */
+let held: Result | null = null;
+function holdRings(r: Result) {
+  held = r;
+  drawHeat(r);
+}
+/** The base map is up: the held map goes on in full (unless a newer one replaced it). */
+function showHeld() {
+  if (held && state.result === held) showResult(held);
+  held = null;
 }
 
 /** Puts the result's colour image on the map (an empty one while it is unpainted). */
@@ -1363,6 +1389,7 @@ const tap = initTap(
     openChanges: (ride) => changes?.openFor(ride),
     showArrows: (lines) => showArrows?.(lines),
     refining: () => refining,
+    footpathsIn: () => footpathsIn,
     showHome: (i) => {
       const at = starts()[i];
       if (at)

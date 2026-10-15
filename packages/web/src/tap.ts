@@ -77,6 +77,8 @@ export interface TapDeps {
   showArrows: (lines: GeoJSON.FeatureCollection | null) => void;
   /** The map is being redone with the footpaths: the place's trip comes again after it. */
   refining: () => boolean;
+  /** Whether the footpaths are in (walks follow them, not straight lines). */
+  footpathsIn: () => boolean;
 }
 
 /**
@@ -88,6 +90,13 @@ const SWAP_WAIT_MS = 2500;
 
 /** Seconds a link's trip span is widened by on each side. */
 const LINK_SLACK_S = 5;
+/**
+ * Seconds a trip span kept before the footpaths were in is widened by on each side once they
+ * are: the walks at the ends change with them. Over 300 random trips (bench/kept.ts) the same
+ * rides then come out in 43–49 %, against 24–30 % with the usual trip; wider spans let other
+ * trips in (0.13.8d).
+ */
+const FOOTPATH_SLACK_S = 120;
 
 /** `initial` is the place in the link, `span` its trip's times (url.ts). */
 export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span | null = null) {
@@ -744,6 +753,8 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     lon: number;
     span: Span;
     map: string;
+    /** Found with straight-line walks: widened once the footpaths are in. */
+    straight?: true;
   } | null = null;
   /** What the map is computed for, as far as the kept trip goes. */
   const mapKey = () =>
@@ -800,7 +811,15 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     hideReadout();
     setSpot({ lat: old.lat, lon: old.lon, title: '', searched: false });
     deps.moveAnchor(at, before, text, trip);
-    kept = trip ? { lat: old.lat, lon: old.lon, span: trip, map: mapKey() } : null;
+    kept = trip
+      ? {
+          lat: old.lat,
+          lon: old.lon,
+          span: trip,
+          map: mapKey(),
+          ...(deps.footpathsIn() ? {} : { straight: true as const }),
+        }
+      : null;
     // The link keeps that trip too.
     if (kept) deps.writeUrl();
   });
@@ -977,6 +996,20 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     onTrip,
     onLiving,
     addChangeNotes,
+    /**
+     * The footpaths are in: a trip kept with straight-line walks gets a wider span, so the
+     * card asks for it again around the new walks once the map is redone (0.13.8d).
+     */
+    onFootpaths() {
+      if (!kept?.straight) return;
+      const { leave, arrive } = kept.span;
+      kept = {
+        lat: kept.lat,
+        lon: kept.lon,
+        map: kept.map,
+        span: { leave: leave - FOOTPATH_SLACK_S, arrive: arrive + FOOTPATH_SLACK_S },
+      };
+    },
     /** The place kept in the link. */
     spot: (): Point | null => spot,
     /** The trip kept for that place in the link, once the map moved to its other end. */
