@@ -23,7 +23,7 @@ import { icon } from './icons';
 import { MAX_NAME, MAX_STARTS, type Point, type Span } from './url';
 import { liveStatus, liveText, type Board } from './live';
 import { dataBase } from './region';
-import { clockNow, isDate, rollsOn } from './when';
+import { clockNow, isDate, rolledWindow, rollsOn } from './when';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
 export interface Spot extends Point {
@@ -475,7 +475,15 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
       }
       tripAt.askedLater = true;
       tripId++;
-      send({ type: 'trip', id: tripId, lat: tripAt.lat, lon: tripAt.lon, leaveAt: now });
+      const window = rolledWindow(state.when, now);
+      send({
+        type: 'trip',
+        id: tripId,
+        lat: tripAt.lat,
+        lon: tripAt.lon,
+        leaveAt: now,
+        ...(window ? { window } : {}),
+      });
     }
   }, 15_000);
 

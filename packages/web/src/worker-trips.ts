@@ -22,6 +22,7 @@ import { bestRows } from './more-rows';
 import { stopName } from './stop-name';
 import { course, walk } from './worker-paths';
 import { CELL_M, cellSeconds, travelOptions, type Run } from './worker-runs';
+import { prepared, type Variant } from './worker-timetables';
 
 /** The last computed map, as trips on tap need it. */
 export interface LastTrip {
@@ -46,6 +47,8 @@ export interface LastTrip {
   other?: () => Promise<PreparedTimetable | null>;
   /** `other` once it is in (null: not to be had). */
   otherTt?: PreparedTimetable | null;
+  /** The map's timetable variant, for the next hour's file (see tapTrip). */
+  variant?: Variant;
 }
 /** The last computed map, kept for trip lookups on tap. */
 let lastTrip: LastTrip | null = null;
@@ -412,6 +415,8 @@ function twinRoutes(
 
 /** The last single connection put on a card, for the drawer's more connections. */
 let lastFound: NonNullable<ReturnType<typeof trip>> | null = null;
+/** The map (or the next hour's file) that connection was found on. */
+let lastFoundOn: LastTrip | null = null;
 
 /** A drawer row on the timetable's own clock: the start moves on, the end must improve. */
 interface MoreRow {
@@ -432,7 +437,7 @@ interface MoreBase {
 }
 
 function moreBase(msg: Extract<ToWorker, { type: 'moreTrips' }>): MoreBase | null {
-  const last = lastTrip;
+  const last = lastFoundOn;
   const f0 = lastFound;
   if (!last || !f0 || f0.leave !== msg.leave || f0.arrive !== msg.arrive) return null;
   if (!f0.journey.legs.some((l) => l.type === 'ride')) return null;
@@ -688,7 +693,7 @@ export function tripMessage(
 }
 
 /** The trip to a tapped place from each start (one start: kept for the drawer's more). */
-export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>) {
+export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: NextHour | null) {
   const last = lastTrip;
   // To the Ziel leaving, a trip leaves the tapped place at the map's time (or, the shown
   // connection missed, at a later one); each is its own search (tripBetween).
@@ -701,6 +706,8 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>) {
     last.travel !== 'bikeonly'
       ? {
           ...last,
+          // Past the map's hour, on the next hour's file when it is in.
+          ...(nextHour ? { tt: nextHour.tt, otherTt: nextHour.other } : {}),
           leaveAt: msg.leaveAt,
           from: msg.leaveAt,
           ...(toGoal ? { leaving: msg.leaveAt } : {}),
@@ -721,5 +728,36 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>) {
       : trip(last!, nowRun(last!, r, msg), msg);
   });
   lastFound = journeys.length === 1 ? journeys[0]! : null;
+  lastFoundOn = later ?? last;
   return tripMessage(journeys);
+}
+
+/** The next hour's timetable, both ways round, for a connection that rolled on past the map's hour. */
+export interface NextHour {
+  tt: PreparedTimetable;
+  other: PreparedTimetable | null;
+}
+
+/**
+ * Loads the next hour's file (`window`) the way the last map runs, and the other way round,
+ * for a trip leaving after the map's hour: the map's own file holds the trips starting up to
+ * two hours after its hour, so trips over an hour, asked for late in the next hour, would
+ * come out worse or not at all. The app preloads that hour after each map, so this is
+ * usually there already; null when it cannot be had (the map's own file is used then).
+ */
+export async function nextHour(window: string): Promise<NextHour | null> {
+  const last = lastTrip;
+  if (!last || last.travel === 'bikeonly') return null;
+  const variant = last.variant ?? {};
+  try {
+    const [tt, other] = await Promise.all([
+      prepared(window, last.direction, variant),
+      prepared(window, last.direction === 'depart' ? 'arrive' : 'depart', variant).catch(
+        () => null,
+      ),
+    ]);
+    return { tt, other };
+  } catch {
+    return null;
+  }
 }

@@ -256,6 +256,17 @@ export function clockNow(when: When, now = new Date()): number | null {
  */
 export const rollsOn = (when: When, now: number) => now < (when.hour + 2) * 3600;
 
+/**
+ * The file a missed connection rolls on with, once the clock is past the chosen hour: the
+ * next hour's, which holds the trips leaving then all the way (the chosen hour's stops two
+ * hours after it, so trips over an hour late in the next hour came out worse). Null within
+ * the hour, and after 23 Uhr (the chosen hour's file stays).
+ */
+export function rolledWindow(when: When, now: number): string | null {
+  if (now < (when.hour + 1) * 3600 || when.hour >= 23) return null;
+  return windowName({ day: when.day, hour: when.hour + 1 });
+}
+
 /** "+15", "+30", "+60" in the time panel: that many minutes from now in Berlin, exact. */
 export function laterWhen(minutes: number, now = new Date()): When {
   const at = new Date(now.getTime() + minutes * 60_000);
