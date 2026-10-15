@@ -14,12 +14,14 @@ export type {
   TravelLegs,
   RoundLegs,
   TravelTimeOptions,
+  StopProfile,
   TravelTimeResult,
 } from './types';
 export type { PreparedTimetable } from './prepare';
 export { loadTimetable } from './prepare';
 export { travelTimes } from './raptor';
 export { reverseTimetable } from './reverse';
+export { goalArrival, goalCells, goalWindow } from './goal';
 export { stepFreeTimetable } from './stepfree';
 export { REGION, REGIONS, type Box, type Region } from './regions';
 export {

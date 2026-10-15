@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeRequest, linkState, readFrom, sameRequest } from './state';
+import { computeRequest, linkState, mapDirection, mapToGoal, readFrom, sameRequest } from './state';
 
 describe('the first map, as the worker makes it ahead', () => {
   const search = '?from=52.52190,13.41320&t=weekday-10';
@@ -35,5 +35,35 @@ describe('the first map, as the worker makes it ahead', () => {
 
   it('drops starts outside the area', () => {
     expect(linkState('?from=48.1,11.5', readFrom({})).state.origin).toBeNull();
+  });
+});
+
+describe('which end the map runs to, apart from the time', () => {
+  const at = new Date('2026-10-13T08:30:00Z');
+
+  it('leaving to the place keeps a departure time and asks for the trips to it', () => {
+    const { state } = linkState('?from=52.52190,13.41320&t=weekday-10&dir=goal', readFrom({}));
+    expect(state.direction).toBe('depart');
+    expect(mapToGoal(state)).toBe(true);
+    expect(mapDirection(state)).toBe('arrive');
+    expect(computeRequest({ ...state, origin: state.origin! }, at)).toMatchObject({
+      window: 'weekday-10',
+      direction: 'depart',
+      toGoal: true,
+    });
+  });
+
+  it('arriving is always to the place, leaving from a start is from it', () => {
+    const arr = linkState('?from=52.52190,13.41320&t=weekday-10&dir=arr', readFrom({})).state;
+    expect(mapToGoal(arr)).toBe(true);
+    expect(computeRequest({ ...arr, origin: arr.origin! }, at)).toMatchObject({
+      window: 'weekday-09',
+      direction: 'arrive',
+    });
+    expect(computeRequest({ ...arr, origin: arr.origin! }, at)).not.toHaveProperty('toGoal');
+    const from = linkState('?from=52.52190,13.41320&t=weekday-10', readFrom({})).state;
+    expect(mapToGoal(from)).toBe(false);
+    expect(mapDirection(from)).toBe('depart');
+    expect(computeRequest({ ...from, origin: from.origin! }, at)).not.toHaveProperty('toGoal');
   });
 });

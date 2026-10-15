@@ -1,6 +1,6 @@
-# Roadmap V1.45
+# Roadmap V1.46
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.4**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.5**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -20,13 +20,12 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 - 2026-10-15 (from 0.13.4): In Typisch/Bestfall with "Ankommen", a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
 - 2026-10-15 (from 0.13.4): Moving the map before footpaths load keeps a trip found with straight-line walks; once footpaths arrive it may not fit and the card falls back to the usual trip.
+- 2026-10-15 (from 0.13.5): A tap on a map to a Ziel with a departure time runs three searches for its trip (about 11 ms more than the arrival map's one in Node); the Ziel's walks to the stops could be kept per map.
+- 2026-10-15 (from 0.13.5): The lines drawn on a map to a Ziel with a departure time follow a pass arriving 40 minutes after leaving, not the departure trips themselves; fine for the picture, not exact.
+- 2026-10-15 (from 0.13.5): That map's minutes are 3 or more apart from the tapped trip for 10–17 % of places (a vehicle caught or missed by seconds; the arrival map: 8 %); two stop guesses per cell instead of one halve that for a second grid's cost (about +100 ms).
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.5 Changing direction keeps the departure time**. Hendrik (2026-10-14): "changing direction should not switch to Ankunftszeit mode". Today the trip card's ⇅, moving the map to the other end of the trip and the Zeit panel's Losfahren/Ankommen are one switch: when the map's place becomes the Ziel, the time turns into an arrival time ("Ankommen um …", and on "Jetzt" it even moves an hour on). So Start/Ziel and departure/arrival time are tied together.
-  - a. Make them two separate choices: ⇅ and moving the map only change which place is Start and which is Ziel; the time stays a departure time ("Losfahren") unless Ankommen is picked in the Zeit panel.
-  - b. A map to a Ziel with a departure time needs the trips from every place leaving at that time. Measure whether that is as fast as today's arrival map; if not, find a quick way (for example from the hour's timetable already loaded) and report the timings before building.
-  - c. "Rückgängig" and links (dir=arr) keep working; the trip on the card stays the same when only the direction changes.
 - **0.13.6 Timetable windows check**. Hendrik (2026-10-13): "check the timetables where day we might only need two hour windows for typical and best connection and for the "next" calculation, is a one hour window, however it is build right now a good way to go or can we optimise in terms of speed and accuracy?"
   - a. Measure today's windows: what each timetable file holds and how long each kind of map takes.
   - b. Try two-hour windows for Typisch and best connection and one hour for Nächste; compare speed, file size and trip accuracy against today.

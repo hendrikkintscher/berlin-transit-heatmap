@@ -1,5 +1,5 @@
 import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
-import type { Origin, RoundLegs, TravelTimeOptions, TravelTimeResult } from './types';
+import type { Origin, RoundLegs, StopProfile, TravelTimeOptions, TravelTimeResult } from './types';
 import {
   sameEdgeMetres,
   snapOrigin,
@@ -106,10 +106,13 @@ export function travelTimes(
   const horizon = typical ? (opts.typicalHorizonSeconds ?? DEFAULT_TYPICAL_HORIZON_S) : 0;
   // Leaving at a fixed time is plain RAPTOR: one departure, the next trips from there.
   const leaveAt = opts.leaveAt;
-  const departures =
-    leaveAt === undefined
+  const profile = opts.profile;
+  const departures = profile
+    ? departureTimes(tt, accessStops, accessWalk, 0, profile.from, profile.to)
+    : leaveAt === undefined
       ? departureTimes(tt, accessStops, accessWalk, horizon)
       : Int32Array.of(Math.round(leaveAt));
+  const events = profile ? new ProfileEvents() : null;
   const ws = tt.windowStart;
   const we = tt.windowEnd;
 
@@ -241,7 +244,7 @@ export function travelTimes(
       // say), not chained: as one may follow the last ride, so the walks at both ends of a
       // trip match and it comes out the same seen from either end (arriving runs on the
       // reversed timetable). Range scans leave them out, so their departures stay as few.
-      const walked = leaveAt === undefined ? 0 : markedCount;
+      const walked = leaveAt === undefined && !profile ? 0 : markedCount;
       for (let m = 0; m < walked; m++) isNextMarked[marked[m]] = 1;
       for (let m = 0; m < walked; m++) {
         const s = marked[m];
@@ -418,6 +421,7 @@ export function travelTimes(
       for (let m = 0; m < touchedCount; m++) {
         const s = touched[m];
         isTouched[s] = 0;
+        events?.add(s, dep, tauStar[s]);
         if (typical) {
           settle(s, dep);
           since[s] = dep;
@@ -454,6 +458,7 @@ export function travelTimes(
   return {
     stopSeconds: best,
     ...(typicalSeconds ? { typicalSeconds } : {}),
+    ...(events ? { profile: events.finish(S) } : {}),
     computedInMs: now() - t0,
     origin: { lat: origin.lat, lon: origin.lon },
     departures: departures.length,
@@ -472,6 +477,8 @@ function departureTimes(
   accessStops: number[],
   accessWalk: number[],
   horizon = 0,
+  from = tt.windowStart,
+  to = tt.windowEnd + horizon,
 ): Int32Array {
   const {
     routeStopOffset,
@@ -482,8 +489,8 @@ function departureTimes(
     stopRouteRoute,
     stopRouteIndex,
   } = tt;
-  const lo = tt.windowStart;
-  const hi = tt.windowEnd + horizon;
+  const lo = from;
+  const hi = to;
   const out: number[] = [];
   for (let a = 0; a < accessStops.length; a++) {
     const s = accessStops[a];
@@ -507,4 +514,41 @@ function departureTimes(
     if (res.length === 0 || res[res.length - 1] !== arr[k]) res.push(arr[k]);
   }
   return Int32Array.from(res);
+}
+
+/** The improvements of each stop's arrival over the scanned departures (StopProfile). */
+class ProfileEvents {
+  private stop = new Int32Array(1 << 16);
+  private departure = new Int32Array(1 << 16);
+  private arrival = new Int32Array(1 << 16);
+  private n = 0;
+
+  add(s: number, departure: number, arrival: number) {
+    if (this.n === this.stop.length) {
+      for (const k of ['stop', 'departure', 'arrival'] as const) {
+        const bigger = new Int32Array(this.n * 2);
+        bigger.set(this[k]);
+        this[k] = bigger;
+      }
+    }
+    this.stop[this.n] = s;
+    this.departure[this.n] = departure;
+    this.arrival[this.n++] = arrival;
+  }
+
+  /** Grouped by stop, each stop's events in the order they came. */
+  finish(stopCount: number): StopProfile {
+    const offset = new Int32Array(stopCount + 1);
+    for (let i = 0; i < this.n; i++) offset[this.stop[i] + 1]++;
+    for (let s = 0; s < stopCount; s++) offset[s + 1] += offset[s];
+    const at = offset.slice(0, stopCount);
+    const departure = new Int32Array(this.n);
+    const arrival = new Int32Array(this.n);
+    for (let i = 0; i < this.n; i++) {
+      const k = at[this.stop[i]]++;
+      departure[k] = this.departure[i];
+      arrival[k] = this.arrival[i];
+    }
+    return { offset, departure, arrival };
+  }
 }

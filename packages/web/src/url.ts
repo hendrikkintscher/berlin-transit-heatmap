@@ -51,6 +51,8 @@ export interface LinkState {
   span: Span | null;
   when: When;
   direction: Direction;
+  /** Leaving to the map's place (dir=goal), see State. */
+  toGoal: boolean;
   measure: Measure;
   compare: When | null;
   walkKmh: number;
@@ -131,7 +133,9 @@ export function readLink(search: string, base: LinkState): LinkState {
   s.to = s.origin ? parsePoint(p.get('to')) : null;
   s.span = s.to ? parseSpan(p.get('trip')) : null;
   s.when = whenFromParams(p, base.when);
-  if (p.get('dir') === 'arr') s.direction = 'arrive';
+  const dir = p.get('dir');
+  if (dir === 'arr') s.direction = 'arrive';
+  s.toGoal = dir === 'goal' && !s.others.length;
   const m = p.get('m');
   s.measure = m === 'typical' || m === 'best' || m === 'next' ? m : defaultMeasure(s);
   // An exact time is always "Nächste".
@@ -158,6 +162,7 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
   if (s.to && s.span) p.set('trip', spanParam(s.span));
   if (whenParam(s.when) !== windowName(now)) p.set('t', whenParam(s.when));
   if (s.direction === 'arrive') p.set('dir', 'arr');
+  else if (s.toGoal) p.set('dir', 'goal');
   if (s.measure !== defaultMeasure(s)) p.set('m', s.measure);
   if (s.compare) p.set('cmp', windowName(s.compare));
   if (s.walkKmh !== DEFAULT_WALK_KMH) p.set('walk', String(s.walkKmh));

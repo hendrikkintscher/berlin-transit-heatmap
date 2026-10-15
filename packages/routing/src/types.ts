@@ -113,6 +113,13 @@ export interface TravelTimeOptions {
    * it, though of two equally quick ways the one kept may differ. (Addition to Contract 2.)
    */
   arriveBy?: number;
+  /**
+   * Scan every departure from the origin in [from, to] (this timetable's clock) and keep,
+   * per stop, each moment its arrival improved (result.profile). On the reversed timetable
+   * from a destination that is the profile of when to leave each stop to arrive by each
+   * moment (goal.ts). Replaces the window; `typical` and `leaveAt` do not apply.
+   */
+  profile?: { from: number; to: number };
 }
 
 /**
@@ -173,6 +180,19 @@ export interface TravelTimeResult {
   legs?: TravelLegs;
   /** Present when computed with `typical`: average travel time over the window, waiting included. */
   typicalSeconds?: Float32Array;
+  /** Present when computed with `profile`. */
+  profile?: StopProfile;
+}
+
+/**
+ * Per stop, in scan order (latest origin departure first), the origin departures that
+ * improved its arrival: event i of stop s, for offset[s] <= i < offset[s + 1], got there
+ * by `arrival[i]` when leaving the origin at `departure[i]`. Both fall along a stop's events.
+ */
+export interface StopProfile {
+  offset: Int32Array;
+  departure: Int32Array;
+  arrival: Int32Array;
 }
 
 export interface HeatGridOptions {

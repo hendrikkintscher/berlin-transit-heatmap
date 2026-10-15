@@ -24,6 +24,14 @@ describe('early load', () => {
     });
   });
 
+  it('runs the timetable backwards for a map to the place, arriving or leaving', () => {
+    // Leaving to the place takes the hour's own file, reversed.
+    expect(earlyLoad('?t=weekend-02&dir=goal', NONE, NOW)).toMatchObject({
+      window: 'weekend-02',
+      direction: 'arrive',
+    });
+  });
+
   it('uses the stored settings unless the link names them', () => {
     const stored = { stepFree: '1', travel: '1' };
     expect(earlyLoad('', stored, NOW)).toMatchObject({ stepFree: true, bike: true });

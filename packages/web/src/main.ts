@@ -52,6 +52,8 @@ import {
   computeRequest,
   inArea,
   linkState,
+  mapDirection,
+  mapToGoal,
   NOW_WHEN,
   remember,
   seen,
@@ -67,7 +69,9 @@ import {
   isoDay,
   catchUp,
   fullHour,
+  sameWhen,
   type Direction,
+  type When,
 } from './when';
 import { initWhenSheet } from './when-sheet';
 import { initBack, replaceUrl } from './back';
@@ -520,7 +524,7 @@ function preloadNextHour() {
         type: 'load',
         window: next,
         quiet: true,
-        direction: state.direction,
+        direction: mapDirection(state),
         ...(state.stepFree ? { stepFree: true } : {}),
         ...(state.travel === 'bike' ? { bike: true } : {}),
       }),
@@ -536,7 +540,7 @@ function compute() {
   // Arriving, the set place is where trips end: its marker becomes the Ziel (style.css).
   document.body.classList.toggle(
     'arrive',
-    state.direction === 'arrive' && !state.others.length && !state.special,
+    mapToGoal(state) && !state.others.length && !state.special,
   );
   if (state.special) return special.compute();
   const origin = state.origin;
@@ -661,9 +665,10 @@ function setOrigin(p: Point, spot = tap.spot()) {
 
 /**
  * The map's place moves to the tapped place and keeps that place's role: a Ziel stays the
- * Ziel, so the direction turns round and the trip stays as it is (only the map changes):
- * the map then arrives when the shown trip `trip` arrives (or leaves when it leaves).
- * `text` names it for "Rückgängig".
+ * Ziel, so the map turns round (to the place instead of from it, or the other way) and the
+ * trip stays as it is. The time stays a departure time, the trip's own departure `trip.leave`
+ * (the Zeit shows "ab 10:57"), so the trip on the card stays the same. `text` names it for
+ * "Rückgängig".
  */
 function moveAnchor(
   p: Point,
@@ -672,10 +677,15 @@ function moveAnchor(
   trip?: { leave: number; arrive: number },
 ) {
   offerUndo(spot, text);
-  const to = state.direction === 'arrive' ? 'depart' : 'arrive';
-  whenSheet.setDirection(to, true, trip && (to === 'arrive' ? trip.arrive : trip.leave));
+  whenSheet.setPlace(!mapToGoal(state), true, trip?.leave);
+  if (undoTo) undoTo.after = state.when;
   state.origin = p;
   startsChanged();
+}
+
+/** ⇅: the map's place and the tapped place swap Start and Ziel; the time stays as it is. */
+function swapEnds() {
+  whenSheet.setPlace(!mapToGoal(state));
 }
 
 /** Moves start i (0 = the first) to p. */
@@ -689,13 +699,27 @@ function moveStart(i: number, p: Point) {
 /** How long "Rückgängig" stays after a start moved. */
 const UNDO_MS = 5000;
 const undoEl = $('undo');
-let undoTo: { starts: Point[]; spot: Point | null; direction: Direction } | null = null;
+let undoTo: {
+  starts: Point[];
+  spot: Point | null;
+  /** The end the place was and the time before the move, and the time the move gave. */
+  direction: Direction;
+  toGoal: boolean;
+  when: When;
+  after?: When;
+} | null = null;
 let undoTimer = 0;
 /** A start is about to move: for a few seconds, one tap brings the starts and place back. */
 function offerUndo(spot: Point | null, text?: string) {
   if (!state.origin) return;
-  undoTo = { starts: starts(), spot, direction: state.direction };
-  $('undo-text').textContent = text ?? t(state.direction === 'arrive' ? 'undoGoal' : 'undoStart');
+  undoTo = {
+    starts: starts(),
+    spot,
+    direction: state.direction,
+    toGoal: state.toGoal,
+    when: state.when,
+  };
+  $('undo-text').textContent = text ?? t(mapToGoal(state) ? 'undoGoal' : 'undoStart');
   undoEl.hidden = false;
   clearTimeout(undoTimer);
   undoTimer = window.setTimeout(hideUndo, UNDO_MS);
@@ -710,7 +734,8 @@ $('undo-btn').addEventListener('click', () => {
   hideUndo();
   if (!to) return;
   tap.placeSpot(to.spot);
-  if (to.direction !== state.direction) whenSheet.setDirection(to.direction, true);
+  if (to.direction !== state.direction || to.toGoal !== state.toGoal)
+    whenSheet.restore(to, !!to.after && sameWhen(to.after, state.when));
   setStarts(to.starts);
 });
 
@@ -769,6 +794,8 @@ let closedMeet: { second: Point; names: string[] } | null = null;
 /** Meeting point: one more start, up to MAX_STARTS. */
 function addStart(p: Point) {
   if (!state.origin || starts().length >= MAX_STARTS) return;
+  // A meeting point starts from the places: the place is not the Ziel any more.
+  state.toGoal = false;
   const back = closedMeet;
   closedMeet = null;
   // The closed Treffpunkt's second person comes back with their names.
@@ -1319,6 +1346,7 @@ const tap = initTap(
     send,
     setOrigin,
     moveAnchor,
+    swapEnds,
     addStart,
     removeStart,
     nameStart,

@@ -21,7 +21,7 @@ export function linkHasStart(search: string): boolean {
 
 /**
  * What the first map will need, known before the app has loaded: the timetable file and how
- * it is prepared (direction, step-free, bikes), from the link and the stored settings
+ * it is prepared (direction: forward, or reversed for a map to the place; step-free, bikes), from the link and the stored settings
  * ('step-free' and 'travel' in localStorage, null when unset). The same as readLink and the
  * device settings give, so the early load is the one the first map uses.
  */
@@ -32,13 +32,16 @@ export function earlyLoad(
 ): { window: string; direction: Direction; stepFree: boolean; bike: boolean } {
   const p = new URLSearchParams(search);
   const direction: Direction = p.get('dir') === 'arr' ? 'arrive' : 'depart';
+  // (The timetable runs backwards for a map to the place, arriving or leaving.)
+  const reversed: Direction =
+    direction === 'arrive' || p.get('dir') === 'goal' ? 'arrive' : 'depart';
   const stepFree = p.has('sf') ? p.get('sf') === '1' : Number(stored.stepFree) > 0;
   const travel = p.has('go')
     ? travelOf(p.get('go'))
     : (TRAVELS[Number(stored.travel ?? 0)] ?? 'walk');
   return {
     window: computeWindow(whenFromParams(p, whenAt(now), now), direction),
-    direction,
+    direction: reversed,
     stepFree,
     bike: travel === 'bike',
   };

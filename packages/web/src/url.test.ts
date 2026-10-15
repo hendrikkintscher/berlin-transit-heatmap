@@ -10,6 +10,7 @@ const BASE: LinkState = {
   span: null,
   when: NOW,
   direction: 'depart',
+  toGoal: false,
   measure: 'next',
   compare: null,
   walkKmh: 5,
@@ -24,6 +25,19 @@ const BASE: LinkState = {
 };
 
 describe('links', () => {
+  it("carries leaving to the map's place (dir=goal), apart from arriving (dir=arr)", () => {
+    const to = { ...BASE, origin: { lat: 52.5037, lon: 13.4108 }, toGoal: true };
+    const q = linkQuery(to, NOW);
+    expect(q).toBe('from=52.50370%2C13.41080&dir=goal');
+    expect(readLink(q, BASE)).toEqual(to);
+    // Arriving is the Ziel already; a meeting point starts from its places.
+    expect(readLink('from=52.5,13.4&dir=arr', BASE)).toMatchObject({
+      direction: 'arrive',
+      toGoal: false,
+    });
+    expect(readLink('from=52.5,13.4&with=52.6,13.5&dir=goal', BASE).toGoal).toBe(false);
+  });
+
   it('leaves out everything that is the default', () => {
     expect(linkQuery(BASE, NOW)).toBe('');
     expect(readLink('', BASE)).toEqual(BASE);
@@ -41,6 +55,7 @@ describe('links', () => {
       span: { leave: 37419, arrive: 41203 },
       when: { day: 'weekend', hour: 2 },
       direction: 'arrive',
+      toGoal: false,
       measure: 'best',
       compare: { day: 'weekday', hour: 10 },
       walkKmh: 4,

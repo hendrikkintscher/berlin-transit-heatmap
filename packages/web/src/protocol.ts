@@ -50,7 +50,7 @@ export type ToWorker =
       window: Window;
       /** A background load (the next hour): failures stay silent. */
       quiet?: boolean;
-      /** Prepare it as a compute with these settings will need it. */
+      /** Prepare it as a compute with these settings will need it ('arrive': reversed). */
       direction?: Direction;
       stepFree?: boolean;
       bike?: boolean;
@@ -66,6 +66,11 @@ export type ToWorker =
       others?: { lat: number; lon: number }[];
       /** 'depart': from the point leaving in the hour; 'arrive': to the point arriving in the hour after the file's window. */
       direction: Direction;
+      /**
+       * With 'depart': to the point instead of from it, leaving the places at the time (the
+       * point is the Ziel, the time a departure time). The file is the hour's own.
+       */
+      toGoal?: true;
       /**
        * 'typical' averages over the hour, waiting included; 'best' is the shortest trip in
        * it; 'next' takes the next connection (departing: from leaveOffset seconds into the
