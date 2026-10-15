@@ -8,12 +8,14 @@ import type { Measure } from './protocol';
 import { $, type State } from './state';
 import {
   arriveWhen,
+  exactWhen,
   fullHour,
   isNow,
   isPastHour,
   isPastTime,
   laterWhen,
   leaveOffset,
+  sameWhen,
   upcomingDays,
   whenAt,
   whenParam,
@@ -184,11 +186,33 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   for (const b of typicalButtons) b.addEventListener('click', () => pickDay(b.dataset.day));
   /** Leaving's time before switching to Ankommen, and the time that switch gave it. */
   let beforeArrive: { depart: When; arrive: When } | null = null;
+  /** The time before the map moved to the trip's other end, and the trip's time it took. */
+  let beforeMove: { direction: Direction; when: When; moved: When } | null = null;
   /**
    * Losfahren or Ankommen (the trip card's ⇅ uses it too). `quiet` only sets it: the caller
-   * recomputes the map itself, when the start moves in the same step.
+   * recomputes the map itself, when the start moves in the same step. `at`, when the map
+   * moves to the other end of the shown trip (seconds of the day): the trip's arrival when
+   * turning to Ankommen, its departure when turning to Losfahren, to the minute, so the map
+   * fits the trip (Nächste only); moving back brings the time before.
    */
-  function setDirection(direction: Direction, quiet = false) {
+  function setDirection(direction: Direction, quiet = false, at?: number) {
+    const back = beforeMove;
+    beforeMove = null;
+    if (back && back.direction === direction && sameWhen(back.moved, state.when)) {
+      beforeArrive = null;
+      arriveMoved = null;
+      return setWhen(back.when, { direction }, quiet);
+    }
+    const moved =
+      at !== undefined && state.measure === 'next' && direction !== state.direction
+        ? exactWhen(state.when.day, at, direction)
+        : null;
+    if (moved) {
+      beforeMove = { direction: state.direction, when: state.when, moved };
+      beforeArrive = null;
+      arriveMoved = null;
+      return setWhen(moved, { direction }, quiet);
+    }
     let w = state.when;
     if (direction === 'arrive' && state.direction !== 'arrive') {
       w = arriveWhen(state.when);

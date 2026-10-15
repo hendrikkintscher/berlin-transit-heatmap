@@ -97,8 +97,19 @@ export type ToWorker =
    * with `limit` its "Bis N Min." shading.
    */
   | { type: 'paint'; id: number; limit?: number }
-  /** The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was missed. */
-  | { type: 'trip'; id: number; lat: number; lon: number; leaveAt?: number }
+  /**
+   * The journey to a tapped place; `leaveAt` (seconds of the day) when the shown one was
+   * missed; `span` (seconds of the day), once the map moved to the other end of a trip:
+   * that trip again, leaving no earlier and arriving no later.
+   */
+  | {
+      type: 'trip';
+      id: number;
+      lat: number;
+      lon: number;
+      leaveAt?: number;
+      span?: { leave: number; arrive: number };
+    }
   /** The worker's own downloads so far, for the timing box (?timing in the link). */
   | { type: 'downloads' }
   /**

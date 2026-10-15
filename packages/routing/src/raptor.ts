@@ -184,11 +184,15 @@ export function travelTimes(
 
     // tau[k * S + s]: earliest arrival at s using at most k trips. Kept across departures.
     const tau = new Int32Array((maxRounds + 1) * S).fill(UNREACHED);
-    const tauStar = new Int32Array(S).fill(UNREACHED);
+    // Arrivals after `arriveBy` are not kept (their stops count as unreached).
+    const tauStar = new Int32Array(S).fill(
+      opts.arriveBy === undefined ? UNREACHED : Math.min(UNREACHED, Math.floor(opts.arriveBy) + 1),
+    );
     // Earliest arrival at s on board a vehicle. Footpaths start only from
     // vehicle arrivals, so this is tracked separately: a stop first reached on
     // foot must still pass its footpaths on when a vehicle gets there later.
     const vehStar = new Int32Array(S).fill(UNREACHED);
+    if (rounds) rounds.arrivals = tau;
 
     // Stops improved in the previous / current round.
     let marked = new Int32Array(S);
@@ -232,6 +236,42 @@ export function travelTimes(
           }
         }
       }
+
+      // Leaving at one moment, footpaths from the stops walked to (to another platform,
+      // say), not chained: as one may follow the last ride, so the walks at both ends of a
+      // trip match and it comes out the same seen from either end (arriving runs on the
+      // reversed timetable). Range scans leave them out, so their departures stay as few.
+      const walked = leaveAt === undefined ? 0 : markedCount;
+      for (let m = 0; m < walked; m++) isNextMarked[marked[m]] = 1;
+      for (let m = 0; m < walked; m++) {
+        const s = marked[m];
+        for (let e = transferOffset[s]; e < transferOffset[s + 1]; e++) {
+          const u = transferTo[e];
+          const arr = tau[s] + transferSeconds[e];
+          if (arr < tauStar[u]) {
+            tau[u] = arr;
+            tauStar[u] = arr;
+            if (track) {
+              starKind[u] = LEG_WALK;
+              starFrom[u] = s;
+            }
+            if (rounds) {
+              rounds.round[u] = 0;
+              rounds.kind[u] = LEG_WALK;
+              rounds.from[u] = s;
+            }
+            if (!isNextMarked[u]) {
+              isNextMarked[u] = 1;
+              marked[markedCount++] = u;
+            }
+            if (!isTouched[u]) {
+              isTouched[u] = 1;
+              touched[touchedCount++] = u;
+            }
+          }
+        }
+      }
+      if (walked) for (let m = 0; m < markedCount; m++) isNextMarked[marked[m]] = 0;
 
       for (let k = 1; k <= maxRounds && markedCount > 0; k++) {
         const prevBase = (k - 1) * S;

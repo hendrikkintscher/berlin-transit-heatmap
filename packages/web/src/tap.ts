@@ -41,7 +41,12 @@ export interface TapDeps {
    * The map's place moves to p and keeps p's role (the direction turns round); `text`
    * names it for "Rückgängig".
    */
-  moveAnchor: (p: Point, spot: Point | null, text: string) => void;
+  moveAnchor: (
+    p: Point,
+    spot: Point | null,
+    text: string,
+    trip?: { leave: number; arrive: number },
+  ) => void;
   /** Meeting point: one more start. */
   addStart: (p: Point) => void;
   /** Removes start i (0 = the first). */
@@ -215,7 +220,7 @@ export function initTap(deps: TapDeps, initial: Point | null) {
             ? { type: 'livingAt', id: tripId, map: r.id, lat, lon: lng }
             : r.home
               ? { type: 'homeTrip', id: tripId, map: r.id, lat, lon: lng }
-              : { type: 'trip', id: tripId, lat, lon: lng },
+              : { type: 'trip', id: tripId, lat, lon: lng, ...keptSpan(lat, lng) },
         );
         tripAt = r.living || r.home ? null : { lat, lon: lng, askedLater: false };
         tripAsked = tripAt !== null;
@@ -716,6 +721,33 @@ export function initTap(deps: TapDeps, initial: Point | null) {
       .join(' · ')}</small>`;
   }
 
+  /**
+   * The trip the card showed when the map moved to its other end, for that place while the
+   * map stays as moved: its card asks for that trip again (within its times).
+   */
+  let kept: {
+    lat: number;
+    lon: number;
+    span: { leave: number; arrive: number };
+    map: string;
+  } | null = null;
+  /** What the map is computed for, as far as the kept trip goes. */
+  const mapKey = () =>
+    JSON.stringify([
+      state.origin,
+      state.others,
+      state.when,
+      state.direction,
+      state.measure,
+      state.travel,
+      state.walkKmh,
+      state.stepFree,
+    ]);
+  function keptSpan(lat: number, lon: number) {
+    if (kept && (kept.lat !== lat || kept.lon !== lon || kept.map !== mapKey())) kept = null;
+    return kept ? { span: kept.span } : {};
+  }
+
   // The rings move to the place, which keeps its role (a Ziel stays the Ziel: the direction
   // turns round, the trip stays). The old place of the map becomes the tapped place, so a
   // second tap turns it back.
@@ -730,10 +762,18 @@ export function initTap(deps: TapDeps, initial: Point | null) {
     const text = name
       ? t(arrive ? 'anchorFromNow' : 'anchorToNow', { name })
       : t(arrive ? 'anchorFromHere' : 'anchorToHere');
+    // The shown connection's times, so the map at the other end gives the same trip.
+    const shown = connections[shownConnection]?.journeys;
+    const j = shown?.length === 1 ? shown[0] : null;
+    const trip =
+      j?.leave !== undefined && j.arrive !== undefined
+        ? { leave: j.leave, arrive: j.arrive }
+        : undefined;
     flash = 'rings';
     hideReadout();
     setSpot({ lat: old.lat, lon: old.lon, title: '', searched: false });
-    deps.moveAnchor(at, before, text);
+    deps.moveAnchor(at, before, text, trip);
+    kept = trip ? { lat: old.lat, lon: old.lon, span: trip, map: mapKey() } : null;
   });
   secondBtn.addEventListener('click', () => {
     const at = pending;

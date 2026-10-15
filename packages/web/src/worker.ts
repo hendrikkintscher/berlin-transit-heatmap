@@ -36,6 +36,7 @@ import {
   moreTrips,
   nearestStopName,
   setLastTrip,
+  tripsReady,
   tapTrip,
   tripMessage,
   warmNextTrip,
@@ -79,6 +80,12 @@ function mapAhead(boot: Extract<ToWorker, { type: 'boot' }>): typeof firstMap {
     () => null,
   );
   return ahead;
+}
+
+/** `f`, run once on first use. */
+function once<T>(f: () => T): () => T {
+  let made: { value: T } | null = null;
+  return () => (made ??= { value: f() }).value;
 }
 
 /**
@@ -204,6 +211,12 @@ function sendMap(msg: ComputeMsg, made: Made, t0: number) {
     // own pass for "Nächste", a pass of their own for Typisch and Bestfall.
     leaveAt: msg.measure === 'next' ? null : from,
     from,
+    other: once(() =>
+      prepared(msg.window, msg.direction === 'depart' ? 'arrive' : 'depart', {
+        stepFree: msg.stepFree,
+        bike: made.travel === 'bike',
+      }).catch(() => null),
+    ),
   });
   lastShown = made.shown && { ...made.shown, id: msg.id };
   ctx.postMessage(
@@ -322,6 +335,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const tapped = latestTrip;
       do await nextTask();
       while (msg.id === latestCompute && latestTrip === tapped && warmNextTrip());
+      // And the timetable the other way round, which trips on tap need too.
+      if (msg.id === latestCompute) await tripsReady();
     } else if (msg.type === 'paint') {
       if (lastShown?.id !== msg.id) return;
       const image = paintShown(lastShown, msg.limit);
@@ -346,6 +361,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
     } else if (msg.type === 'trip') {
       latestTrip = msg.id;
       await nextTask();
+      if (msg.id !== latestTrip) return;
+      await tripsReady();
       if (msg.id !== latestTrip) return;
       post({ type: 'trip', id: msg.id, ...tapTrip(msg) });
     }

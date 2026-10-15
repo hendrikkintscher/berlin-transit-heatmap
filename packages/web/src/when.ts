@@ -58,6 +58,19 @@ export function whenParam(w: When): string {
   return windowName(w) + (w.minute !== undefined ? String(w.minute).padStart(2, '0') : '');
 }
 
+export const sameWhen = (a: When, b: When) =>
+  a.day === b.day && a.hour === b.hour && a.minute === b.minute;
+
+/**
+ * The exact time `seconds` into the service day `day`, to the minute: rounded up for
+ * arriving by it, down for leaving at it. Null past the day's midnight.
+ */
+export function exactWhen(day: Day, seconds: number, direction: Direction): When | null {
+  const m = direction === 'arrive' ? Math.ceil(seconds / 60) : Math.floor(seconds / 60);
+  if (!(m >= 0 && m < 24 * 60)) return null;
+  return { day, hour: Math.floor(m / 60), minute: m % 60 };
+}
+
 /** The same time on the full hour. */
 export const fullHour = ({ day, hour }: When): When => ({ day, hour });
 
