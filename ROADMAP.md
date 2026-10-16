@@ -1,6 +1,6 @@
-# Roadmap V1.50
+# Roadmap V1.51
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.8**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.9**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -18,12 +18,9 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## Inbox
 
-## 0.13 Faster and steadier routing
+- 2026-10-16 (from 0.13.9): Trips on tap may now walk up to 30 minutes at an end when that is faster (58 of 390 checked trips, 11 minutes earlier in the median); the card shows the walk's minutes but says nothing about it being long. A short hint ("langer Fußweg") or the slower trip with less walking in the drawer could help.
 
-- **0.13.9 Map walk rule: fastest, even with a longer walk (decision)**. From 0.13.4 (2026-10-15, Hendrik's call): "should the map use the "fastest, even with a longer walk" rule like the trip on tap? Brings them closer but changes the map at the edges of town (ties in with #237)." Today the map uses its 15-minute walk rule and #237's less walking on equal arrival, so map minutes and the tapped trip are 3 or more minutes apart in 8 % of places (0.13.4 check over 386 places).
-  - a. Measure, with the same 386 places, how often map and trip agree under the "fastest, even with a longer walk" rule, and where the map changes (edges of town, long walks to a faster line), with before/after screenshots at 360×740.
-  - b. Measure first map and tap timings with the new rule; it must not slow either.
-  - c. Hendrik gets the numbers and a recommendation; the map changes only on his yes.
+## 0.13 Faster and steadier routing
 
 - **0.13.10 Ankommen under Typisch and Bestfall: trip and map agree**. Inbox note from 0.13.4 (2026-10-15): with Ankommen under Typisch or Bestfall, a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
   - a. Count how often and by how much card and map differ today (random places, a few hours).
