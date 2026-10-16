@@ -258,8 +258,9 @@ function setStatus(render: () => string, fade: boolean | number = false) {
  * screen when the line is fast (roadmap 0.13.1), else once the base map is up as well: on a
  * slower line it would share the line with the base map's tiles and labels and hold them up.
  * With no start, it comes once the base map is up. The worker unpacks it as soon as it is in,
- * in slices of a few milliseconds, so taps meanwhile are not held up, and hands it over once
- * the base map is up (0.13.2). While it streams, the bar and a note say so.
+ * in slices of a few milliseconds, so taps meanwhile are not held up (0.13.2), and hands it
+ * over at once: the map is redone with it, its colours go on at once and its time rings and
+ * lines once the base map is up (0.13.8). While it streams, the bar and a note say so.
  */
 let walkAsked = false;
 /** The lines' courses may load (the base map is up), told to the worker once. */
@@ -276,6 +277,7 @@ function afterFirstMap() {
   if (!basemapUp) {
     basemapTimer ||= window.setTimeout(() => {
       basemapUp = true;
+      showHeld();
       afterFirstMap();
     }, BASEMAP_WAIT_MS);
     return;
@@ -286,6 +288,8 @@ function afterFirstMap() {
   preloadNextHour();
 }
 let walkLoading = false;
+/** The footpaths are in: walks follow them. */
+let footpathsIn = false;
 /**
  * When the footpath line first went up (0: not yet). It shows for WALK_LINE_MS at most:
  * the map works without footpaths, so on a slow download the line gives way and only the
@@ -377,6 +381,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     // Footpaths arrived: redo what was computed with straight-line walks.
     if (m.type === 'walk') {
       performance.mark('footpaths');
+      footpathsIn = true;
+      tap.onFootpaths();
       refineWalks();
     }
   } else if (m.type === 'result') {
@@ -385,7 +391,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     refining = false;
     if (m.living || m.home) special.done(m);
     state.result = m;
-    showResult(m);
+    // Redone with the footpaths before the base map is up: its rings and lines wait for it.
+    showResult(m, !(refined && !basemapUp));
     // A switch changed while it was computing.
     syncImage();
     tap.onResult();
@@ -416,8 +423,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (!r || r.id !== m.id) return;
     r.routes = m.routes;
     r.labels = m.labels;
-    (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
-    (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
+    if (held !== r) showLines(r, false);
   } else if (m.type === 'moreTrips') {
     tap.onMoreTrips(m);
   } else if (m.type === 'placeName') {
@@ -781,8 +787,8 @@ function clearResult() {
   showHeat();
   if (!state.mapReady) return;
   const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
-  for (const id of [ROUTES_SOURCE, LABELS_SOURCE, OUTLINES_SOURCE])
-    (map.getSource(id) as GeoJSONSource | undefined)?.setData(empty);
+  held = null;
+  for (const id of [ROUTES_SOURCE, LABELS_SOURCE, OUTLINES_SOURCE]) setLayerData(id, empty);
 }
 
 /**
@@ -847,6 +853,7 @@ if (attrib) {
 // or the lines and the next hour once the first map is there.
 map.once('load', () => {
   basemapUp = true;
+  showHeld();
   if (!state.origin && !state.special) askBackground();
   else afterFirstMap();
 });
@@ -997,7 +1004,8 @@ map.on('zoomend', showMeetNames);
 showMeetNames();
 
 let firstMapShown = false;
-function showResult(r: Result) {
+function showResult(r: Result, rings = true) {
+  held = rings ? null : r;
   renderMeet(r.meet);
   renderBest(r);
   frameResult(r);
@@ -1005,9 +1013,7 @@ function showResult(r: Result) {
   showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined, !!r.living);
   if (!state.mapReady) return;
   drawHeat(r);
-  (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
-  (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
-  (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
+  if (rings) showLines(r);
   showHeat();
   map.triggerRepaint();
   // For timing the first load (roadmap 0.13.0): the first map is on its way to the screen.
@@ -1018,6 +1024,35 @@ function showResult(r: Result) {
     // base map.
     if (fastLine()) requestAnimationFrame(() => setTimeout(askWalk));
   }
+}
+
+/**
+ * The map redone with the footpaths before the base map is up: its colours go on at once,
+ * its time rings, lines and labels once the base map is up (showHeld). With the page CPU
+ * slowed 4×, the rings put on at once held the base map up by 0.2–0.6 s (medians over 8
+ * visits), the colours did not (0.13.8a).
+ */
+let held: Result | null = null;
+/** The base map is up: the held map's rings and lines go on (unless a newer map came). */
+function showHeld() {
+  if (held && state.result === held) showLines(held);
+  held = null;
+}
+/** The time rings (unless `rings` is false), the lines and their labels. */
+function showLines(r: Result, rings = true) {
+  if (rings) setLayerData(OUTLINES_SOURCE, r.outlines);
+  setLayerData(ROUTES_SOURCE, r.routes);
+  setLayerData(LABELS_SOURCE, r.labels);
+}
+/** What each ring and line layer shows: data that did not change is not sent again. */
+const layerData = new Map<string, GeoJSON.FeatureCollection>();
+function setLayerData(id: string, data: GeoJSON.FeatureCollection) {
+  const src = map.getSource(id) as GeoJSONSource | undefined;
+  if (!src) return;
+  const was = layerData.get(id);
+  if (was === data || (was && !was.features.length && !data.features.length)) return;
+  layerData.set(id, data);
+  src.setData(data);
 }
 
 /** Puts the result's colour image on the map (an empty one while it is unpainted). */
@@ -1363,6 +1398,7 @@ const tap = initTap(
     openChanges: (ride) => changes?.openFor(ride),
     showArrows: (lines) => showArrows?.(lines),
     refining: () => refining,
+    footpathsIn: () => footpathsIn,
     showHome: (i) => {
       const at = starts()[i];
       if (at)

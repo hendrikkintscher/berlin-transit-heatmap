@@ -77,6 +77,8 @@ export interface TapDeps {
   showArrows: (lines: GeoJSON.FeatureCollection | null) => void;
   /** The map is being redone with the footpaths: the place's trip comes again after it. */
   refining: () => boolean;
+  /** Whether the footpaths are in (walks follow them, not straight lines). */
+  footpathsIn: () => boolean;
 }
 
 /**
@@ -88,6 +90,13 @@ const SWAP_WAIT_MS = 2500;
 
 /** Seconds a link's trip span is widened by on each side. */
 const LINK_SLACK_S = 5;
+/**
+ * Seconds a trip span kept before the footpaths were in is widened by on each side once they
+ * are: the walks at the ends change with them. Over 296 random trips (bench/kept.ts) the card
+ * then keeps the same rides in 43 % (with the usual trip where none fits), against 24 % with
+ * only the usual trip; 180 s gains 2 points more but lets other trips in (0.13.8d).
+ */
+const FOOTPATH_SLACK_S = 120;
 
 /** `initial` is the place in the link, `span` its trip's times (url.ts). */
 export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span | null = null) {
@@ -744,6 +753,10 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     lon: number;
     span: Span;
     map: string;
+    /** Found with straight-line walks: widened once the footpaths are in. */
+    straight?: true;
+    /** Seconds the card's ask widens the span by on each side (the link keeps it as it is). */
+    slack?: number;
   } | null = null;
   /** What the map is computed for, as far as the kept trip goes. */
   const mapKey = () =>
@@ -772,7 +785,8 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   function keptSpan(lat: number, lon: number) {
     const span = keptFor(lat, lon);
     if (!span) kept = null;
-    return span ? { span } : {};
+    const s = kept?.slack ?? 0;
+    return span ? { span: { leave: span.leave - s, arrive: span.arrive + s } } : {};
   }
 
   // The rings move to the place, which keeps its role (a Ziel stays the Ziel: the direction
@@ -800,7 +814,15 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     hideReadout();
     setSpot({ lat: old.lat, lon: old.lon, title: '', searched: false });
     deps.moveAnchor(at, before, text, trip);
-    kept = trip ? { lat: old.lat, lon: old.lon, span: trip, map: mapKey() } : null;
+    kept = trip
+      ? {
+          lat: old.lat,
+          lon: old.lon,
+          span: trip,
+          map: mapKey(),
+          ...(deps.footpathsIn() ? {} : { straight: true as const }),
+        }
+      : null;
     // The link keeps that trip too.
     if (kept) deps.writeUrl();
   });
@@ -977,6 +999,13 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     onTrip,
     onLiving,
     addChangeNotes,
+    /**
+     * The footpaths are in: a trip kept with straight-line walks is asked for with a wider
+     * span, so the card finds it again around the new walks once the map is redone (0.13.8d).
+     */
+    onFootpaths() {
+      if (kept?.straight) kept = { ...kept, straight: undefined, slack: FOOTPATH_SLACK_S };
+    },
     /** The place kept in the link. */
     spot: (): Point | null => spot,
     /** The trip kept for that place in the link, once the map moved to its other end. */

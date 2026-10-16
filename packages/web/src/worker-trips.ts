@@ -715,10 +715,14 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: Nex
       : null;
   const journeys = (last?.runs ?? []).map((r) => {
     const at = later ?? last!;
-    if (toGoal)
-      return at.otherTt
-        ? bothWays(at, r.result.origin, undefined, msg, later ? { leave: msg.leaveAt! } : msg.span)
-        : null;
+    if (toGoal) {
+      if (!at.otherTt) return null;
+      if (later) return bothWays(at, r.result.origin, undefined, msg, { leave: msg.leaveAt! });
+      // A kept trip that no longer fits (the walks changed with the footpaths): the trip
+      // leaving at the map's time, as on a map from a start (0.13.8).
+      const kept = msg.span && bothWays(at, r.result.origin, undefined, msg, msg.span);
+      return kept || bothWays(at, r.result.origin, undefined, msg);
+    }
     const fixed =
       at.otherTt &&
       bothWays(at, r.result.origin, passAt(at, r, !!later), msg, later ? undefined : msg.span);

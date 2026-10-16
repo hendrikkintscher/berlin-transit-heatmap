@@ -39,14 +39,6 @@ export function setWalkKmh(kmh: number) {
 /** The bar moves at most this often, so a fast download does not keep the page busy. */
 const PROGRESS_MS = 100;
 
-/**
- * The footpaths are handed to the app (which then redoes its map with them) only once the
- * base map is up: redone earlier, the map's redraw held the base map's labels up by about
- * 1 s with a slow phone's main thread (0.13.2).
- */
-let handOverOk: () => void;
-const mayHandOver = new Promise<void>((r) => (handOverOk = r));
-
 export async function loadWalk(): Promise<void> {
   if (walkStarted) return;
   walkStarted = true;
@@ -64,12 +56,12 @@ export async function loadWalk(): Promise<void> {
     // 0.6 s of work (more on a phone). It runs in slices of a few milliseconds, so it starts
     // as soon as the download is done, even before the base map is up (0.13.2), and a tap
     // meanwhile waits one slice at most. The grid and stops are snapped now rather than on
-    // the next map or tap.
+    // the next map or tap. They are handed over at once (0.13.8): the app redoes its map
+    // with them, but keeps the new time rings and lines off the map until the base map is up.
     const net = await inSlices(loadWalkNetworkInSteps(buf));
     const layout = gridLayout({ cellSizeM: CELL_M });
     await inSlices(snapCellsInSteps(net, layout.bbox, layout.cols, layout.rows));
     if (lastTimetable) await inSlices(snapStopsInSteps(net, lastTimetable));
-    await mayHandOver;
     walk = net;
     post({ type: 'walk' });
   } catch (err) {
@@ -98,7 +90,6 @@ let lastRoutes: { id: number; tt: PreparedTimetable; used: Segments } | null = n
 /** The base map is up: the lines' courses load now, and the footpaths if not yet asked for. */
 export function startBackground() {
   backgroundOk = true;
-  handOverOk();
   void loadWalk();
   if (lastTimetable) void loadLines(lastTimetable);
 }
