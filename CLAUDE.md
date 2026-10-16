@@ -42,10 +42,10 @@ pnpm --dir packages/routing fetch-data       # real timetable + walk.bin into pa
 
 Benchmarks on the real data live in `packages/routing/bench/` (`swap.ts`: same trip from
 both ends; `goal.ts`: map to a Ziel leaving at a time; `walkrule.ts`: map minutes against the
-trip on tap; `kept.ts`: a trip kept before the footpaths). The release downloads are public: if
-`fetch-data` gets a 401, run it without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the
-release `gtfs-latest` (`GTFS.zip`); `node packages/timetable-build/bin/build-timetable.js
---gtfs data/gtfs --out <dir>` builds all hourly files in about 30 s.
+trip on tap; `kept.ts`: a trip kept before the footpaths; `arrivehour.ts`: Ankommen trips
+against the map's hour). The release downloads are public: if `fetch-data` gets a 401, run it
+without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest` (`GTFS.zip`);
+`node packages/timetable-build/bin/build-timetable.js --gtfs data/gtfs --out <dir>` builds all hourly files in about 30 s.
 
 The cloud session hook (`.claude/hooks/session-start.sh`) installs the packages and fetches
 the bench data.
