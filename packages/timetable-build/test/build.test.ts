@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildTimetables, type BuildResult } from '../src/build.ts';
 import { writeOutputs } from '../src/output.ts';
-import { decodeTimetable } from '../../routing/src/ttbin.ts';
+import { decodeStopList, decodeTimetable } from '../../routing/src/ttbin.ts';
 import { openGtfs } from '../src/source.ts';
 import type { Timetable } from '../src/types.ts';
 
@@ -169,9 +169,10 @@ describe('writeOutputs', () => {
       serviceDate: '2026-10-13',
       stats: result.stats,
     });
-    // The binary file reads back as the timetable, without stop ids and with the
-    // footpaths in stop order.
-    const bin = decodeTimetable(readFileSync(join(dir, 'timetable-day.bin')));
+    // The binary file reads back with the stop list as the timetable, without stop ids and
+    // with the footpaths in stop order.
+    const list = decodeStopList(readFileSync(join(dir, 'stoplist.bin')));
+    const bin = decodeTimetable(readFileSync(join(dir, 'timetable-day.bin')), list);
     expect(bin).toEqual({
       ...day,
       stops: day.stops.map((s) => ({ ...s, id: '' })),
@@ -181,11 +182,16 @@ describe('writeOutputs', () => {
     expect(read('stop-ids.json').ids).toHaveLength(day.stops.length);
     expect(Object.keys(info.files).sort()).toEqual([
       'stop-ids.json',
+      'stoplist.bin',
       'stops.json',
       'timetable-day.bin',
       'timetable-night.bin',
     ]);
-    expect(decodeTimetable(readFileSync(join(dir, 'timetable-night.bin'))).window).toBe('night');
+    // Each hour holds only its routes and shares the list's stops and footpaths.
+    const night = decodeTimetable(readFileSync(join(dir, 'timetable-night.bin')), list);
+    expect(night.window).toBe('night');
+    expect(night.stops).toBe(bin.stops);
+    expect(() => decodeTimetable(readFileSync(join(dir, 'timetable-night.bin')))).toThrow();
   });
 });
 

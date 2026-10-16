@@ -7,8 +7,9 @@
 //   A file over its budget, or a new file without one, fails; raising a budget is a
 //   deliberate edit to budget.json in the same pull request.
 // - Routing: bench/speed.ts times the worker's map computation and timetable loading on
-//   the real data (<dir> holds timetable-weekday-10.bin and walk.bin). With --base, the
-//   same probe runs main's routing code in turns with this one on the same machine, and
+//   the real data (<dir> holds timetable-weekday-10.bin, walk.bin and, for timetables built
+//   since 0.13.13, stoplist.bin). With --base, the same probe runs main's routing code in
+//   turns with this one on the same machine, and
 //   this one may not be slower than the tolerance, nor write a bigger timetable file.
 //   It also times drawing the maps (colours and outlines, from packages/web/src) and
 //   snapping the grid cells to the footpaths.
@@ -106,7 +107,8 @@ if (args.data) {
         delete sides.main;
         continue;
       }
-      const b = (best[side] ??= { loadMs: Infinity, origins: {}, draw: {}, binGzip: r.binGzip });
+      const { binGzip, listGzip } = r;
+      const b = (best[side] ??= { loadMs: Infinity, origins: {}, draw: {}, binGzip, listGzip });
       b.loadMs = Math.min(b.loadMs, r.loadMs);
       // Older probes did not time these.
       if (r.snapMs !== undefined) b.snapMs = Math.min(b.snapMs ?? Infinity, r.snapMs);
@@ -152,8 +154,12 @@ if (args.data) {
   row('Load timetable and footpaths', pr.loadMs, main?.loadMs, ms, limit(main?.loadMs));
   if (pr.snapMs !== undefined)
     row('of which snapping cells', pr.snapMs, main?.snapMs, ms, limit(main?.snapMs));
-  // The file size is exact, so any growth beyond a few bytes counts.
+  // The file sizes are exact, so any growth beyond a few bytes counts: an hour's file, and
+  // what a first visit downloads (that and the stop list, 0.13.13).
   row('Timetable file (gzipped)', pr.binGzip, main?.binGzip, kb, main ? main.binGzip * 1.005 : 0);
+  const first = (s) => s.binGzip + (s.listGzip ?? 0);
+  const fm = main && first(main);
+  row('With the stop list (first visit)', first(pr), fm, kb, main ? fm * 1.005 : 0);
   if (!main) lines.push('', '_No main checkout given: routing times are shown, not compared._');
 }
 

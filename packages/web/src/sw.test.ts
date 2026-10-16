@@ -25,11 +25,12 @@ function load() {
 }
 
 describe('offline timetable cache', () => {
-  it('drops past days first, then keeps the 12 most recently used timetables', async () => {
+  it('drops past days first, then keeps the 12 most recently used timetables and every other file', async () => {
     const sw = load();
     const today = sw.today();
     const names = [
       'walk.bin',
+      'stoplist.bin',
       'lines.bin',
       `timetable-${addDays(today, -1)}-10.bin`,
       ...Array.from(
@@ -48,6 +49,7 @@ describe('offline timetable cache', () => {
     const left = keys.map((k) => k.url.split('/').pop());
     expect(left).toEqual([
       'walk.bin',
+      'stoplist.bin',
       'lines.bin',
       ...Array.from(
         { length: 11 },

@@ -71,7 +71,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --dir packages/web build
       - name: Download real timetable and footpaths
-        run: scripts/publish/download.sh timetable-latest work/speed timetable-weekday-10.bin walk.bin
+        run: |
+          scripts/publish/download.sh timetable-latest work/speed timetable-weekday-10.bin walk.bin
+          # Since 0.13.13 an hour's file (format version 3) needs the build's stop list.
+          if [ "$(od -An -tu1 -j4 -N1 work/speed/timetable-weekday-10.bin | tr -d ' ')" = 3 ]; then
+            scripts/publish/download.sh timetable-latest work/speed stoplist.bin
+          fi
       - name: Check out main to compare against
         if: github.event_name == 'pull_request'
         run: |

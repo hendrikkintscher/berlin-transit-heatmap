@@ -1,15 +1,19 @@
 // Timetables in the worker: downloads (with progress, a typical day standing in for a
-// missing date), and the prepared forward, reversed and filtered timetables kept in memory.
+// missing date), the stop list shared by every hour, and the prepared forward, reversed
+// and filtered timetables kept in memory.
 import {
   bikeTimetable,
+  decodeStopList,
   decodeTimetable,
   loadTimetable,
+  needsStopList,
   reverseTimetable,
   stepFreeTimetable,
   type PreparedTimetable,
+  type StopListData,
   type Timetable,
 } from '@berlin-transit-heatmap/routing';
-import { dataUrl } from './data-url';
+import { dataPublished, dataUrl } from './data-url';
 import type { Direction, Window } from './protocol';
 import { typicalWindow } from './when';
 import { post } from './worker-post';
@@ -38,6 +42,9 @@ async function downloadTimetable(
   file: string,
   typical: string | null,
 ): Promise<Timetable> {
+  // The hour's file and, the first time, the stop list come down side by side; the bar
+  // counts both.
+  const list = stopList();
   const url = dataUrl(dataBase, `timetable-${file}.bin`);
   const res = await fetch(url);
   // (Some servers answer a missing file with the app's own page.)
@@ -47,10 +54,66 @@ async function downloadTimetable(
   if (!binary) void res.body?.cancel();
   if (!binary && typical) return downloadTimetable(window, typical, null);
   if (!binary) throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
-  const buf = await readWithProgress(res.body, res, (loaded, total) =>
-    post({ type: 'progress', window, loaded, total }),
-  );
-  return decodeTimetable(buf) as Timetable;
+  let hour = { loaded: 0, total: 0 };
+  const report = () => {
+    const l = list?.done === false ? list : { loaded: 0, total: 0 };
+    post({ type: 'progress', window, loaded: hour.loaded + l.loaded, total: hour.total + l.total });
+  };
+  list?.listeners.add(report);
+  try {
+    const buf = await readWithProgress(res.body, res, (loaded, total) => {
+      hour = { loaded, total };
+      report();
+    });
+    if (!needsStopList(buf)) return decodeTimetable(buf) as Timetable;
+    if (!list) throw new Error('Timetable needs a stop list, and this deploy has none');
+    return decodeTimetable(buf, await list.data) as Timetable;
+  } finally {
+    list?.listeners.delete(report);
+  }
+}
+
+/** The stop list's download: its data, how far it is, and who wants to hear about it. */
+interface StopListLoad {
+  data: Promise<StopListData>;
+  loaded: number;
+  total: number;
+  done: boolean;
+  listeners: Set<() => void>;
+}
+let stopListLoad: StopListLoad | null = null;
+
+/**
+ * The build's stops and footpaths (stoplist.bin): downloaded and read once, then shared by
+ * every hour's timetable; tried again after a failure. Null when the deploy's data has no
+ * stop list (built before it was split out: its timetables are whole).
+ */
+function stopList(): StopListLoad | null {
+  if (stopListLoad) return stopListLoad;
+  if (!dataPublished('stoplist.bin')) return null;
+  const progress = { loaded: 0, total: 0, done: false, listeners: new Set<() => void>() };
+  const data = (async () => {
+    const url = dataUrl(dataBase, 'stoplist.bin');
+    const res = await fetch(url);
+    if (!res.ok || res.body === null || res.headers.get('content-type')?.includes('html')) {
+      void res.body?.cancel();
+      throw new Error(`Stop list not available (${res.status} for ${url.pathname})`);
+    }
+    const buf = await readWithProgress(res.body, res, (loaded, total) => {
+      progress.loaded = loaded;
+      progress.total = total;
+      for (const f of progress.listeners) f();
+    });
+    progress.done = true;
+    return decodeStopList(buf);
+  })();
+  const load: StopListLoad = Object.assign(progress, { data });
+  data.catch(() => {
+    load.done = true;
+    if (stopListLoad === load) stopListLoad = null;
+  });
+  stopListLoad = load;
+  return load;
 }
 
 /**

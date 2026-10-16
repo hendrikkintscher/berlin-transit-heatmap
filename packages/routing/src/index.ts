@@ -48,8 +48,14 @@ export {
   type TripOptions,
   type TripTime,
 } from './trip';
-export type { TimetableData } from './ttbin';
-export { decodeTimetable, encodeTimetable } from './ttbin';
+export type { StopListData, TimetableData } from './ttbin';
+export {
+  decodeStopList,
+  decodeTimetable,
+  encodeStopList,
+  encodeTimetable,
+  needsStopList,
+} from './ttbin';
 export { decodeWalkBin, decodeWalkBinInSteps, encodeWalkBin, type WalkData } from './walkbin';
 export type { Hop, LineShapes } from './linesbin';
 export { decodeLines, encodeLines, hopCourse } from './linesbin';

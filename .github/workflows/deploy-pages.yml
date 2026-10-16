@@ -60,7 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           # Only what the app loads (the release also keeps stops.json and checksums.json).
-          DOWNLOAD_ONLY: '^(timetable-.*\.bin|walk\.bin|lines\.bin|streets\.json|changes\.json|stop-ids\.json|build-info\.json)$'
+          DOWNLOAD_ONLY: '^(timetable-.*\.bin|stoplist\.bin|walk\.bin|lines\.bin|streets\.json|changes\.json|stop-ids\.json|build-info\.json)$'
         run: |
           # Each region's data in its own folder (data/<id>/, see packages/web/src/region.ts).
           dir="packages/web/dist/data/$(node scripts/region.mjs id)"

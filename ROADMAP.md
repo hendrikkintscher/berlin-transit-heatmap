@@ -1,6 +1,6 @@
-# Roadmap V2.1
+# Roadmap V2.2
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.12**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.13**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## North star
 
@@ -11,7 +11,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 | When  | Theme (outcome)                                 | Steps                                    |
 | ----- | ----------------------------------------------- | ---------------------------------------- |
 | Now   | A. Trip and map agree (0.13)                    | 0.13.14, 0.13.15, 0.13.17–18             |
-| Now   | B. Fast and steady loading and measuring (0.13) | 0.13.13, 0.13.16                         |
+| Now   | B. Fast and steady loading and measuring (0.13) | 0.13.16                                  |
 | Next  | C. Map handling (0.14)                          | 0.14.0                                   |
 | Next  | D. Clear and welcoming looks (0.15)             | 0.15.0–0.15.5, 0.15.11                   |
 | Next  | E. Treffpunkt that shows fairness (0.15)        | 0.15.6 → 0.15.7 → 0.15.8                 |
@@ -69,13 +69,6 @@ Outcome: the trip on tap and the map's minutes match, in every mode and at every
 ## Now: B. Fast and steady loading and measuring
 
 Outcome: less to download on every visit, and speed numbers that can be trusted.
-
-- **0.13.13 Stop list loaded once** · should · build
-  - Why: note from 0.13.6 (2026-10-15): most of every hourly timetable file is the stop list, the same in each: a night file with about 1,000 trips is 258 KB gzipped against 289–303 KB for 7,000–16,000 trips by day.
-  - Done when: further hours download only their trips, and the first map stays within noise.
-  - a. Split the stop list out of the hourly files into one file loaded once and kept by the service worker; each hourly file then holds only its trips.
-  - b. Measure the first map on a fresh visit (one more file, so it must not get slower), a further hour's file, the next-hour preload and Vergleich, before and after, at 360×740.
-  - c. Keep it only if the first map stays within noise; the speed budget's file-size check (`scripts/speed/budget.json`) follows the new files.
 
 - **0.13.16 Steadier Node map timings in the speed check** · should · build
   - Why: note from 0.13.8 (2026-10-16): the CI speed job's Node map timings vary by up to ±9 % between runs with no routing change (Köpenick 134 against 123 ms on the same machine), so a budget on them would need several runs or a wider margin.
@@ -167,4 +160,5 @@ Outcome: the pictures show the finished app, and the Berlin app is called done. 
 
 - 2026-10-16 (from 0.13.12): the tap on the map to a Ziel leaving still takes about twice the arrival map's in Node (5–8 against 3–4 ms: three searches against one, the arrival map's tap gets the map's own pass); in the browser 195 against about 175 ms. The latest leaving (its second search) might be read off the map's profile search.
 - 2026-10-16 (from 0.13.12): under Typisch the lines of the map to a Ziel leaving still follow a pass arriving 40 minutes on (its cells average the hour and take no one trip).
-- 2026-10-16 (from 0.13.12): worker.js is 33.1 KB gzipped, about 130 bytes under its budget limit (31.2 KB + 1 % + 1 KB); the next worker change will need a deliberate raise in `scripts/speed/budget.json`.
+- 2026-10-16 (from 0.13.13): hourly timetables are now 40–60 KB gzipped, so the service worker could keep far more than 12 of them (48 would be about 2.5 MB): more hours and days offline, and fewer downloads when going back and forth in the Zeit panel.
+- 2026-10-16 (from 0.13.13): `stop-ids.json` (the live status's station numbers) is another per-stop file loaded on its own; it could ride in `stoplist.bin`, one file fewer.

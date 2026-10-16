@@ -9,11 +9,13 @@ import {
   travelTimes,
   heatGrid,
   gridToGeoJSON,
+  decodeStopList,
   decodeTimetable,
 } from '@berlin-transit-heatmap/routing';
 
-const bin = await (await fetch('./data/timetable-weekday-10.bin')).arrayBuffer();
-const tt = loadTimetable(decodeTimetable(bin)); // once per file
+const get = async (name: string) => (await fetch(`./data/${name}`)).arrayBuffer();
+const stops = decodeStopList(await get('stoplist.bin')); // once: stops and footpaths
+const tt = loadTimetable(decodeTimetable(await get('timetable-weekday-10.bin'), stops)); // per hour
 const result = travelTimes(tt, { lat: 52.5219, lon: 13.4132 }); // per tap
 const grid = heatGrid(tt, result); // 250 m cells over Berlin
 const geojson = gridToGeoJSON(grid); // one square per reachable cell, properties { band, seconds }
@@ -93,7 +95,9 @@ pnpm --filter @berlin-transit-heatmap/routing bench day  # or: bench night [maxR
 The slow tests and the benchmark download `timetable-weekday-10.bin` (day) and
 `timetable-weekday-02.bin` (night) from release `timetable-latest` into `.data/`
 (`pnpm --filter @berlin-transit-heatmap/routing fetch-data` also gets `walk.bin`, which
-`smoke` then walks on; `ROUTING_DATA_DIR` overrides the folder).
+`smoke` then walks on, and `stoplist.bin` for timetables built since 0.13.13;
+`ROUTING_DATA_DIR` overrides the folder). If a newer stop list no longer fits a cached
+timetable ("different builds"), delete `.data/` and fetch again.
 
 `bench/speed.ts` is the CI speed probe (see `scripts/speed/check.mjs`): the worker's map
 computation per start, colours and outlines (from the web app's source), loading and

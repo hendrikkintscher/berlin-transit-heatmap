@@ -3,7 +3,7 @@
 // and the device's settings, so it draws the first map before the app asks for it (see
 // mapAhead in worker.ts). With a start in the link it also asks for that map's timetable
 // at once. boot.ts takes the worker over.
-import { dataUrl, pageDataVersions, setDataVersions } from './data-url';
+import { dataPublished, dataUrl, pageDataVersions, setDataVersions } from './data-url';
 import { earlyLoad, linkHasStart, STATE_KEYS } from './early';
 import type { FromWorker, ToWorker } from './protocol';
 import { dataBase } from './region';
@@ -27,18 +27,21 @@ try {
   send({ type: 'boot', v, baseURI: document.baseURI, search: location.search, stored, at });
   window.__boot = { worker, early };
   if (linkHasStart(location.search)) {
-    // The first map's timetable, at high priority: browsers fetch the worker's own script
-    // last, and the worker's request for the file (once that is in) is answered from this
-    // download. (Read here too, so it runs on.)
+    // The first map's timetable and the stop list, at high priority: browsers fetch the
+    // worker's own script last, and the worker's requests for the files (once that is in)
+    // are answered from these downloads. (Read here too, so they run on.)
     setDataVersions(v);
     const { window } = earlyLoad(location.search, {
       stepFree: stored['step-free'] ?? null,
       travel: stored.travel ?? null,
     });
-    const url = dataUrl(dataBase(), `timetable-${window}.bin`);
-    fetch(url, { priority: 'high' })
-      .then((res) => res.arrayBuffer())
-      .catch(() => {});
+    const files = [`timetable-${window}.bin`];
+    // Its stops and footpaths, loaded once for every hour (0.13.13).
+    if (dataPublished('stoplist.bin')) files.push('stoplist.bin');
+    for (const name of files)
+      fetch(dataUrl(dataBase(), name), { priority: 'high' })
+        .then((res) => res.arrayBuffer())
+        .catch(() => {});
   }
 } catch {
   // No module workers: the entry starts the worker as before.

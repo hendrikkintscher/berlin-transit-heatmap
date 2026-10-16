@@ -19,10 +19,21 @@ export function setDataVersions(json: string | null | undefined): void {
 export const pageDataVersions = (): string | undefined =>
   document.querySelector<HTMLMetaElement>('meta[name="data-v"]')?.content;
 
+/**
+ * Whether the deploy has a data file: always assumed without versions (local runs), where
+ * a missing file is simply not found.
+ */
+export const dataPublished = (name: string): boolean =>
+  !Object.keys(versions).length || versionKey(name) in versions;
+
+/** The version key of a data file (as scripts/publish/data-versions.mjs gives it). */
+const versionKey = (name: string) =>
+  name.startsWith('timetable-') ? 'timetable' : name.replace(/\.[^.]+$/, '');
+
 /** A data file's address in `base`, with its version when the page has one. */
 export function dataUrl(base: string, name: string): URL {
   const url = new URL(name, base);
-  const v = versions[name.startsWith('timetable-') ? 'timetable' : name.replace(/\.[^.]+$/, '')];
+  const v = versions[versionKey(name)];
   if (v) url.searchParams.set('v', v);
   return url;
 }

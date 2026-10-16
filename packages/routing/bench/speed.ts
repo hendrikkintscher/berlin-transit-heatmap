@@ -6,7 +6,8 @@
  * With the web app's source folder it also times drawing each map: the colours (softened
  * and painted) and the outlines, as the worker draws them.
  *
- *   tsx bench/speed.ts <routing src dir> <data dir with timetable-weekday-10.bin and walk.bin>
+ *   tsx bench/speed.ts <routing src dir> <data dir with timetable-weekday-10.bin, walk.bin
+ *     and, for timetables built since 0.13.13, stoplist.bin>
  *     [web src dir]
  */
 import { readFileSync } from 'node:fs';
@@ -47,7 +48,12 @@ const bin = readFileSync(join(dataDir, 'timetable-weekday-10.bin'));
 const walkBin = readFileSync(join(dataDir, 'walk.bin'));
 
 let t = performance.now();
-const data = r.decodeTimetable(bin);
+// Since 0.13.13 the hour's file holds only its routes (format version 3), and its stops and
+// footpaths come from stoplist.bin.
+const data =
+  bin[4] === 3
+    ? r.decodeTimetable(bin, r.decodeStopList(readFileSync(join(dataDir, 'stoplist.bin'))))
+    : r.decodeTimetable(bin);
 const tt = r.loadTimetable(data as Parameters<Routing['loadTimetable']>[0]);
 const walk = r.loadWalkNetwork(
   walkBin.buffer.slice(walkBin.byteOffset, walkBin.byteOffset + walkBin.byteLength),
@@ -97,6 +103,12 @@ function fastest(f: () => unknown): number {
   return best;
 }
 
-// The timetable file this code would write for the same data.
-const binGzip = gzipSync(r.encodeTimetable(data), { level: 9 }).length;
-console.log(JSON.stringify({ loadMs, snapMs, origins, ...(web ? { draw } : {}), binGzip }));
+// The files this code would write for the same data: since 0.13.13 the hour's routes, and
+// the stop list once for all hours (listGzip, 0 before).
+const gz = (b: Uint8Array) => gzipSync(b, { level: 9 }).length;
+const list = 'encodeStopList' in r ? r.encodeStopList(data) : null;
+const binGzip = gz(r.encodeTimetable(data, list?.id));
+const listGzip = list ? gz(list.data) : 0;
+console.log(
+  JSON.stringify({ loadMs, snapMs, origins, ...(web ? { draw } : {}), binGzip, listGzip }),
+);

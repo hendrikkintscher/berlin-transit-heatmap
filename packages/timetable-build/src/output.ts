@@ -4,7 +4,7 @@ import { gzipSync } from 'node:zlib';
 import type { BuildResult } from './build.ts';
 import type { ChangesFile } from './changes.ts';
 // The binary format (Contract 4) lives with its decoder; that file imports nothing.
-import { encodeTimetable } from '../../routing/src/ttbin.ts';
+import { encodeStopList, encodeTimetable } from '../../routing/src/ttbin.ts';
 import { encodeLines } from '../../routing/src/linesbin.ts';
 
 export interface FileInfo {
@@ -22,8 +22,9 @@ export interface BuildInfo {
 }
 
 /**
- * Writes timetable-<window>.bin (Contract 4, what the app loads) for every window,
- * stops.json, stop-ids.json, lines.bin, changes.json (with real dates) and build-info.json.
+ * Writes stoplist.bin and timetable-<window>.bin (Contract 4, what the app loads) for every
+ * window, stops.json, stop-ids.json, lines.bin, changes.json (with real dates) and
+ * build-info.json.
  * (The JSON timetables are gone: the app reads only the binary ones.)
  */
 export function writeOutputs(result: BuildResult, outDir: string, extra: object = {}): BuildInfo {
@@ -34,8 +35,20 @@ export function writeOutputs(result: BuildResult, outDir: string, extra: object 
     files[name] = { bytes: data.length, gzipBytes: gzipSync(data, { level: 9 }).length };
   };
   const write = (name: string, value: unknown) => save(name, Buffer.from(JSON.stringify(value)));
-  for (const [name, tt] of Object.entries(result.timetables))
-    save(`timetable-${name}.bin`, encodeTimetable(tt));
+  // The stops and footpaths are the same in every window: one file, loaded once by the app,
+  // and each hourly file holds only its routes.
+  const windows = Object.entries(result.timetables);
+  if (windows.length) {
+    const first = windows[0]![1];
+    const list = encodeStopList(first);
+    for (const [name, tt] of windows) {
+      const same = tt.stops === first.stops && tt.transfers === first.transfers;
+      if (!same && encodeStopList(tt).id !== list.id)
+        throw new Error(`Window ${name} has stops or footpaths of its own`);
+    }
+    save('stoplist.bin', list.data);
+    for (const [name, tt] of windows) save(`timetable-${name}.bin`, encodeTimetable(tt, list.id));
+  }
   write('stops.json', result.stopsFile);
   // The binary timetables carry no GTFS ids; the app's live status (web live.ts) looks up
   // a stop's VBB station number here, by stop index: 900100003 for Alexanderplatz, 0 if none.
