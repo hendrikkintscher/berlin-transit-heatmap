@@ -165,7 +165,6 @@ Outcome: the pictures show the finished app, and the Berlin app is called done. 
 
 ## Inbox
 
-- 2026-10-16 (from 0.13.12): **decision for Hendrik** (0.13.12c): two stop guesses per cell on the map to a Ziel leaving (the second from leaving within 30 minutes instead of 10) bring the places 3 or more minutes apart from the tapped trip from 11 / 16 / 11 % to 10 / 13 / 8 % (Alexanderplatz, Spandau, Köpenick; 300 places each, `GUESS2=1800 bench/goal.ts`; 1 s, 5, 20 and 40 minutes do no better), not halved, for +80–130 ms per map in Node (60–90 % more). Recommendation: leave it as it is.
 - 2026-10-16 (from 0.13.12): the tap on the map to a Ziel leaving still takes about twice the arrival map's in Node (5–8 against 3–4 ms: three searches against one, the arrival map's tap gets the map's own pass); in the browser 195 against about 175 ms. The latest leaving (its second search) might be read off the map's profile search.
 - 2026-10-16 (from 0.13.12): under Typisch the lines of the map to a Ziel leaving still follow a pass arriving 40 minutes on (its cells average the hour and take no one trip).
 - 2026-10-16 (from 0.13.12): worker.js is 33.1 KB gzipped, about 130 bytes under its budget limit (31.2 KB + 1 % + 1 KB); the next worker change will need a deliberate raise in `scripts/speed/budget.json`.
