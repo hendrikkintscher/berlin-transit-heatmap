@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { goalArrival, goalWindow, loadTimetable, reverseTimetable, travelTimes } from '../src';
+import {
+  goalArrival,
+  goalCells,
+  goalUsage,
+  goalWindow,
+  heatGrid,
+  LEG_WALK,
+  loadTimetable,
+  reverseTimetable,
+  travelTimes,
+} from '../src';
 import { A, B, C, D, G, I, miniTimetable, STOP_POS } from './fixture';
 
 const H10 = 10 * 3600;
@@ -57,5 +67,60 @@ describe('goalWindow', () => {
   it('leaves out stops nothing reaches', () => {
     expect(goalWindow(p, H10, H10 + 600, true)[I]).toBe(Infinity);
     expect(goalWindow(p, H10, H10 + 600, false)[G]).toBeLessThan(Infinity);
+  });
+});
+
+describe('lines of a map to a destination (goalUsage)', () => {
+  const found = travelTimes(back, STOP_POS[D], {
+    profile: { from: -(H10 + 3000), to: -H10 },
+    arriveBy: -H10,
+    trackLegs: true,
+  });
+  const p = found.profile!;
+  const stopSeconds = goalWindow(p, H10, H10 + 600, false);
+  const grid = heatGrid(back, { ...found, stopSeconds }, { cellSizeM: 100, trackStops: true });
+  const cells = new Float64Array(p.departure.length);
+  goalCells(grid, stopSeconds, p, H10, undefined, cells);
+  const used = goalUsage(back, p, cells, grid, { minShare: 0 });
+  const hop = (a: number, b: number) =>
+    used.find((u) => u.a === Math.min(a, b) && u.b === Math.max(a, b));
+
+  it('records legs without changing the profile', () => {
+    const plain = profileTo(D);
+    expect([...p.arrival]).toEqual([...plain.arrival]);
+    expect([...p.departure]).toEqual([...plain.departure]);
+  });
+
+  it("gives each leg's stop before it an event of the same departure", () => {
+    const { kind, from } = p.legs!;
+    for (let s = 0; s < p.offset.length - 1; s++)
+      for (let i = p.offset[s]; i < p.offset[s + 1]; i++) {
+        const k = kind[i];
+        if (k < LEG_WALK) continue;
+        const before = k >= 0 ? back.routeStops[back.routeStopOffset[k] + from[i]] : from[i];
+        let same = false;
+        for (let j = p.offset[before]; j < p.offset[before + 1]; j++)
+          if (p.departure[j] === p.departure[i]) same = true;
+        expect(same).toBe(true);
+      }
+  });
+
+  it('counts every cell that takes an event', () => {
+    let taken = 0;
+    for (let k = 0; k < grid.seconds.length; k++)
+      if (grid.stop![k] >= 0 && grid.seconds[k] < Infinity) taken++;
+    expect(cells.reduce((a, b) => a + b, 0)).toBe(taken);
+  });
+
+  it('rides the line the cells take to the destination', () => {
+    // Every cell around A takes the U1 through B and C to D.
+    const ab = hop(A, B)!;
+    expect(ab.names).toEqual(['U1']);
+    expect(hop(B, C)!.cells).toBeGreaterThanOrEqual(ab.cells);
+    expect(hop(C, D)!.cells).toBeGreaterThanOrEqual(hop(B, C)!.cells);
+  });
+
+  it('needs a profile with legs', () => {
+    expect(() => goalUsage(back, profileTo(D), cells, grid)).toThrow();
   });
 });

@@ -37,10 +37,17 @@ export {
 export { distanceM, WALK_SPEED_MPS } from './geo';
 export { LEG_NONE, LEG_ORIGIN, LEG_WALK } from './raptor';
 export type { RouteUsageOptions, UsedSegment } from './usage';
-export { routeUsage } from './usage';
+export { goalUsage, routeUsage } from './usage';
 export type { Journey, JourneyLeg } from './journey';
 export { departureAt, journeyTo, journeyVia, laterStart } from './journey';
-export { directSeconds, tripBetween, walksToStops, type FixedTrip, type TripTime } from './trip';
+export {
+  directSeconds,
+  tripBetween,
+  walksToStops,
+  type FixedTrip,
+  type TripOptions,
+  type TripTime,
+} from './trip';
 export type { TimetableData } from './ttbin';
 export { decodeTimetable, encodeTimetable } from './ttbin';
 export { decodeWalkBin, decodeWalkBinInSteps, encodeWalkBin, type WalkData } from './walkbin';

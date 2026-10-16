@@ -34,15 +34,19 @@ function firstAllowing(p: StopProfile, s: number, leave: number): number {
 /**
  * Leaving at any moment of [from, to]: per stop the average seconds until the destination
  * (waiting included, over the moments that still get there) when `typical`, else the least.
+ * `pick`, if given and not `typical`: filled with each stop's event giving the least (-1
+ * where none), so a map's lines can follow the trips its cells take (goalUsage).
  */
 export function goalWindow(
   p: StopProfile,
   from: number,
   to: number,
   typical: boolean,
+  pick?: Int32Array,
 ): Float32Array {
   const S = p.offset.length - 1;
   const out = new Float32Array(S).fill(Infinity);
+  pick?.fill(-1);
   for (let s = 0; s < S; s++) {
     let before = -Infinity;
     let sum = 0;
@@ -58,7 +62,10 @@ export function goalWindow(
       if (b <= a) continue;
       covered += b - a;
       sum += arrive * (b - a) - (b * b - a * a) / 2;
-      least = Math.min(least, arrive - b);
+      if (arrive - b < least) {
+        least = arrive - b;
+        if (pick) pick[s] = i;
+      }
     }
     if (typical && covered > 0) out[s] = sum / covered;
     else if (!typical && least < Infinity) out[s] = least;
@@ -75,7 +82,8 @@ export function goalWindow(
  *
  * `walkOnly`: the cells around the Ziel made without any stop (a grid of `window` cells at
  * (c0, r0)), whose walk all the way is no later than waiting for a vehicle, however it looked
- * before the correction.
+ * before the correction. `cells`, if given (one per profile event): each event gets one
+ * for every cell that takes it, for goalUsage.
  */
 export function goalCells(
   grid: HeatGrid,
@@ -83,30 +91,34 @@ export function goalCells(
   p: StopProfile,
   leave: number,
   walkOnly?: { grid: HeatGrid; c0: number; r0: number },
+  cells?: Float64Array,
 ): void {
   const stop = grid.stop;
   if (!stop) throw new Error('goalCells needs a grid made with trackStops');
   const seconds = grid.seconds;
-  for (let k = 0; k < seconds.length; k++) {
-    const s = stop[k];
-    if (s < 0 || seconds[k] === Infinity) continue;
-    const i = firstAllowing(p, s, leave + (seconds[k] - stopSeconds[s]));
-    seconds[k] = i < 0 ? Infinity : -p.departure[i] - leave;
-  }
-  if (!walkOnly) return;
-  const { grid: w, c0, r0 } = walkOnly;
-  for (let r = 0; r < w.rows; r++) {
-    const row = r0 + r;
-    if (row < 0 || row >= grid.rows) continue;
-    for (let c = 0; c < w.cols; c++) {
-      const col = c0 + c;
-      if (col < 0 || col >= grid.cols) continue;
-      const v = w.seconds[r * w.cols + c];
-      const k = row * grid.cols + col;
-      if (v < seconds[k]) {
-        seconds[k] = v;
-        stop[k] = -1;
+  const w = walkOnly?.grid;
+  const c0 = walkOnly?.c0 ?? 0;
+  const r0 = walkOnly?.r0 ?? 0;
+  for (let row = 0, k = 0; row < grid.rows; row++) {
+    const wr = row - r0;
+    const inRows = w !== undefined && wr >= 0 && wr < w.rows;
+    for (let col = 0; col < grid.cols; col++, k++) {
+      const s = stop[k];
+      let event = -1;
+      if (s >= 0 && seconds[k] !== Infinity) {
+        event = firstAllowing(p, s, leave + (seconds[k] - stopSeconds[s]));
+        seconds[k] = event < 0 ? Infinity : -p.departure[event] - leave;
       }
+      const wc = col - c0;
+      if (inRows && wc >= 0 && wc < w.cols) {
+        const v = w.seconds[wr * w.cols + wc];
+        if (v < seconds[k]) {
+          seconds[k] = v;
+          stop[k] = -1;
+          event = -1;
+        }
+      }
+      if (cells && event >= 0) cells[event]++;
     }
   }
 }

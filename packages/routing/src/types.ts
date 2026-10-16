@@ -120,6 +120,12 @@ export interface TravelTimeOptions {
    * moment (goal.ts). Replaces the window; `typical` and `leaveAt` do not apply.
    */
   profile?: { from: number; to: number };
+  /**
+   * The walks from `origin` to the stops, as walksToStops gives them with the same options
+   * (Infinity where out of reach): used instead of walking the footpaths again, which is
+   * a good part of a short search. (Addition to Contract 2.)
+   */
+  accessSeconds?: Float32Array;
 }
 
 /**
@@ -193,6 +199,11 @@ export interface StopProfile {
   offset: Int32Array;
   departure: Int32Array;
   arrival: Int32Array;
+  /**
+   * With `trackLegs`: each event's last leg, as in TravelLegs. A leg's stop before it has
+   * an event for the same origin departure, so a journey is followed back event by event.
+   */
+  legs?: { kind: Int32Array; from: Int32Array; to: Int32Array };
 }
 
 export interface HeatGridOptions {

@@ -6,6 +6,7 @@ import {
   cellAt,
   cellColRow,
   goalCells,
+  goalUsage,
   goalWindow,
   gridLayout,
   heatGrid,
@@ -165,7 +166,7 @@ const GOAL_WAIT_S = 600;
 const GOAL_WALK_CELLS_MAX = 100;
 /** Beyond the hour, how far Typisch and Bestfall look for arrivals (as forward Typisch). */
 const GOAL_HORIZON_S = 2700;
-/** The pass whose lines are drawn for a map to the Ziel: arriving this long after leaving. */
+/** Under Typisch, the pass whose lines are drawn for a map to the Ziel: arriving this long after leaving. */
 const GOAL_LINES_S = 2400;
 
 /** The start of the hour of a reversed timetable's file (real seconds of the service day). */
@@ -178,7 +179,9 @@ export const fileHourStart = (back: PreparedTimetable) => -back.windowEnd - 3600
  * moment of the hour. A profile search from the Ziel gives each stop's arrivals for every
  * moment of leaving, the grid is made from a good guess of each cell's best stop and the
  * cells corrected to the vehicle they catch after their walk (goal.ts in the routing package).
- * The lines drawn follow a pass arriving a while later, as the trips of that map do.
+ * The lines drawn follow the trips the cells take (Nächste: the vehicle each catches;
+ * Bestfall: the quickest of the hour at its stop); under Typisch, whose cells take no one
+ * trip, a pass arriving a while later (roadmap 0.13.12b).
  */
 export function goalRun(
   back: PreparedTimetable,
@@ -192,21 +195,28 @@ export function goalRun(
   if (travel === 'bikeonly') return run(back, origin, false, travel, usage, -leave);
   const w = travelOptions(travel);
   const next = measure === 'next';
+  const typical = measure === 'typical';
   const from = next ? leave : fileHourStart(back);
   const to = next ? from + GOAL_WAIT_S : from + 3600;
   const span = next ? GOAL_SPAN_S : 3600 + GOAL_HORIZON_S;
+  // The lines come from the profile's own legs, except under Typisch.
+  const ownLines = usage && !typical;
   const found = travelTimes(back, origin, {
     profile: { from: -(from + span), to: -from },
     arriveBy: -from,
+    trackLegs: ownLines,
     ...w,
   });
   const profile = found.profile!;
-  const stopSeconds = goalWindow(profile, from, to, measure === 'typical');
+  const pick = ownLines && !next ? new Int32Array(back.stopCount) : undefined;
+  const stopSeconds = goalWindow(profile, from, to, typical, pick);
   const grid = heatGrid(
     back,
     { ...found, stopSeconds },
     { cellSizeM: CELL_M, trackStops: true, ...w },
   );
+  /** Per profile event, the cells taking it (for the lines). */
+  const cells = ownLines ? new Float64Array(profile.departure.length) : undefined;
   if (next) {
     // Walking all the way: only around the Ziel, where it can beat the stop-based minutes.
     const [col, row] = cellColRow(gridLayout({ cellSizeM: CELL_M }), origin.lat, origin.lon);
@@ -220,13 +230,26 @@ export function goalRun(
       { ...found, stopSeconds: new Float32Array(stopSeconds.length).fill(Infinity) },
       { cellSizeM: CELL_M, window: near, ...w },
     );
-    goalCells(grid, stopSeconds, profile, leave, {
-      grid: walkOnly,
-      c0: Math.max(0, near.c0),
-      r0: Math.max(0, near.r0),
-    });
+    goalCells(
+      grid,
+      stopSeconds,
+      profile,
+      leave,
+      { grid: walkOnly, c0: Math.max(0, near.c0), r0: Math.max(0, near.r0) },
+      cells,
+    );
+  } else if (cells && pick) {
+    const stop = grid.stop!;
+    for (let k = 0; k < stop.length; k++) {
+      const e = stop[k] >= 0 && grid.seconds[k] < Infinity ? pick[stop[k]] : -1;
+      if (e >= 0) cells[e]++;
+    }
   }
-  // The lines: the quickest ways arriving a while later than leaving.
+  if (cells) {
+    const used = goalUsage(back, profile, cells, grid, { minShare: MIN_ROUTE_SHARE });
+    return { result: found, best: grid, shown: grid, used };
+  }
+  // Typisch: the quickest ways arriving a while later than leaving.
   const result = usage
     ? travelTimes(back, origin, { trackLegs: true, leaveAt: -(from + GOAL_LINES_S), ...w })
     : found;
