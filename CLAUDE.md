@@ -40,10 +40,21 @@ pnpm --dir packages/routing fetch-data       # real timetable + walk.bin into pa
 ```
 
 Benchmarks on the real data live in `packages/routing/bench/` (`swap.ts`: same trip from
-both ends; `goal.ts`: map to a Ziel leaving at a time). The release downloads are public: if
+both ends; `goal.ts`: map to a Ziel leaving at a time; `walkrule.ts`: map minutes against the
+trip on tap; `kept.ts`: a trip kept before the footpaths). The release downloads are public: if
 `fetch-data` gets a 401, run it without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the
 release `gtfs-latest` (`GTFS.zip`); `node packages/timetable-build/bin/build-timetable.js
 --gtfs data/gtfs --out <dir>` builds all hourly files in about 30 s.
 
 The cloud session hook (`.claude/hooks/session-start.sh`) installs the packages and fetches
 the bench data.
+
+## Handover notes
+
+- Several chats may share one container and the branch `claude/focused-johnson-10stwf`:
+  check `git log origin/main..HEAD` and `git status` before starting, and build on (or ask
+  about) commits you did not make instead of overwriting them.
+- When a step's PR is merged, reset the branch to `origin/main` before the next step.
+- The working walk rule since 0.13.9: on foot, walks up to 30 minutes count at both ends
+  (`FASTEST_WALK` in `packages/web/src/worker-runs.ts`); the Node benches in
+  `packages/routing/bench` pass their own options.
