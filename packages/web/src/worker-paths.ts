@@ -37,7 +37,7 @@ export function setWalkKmh(kmh: number) {
 }
 
 /** The bar moves at most this often, so a fast download does not keep the page busy. */
-export const PROGRESS_MS = 100;
+const PROGRESS_MS = 100;
 
 export async function loadWalk(): Promise<void> {
   if (walkStarted) return;

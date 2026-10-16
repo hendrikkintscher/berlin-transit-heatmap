@@ -12,7 +12,6 @@ import {
 import { dataUrl } from './data-url';
 import type { Direction, Window } from './protocol';
 import { typicalWindow } from './when';
-import { PROGRESS_MS } from './worker-paths';
 import { post } from './worker-post';
 
 /** Where the region's data files are (data/<region>/), from the app's first message. */
@@ -48,15 +47,9 @@ async function downloadTimetable(
   if (!binary) void res.body?.cancel();
   if (!binary && typical) return downloadTimetable(window, typical, null);
   if (!binary) throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
-  // The bar moves at most every PROGRESS_MS: one main-thread task per chunk would compete
-  // with the first map.
-  let reportedAt = -Infinity;
-  const buf = await readWithProgress(res.body, res, (loaded, total) => {
-    const now = performance.now();
-    if (now - reportedAt < PROGRESS_MS && loaded < total) return;
-    reportedAt = now;
-    post({ type: 'progress', window, loaded, total });
-  });
+  const buf = await readWithProgress(res.body, res, (loaded, total) =>
+    post({ type: 'progress', window, loaded, total }),
+  );
   return decodeTimetable(buf) as Timetable;
 }
 
