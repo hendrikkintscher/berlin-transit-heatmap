@@ -2,20 +2,24 @@
 
 Berlin transit heatmap, live at https://hendrikkintscher.github.io/berlin-transit-heatmap/.
 Start with [README.md](README.md), then [ROADMAP.md](ROADMAP.md): its "How to use this roadmap"
-section is the working agreement with Hendrik.
+section is the working agreement with Hendrik. Since V2.0 the roadmap has a north star, outcome
+themes in Now / Next / Later order, and one node per step with labels (must/should/could;
+build/decision/check); the structure follows roadmap.sh's product-manager roadmap.
 How to write each language here (TypeScript, JS, shell, Actions YAML, HTML/CSS): [BEST_PRACTICES.md](BEST_PRACTICES.md).
 
 ## How a step goes
 
 - Hendrik picks one roadmap step; build only that one, never the next.
 - One PR per step: bump the version in both `package.json` and `packages/web/package.json`
-  (the merge is tagged `vX.Y.Z` automatically), remove the step from ROADMAP.md and bump its
-  `V1.x`, add the app-version row and the roadmap-version line to CHANGELOG.md, run
+  (the merge is tagged `vX.Y.Z` automatically), remove the step from ROADMAP.md (and from the Now/Next/Later
+  table) and bump its `V2.x`, add the app-version row and the roadmap-version line to CHANGELOG.md, run
   `npx prettier --write` on the changed docs.
-- Steps marked "decision" (or "Hendrik gets the numbers"): measure, report a short table and a
+- Steps labelled "decision" (or "Hendrik gets the numbers"): measure, report a short table and a
   recommendation, and wait for his yes before building.
 - Things noticed on the way go under "## Inbox" in ROADMAP.md, one dated line each
   ("2026-10-15 (from 0.13.6): …"), and end the PR description as a "For the roadmap Inbox" list.
+  A roadmap edit turns each Inbox line into a step node in its theme (new ids continue the
+  theme's milestone, e.g. 0.13.19; existing ids are never renumbered just to tidy up).
 - Get CI green (`check`, `smoke`, `speed`), merge (squash; merging deploys to Pages), then check
   the live site.
 
@@ -56,6 +60,9 @@ the bench data.
   check `git log origin/main..HEAD` and `git status` before starting, and build on (or ask
   about) commits you did not make instead of overwriting them.
 - When a step's PR is merged, reset the branch to `origin/main` before the next step.
+- Old branches (2026-10-16): every `claude/project-thread-*` branch was checked against main and
+  holds nothing unmerged (all squash-merged through their PRs). Deleting them from a session was
+  blocked; Hendrik can delete them on GitHub. Don't merge them: their diffs are stale copies.
 - The working walk rule since 0.13.9: on foot, walks up to 30 minutes count at both ends
   (`FASTEST_WALK` in `packages/web/src/worker-runs.ts`); the Node benches in
   `packages/routing/bench` pass their own options.
