@@ -1,6 +1,6 @@
-# Roadmap V1.51
+# Roadmap V1.52
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.9**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.10**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -22,30 +22,30 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## 0.13 Faster and steadier routing
 
-- **0.13.10 Ankommen under Typisch and Bestfall: trip and map agree**. Inbox note from 0.13.4 (2026-10-15): with Ankommen under Typisch or Bestfall, a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
+- **0.13.11 Ankommen under Typisch and Bestfall: trip and map agree**. Inbox note from 0.13.4 (2026-10-15): with Ankommen under Typisch or Bestfall, a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
   - a. Count how often and by how much card and map differ today (random places, a few hours).
   - b. Let the trip on tap arrive within the hour the map counts (for example by its end, or the one closest to the map's minutes), so card and map tell the same; tap timings stay as they are.
 
-- **0.13.11 Map to a Ziel with a departure time: follow-ups**. Inbox notes from 0.13.5 (2026-10-15) on the map built there (⇅ or the rings with Losfahren).
+- **0.13.12 Map to a Ziel with a departure time: follow-ups**. Inbox notes from 0.13.5 (2026-10-15) on the map built there (⇅ or the rings with Losfahren).
   - a. A tap on that map runs three searches for its trip (about 11 ms more than the arrival map's one in Node); keep the Ziel's walks to the stops per map, and measure the tap before and after.
   - b. Its lines follow a pass arriving 40 minutes after leaving, not the departure trips themselves; fine for the picture, not exact. Draw them from the trips the map's cells take, if that costs no more than today.
   - c. Its minutes are 3 or more apart from the tapped trip for 10–17 % of places (a vehicle caught or missed by seconds; the arrival map: 8 %). Two stop guesses per cell instead of one would halve that for about +100 ms per map; Hendrik decides with the numbers.
 
-- **0.13.12 Stop list loaded once**. Inbox note from 0.13.6 (2026-10-15): most of every hourly timetable file is the stop list, the same in each: a night file with about 1,000 trips is 258 KB gzipped against 289–303 KB for 7,000–16,000 trips by day.
+- **0.13.13 Stop list loaded once**. Inbox note from 0.13.6 (2026-10-15): most of every hourly timetable file is the stop list, the same in each: a night file with about 1,000 trips is 258 KB gzipped against 289–303 KB for 7,000–16,000 trips by day.
   - a. Split the stop list out of the hourly files into one file loaded once and kept by the service worker; each hourly file then holds only its trips.
   - b. Measure the first map on a fresh visit (one more file, so it must not get slower), a further hour's file, the next-hour preload and Vergleich, before and after, at 360×740.
   - c. Keep it only if the first map stays within noise; the speed budget's file-size check follows the new files.
 
-- **0.13.13 Rolling on further and past midnight**. Inbox note from 0.13.6 (2026-10-15): a missed connection still rolls on only until two hours after the chosen hour (rollsOn), although the next hour's file it now uses holds trips further on; after 23 Uhr it stays on the chosen file (the next day's 0 Uhr is not used).
+- **0.13.14 Rolling on further and past midnight**. Inbox note from 0.13.6 (2026-10-15): a missed connection still rolls on only until two hours after the chosen hour (rollsOn), although the next hour's file it now uses holds trips further on; after 23 Uhr it stays on the chosen file (the next day's 0 Uhr is not used).
   - a. Let the card and the drawer roll on as far as the next hour's file reaches.
   - b. After 23 Uhr use the next day's 0 Uhr file (the coming week's date, or the right typical day), preloaded like the next hour's.
   - c. Tap timings stay as they are; check a few late-evening trips at 360×740.
 
-- **0.13.14 A trip kept before the footpaths: hold the move? (decision)**. Inbox note from 0.13.8 (2026-10-16): a trip kept by moving the map to its other end before the footpaths are in now stays on the card in 7 of 9 checked moves (bench/kept.ts over 296 random trips: same rides in 38 %, 43 % counting the usual trip where none fits, against 24 % before); in the rest the footpath walks at the ends miss the kept vehicles. Asking by the rides themselves (first departure less the new walk, last arrival plus it) measured no better (38 %).
+- **0.13.15 A trip kept before the footpaths: hold the move? (decision)**. Inbox note from 0.13.8 (2026-10-16): a trip kept by moving the map to its other end before the footpaths are in now stays on the card in 7 of 9 checked moves (bench/kept.ts over 296 random trips: same rides in 38 %, 43 % counting the usual trip where none fits, against 24 % before); in the rest the footpath walks at the ends miss the kept vehicles. Asking by the rides themselves (first departure less the new walk, last arrival plus it) measured no better (38 %).
   - a. Measure how long a move before the footpaths would wait if it were held until they are in (fresh visits at 360×740, also with the page CPU slowed 4×), and how often a move comes that early.
   - b. Hendrik gets the numbers and a recommendation: hold the move (the trip kept every time, an early move slower) or leave it as it is; nothing changes without his yes.
 
-- **0.13.15 Steadier Node map timings in the speed check**. Inbox note from 0.13.8 (2026-10-16): the CI speed job's Node map timings vary by up to ±9 % between runs with no routing change (Köpenick 134 against 123 ms on the same machine), so a budget on them would need several runs or a wider margin.
+- **0.13.16 Steadier Node map timings in the speed check**. Inbox note from 0.13.8 (2026-10-16): the CI speed job's Node map timings vary by up to ±9 % between runs with no routing change (Köpenick 134 against 123 ms on the same machine), so a budget on them would need several runs or a wider margin.
   - a. Run each map several times (for example 5) and report the median, measured against today's single runs on the same machine; the job may take only a little longer.
   - b. If the medians stay within a few per cent, propose a budget on them (a deliberate edit with the reason, as for the file sizes).
 
