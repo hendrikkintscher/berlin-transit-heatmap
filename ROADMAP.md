@@ -1,4 +1,4 @@
-# Roadmap V1.49
+# Roadmap V1.50
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.8**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
@@ -17,9 +17,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 - **Roadmap**: `V1.x`. Every edit that adds, removes, reorders or finishes a step bumps x and adds a line at the top of "Roadmap versions" in CHANGELOG.md; a full reorganisation makes `V2.0`. ROADMAP.md, CHANGELOG.md and LATER.md stay identical to their project copies plan/roadmap.md, plan/changelog.md and plan/later.md (docs-only PR, `npx prettier --write` on the changed files).
 
 ## Inbox
-
-- 2026-10-16 (from 0.13.8): a trip kept by moving the map before the footpaths are in now stays on the card in 7 of 9 checked moves (bench/kept.ts over 296 random trips: same rides in 38 %, 43 % counting the usual trip where none fits, against 24 % before); in the rest the footpath walks at the ends miss the kept vehicles. Asking by the rides themselves (first departure less the new walk, last arrival plus it) measured no better (38 %). Holding the move until the footpaths are in would keep the trip every time, but makes an early move slower: Hendrik decides whether it is worth it.
-- 2026-10-16 (from 0.13.8): the speed check's Node map timings vary by up to ±9 % between runs with no routing change (Köpenick 134 against 123 ms on the same machine); a budget on them would need several runs or a wider margin.
 
 ## 0.13 Faster and steadier routing
 
@@ -46,6 +43,14 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
   - a. Let the card and the drawer roll on as far as the next hour's file reaches.
   - b. After 23 Uhr use the next day's 0 Uhr file (the coming week's date, or the right typical day), preloaded like the next hour's.
   - c. Tap timings stay as they are; check a few late-evening trips at 360×740.
+
+- **0.13.14 A trip kept before the footpaths: hold the move? (decision)**. Inbox note from 0.13.8 (2026-10-16): a trip kept by moving the map to its other end before the footpaths are in now stays on the card in 7 of 9 checked moves (bench/kept.ts over 296 random trips: same rides in 38 %, 43 % counting the usual trip where none fits, against 24 % before); in the rest the footpath walks at the ends miss the kept vehicles. Asking by the rides themselves (first departure less the new walk, last arrival plus it) measured no better (38 %).
+  - a. Measure how long a move before the footpaths would wait if it were held until they are in (fresh visits at 360×740, also with the page CPU slowed 4×), and how often a move comes that early.
+  - b. Hendrik gets the numbers and a recommendation: hold the move (the trip kept every time, an early move slower) or leave it as it is; nothing changes without his yes.
+
+- **0.13.15 Steadier Node map timings in the speed check**. Inbox note from 0.13.8 (2026-10-16): the CI speed job's Node map timings vary by up to ±9 % between runs with no routing change (Köpenick 134 against 123 ms on the same machine), so a budget on them would need several runs or a wider margin.
+  - a. Run each map several times (for example 5) and report the median, measured against today's single runs on the same machine; the job may take only a little longer.
+  - b. If the medians stay within a few per cent, propose a budget on them (a deliberate edit with the reason, as for the file sizes).
 
 ## 0.14 Map handling
 
