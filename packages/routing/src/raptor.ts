@@ -55,7 +55,8 @@ export function travelTimes(
   const oy = (origin.lat - tt.proj.lat0) * tt.proj.mPerLat;
   const net = opts.walk;
   const speeds = walkSpeeds(opts.walkSpeedMps);
-  const originSnap = net ? snapOrigin(net, origin) : null;
+  const given = opts.accessSeconds;
+  const originSnap = net && !given ? snapOrigin(net, origin) : null;
   const findAccess = (maxWalk: number) => {
     if (net && originSnap && originSnap.edge[0] >= 0) {
       // Walk the footpath network; stops off the network fall back to a straight line.
@@ -93,8 +94,16 @@ export function travelTimes(
       });
     }
   };
-  findAccess(maxWalk);
-  if (accessStops.length === 0) findAccess(fallbackWalk);
+  if (given) {
+    for (let s = 0; s < S; s++)
+      if (given[s] < Infinity) {
+        accessStops.push(s);
+        accessWalk.push(given[s]);
+      }
+  } else {
+    findAccess(maxWalk);
+    if (accessStops.length === 0) findAccess(fallbackWalk);
+  }
 
   const best = new Float32Array(S).fill(Infinity);
   for (let a = 0; a < accessStops.length; a++) {
@@ -112,7 +121,7 @@ export function travelTimes(
     : leaveAt === undefined
       ? departureTimes(tt, accessStops, accessWalk, horizon)
       : Int32Array.of(Math.round(leaveAt));
-  const events = profile ? new ProfileEvents() : null;
+  const events = profile ? new ProfileEvents(opts.trackLegs === true) : null;
   const ws = tt.windowStart;
   const we = tt.windowEnd;
 
@@ -421,7 +430,7 @@ export function travelTimes(
       for (let m = 0; m < touchedCount; m++) {
         const s = touched[m];
         isTouched[s] = 0;
-        events?.add(s, dep, tauStar[s]);
+        events?.add(s, dep, tauStar[s], starKind[s], starFrom[s], starTo[s]);
         if (typical) {
           settle(s, dep);
           since[s] = dep;
@@ -521,11 +530,27 @@ class ProfileEvents {
   private stop = new Int32Array(1 << 16);
   private departure = new Int32Array(1 << 16);
   private arrival = new Int32Array(1 << 16);
+  /** With legs: each event's last leg, as TravelLegs. */
+  private kind: Int32Array;
+  private from: Int32Array;
+  private to: Int32Array;
   private n = 0;
+  private readonly legs: boolean;
 
-  add(s: number, departure: number, arrival: number) {
+  constructor(legs: boolean) {
+    this.legs = legs;
+    const size = legs ? 1 << 16 : 0;
+    this.kind = new Int32Array(size);
+    this.from = new Int32Array(size);
+    this.to = new Int32Array(size);
+  }
+
+  add(s: number, departure: number, arrival: number, kind: number, from: number, to: number) {
     if (this.n === this.stop.length) {
-      for (const k of ['stop', 'departure', 'arrival'] as const) {
+      const keys = this.legs
+        ? (['stop', 'departure', 'arrival', 'kind', 'from', 'to'] as const)
+        : (['stop', 'departure', 'arrival'] as const);
+      for (const k of keys) {
         const bigger = new Int32Array(this.n * 2);
         bigger.set(this[k]);
         this[k] = bigger;
@@ -533,6 +558,11 @@ class ProfileEvents {
     }
     this.stop[this.n] = s;
     this.departure[this.n] = departure;
+    if (this.legs) {
+      this.kind[this.n] = kind;
+      this.from[this.n] = from;
+      this.to[this.n] = to;
+    }
     this.arrival[this.n++] = arrival;
   }
 
@@ -544,11 +574,19 @@ class ProfileEvents {
     const at = offset.slice(0, stopCount);
     const departure = new Int32Array(this.n);
     const arrival = new Int32Array(this.n);
+    const legs = this.legs
+      ? { kind: new Int32Array(this.n), from: new Int32Array(this.n), to: new Int32Array(this.n) }
+      : null;
     for (let i = 0; i < this.n; i++) {
       const k = at[this.stop[i]]++;
       departure[k] = this.departure[i];
       arrival[k] = this.arrival[i];
+      if (legs) {
+        legs.kind[k] = this.kind[i];
+        legs.from[k] = this.from[i];
+        legs.to[k] = this.to[i];
+      }
     }
-    return { offset, departure, arrival };
+    return { offset, departure, arrival, ...(legs ? { legs } : {}) };
   }
 }

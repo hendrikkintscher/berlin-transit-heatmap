@@ -81,6 +81,20 @@ export interface FixedTrip {
   arrive: number;
 }
 
+/** Options of tripBetween: a search's, and the walks at either end when already known. */
+export type TripOptions = TravelTimeOptions & {
+  /** Walking all the way counts up to this long (seconds). Default 15 minutes. */
+  directMaxSeconds?: number;
+  /** walksToStops(fwd, from) and walksToStops(fwd, to) with the same options, if at hand. */
+  fromWalks?: Float32Array;
+  toWalks?: Float32Array;
+  /**
+   * Leaving at a time: a moment the trip surely arrives by (from a map's minutes, with some
+   * room), so the first search does less. If nothing arrives by it, it searches again.
+   */
+  arriveByHint?: number;
+};
+
 /** When a trip is to be: leaving at, arriving by, or within a span (both). */
 export type TripTime = { leave: number } | { arrive: number } | { leave: number; arrive: number };
 
@@ -103,13 +117,16 @@ export function tripBetween(
   from: Origin,
   to: Origin,
   at: TripTime,
-  opts: TravelTimeOptions & { directMaxSeconds?: number } = {},
+  opts: TripOptions = {},
   given?: TravelTimeResult,
 ): FixedTrip | null {
-  const { directMaxSeconds, ...o } = opts;
+  const { directMaxSeconds, fromWalks: fw, toWalks: tw, arriveByHint, ...o } = opts;
   const walk = directSeconds(from, to, o, directMaxSeconds);
-  const toWalks = walksToStops(fwd, to, o);
-  const fromWalks = walksToStops(fwd, from, o);
+  // Each end's walks are found once and given to every search from that end.
+  const toWalks = tw ?? walksToStops(fwd, to, o);
+  const fromWalks = fw ?? walksToStops(fwd, from, o);
+  const fromOpts = { ...o, accessSeconds: fromWalks };
+  const toOpts = { ...o, accessSeconds: toWalks };
   // The span: from the earliest leaving to the latest arriving that count.
   let lo: number;
   let hi: number;
@@ -118,17 +135,23 @@ export function tripBetween(
   let leave: number | null = null;
   if ('leave' in at && 'arrive' in at) {
     [lo, hi] = [at.leave, at.arrive];
-    const r = travelTimes(fwd, from, { ...o, leaveAt: lo, arriveBy: hi, trackLegs: true });
+    const r = travelTimes(fwd, from, { ...fromOpts, leaveAt: lo, arriveBy: hi, trackLegs: true });
     rides = fewestRides(byRides(r, toWalks), hi);
   } else if ('leave' in at) {
     lo = at.leave;
-    const r = given ?? travelTimes(fwd, from, { ...o, leaveAt: lo, trackLegs: true });
-    const arrive = byRides(r, toWalks);
+    const pass = (arriveBy?: number) =>
+      byRides(
+        travelTimes(fwd, from, { ...fromOpts, leaveAt: lo, arriveBy, trackLegs: true }),
+        toWalks,
+      );
+    let arrive = given ? byRides(given, toWalks) : pass(arriveByHint);
+    // Nothing by the bound: it was too tight, so the search goes again without it.
+    if (!given && arriveByHint !== undefined && !(Math.min(...arrive) < Infinity)) arrive = pass();
     hi = Math.min(Math.min(...arrive), lo + walk);
     rides = fewestRides(arrive, hi);
   } else {
     hi = at.arrive;
-    const r = given ?? travelTimes(back, to, { ...o, leaveAt: -hi, trackLegs: true });
+    const r = given ?? travelTimes(back, to, { ...toOpts, leaveAt: -hi, trackLegs: true });
     // On the reversed clock, getting to the start is leaving it.
     const leaving = byRides(r, fromWalks);
     lo = Math.max(-Math.min(...leaving), hi - walk);
@@ -146,7 +169,7 @@ export function tripBetween(
   if (leave === null) {
     // The latest leaving with that many rides that still arrives by `hi`.
     const r = travelTimes(back, to, {
-      ...o,
+      ...toOpts,
       leaveAt: -hi,
       arriveBy: -lo,
       maxRounds: rides,
@@ -155,7 +178,12 @@ export function tripBetween(
     const leaving = byRides(r, fromWalks)[rides]!;
     leave = leaving < Infinity ? -leaving : lo;
   }
-  const r = travelTimes(fwd, from, { ...o, leaveAt: leave, maxRounds: rides, trackLegs: true });
+  const r = travelTimes(fwd, from, {
+    ...fromOpts,
+    leaveAt: leave,
+    maxRounds: rides,
+    trackLegs: true,
+  });
   // The last stop: reached by a ride (not walked to from the start), quickest on.
   const rounds = r.legs!.rounds!;
   let last = -1;

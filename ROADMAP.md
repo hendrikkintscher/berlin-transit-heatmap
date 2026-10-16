@@ -1,6 +1,6 @@
-# Roadmap V2.0
+# Roadmap V2.1
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.11**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.12**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## North star
 
@@ -10,7 +10,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 | When  | Theme (outcome)                                 | Steps                                    |
 | ----- | ----------------------------------------------- | ---------------------------------------- |
-| Now   | A. Trip and map agree (0.13)                    | 0.13.12, 0.13.14, 0.13.15, 0.13.17–18    |
+| Now   | A. Trip and map agree (0.13)                    | 0.13.14, 0.13.15, 0.13.17–18             |
 | Now   | B. Fast and steady loading and measuring (0.13) | 0.13.13, 0.13.16                         |
 | Next  | C. Map handling (0.14)                          | 0.14.0                                   |
 | Next  | D. Clear and welcoming looks (0.15)             | 0.15.0–0.15.5, 0.15.11                   |
@@ -41,13 +41,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 ## Now: A. Trip and map agree
 
 Outcome: the trip on tap and the map's minutes match, in every mode and at every hour.
-
-- **0.13.12 Map to a Ziel with a departure time: follow-ups** · should · build (c: decision)
-  - Why: notes from 0.13.5 (2026-10-15) on the map built there (⇅ or the rings with Losfahren). Evidence: `packages/routing/bench/goal.ts`.
-  - Done when: the tap costs no more than the arrival map's, and Hendrik has the numbers for c.
-  - a. A tap on that map runs three searches for its trip (about 11 ms more than the arrival map's one in Node); keep the Ziel's walks to the stops per map, and measure the tap before and after.
-  - b. Its lines follow a pass arriving 40 minutes after leaving, not the departure trips themselves; fine for the picture, not exact. Draw them from the trips the map's cells take, if that costs no more than today.
-  - c. Its minutes are 3 or more apart from the tapped trip for 10–17 % of places (a vehicle caught or missed by seconds; the arrival map: 8 %). Two stop guesses per cell instead of one would halve that for about +100 ms per map; Hendrik decides with the numbers.
 
 - **0.13.14 Rolling on further and past midnight** · should · build
   - Why: note from 0.13.6 (2026-10-15): a missed connection still rolls on only until two hours after the chosen hour (rollsOn), although the next hour's file it now uses holds trips further on; after 23 Uhr it stays on the chosen file (the next day's 0 Uhr is not used).
@@ -172,4 +165,7 @@ Outcome: the pictures show the finished app, and the Berlin app is called done. 
 
 ## Inbox
 
-Empty.
+- 2026-10-16 (from 0.13.12): **decision for Hendrik** (0.13.12c): two stop guesses per cell on the map to a Ziel leaving (the second from leaving within 30 minutes instead of 10) bring the places 3 or more minutes apart from the tapped trip from 11 / 16 / 11 % to 10 / 13 / 8 % (Alexanderplatz, Spandau, Köpenick; 300 places each, `GUESS2=1800 bench/goal.ts`; 1 s, 5, 20 and 40 minutes do no better), not halved, for +80–130 ms per map in Node (60–90 % more). Recommendation: leave it as it is.
+- 2026-10-16 (from 0.13.12): the tap on the map to a Ziel leaving still takes about twice the arrival map's in Node (5–8 against 3–4 ms: three searches against one, the arrival map's tap gets the map's own pass); in the browser 195 against about 175 ms. The latest leaving (its second search) might be read off the map's profile search.
+- 2026-10-16 (from 0.13.12): under Typisch the lines of the map to a Ziel leaving still follow a pass arriving 40 minutes on (its cells average the hour and take no one trip).
+- 2026-10-16 (from 0.13.12): worker.js is 33.1 KB gzipped, about 130 bytes under its budget limit (31.2 KB + 1 % + 1 KB); the next worker change will need a deliberate raise in `scripts/speed/budget.json`.

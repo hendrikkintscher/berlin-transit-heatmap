@@ -16,6 +16,8 @@ import {
   type PreparedTimetable,
   type TravelTimeResult,
   type TripTime,
+  type WalkNetwork,
+  walksToStops,
 } from '@berlin-transit-heatmap/routing';
 import type { Direction, FromWorker, ToWorker, Travel, TripLeg } from './protocol';
 import { bestRows } from './more-rows';
@@ -304,12 +306,55 @@ const MORE_SPAN_S = 3600;
 const MORE_TRIES = 40;
 
 /**
+ * How much later than the map's minutes a trip to the Ziel leaving may arrive and still be
+ * found by the first, bounded search (tripBetween's arriveByHint); it searches again if not.
+ */
+const HINT_ROOM_S = 900;
+
+/** The walks from the last map's place to the stops (see originWalks). */
+let walksKept: {
+  tt: PreparedTimetable;
+  lat: number;
+  lon: number;
+  travel: Travel;
+  walk: WalkNetwork | undefined;
+  speed: number | undefined;
+  walks: Float32Array;
+} | null = null;
+
+/**
+ * The walks from a map's place to the stops, as tripBetween needs them at that end: kept
+ * for the next tap on the same map, so a tap walks the footpaths from the tapped place only
+ * (roadmap 0.13.12a). New with another place, timetable, way of travel or footpath network.
+ */
+function originWalks(
+  tt: PreparedTimetable,
+  o: { lat: number; lon: number },
+  travel: Travel,
+  w: ReturnType<typeof travelOptions>,
+): Float32Array {
+  const k = walksKept;
+  const same =
+    k?.tt === tt &&
+    k.lat === o.lat &&
+    k.lon === o.lon &&
+    k.travel === travel &&
+    k.walk === w.walk &&
+    k.speed === w.walkSpeedMps;
+  if (same) return k.walks;
+  const walks = walksToStops(tt, o, w);
+  walksKept = { tt, lat: o.lat, lon: o.lon, travel, walk: w.walk, speed: w.walkSpeedMps, walks };
+  return walks;
+}
+
+/**
  * The trip to (arriving: from) the tapped place as both ends see it (tripBetween): the
  * same journey whether the map is made from this end or the other, so moving the map to
  * the other end of a trip keeps it. `pass` is the start's pass at the trip's moment, `time`
  * the trip's span or moment if not the map's own. Null without the timetable the other way
  * round, by bike all the way, or out of reach (the map's own grid then finds it, as before).
- * To the Ziel leaving, the map's place is the trip's end and the trip leaves at `leaving`.
+ * To the Ziel leaving, the map's place is the trip's end and the trip leaves at `leaving`;
+ * `mapSeconds`, the map's minutes at the tapped place, then bound its first search.
  */
 function bothWays(
   last: LastTrip,
@@ -317,6 +362,7 @@ function bothWays(
   pass: TravelTimeResult | undefined,
   at: { lat: number; lon: number },
   time?: TripTime,
+  mapSeconds?: number,
 ) {
   const other = last.otherTt;
   if (!other || last.travel === 'bikeonly' || !origin) return null;
@@ -335,13 +381,23 @@ function bothWays(
       : depart
         ? { leave: last.from }
         : { arrive: -last.from };
+  // The map's own place is the same on every tap: its walks to the stops are found once.
+  const ends = originWalks(fwd, o, last.travel, w);
   const f = tripBetween(
     fwd,
     back,
     from,
     to,
     time ?? own,
-    { ...w, ...('maxOriginSeconds' in w ? { directMaxSeconds: w.maxOriginSeconds } : {}) },
+    {
+      ...w,
+      ...('maxOriginSeconds' in w ? { directMaxSeconds: w.maxOriginSeconds } : {}),
+      ...(mapFwd ? { fromWalks: ends } : { toWalks: ends }),
+      // To the Ziel leaving at the map's time: the trip arrives about when the map says.
+      ...(!time && last.leaving !== undefined && mapSeconds !== undefined && mapSeconds < Infinity
+        ? { arriveByHint: last.leaving + mapSeconds + HINT_ROOM_S }
+        : {}),
+    },
     time ? undefined : pass,
   );
   if (!f) return null;
@@ -721,7 +777,9 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: Nex
       // A kept trip that no longer fits (the walks changed with the footpaths): the trip
       // leaving at the map's time, as on a map from a start (0.13.8).
       const kept = msg.span && bothWays(at, r.result.origin, undefined, msg, msg.span);
-      return kept || bothWays(at, r.result.origin, undefined, msg);
+      return (
+        kept || bothWays(at, r.result.origin, undefined, msg, undefined, cellSeconds(r.best, msg))
+      );
     }
     const fixed =
       at.otherTt &&

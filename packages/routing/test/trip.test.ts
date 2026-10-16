@@ -4,6 +4,7 @@ import {
   reverseTimetable,
   travelTimes,
   tripBetween,
+  walksToStops,
   type Journey,
   type PreparedTimetable,
   type Timetable,
@@ -51,6 +52,31 @@ describe('tripBetween', () => {
 
   it('is null out of reach', () => {
     expect(tripBetween(fwd, back, near(A), { lat: 0, lon: 0 }, { leave: H10 })).toBeNull();
+  });
+
+  it('comes out the same with the walks at either end given', () => {
+    const fromWalks = walksToStops(fwd, near(A));
+    const toWalks = walksToStops(fwd, near(H));
+    for (const at of [{ leave: H10 + 30 }, { arrive: H10 + 2400 }]) {
+      const x = tripBetween(fwd, back, near(A), near(H), at);
+      expect(tripBetween(fwd, back, near(A), near(H), at, { fromWalks, toWalks })).toEqual(x);
+    }
+  });
+
+  it('comes out the same with a bound on the arrival, too tight or not', () => {
+    const x = tripBetween(fwd, back, near(A), near(H), { leave: H10 + 30 })!;
+    for (const arriveByHint of [x.arrive, x.arrive + 900, x.arrive - 600, H10])
+      expect(
+        tripBetween(fwd, back, near(A), near(H), { leave: H10 + 30 }, { arriveByHint }),
+      ).toEqual(x);
+  });
+
+  it('a search with its walks given is the same as one walking them', () => {
+    const o = { leaveAt: H10 + 30, trackLegs: true };
+    const given = travelTimes(fwd, near(A), { ...o, accessSeconds: walksToStops(fwd, near(A)) });
+    const walked = travelTimes(fwd, near(A), o);
+    expect([...given.stopSeconds]).toEqual([...walked.stopSeconds]);
+    expect([...given.legs!.kind]).toEqual([...walked.legs!.kind]);
   });
 });
 
