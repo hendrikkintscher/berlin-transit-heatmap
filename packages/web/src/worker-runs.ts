@@ -127,8 +127,20 @@ export function travelOptions(travel: Travel) {
         // minutes only, so the first map is as quick as on foot.
         ...(walk ? {} : { maxFinalWalkSeconds: 600, maxFallbackWalkSeconds: 600 }),
       }
-    : { walk, walkSpeedMps };
+    : { walk, walkSpeedMps, ...FASTEST_WALK };
 }
+
+/**
+ * On foot, every walk up to 30 minutes counts at both ends, and the fastest way wins even
+ * with a longer walk (roadmap 0.13.9): before, a walk over 15 minutes counted only where no
+ * stop was nearer, so the map and the trip on tap could each pick another walk (3+ minutes
+ * apart in 16 % of places, now 7 %; bench/walkrule.ts).
+ */
+const FASTEST_WALK = {
+  maxInitialWalkSeconds: 1800,
+  maxFallbackWalkSeconds: 1800,
+  maxFinalWalkSeconds: 1800,
+} as const;
 
 /** Meeting point: each cell gets the slowest trip ("where can we all be in N min?"). */
 export function slowestOf(grids: HeatGrid[]): HeatGrid {
