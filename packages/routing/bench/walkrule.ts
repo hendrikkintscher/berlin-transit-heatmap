@@ -129,16 +129,15 @@ for (const S of STARTS) {
 for (const rule of Object.keys(RULES) as Rule[]) {
   const d = agree[rule];
   const pct = (f: (x: number) => boolean) => ((100 * d.filter(f).length) / d.length).toFixed(0);
+  const p90 = tripMs[rule].slice().sort((a, b) => a - b)[Math.floor(tripMs[rule].length * 0.9)]!;
+  const earlier = tripMin[rule].map((m, i) => tripMin.today[i] - m).filter((x) => x > 0);
   const tripsChanged = tripMin[rule].filter((m, i) => m !== tripMin.today[i]).length;
   console.log(
     `${rule}: ${d.length} places; same minute ${pct((x) => x === 0)} %, within 1 ${pct((x) => x <= 1)} %, ` +
       `3+ apart ${pct((x) => x >= 3)} % (map lower ${signed[rule].filter((x) => x <= -3).length}, ` +
       `higher ${signed[rule].filter((x) => x >= 3).length}); trips changed against today ${tripsChanged} ` +
-      `tap trip ${median(tripMs[rule]).toFixed(1)} ms median, ${tripMs[rule]
-        .slice()
-        .sort((a, b) => a - b)
-        [Math.floor(tripMs[rule].length * 0.9)]!.toFixed(1)} p90; ` +
+      `; tap trip ${median(tripMs[rule]).toFixed(1)} ms median, ${p90.toFixed(1)} p90; ` +
       `longest walk over 15 min in ${longest[rule].filter((x) => x > 15).length} trips ` +
-      `(earlier by ${median(tripMin[rule].map((m, i) => tripMin.today[i] - m).filter((x) => x > 0))} min median)`,
+      (earlier.length ? `(earlier by ${median(earlier)} min median)` : ''),
   );
 }
