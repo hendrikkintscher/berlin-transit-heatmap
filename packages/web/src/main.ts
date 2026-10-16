@@ -952,6 +952,8 @@ function renderBest(r: Result) {
     const label = t('livingBest', { n: Math.round(s.seconds / 60) });
     el.innerHTML = `<i>${i + 1}</i><span>${label}</span>`;
     el.title = label;
+    // Before addTo: MapLibre names a marker without a label just "Map marker".
+    el.setAttribute('aria-label', label);
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       tap.tapAt(s.lat, s.lon);
@@ -989,6 +991,7 @@ function renderMeet(list: Result['meet']) {
     // A star with the rank, so the suggestions do not read as the numbered starts.
     el.innerHTML = `<i>★${i + 1}</i><span>${escapeHtml(shortStop(s.name))}</span>`;
     el.title = t('meetSuggestion', { name: stopName(s.name), list: namedMinutes(s.mins) });
+    el.setAttribute('aria-label', el.title);
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       tap.tapAt(s.lat, s.lon, undefined, stopName(s.name));
@@ -1202,7 +1205,8 @@ function frameView(points: Point[], card = false, animate = true) {
   map.fitBounds(box, {
     padding: { top, bottom, left: 40, right: 96 },
     maxZoom: 15,
-    ...(animate ? { essential: true } : { duration: 0 }),
+    // Not `essential`: MapLibre then skips the animation when the phone asks for less motion.
+    ...(animate ? {} : { duration: 0 }),
   });
 }
 /** The first map from a link with a destination or several starts is framed once. */
@@ -1262,7 +1266,7 @@ locateBtn.addEventListener('click', () => {
         return;
       }
       setOrigin({ lat, lon });
-      map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 12.5), essential: true });
+      map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 12.5) });
     },
     (err) => {
       locateBtn.classList.remove('busy');

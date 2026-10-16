@@ -104,7 +104,8 @@ self.addEventListener('fetch', (event) => {
           fetch(req).then((res) => {
             if (res.ok) {
               const copy = res.clone();
-              caches.open(SHELL).then((c) => c.put(req, copy));
+              // Inside waitUntil: the worker may be stopped once the response is out.
+              event.waitUntil(caches.open(SHELL).then((c) => c.put(req, copy)));
             }
             return res;
           }),
@@ -159,7 +160,7 @@ async function refreshedData(event, req) {
   const c = await caches.open(DATA);
   const cached = await c.match(req);
   const fresh = fetch(req).then((res) => {
-    if (res.ok) c.put(req, res.clone()).then(() => trim(c));
+    if (res.ok) event.waitUntil(c.put(req, res.clone()).then(() => trim(c)));
     return res;
   });
   if (cached) {
@@ -206,7 +207,8 @@ async function mapResponse(event, req, url) {
   const immutable = /\/(sprites|fonts)\/|\/\d{8}_\d{6}_\w+\//.test(url.pathname);
   if (cached && immutable) return cached;
   const fresh = fetch(req).then((res) => {
-    if (res.ok) c.put(req, res.clone()).then(() => ++tilePuts % TRIM_EVERY || trimTiles(c));
+    if (res.ok)
+      event.waitUntil(c.put(req, res.clone()).then(() => ++tilePuts % TRIM_EVERY || trimTiles(c)));
     return res;
   });
   if (cached) {

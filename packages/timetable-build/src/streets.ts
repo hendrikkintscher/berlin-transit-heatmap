@@ -13,12 +13,10 @@
  * point's offset from the box's south-west corner in 1e-4 degrees (about 10 m), in base 36.
  * plz and town may be empty.
  */
-import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';
-import { createGunzip } from 'node:zlib';
 import { REGION, type Box } from '../../routing/src/regions.ts';
 import { distanceM } from './geo.ts';
-import { parseTags } from './walk.ts';
+import { openText, parseTags } from './walk.ts';
 
 /** Road types that make up the street names people search for. */
 const STREET_TYPES = new Set([
@@ -118,8 +116,7 @@ export async function buildStreets(
 
 /** Reads a plain or gzipped OPL file into the street list. */
 export async function readStreetsFile(path: string, box?: Box): Promise<Street[]> {
-  let input: NodeJS.ReadableStream = createReadStream(path);
-  if (path.endsWith('.gz')) input = input.pipe(createGunzip());
+  const input = openText(path);
   return buildStreets(createInterface({ input, crlfDelay: Infinity }), box);
 }
 

@@ -101,13 +101,22 @@ export function parseTags(field: string): Map<string, string> {
   return tags;
 }
 
+/** A plain or gzipped file as a stream; a read error (say ENOENT) reaches its reader. */
+export function openText(path: string): NodeJS.ReadableStream {
+  const file = createReadStream(path);
+  if (!path.endsWith('.gz')) return file;
+  const gunzip = createGunzip();
+  // pipe() does not pass the file's errors on: without this, a missing file is uncaught.
+  file.on('error', (e) => gunzip.destroy(e));
+  return file.pipe(gunzip);
+}
+
 /** Reads OPL lines (plain or gzipped file) into the walking graph. */
 export async function readOplFile(
   path: string,
   bbox?: BBox,
 ): Promise<{ graph: WalkGraph; stats: WalkBuildStats }> {
-  let input: NodeJS.ReadableStream = createReadStream(path);
-  if (path.endsWith('.gz')) input = input.pipe(createGunzip());
+  const input = openText(path);
   const lines = createInterface({ input, crlfDelay: Infinity });
   return buildWalkGraph(lines, bbox);
 }

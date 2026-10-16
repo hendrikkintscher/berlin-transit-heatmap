@@ -81,10 +81,15 @@ export function initMenu(deps: MenuDeps) {
     menuDialog.close();
     infoDialog.showModal();
   });
-  // A tap on the backdrop (outside the panel) closes any sheet.
+  // A tap on the backdrop (outside the panel) closes any sheet. The dialog itself is also
+  // the target of a tap in its padding, so the point is checked against its box.
   for (const d of [menuDialog, infoDialog]) {
     d.addEventListener('click', (e) => {
-      if (e.target === d) d.close();
+      if (e.target !== d) return;
+      const r = d.getBoundingClientRect();
+      const inside =
+        e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      if (!inside) d.close();
     });
   }
 

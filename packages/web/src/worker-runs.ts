@@ -19,7 +19,7 @@ import {
   type UsedSegment,
 } from '@berlin-transit-heatmap/routing';
 import { departuresPerHour, stations } from './layers';
-import { type MeetCandidate } from './meet';
+import type { MeetCandidate } from './meet';
 import type { Travel } from './protocol';
 import { walk, walkSpeedMps } from './worker-paths';
 

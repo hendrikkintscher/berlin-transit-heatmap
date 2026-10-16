@@ -14,7 +14,7 @@ import { OUTLINE_BLUR_CELLS, paint } from './paint';
 import type { FromWorker, ToWorker, Travel, Window } from './protocol';
 import { HOME_LUT } from './worker-paint';
 import { setWalkKmh } from './worker-paths';
-import { ctx, post } from './worker-post';
+import { ctx, nextTask, post } from './worker-post';
 import { CELL_M, cellIndex, run, travelOptions } from './worker-runs';
 import { prepared, type Variant } from './worker-timetables';
 import { setLastTrip, trip, nearRun } from './worker-trips';
@@ -96,7 +96,8 @@ export async function home(msg: Extract<ToWorker, { type: 'home' }>) {
       }
     }
     post({ type: 'mapProgress', id: msg.id, done: f + 1, total: msg.windows.length });
-    await new Promise((r) => setTimeout(r, 0));
+    // A message to itself, not a timer: the messages queued meanwhile get in first.
+    await nextTask();
     if (livingId !== msg.id) return;
   }
   if (!tt || !fast || !any || !fastPass) return;
@@ -222,7 +223,7 @@ export async function living(msg: Extract<ToWorker, { type: 'living' }>) {
     seconds.push(g.seconds);
     post({ type: 'mapProgress', id: msg.id, done: i + 1, total: msg.places.length });
     // Let a newer request (or a tap) in between places.
-    await new Promise((r) => setTimeout(r, 0));
+    await nextTask();
     if (livingId !== msg.id) return;
   }
   if (!layout) return;
@@ -243,7 +244,8 @@ export async function living(msg: Extract<ToWorker, { type: 'living' }>) {
   const image = paint(grid);
   const outlines = traceOutlines(grid.seconds, grid.cols, grid.rows, grid.bbox, OUTLINE_BLUR_CELLS);
   const empty = { type: 'FeatureCollection' as const, features: [] };
-  const values = Float32Array.from(grid.seconds) as Float32Array<ArrayBuffer>;
+  // The score grid is not kept (livingMap has the places' own), so it moves without a copy.
+  const values = grid.seconds as Float32Array<ArrayBuffer>;
   ctx.postMessage(
     {
       type: 'result',

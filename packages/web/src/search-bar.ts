@@ -342,7 +342,7 @@ export function initSearch(deps: SearchDeps) {
       deps.tapAt(p.lat, p.lon, undefined, p.label, true);
     } else {
       // Far enough out for about the 45-minute ring around the new start (C8).
-      map.flyTo({ center: [p.lon, p.lat], zoom: reachZoom(p.lat), essential: true });
+      map.flyTo({ center: [p.lon, p.lat], zoom: reachZoom(p.lat) });
       deps.setOrigin(p);
     }
   }

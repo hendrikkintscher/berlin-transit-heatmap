@@ -21,12 +21,19 @@ concurrency:
 env:
   OSM_TAG: osm-latest
 
+# Steps run as bash -eo pipefail: a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -54,7 +61,8 @@ jobs:
       - name: Filter walkable ways
         run: |
           cd work
-          osmium merge $(for r in $EXTRACTS; do echo "$r.osm.pbf"; done) -o merged.osm.pbf
+          read -ra extracts <<<"$EXTRACTS"
+          osmium merge "${extracts[@]/%/.osm.pbf}" -o merged.osm.pbf
           osmium extract -b "$BBOX" --strategy complete_ways merged.osm.pbf -o area.osm.pbf
           osmium tags-filter -t area.osm.pbf \
             w/highway w/railway=platform w/public_transport=platform \

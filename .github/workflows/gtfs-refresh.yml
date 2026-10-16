@@ -25,12 +25,19 @@ concurrency:
 env:
   LATEST_TAG: gtfs-latest
 
+# Steps run as bash -eo pipefail: a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -51,12 +58,13 @@ jobs:
         id: changed
         env:
           GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force }}
         run: |
           previous=""
           if gh release download "$LATEST_TAG" -p manifest.json -O work/previous.json 2>/dev/null; then
             previous=$(jq -r '.sha256 // empty' work/previous.json)
           fi
-          if [ "$previous" = "$SHA256" ] && [ "${{ inputs.force }}" != "true" ]; then
+          if [ "$previous" = "$SHA256" ] && [ "$FORCE" != "true" ]; then
             echo "Feed unchanged ($SHA256), nothing to publish."
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else

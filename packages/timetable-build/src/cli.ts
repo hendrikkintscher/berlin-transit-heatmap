@@ -30,6 +30,18 @@ if (values.help || !values.gtfs || !values.out) {
   process.exit(values.help ? 0 : 1);
 }
 
+// Checked first: a typo should not wait for the walking network to load.
+const dayCount = Number(values.days ?? 0);
+if (!Number.isInteger(dayCount) || dayCount < 0)
+  throw new Error(`--days must be a whole number of 0 or more, got ${values.days}`);
+for (const [flag, value] of [
+  ['today', values.today],
+  ['date', values.date],
+] as const) {
+  if (value !== undefined && !/^\d{4}-?\d{2}-?\d{2}$/.test(value))
+    throw new Error(`--${flag} must be a date like 2026-10-16, got ${value}`);
+}
+
 const mb = (n: number) => `${(n / 1e6).toFixed(2)} MB`;
 const bin = (info: object) => (info as { walk: { bytes: number; gzipBytes: number } }).walk;
 const started = Date.now();
@@ -49,7 +61,6 @@ if (values.osm) {
 }
 
 // Real dates: today in Berlin and the days after it, each with its own 24 hourly windows.
-const dayCount = Number(values.days ?? 0);
 const today = values.today ? values.today.replaceAll('-', '') : berlinToday();
 const dates = Array.from({ length: dayCount }, (_, i) => addDays(today, i));
 

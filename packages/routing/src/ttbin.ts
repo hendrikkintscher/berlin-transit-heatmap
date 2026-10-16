@@ -209,6 +209,7 @@ export function decodeTimetable(data: ArrayBuffer | Uint8Array): TimetableData {
     };
     if (uvar() & 1) s.stepFree = false;
     const parent = uvar();
+    if (parent > stops.length) throw new Error('Timetable file is inconsistent');
     if (parent) s.parent = parent - 1;
     stops[i] = s;
   }

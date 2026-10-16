@@ -72,6 +72,24 @@ describe('geo', () => {
     forEachNearbyPair(points, 400, (i, j) => pairs.push([i, j]));
     expect(pairs).toEqual([[0, 1]]);
   });
+
+  it('finds pairs further north than the first point', () => {
+    // Cells sized at the first point's latitude are narrower than the radius further
+    // north: two points 296 m apart there could sit two cells apart and be missed.
+    const R = 300;
+    const cellLon = R / (111_320 * Math.cos((52.25 * Math.PI) / 180));
+    const k = Math.ceil(13.4 / cellLon);
+    const points = [
+      { lat: 52.25, lon: 13.4 },
+      { lat: 52.8, lon: k * cellLon - 1e-7 },
+      { lat: 52.8, lon: (k + 1) * cellLon + 1e-7 },
+    ];
+    const metres = distanceM(52.8, points[1]!.lon, 52.8, points[2]!.lon);
+    expect(metres).toBeLessThan(R);
+    const pairs: [number, number][] = [];
+    forEachNearbyPair(points, R, (i, j) => pairs.push([i, j]));
+    expect(pairs).toEqual([[1, 2]]);
+  });
 });
 
 describe('build helpers', () => {

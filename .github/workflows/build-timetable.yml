@@ -25,7 +25,7 @@ on:
         default: '300'
 
 permissions:
-  contents: write
+  contents: read
   actions: read
 
 concurrency:
@@ -43,6 +43,11 @@ env:
   CEILING_PERCENT: 150
   # Real dates with their own hourly files: today and the next seven days.
   DAYS: 8
+
+# Steps run as bash -eo pipefail: a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
 
 jobs:
   # The scheduled run builds only when the nightly one did not: the published files do
@@ -93,8 +98,13 @@ jobs:
         (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Publishing the release is the only write in this workflow.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -119,9 +129,9 @@ jobs:
 
       - name: Build timetable files
         run: |
-          osm=""
-          if [ -f work/walkways.opl.gz ]; then osm="--osm work/walkways.opl.gz"; fi
-          NODE_OPTIONS=--max-old-space-size=6144 pnpm build-timetable --gtfs work/GTFS.zip --out work/out --days "$DAYS" $osm
+          osm=()
+          if [ -f work/walkways.opl.gz ]; then osm=(--osm work/walkways.opl.gz); fi
+          NODE_OPTIONS=--max-old-space-size=6144 pnpm build-timetable --gtfs work/GTFS.zip --out work/out --days "$DAYS" "${osm[@]}"
           # Record which feed the files were built from.
           jq --slurpfile gtfs work/manifest.json '. + {gtfs: $gtfs[0]}' work/out/build-info.json > work/build-info.json
           mv work/build-info.json work/out/build-info.json
@@ -151,12 +161,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          SWAP_ABOVE: ${{ inputs.swap_above || '300' }}
         run: |
           service=$(jq -r .serviceDate work/out/build-info.json)
           feed=$(jq -r '.gtfs.serviceStart + " to " + .gtfs.serviceEnd' work/out/build-info.json)
           dates=$(jq -r '.stats.dates | if length > 0 then "\(.[0]) to \(.[-1])" else "none" end' work/out/build-info.json)
           notes="Timetable files for the web app, built $(date -u +%Y-%m-%d) from VBB GTFS ($feed). Reference service day: $service. Real dates: $dates. Data © VBB, CC BY 4.0."
           # Only new and changed files go up, never leaving one missing (scripts/publish).
-          keep=""
-          if [ ! -f work/out/walk.bin ]; then keep="--keep walk.bin --keep streets.json"; fi
-          node scripts/publish/publish.mjs --dir work/out --tag "$TIMETABLE_TAG" --notes "$notes" --swap-above "${{ inputs.swap_above || '300' }}" $keep
+          keep=()
+          if [ ! -f work/out/walk.bin ]; then keep=(--keep walk.bin --keep streets.json); fi
+          node scripts/publish/publish.mjs --dir work/out --tag "$TIMETABLE_TAG" --notes "$notes" --swap-above "$SWAP_ABOVE" "${keep[@]}"

@@ -9,6 +9,7 @@
 # per 100 files to list them), or those whose names match DOWNLOAD_ONLY (an extended
 # regular expression) when it is set.
 set -euo pipefail
+: "${GITHUB_REPOSITORY:?must be set}"
 tag=$1
 dir=$2
 shift 2
@@ -25,5 +26,9 @@ if [ $# -eq 0 ]; then
   mapfile -t files < <(printf '%s\n' "${files[@]}" | grep -E "${DOWNLOAD_ONLY:-\.(json|bin)\$}")
   set -- "${files[@]}"
 fi
-printf '%s\n' "$@" | xargs -P 8 -I{} curl -fsSL --retry 3 -o "$dir/{}" "$base/{}"
+[ $# -gt 0 ] || { echo "download.sh: no files to fetch from $tag" >&2; exit 1; }
+# Each file lands under its own name only when complete: a failed fetch leaves no half file.
+# shellcheck disable=SC2016 # the inner sh expands $1-$3, not this one
+printf '%s\n' "$@" | xargs -P 8 -I{} sh -c \
+  'curl -fsSL --retry 3 -o "$1/$2.part" "$3/$2" && mv "$1/$2.part" "$1/$2"' _ "$dir" {} "$base"
 echo "Downloaded $# files from $tag"

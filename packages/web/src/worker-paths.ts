@@ -37,7 +37,7 @@ export function setWalkKmh(kmh: number) {
 }
 
 /** The bar moves at most this often, so a fast download does not keep the page busy. */
-const PROGRESS_MS = 100;
+export const PROGRESS_MS = 100;
 
 export async function loadWalk(): Promise<void> {
   if (walkStarted) return;
@@ -65,8 +65,9 @@ export async function loadWalk(): Promise<void> {
     walk = net;
     post({ type: 'walk' });
   } catch (err) {
-    // Straight-line walking stays in place.
+    // Straight-line walking stays in place; a later loadWalk tries again.
     console.warn('Walking network not used:', err);
+    walkStarted = false;
     post({ type: 'walkFailed' });
   }
 }

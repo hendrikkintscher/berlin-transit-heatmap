@@ -467,7 +467,8 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   // While the card is open, "los in X Min." counts down; once the connection is missed,
   // the next one is asked for.
   setInterval(() => {
-    if (readout.hidden || !tripAt) return;
+    // Not in a background tab: no live checks nobody sees (the next tick catches up).
+    if (document.hidden || readout.hidden || !tripAt) return;
     const now = clockNow(state.when);
     if (now === null) return;
     if (Date.now() - liveAt > 60_000) checkLive();

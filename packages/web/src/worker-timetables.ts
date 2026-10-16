@@ -12,6 +12,7 @@ import {
 import { dataUrl } from './data-url';
 import type { Direction, Window } from './protocol';
 import { typicalWindow } from './when';
+import { PROGRESS_MS } from './worker-paths';
 import { post } from './worker-post';
 
 /** Where the region's data files are (data/<region>/), from the app's first message. */
@@ -44,11 +45,18 @@ async function downloadTimetable(
   const binary = res.ok && res.body !== null && !res.headers.get('content-type')?.includes('html');
   // A date has only the binary file; without one (the evening before today, or a day the
   // build has not reached yet) its typical day stands in, and says so by its serviceDate.
+  if (!binary) void res.body?.cancel();
   if (!binary && typical) return downloadTimetable(window, typical, null);
   if (!binary) throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
-  const buf = await readWithProgress(res.body, res, (loaded, total) =>
-    post({ type: 'progress', window, loaded, total }),
-  );
+  // The bar moves at most every PROGRESS_MS: one main-thread task per chunk would compete
+  // with the first map.
+  let reportedAt = -Infinity;
+  const buf = await readWithProgress(res.body, res, (loaded, total) => {
+    const now = performance.now();
+    if (now - reportedAt < PROGRESS_MS && loaded < total) return;
+    reportedAt = now;
+    post({ type: 'progress', window, loaded, total });
+  });
   return decodeTimetable(buf) as Timetable;
 }
 

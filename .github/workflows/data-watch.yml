@@ -26,6 +26,11 @@ concurrency:
   group: data-watch
   cancel-in-progress: false
 
+# Steps run as bash -eo pipefail: a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   check:
     runs-on: ubuntu-latest

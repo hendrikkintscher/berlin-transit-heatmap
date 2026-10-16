@@ -41,7 +41,10 @@ export function forEachNearbyPair(
   onPair: (i: number, j: number, metres: number) => void,
 ): void {
   if (points.length === 0) return;
-  const refLat = points[0]!.lat;
+  // Cells as wide as the radius at the point furthest from the equator, so they are at
+  // least that wide everywhere and no pair can sit two cells apart.
+  let refLat = 0;
+  for (const p of points) refLat = Math.max(refLat, Math.abs(p.lat));
   const cellLat = radiusM / 111_320;
   const cellLon = radiusM / (111_320 * Math.cos(refLat * RAD));
   const grid = new Map<string, number[]>();

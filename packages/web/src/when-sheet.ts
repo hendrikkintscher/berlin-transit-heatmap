@@ -57,6 +57,21 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
   const timeInput = $<HTMLInputElement>('when-time');
   const timeBox = $('when-time-box');
   const dayRow = document.querySelector<HTMLElement>('#pop-when .day-row')!;
+  const pop = $('pop-when');
+  /**
+   * Typical days sit at the end of the row, so the chosen one is scrolled into view. It
+   * reads layout, so only while the panel is open: ⇅ and moving the rings re-render here.
+   */
+  function scrollPicked() {
+    if (pop.hidden) return;
+    const picked = dayRow.querySelector<HTMLElement>('[aria-checked="true"]');
+    if (picked && picked.offsetLeft + picked.offsetWidth > dayRow.scrollLeft + dayRow.clientWidth)
+      dayRow.scrollLeft = picked.offsetLeft + picked.offsetWidth - dayRow.clientWidth;
+  }
+  // After the chip row's own click handler has opened the panel (chips.ts).
+  document
+    .querySelector('[data-pop="when"]')
+    ?.addEventListener('click', () => setTimeout(scrollPicked));
 
   /** Today and the next days (they move on at midnight), then the typical days to compare. */
   function renderDays() {
@@ -135,10 +150,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
       });
     for (const b of [...dayGrid.children, ...typicalButtons])
       b.setAttribute('aria-checked', String((b as HTMLElement).dataset.day === w.day));
-    // Typical days sit at the end of the row, so the chosen one is scrolled into view.
-    const picked = dayRow.querySelector<HTMLElement>('[aria-checked="true"]');
-    if (picked && picked.offsetLeft + picked.offsetWidth > dayRow.scrollLeft + dayRow.clientWidth)
-      dayRow.scrollLeft = picked.offsetLeft + picked.offsetWidth - dayRow.clientWidth;
+    scrollPicked();
     // Today's hours that are over are greyed out (the chosen one stays as it is).
     const now = new Date();
     for (const b of hourGrid.children as HTMLCollectionOf<HTMLButtonElement>) {
