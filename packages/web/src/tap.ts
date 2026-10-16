@@ -92,9 +92,9 @@ const SWAP_WAIT_MS = 2500;
 const LINK_SLACK_S = 5;
 /**
  * Seconds a trip span kept before the footpaths were in is widened by on each side once they
- * are: the walks at the ends change with them. Over 300 random trips (bench/kept.ts) the same
- * rides then come out in 43–49 %, against 24–30 % with the usual trip; wider spans let other
- * trips in (0.13.8d).
+ * are: the walks at the ends change with them. Over 296 random trips (bench/kept.ts) the card
+ * then keeps the same rides in 43 % (with the usual trip where none fits), against 24 % with
+ * only the usual trip; 180 s gains 2 points more but lets other trips in (0.13.8d).
  */
 const FOOTPATH_SLACK_S = 120;
 
@@ -755,6 +755,8 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     map: string;
     /** Found with straight-line walks: widened once the footpaths are in. */
     straight?: true;
+    /** Seconds the card's ask widens the span by on each side (the link keeps it as it is). */
+    slack?: number;
   } | null = null;
   /** What the map is computed for, as far as the kept trip goes. */
   const mapKey = () =>
@@ -783,7 +785,8 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   function keptSpan(lat: number, lon: number) {
     const span = keptFor(lat, lon);
     if (!span) kept = null;
-    return span ? { span } : {};
+    const s = kept?.slack ?? 0;
+    return span ? { span: { leave: span.leave - s, arrive: span.arrive + s } } : {};
   }
 
   // The rings move to the place, which keeps its role (a Ziel stays the Ziel: the direction
@@ -997,18 +1000,11 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     onLiving,
     addChangeNotes,
     /**
-     * The footpaths are in: a trip kept with straight-line walks gets a wider span, so the
-     * card asks for it again around the new walks once the map is redone (0.13.8d).
+     * The footpaths are in: a trip kept with straight-line walks is asked for with a wider
+     * span, so the card finds it again around the new walks once the map is redone (0.13.8d).
      */
     onFootpaths() {
-      if (!kept?.straight) return;
-      const { leave, arrive } = kept.span;
-      kept = {
-        lat: kept.lat,
-        lon: kept.lon,
-        map: kept.map,
-        span: { leave: leave - FOOTPATH_SLACK_S, arrive: arrive + FOOTPATH_SLACK_S },
-      };
+      if (kept?.straight) kept = { ...kept, straight: undefined, slack: FOOTPATH_SLACK_S };
     },
     /** The place kept in the link. */
     spot: (): Point | null => spot,

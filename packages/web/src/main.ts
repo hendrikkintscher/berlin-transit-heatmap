@@ -391,8 +391,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     refining = false;
     if (m.living || m.home) special.done(m);
     state.result = m;
-    if (refined && !basemapUp) holdRings(m);
-    else showResult(m);
+    // Redone with the footpaths before the base map is up: its rings and lines wait for it.
+    showResult(m, !(refined && !basemapUp));
     // A switch changed while it was computing.
     syncImage();
     tap.onResult();
@@ -423,8 +423,7 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (!r || r.id !== m.id) return;
     r.routes = m.routes;
     r.labels = m.labels;
-    (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
-    (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
+    if (held !== r) showLines(r, false);
   } else if (m.type === 'moreTrips') {
     tap.onMoreTrips(m);
   } else if (m.type === 'placeName') {
@@ -788,8 +787,8 @@ function clearResult() {
   showHeat();
   if (!state.mapReady) return;
   const empty: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
-  for (const id of [ROUTES_SOURCE, LABELS_SOURCE, OUTLINES_SOURCE])
-    (map.getSource(id) as GeoJSONSource | undefined)?.setData(empty);
+  held = null;
+  for (const id of [ROUTES_SOURCE, LABELS_SOURCE, OUTLINES_SOURCE]) setLayerData(id, empty);
 }
 
 /**
@@ -1005,8 +1004,8 @@ map.on('zoomend', showMeetNames);
 showMeetNames();
 
 let firstMapShown = false;
-function showResult(r: Result) {
-  held = null;
+function showResult(r: Result, rings = true) {
+  held = rings ? null : r;
   renderMeet(r.meet);
   renderBest(r);
   frameResult(r);
@@ -1014,9 +1013,7 @@ function showResult(r: Result) {
   showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined, !!r.living);
   if (!state.mapReady) return;
   drawHeat(r);
-  (map.getSource(ROUTES_SOURCE) as GeoJSONSource | undefined)?.setData(r.routes);
-  (map.getSource(LABELS_SOURCE) as GeoJSONSource | undefined)?.setData(r.labels);
-  (map.getSource(OUTLINES_SOURCE) as GeoJSONSource | undefined)?.setData(r.outlines);
+  if (rings) showLines(r);
   showHeat();
   map.triggerRepaint();
   // For timing the first load (roadmap 0.13.0): the first map is on its way to the screen.
@@ -1031,19 +1028,31 @@ function showResult(r: Result) {
 
 /**
  * The map redone with the footpaths before the base map is up: its colours go on at once,
- * its time rings, lines and labels (and pins) once the base map is up (showHeld). Put on
- * earlier, the rings held the base map up by about 1 s with the page CPU slowed 4×, while
- * the colours and the redo itself did not (0.13.8).
+ * its time rings, lines and labels once the base map is up (showHeld). With the page CPU
+ * slowed 4×, the rings put on at once held the base map up by 0.2–0.6 s (medians over 8
+ * visits), the colours did not (0.13.8a).
  */
 let held: Result | null = null;
-function holdRings(r: Result) {
-  held = r;
-  drawHeat(r);
-}
-/** The base map is up: the held map goes on in full (unless a newer one replaced it). */
+/** The base map is up: the held map's rings and lines go on (unless a newer map came). */
 function showHeld() {
-  if (held && state.result === held) showResult(held);
+  if (held && state.result === held) showLines(held);
   held = null;
+}
+/** The time rings (unless `rings` is false), the lines and their labels. */
+function showLines(r: Result, rings = true) {
+  if (rings) setLayerData(OUTLINES_SOURCE, r.outlines);
+  setLayerData(ROUTES_SOURCE, r.routes);
+  setLayerData(LABELS_SOURCE, r.labels);
+}
+/** What each ring and line layer shows: data that did not change is not sent again. */
+const layerData = new Map<string, GeoJSON.FeatureCollection>();
+function setLayerData(id: string, data: GeoJSON.FeatureCollection) {
+  const src = map.getSource(id) as GeoJSONSource | undefined;
+  if (!src) return;
+  const was = layerData.get(id);
+  if (was === data || (was && !was.features.length && !data.features.length)) return;
+  layerData.set(id, data);
+  src.setData(data);
 }
 
 /** Puts the result's colour image on the map (an empty one while it is unpainted). */

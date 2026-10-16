@@ -1,6 +1,6 @@
-# Roadmap V1.48
+# Roadmap V1.49
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.7**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.8**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -18,15 +18,10 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 ## Inbox
 
-(empty)
+- 2026-10-16 (from 0.13.8): a trip kept by moving the map before the footpaths are in now stays on the card in 7 of 9 checked moves (bench/kept.ts over 296 random trips: same rides in 38 %, 43 % counting the usual trip where none fits, against 24 % before); in the rest the footpath walks at the ends miss the kept vehicles. Asking by the rides themselves (first departure less the new walk, last arrival plus it) measured no better (38 %). Holding the move until the footpaths are in would keep the trip every time, but makes an early move slower: Hendrik decides whether it is worth it.
+- 2026-10-16 (from 0.13.8): the speed check's Node map timings vary by up to ±9 % between runs with no routing change (Köpenick 134 against 123 ms on the same machine); a budget on them would need several runs or a wider margin.
 
 ## 0.13 Faster and steadier routing
-
-- **0.13.8 Footpaths on the map a second sooner**. Side note from 0.13.2 (2026-10-14): "Handing footpaths to the map right after unpacking would make them ready ~1 s sooner again (2.8 s), but redoing the map with them then delayed base map labels by ~1 s, so it wasn't kept. A cheaper map redo would unlock that second." Plan from the 0.13.2 thread; expected gain about 1 s (footpaths ready around 2.8 s instead of 3.76 s at 360×740).
-  - a. Measure which part of the map redo costs the base map time: the new colours (one picture), the time rings, or the line courses with their name labels. Same 360×740 setup as 0.13.2.
-  - b. Hand the footpaths over right after unpacking: put the new colours on the map at once; send rings, line courses and labels only once the base map is up, and skip them when they did not change. If a shows the rings are cheap, they go with the colours, so colours and rings never disagree.
-  - c. Keep it only if the base map stays within noise and taps stay as fast; otherwise drop it and report the numbers.
-  - d. Inbox note from 0.13.4 (2026-10-15): moving the map to the other end of a trip before the footpaths load keeps a trip found with straight-line walks; once the footpaths arrive it may not fit, and the card falls back to the usual trip. Ask for the kept trip again with the footpaths (its span a little wider), so the card keeps it.
 
 - **0.13.9 Map walk rule: fastest, even with a longer walk (decision)**. From 0.13.4 (2026-10-15, Hendrik's call): "should the map use the "fastest, even with a longer walk" rule like the trip on tap? Brings them closer but changes the map at the edges of town (ties in with #237)." Today the map uses its 15-minute walk rule and #237's less walking on equal arrival, so map minutes and the tapped trip are 3 or more minutes apart in 8 % of places (0.13.4 check over 386 places).
   - a. Measure, with the same 386 places, how often map and trip agree under the "fastest, even with a longer walk" rule, and where the map changes (edges of town, long walks to a faster line), with before/after screenshots at 360×740.
