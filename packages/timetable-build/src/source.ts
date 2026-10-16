@@ -41,6 +41,9 @@ async function openZip(path: string): Promise<GtfsSource> {
     zip.on('end', resolve);
     zip.on('error', reject);
     zip.readEntry();
+  }).catch((err: unknown) => {
+    zip.close();
+    throw err;
   });
   return {
     has: (name) => entries.has(name),

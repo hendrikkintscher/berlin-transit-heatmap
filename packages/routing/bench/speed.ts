@@ -25,7 +25,11 @@ const web = webDir
   ? await Promise.all([
       load<typeof import('../../web/src/paint')>('paint.ts'),
       load<typeof import('../../web/src/contours')>('contours.ts'),
-    ]).catch(() => null)
+    ]).catch((e: unknown) => {
+      // Only a missing module means an older app; any other error is a real failure.
+      if ((e as { code?: string }).code === 'ERR_MODULE_NOT_FOUND') return null;
+      throw e;
+    })
   : null;
 
 // As in the app (worker-runs.ts): 50 m cells, typical times, lines on; walking at 4 km/h

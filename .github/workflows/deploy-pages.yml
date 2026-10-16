@@ -13,13 +13,16 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # Pull requests are tested by CI (ci.yml); this only deploys.
 concurrency:
   group: pages-deploy
   cancel-in-progress: false
+
+# Steps run as bash -eo pipefail: a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
@@ -62,13 +65,15 @@ jobs:
           # Each region's data in its own folder (data/<id>/, see packages/web/src/region.ts).
           dir="packages/web/dist/data/$(node scripts/region.mjs id)"
           mkdir -p "$dir"
-          if scripts/publish/download.sh timetable-latest "$dir"; then
-            ls -la "$dir"
-            # The files' versions go into the start page: phones keep each file until it changes.
-            node scripts/publish/data-versions.mjs "$dir" packages/web/dist/index.html
-          else
+          if ! gh release view timetable-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::warning::No timetable-latest release yet; the app will run on demo data."
+            exit 0
           fi
+          # A failed download fails the deploy: half a data folder is worse than the last site.
+          scripts/publish/download.sh timetable-latest "$dir"
+          ls -la "$dir"
+          # The files' versions go into the start page: phones keep each file until it changes.
+          node scripts/publish/data-versions.mjs "$dir" packages/web/dist/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -77,6 +82,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only the deploy job may publish to Pages (the build job runs installed packages).
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

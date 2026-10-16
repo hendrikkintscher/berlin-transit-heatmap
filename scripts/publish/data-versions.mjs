@@ -9,6 +9,7 @@
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 /** The version key of a data file: "timetable" for all timetables, else its name without extension. */
 export const versionKey = (name) =>
@@ -41,7 +42,7 @@ export function withVersions(html, versions) {
   return html.replace(charset, (m) => `${m}    ${tag}\n`);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [dir, page] = process.argv.slice(2);
   if (!dir || !page) {
     console.error('usage: data-versions.mjs <data dir> <index.html>');

@@ -75,14 +75,16 @@ export function decodeLines(
   stopPos: (s: number) => [number, number],
 ): LineShapes {
   const bytes = new Uint8Array(buffer);
-  if (new DataView(buffer).getUint32(0, true) !== MAGIC || bytes[4] !== 1)
+  if (bytes.length < 5 || new DataView(buffer).getUint32(0, true) !== MAGIC || bytes[4] !== 1)
     throw new Error('not a lines.bin file');
   let p = 5;
   const uvar = () => {
     let v = 0;
     let mul = 1;
     for (;;) {
-      const b = bytes[p++]!;
+      const b = bytes[p++];
+      // Past the end b is undefined, and the loop would never stop.
+      if (b === undefined) throw new Error('lines.bin is truncated');
       v += (b & 127) * mul;
       if (b < 128) return v;
       mul *= 128;
@@ -111,6 +113,7 @@ export function decodeLines(
     }
     if (a < stopCount && b < stopCount) inner.set(a * stopCount + b, pts);
   }
+  if (p !== bytes.length) throw new Error('lines.bin is inconsistent');
   return { stopCount, inner };
 }
 

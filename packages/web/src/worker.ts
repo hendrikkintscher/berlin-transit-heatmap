@@ -5,7 +5,7 @@
 // colour images (worker-paint.ts) live in their own modules.
 import { REGION, type PreparedTimetable } from '@berlin-transit-heatmap/routing';
 import { outlines as traceOutlines } from './contours';
-import { OUTLINE_BLUR_CELLS, paint } from './paint';
+import { OUTLINE_BLUR_CELLS, type paint } from './paint';
 import { accessGrid, departuresPerHour, stations } from './layers';
 import { suggestMeetingPoints } from './meet';
 import { earlyLoad, linkHasStart } from './early';
@@ -275,6 +275,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         stepFree: first.stepFree,
         bike: first.bike,
       });
+      // Not left unhandled when mapAhead throws first (awaited below otherwise).
+      loading.catch(() => undefined);
       // The first map, while the app's code still loads: it takes it when it asks for it.
       firstMap = mapAhead(msg);
       await loading;
@@ -389,7 +391,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const next = msg.window && msg.leaveAt !== undefined ? await nextHour(msg.window) : null;
       if (msg.id !== latestTrip) return;
       post({ type: 'trip', id: msg.id, ...tapTrip(msg, next) });
-    }
+    } else msg satisfies never;
   } catch (err) {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });
   }

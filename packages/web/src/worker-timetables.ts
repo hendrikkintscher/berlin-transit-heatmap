@@ -44,6 +44,7 @@ async function downloadTimetable(
   const binary = res.ok && res.body !== null && !res.headers.get('content-type')?.includes('html');
   // A date has only the binary file; without one (the evening before today, or a day the
   // build has not reached yet) its typical day stands in, and says so by its serviceDate.
+  if (!binary) void res.body?.cancel();
   if (!binary && typical) return downloadTimetable(window, typical, null);
   if (!binary) throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
   const buf = await readWithProgress(res.body, res, (loaded, total) =>

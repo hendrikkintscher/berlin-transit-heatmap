@@ -2243,3 +2243,16 @@ body.special .legend {
   border-color: var(--accent);
   outline: none;
 }
+
+/* Less motion when the phone asks for it: animations and transitions end at once (still
+   firing their end events), and the map skips its flights (no `essential` in main.ts). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

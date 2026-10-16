@@ -20,12 +20,19 @@ concurrency:
   group: tag-version
   cancel-in-progress: false
 
+# Steps run as bash -eo pipefail: a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
   tag:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Tag the version if new
         env:

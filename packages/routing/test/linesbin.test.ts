@@ -31,4 +31,14 @@ describe('lines.bin', () => {
     expect(hopCourse(lines, 3, 4, pos)).toEqual([pos(3), pos(4)]);
     expect(hopCourse(null, 0, 1, pos)).toEqual([pos(0), pos(1)]);
   });
+
+  it('throws on a cut-off or padded file instead of hanging', () => {
+    const bytes = encodeLines([{ a: 0, b: 1, inner: [[13.402, 52.501]] }], pos);
+    // A truncated last number used to loop forever (bytes past the end are undefined).
+    expect(() => decodeLines(bytes.slice(0, -2).buffer, 10, pos)).toThrow(/truncated/);
+    const padded = new Uint8Array(bytes.length + 1);
+    padded.set(bytes);
+    expect(() => decodeLines(padded.buffer, 10, pos)).toThrow(/inconsistent/);
+    expect(() => decodeLines(new ArrayBuffer(2), 10, pos)).toThrow(/not a lines.bin/);
+  });
 });

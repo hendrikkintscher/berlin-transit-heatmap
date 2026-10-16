@@ -3,6 +3,7 @@
 Berlin transit heatmap, live at https://hendrikkintscher.github.io/berlin-transit-heatmap/.
 Start with [README.md](README.md), then [ROADMAP.md](ROADMAP.md): its "How to use this roadmap"
 section is the working agreement with Hendrik.
+How to write each language here (TypeScript, JS, shell, Actions YAML, HTML/CSS): [BEST_PRACTICES.md](BEST_PRACTICES.md).
 
 ## How a step goes
 

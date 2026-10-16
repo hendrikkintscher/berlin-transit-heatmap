@@ -6,46 +6,48 @@ What changed in the app and in the roadmap, newest first. The roadmap (ROADMAP.m
 
 Each step ships as one PR and one version, tagged `vX.Y.Z` on merge. Versions up to 0.7 were assigned afterwards from the PR history.
 
-| Version | Live  | What                                                                                               | PRs       |
-| ------- | ----- | -------------------------------------------------------------------------------------------------- | --------- |
-| 0.13.9  | 10-16 | Map walk rule: the fastest way wins, walks up to 30 min at both ends; map and trip agree more      | #333      |
-| 0.13.8  | 10-16 | Footpaths on the map 0.9 s sooner (2.6 s at 4× CPU); a kept trip stays on the card with them       | #331      |
-| 0.13.7  | 10-15 | Fresh-start link `…/fresh/`: opens the app as on a new device, asks first about favourites         | #329      |
-| 0.13.6  | 10-15 | Timetable windows checked, files kept; a missed connection past the hour uses the next hour's file | #328      |
-| 0.13.5  | 10-15 | Changing direction keeps the departure time: ⇅ and moving the map only swap Start and Ziel         | #327      |
-| 0.13.4  | 10-15 | A swapped trip stays in links and in Typisch/Bestfall; arrival times name the minute reached by    | #325      |
-| 0.13.3  | 10-15 | Moving the map to the other end of a trip keeps the trip, and the map takes the trip's time        | #324      |
-| 0.13.2  | 10-14 | Footpaths unpack in slices right after their download: ready 0.6 s sooner, taps no longer wait     | #322      |
-| 0.13.1  | 10-14 | Footpaths download with the first map on a fast line and are ready about 0.5 s sooner              | #321      |
-| 0.13.0  | 10-14 | First map under 1.5 s on a fresh visit (1.36 s median, was 2.53 s); `?timing` box                  | #315      |
-| 0.12.0  | 10-14 | Closing Treffpunkt keeps the second place as the Ziel                                              | #312      |
-| 0.11.0  | 10-14 | Darker time rings, 3 : 1 against land and water                                                    | #308      |
-| 0.10.11 | 10-14 | "Heute anders" retries a failed changes download when Mehr opens                                   | #305      |
-| 0.10.10 | 10-14 | The footpath loading line shows 5 s at most; a short note when the footpaths arrive later          | #302      |
-| 0.10.9  | 10-14 | "Heute anders" entry in Mehr from the start, with a loading line until the changes file is in      | #299      |
-| 0.10.8  | 10-14 | The footpath loading line no longer overlaps the start card on a short screen                      | #295      |
-| 0.10.7  | 10-14 | The drawer's kept list re-searches other lines with the footpaths; no list cut off by the refresh  | #292      |
-| 0.10.6  | 10-14 | "Heute anders": two-line note on top, one-change rows always show their end date                   | #289      |
-| 0.10.5  | 10-14 | The drawer keeps its list when the card refreshes with the same trip (about 12 searches saved)     | #286      |
-| 0.10.4  | 10-13 | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap          | #283      |
-| 0.10.3  | 10-13 | The drawer also lists faster connections on other lines, found in the background                   | #281      |
-| 0.10.2  | 10-13 | The countdown moves on to the next connection past the full hour, from the loaded file             | #279      |
-| 0.10.1  | 10-13 | "Heute anders" only in Mehr; change notes on the trip card open their line's changes               | #277      |
-| 0.10.0  | 10-13 | Later connections fill in while pulling the drawer and reach an hour ahead                         | #276      |
-| 0.9.2   | 10-13 | Version line in German and English, short commit shown as text                                     | #275      |
-| 0.9.1   | 10-13 | Automatic tag `vX.Y.Z` for each merge that bumps the version                                       | #274      |
-| 0.9.0   | 10-13 | App shows its version in the Mehr menu; git tag per step                                           | #272      |
-| 0.8.0   | 10-13 | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                              | #266–#270 |
-| 0.7     | 10-13 | Faster first trip and first map                                                                    | #257–#261 |
-| 0.6     | 10-13 | Review track: first open, lighter maps, looks, data versions, smoke test, Rings as default look    | #199–#254 |
-| 0.5     | 10-12 | Faster loading, time panel and trip card redesign, real arrivals, Start ⇄ Ziel, Bis N Min.         | #151–#197 |
-| 0.4     | 10-12 | UI overhaul: chips, top bar, calm map, rename "Wohin jetzt?", search bar, street list              | #92–#145  |
-| 0.3     | 10-12 | Binary timetables, speed budget, Wohnlage, real dates, Heute anders, live status                   | #50–#90   |
-| 0.2     | 10-11 | Menu, German UI, meeting point, favourites, trip on tap, footpaths, bike modes                     | #15–#47   |
-| 0.1     | 10-11 | Alpha: web app, timetable build, routing, Pages, search                                            | #1–#10    |
+| Version | Live  | What                                                                                                            | PRs       |
+| ------- | ----- | --------------------------------------------------------------------------------------------------------------- | --------- |
+| 0.13.10 | 10-16 | Review against BEST_PRACTICES.md: bug fixes (truncated lines.bin, footpath pairs, deploy, workflows), hardening | #334      |
+| 0.13.9  | 10-16 | Map walk rule: the fastest way wins, walks up to 30 min at both ends; map and trip agree more                   | #333      |
+| 0.13.8  | 10-16 | Footpaths on the map 0.9 s sooner (2.6 s at 4× CPU); a kept trip stays on the card with them                    | #331      |
+| 0.13.7  | 10-15 | Fresh-start link `…/fresh/`: opens the app as on a new device, asks first about favourites                      | #329      |
+| 0.13.6  | 10-15 | Timetable windows checked, files kept; a missed connection past the hour uses the next hour's file              | #328      |
+| 0.13.5  | 10-15 | Changing direction keeps the departure time: ⇅ and moving the map only swap Start and Ziel                      | #327      |
+| 0.13.4  | 10-15 | A swapped trip stays in links and in Typisch/Bestfall; arrival times name the minute reached by                 | #325      |
+| 0.13.3  | 10-15 | Moving the map to the other end of a trip keeps the trip, and the map takes the trip's time                     | #324      |
+| 0.13.2  | 10-14 | Footpaths unpack in slices right after their download: ready 0.6 s sooner, taps no longer wait                  | #322      |
+| 0.13.1  | 10-14 | Footpaths download with the first map on a fast line and are ready about 0.5 s sooner                           | #321      |
+| 0.13.0  | 10-14 | First map under 1.5 s on a fresh visit (1.36 s median, was 2.53 s); `?timing` box                               | #315      |
+| 0.12.0  | 10-14 | Closing Treffpunkt keeps the second place as the Ziel                                                           | #312      |
+| 0.11.0  | 10-14 | Darker time rings, 3 : 1 against land and water                                                                 | #308      |
+| 0.10.11 | 10-14 | "Heute anders" retries a failed changes download when Mehr opens                                                | #305      |
+| 0.10.10 | 10-14 | The footpath loading line shows 5 s at most; a short note when the footpaths arrive later                       | #302      |
+| 0.10.9  | 10-14 | "Heute anders" entry in Mehr from the start, with a loading line until the changes file is in                   | #299      |
+| 0.10.8  | 10-14 | The footpath loading line no longer overlaps the start card on a short screen                                   | #295      |
+| 0.10.7  | 10-14 | The drawer's kept list re-searches other lines with the footpaths; no list cut off by the refresh               | #292      |
+| 0.10.6  | 10-14 | "Heute anders": two-line note on top, one-change rows always show their end date                                | #289      |
+| 0.10.5  | 10-14 | The drawer keeps its list when the card refreshes with the same trip (about 12 searches saved)                  | #286      |
+| 0.10.4  | 10-13 | "Heute anders": note on top, one row per line, lines with several changes unfold on a tap                       | #283      |
+| 0.10.3  | 10-13 | The drawer also lists faster connections on other lines, found in the background                                | #281      |
+| 0.10.2  | 10-13 | The countdown moves on to the next connection past the full hour, from the loaded file                          | #279      |
+| 0.10.1  | 10-13 | "Heute anders" only in Mehr; change notes on the trip card open their line's changes                            | #277      |
+| 0.10.0  | 10-13 | Later connections fill in while pulling the drawer and reach an hour ahead                                      | #276      |
+| 0.9.2   | 10-13 | Version line in German and English, short commit shown as text                                                  | #275      |
+| 0.9.1   | 10-13 | Automatic tag `vX.Y.Z` for each merge that bumps the version                                                    | #274      |
+| 0.9.0   | 10-13 | App shows its version in the Mehr menu; git tag per step                                                        | #272      |
+| 0.8.0   | 10-13 | Clear trips: direction on the map, Start and Ziel rows, bottom drawer                                           | #266–#270 |
+| 0.7     | 10-13 | Faster first trip and first map                                                                                 | #257–#261 |
+| 0.6     | 10-13 | Review track: first open, lighter maps, looks, data versions, smoke test, Rings as default look                 | #199–#254 |
+| 0.5     | 10-12 | Faster loading, time panel and trip card redesign, real arrivals, Start ⇄ Ziel, Bis N Min.                      | #151–#197 |
+| 0.4     | 10-12 | UI overhaul: chips, top bar, calm map, rename "Wohin jetzt?", search bar, street list                           | #92–#145  |
+| 0.3     | 10-12 | Binary timetables, speed budget, Wohnlage, real dates, Heute anders, live status                                | #50–#90   |
+| 0.2     | 10-11 | Menu, German UI, meeting point, favourites, trip on tap, footpaths, bike modes                                  | #15–#47   |
+| 0.1     | 10-11 | Alpha: web app, timetable build, routing, Pages, search                                                         | #1–#10    |
 
 ## Roadmap versions
 
+- **V1.52** (2026-10-16): a review of the code against the new BEST_PRACTICES.md ships as 0.13.10 (#334), so the unbuilt steps 0.13.10–0.13.15 move up to 0.13.11–0.13.16. Bugs fixed: a truncated lines.bin hung the worker; nearby footpath pairs could be missed further north (the real timetable files come out byte-identical); a missing OPL file was an uncaught stream error; menu and info sheets closed on a tap in their own padding; a failed data download during deploy could publish half a data folder; workflow steps now fail on a broken pipe; publish.mjs --dry-run no longer writes releases. Hardening: least-privilege workflow permissions, worker yields and retries, aria-labels, reduced motion, service worker cache writes inside waitUntil. First map and taps unchanged (360×740, page CPU slowed 4×: 1186 against 1156 ms on main, 10 visits each, within noise). Next in order: 0.13.11 Ankommen under Typisch and Bestfall: trip and map agree.
 - **V1.51** (2026-10-16): 0.13.9 Map walk rule: fastest, even with a longer walk done (#333), built at Hendrik's word. On foot every walk up to 30 minutes now counts at both ends of the map and of the trip on tap, and the fastest way wins; before, a walk over 15 minutes counted only where no stop was nearer. Measured (bench/walkrule.ts, 390 random places from Alexanderplatz, Spandau and Köpenick, leaving at 10:00): map and trip 3 or more minutes apart in 7 % of places, was 16 %; the same minute in 68 %, was 60 %; within a minute in 90 %, was 80 %. 58 of 390 trips change, 11 minutes earlier in the median, by walking more than 15 minutes to a faster line. The map changes little: 0.6 % of cells by half a minute or more, 0.2 % by 3 minutes or more (about 1 % of screen pixels at 360×740 from Köpenick). Map compute in Node unchanged (Nächste 95–131 ms against 105–192, Typisch and Bestfall within noise although twice the departures are scanned); tap trip 11.8 ms against 10.8. Browser at 360×740, 6 fresh visits, medians before → after: first map 747 → 611 ms, tap 171 → 186 ms, ⇅ 669 → 709 ms; with the page CPU slowed 4×: first map 1203 → 1538 ms (both bimodal, ranges 966–1565 and 1017–1701), tap 249 → 260 ms, ⇅ 810 → 791 ms. Next in order: 0.13.10 Ankommen under Typisch and Bestfall: trip and map agree.
 - **V1.50** (2026-10-16): the two Inbox notes from 0.13.8 placed: holding a move made before the footpaths are in, so the kept trip stays every time, as 0.13.14 A trip kept before the footpaths: hold the move? (a decision for Hendrik with numbers first); the speed check's Node map timings varying by up to ±9 % as 0.13.15 Steadier Node map timings in the speed check. The Inbox is empty. Next in order: 0.13.9 Map walk rule: fastest, even with a longer walk (decision).
 - **V1.49** (2026-10-16): 0.13.8 Footpaths on the map a second sooner done (#331). The footpaths are handed over right after unpacking, no longer once the base map is up: the map is redone with them at once, its colours go on at once, and its time rings, lines and labels once the base map is up; ring and line data that did not change is not sent to the map again. Measured (a, at 360×740, page CPU slowed 4×, 7–8 fresh visits each, real base map tiles from a local cache): the colours put on early did not hold the base map up (3.08 s against 3.29 s on main), the rings did (+0.2 to +0.6 s in two runs), so the rings wait with the lines (before the base map the lines are still empty). Timings, main against this change, medians of 8 fresh visits: with the page CPU slowed 4× footpaths ready 3.49 → 2.60 s, base map 3.21 → 3.18 s, first map 1.45 → 1.37 s, tap to trip 324 → 330 ms; at full speed footpaths 1.95 → 1.50 s, base map 1.77 → 1.77 s, first map 477 → 486 ms, tap 240 → 238 ms. d: a trip kept by moving the map to its other end before the footpaths are in is asked for again with them with its span 2 minutes wider on each side (bench/kept.ts, 296 random trips: same rides 38 %, with the usual trip where none fits 43 %, against 24 %; 3 minutes gains 2 points but lets other trips in); the link keeps the trip's own span. Found on the way and fixed: on the map to a Ziel leaving (what a move makes since 0.13.5) a kept trip that did not fit left the card at "Keine Verbindung gefunden" instead of the usual trip; in 9 checked moves at 360×740 main kept 3 trips and showed no connection 6 times, now 7 kept and 2 the usual trip. Speed budget unchanged. Two notes in the Inbox. Next in order: 0.13.9 Map walk rule: fastest, even with a longer walk (decision).

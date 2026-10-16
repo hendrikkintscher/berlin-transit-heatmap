@@ -65,8 +65,9 @@ export async function loadWalk(): Promise<void> {
     walk = net;
     post({ type: 'walk' });
   } catch (err) {
-    // Straight-line walking stays in place.
+    // Straight-line walking stays in place; a later loadWalk tries again.
     console.warn('Walking network not used:', err);
+    walkStarted = false;
     post({ type: 'walkFailed' });
   }
 }

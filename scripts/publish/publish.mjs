@@ -87,10 +87,8 @@ async function ghOnce(method, url, body, headers) {
 
 /** Remaining calls of the hour; reading it does not count against the budget. */
 async function budget() {
-  const res = await fetch('https://api.github.com/rate_limit', {
-    headers: { authorization: `Bearer ${token}` },
-  });
-  const { resources } = await res.json();
+  // Through gh(): a 502 here is retried like any other call.
+  const { resources } = await gh('GET', 'https://api.github.com/rate_limit');
   return resources.core;
 }
 
@@ -151,6 +149,10 @@ const local = new Map(files.map((f) => [f, sha(readFileSync(join(args.dir, f)))]
 let release = await gh('GET', `/releases/tags/${args.tag}`);
 // Without the tag's release an "-old-" one may hold the last files: then nothing is removed.
 const tagged = Boolean(release);
+if (!release && args['dry-run']) {
+  console.log(`Dry run: no release ${args.tag} yet; it would be created with every file.`);
+  process.exit(0);
+}
 if (!release) {
   release = await gh('POST', '/releases', {
     tag_name: args.tag,
@@ -175,13 +177,14 @@ let assets = await assetsOf(release);
 // A broken earlier run: put X back from X.next (or X.old) first.
 const repaired = repairs(assets.map((a) => a.name));
 for (const r of repaired) {
-  console.log(`Repairing ${r.to} from ${r.from}`);
+  console.log(`${args['dry-run'] ? 'Would repair' : 'Repairing'} ${r.to} from ${r.from}`);
+  if (args['dry-run']) continue;
   await rename(
     assets.find((a) => a.name === r.from),
     r.to,
   );
 }
-if (repaired.length) assets = await assetsOf(release);
+if (repaired.length && !args['dry-run']) assets = await assetsOf(release);
 const byName = new Map(assets.map((a) => [a.name, a]));
 let published = new Map();
 if (byName.has(MANIFEST)) {
@@ -193,14 +196,17 @@ for (const k of args.keep) {
   if (!local.has(k) && byName.has(k)) local.set(k, published.get(k) ?? '');
 }
 const keptOnly = new Set(args.keep.filter((k) => !files.includes(k)));
-const p = plan(local, published, [...byName.keys()], Number(args['swap-above']));
+const swapAbove = Number(args['swap-above']);
+if (!Number.isFinite(swapAbove))
+  throw new Error(`--swap-above must be a number, got ${args['swap-above']}`);
+const p = plan(local, published, [...byName.keys()], swapAbove);
 // A kept file that is not rebuilt is never replaced.
 p.replace = p.replace.filter((n) => !keptOnly.has(n));
 console.log(
   `Plan: ${p.mode}, ${p.add.length} new, ${p.replace.length} changed, ${p.remove.length} gone, about ${p.calls} calls`,
 );
 if (args['dry-run'] || p.mode === 'none') {
-  if (p.mode === 'none' && release.body !== args.notes && args.notes) {
+  if (!args['dry-run'] && p.mode === 'none' && release.body !== args.notes && args.notes) {
     await gh('PATCH', `/releases/${release.id}`, { body: args.notes });
   }
   console.log(`Done, ${calls} calls.`);
