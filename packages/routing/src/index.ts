@@ -21,6 +21,7 @@ export type { PreparedTimetable } from './prepare';
 export { loadTimetable } from './prepare';
 export { travelTimes } from './raptor';
 export { reverseTimetable } from './reverse';
+export { shiftTimetable } from './shift';
 export { goalArrival, goalCells, goalWindow } from './goal';
 export { stepFreeTimetable } from './stepfree';
 export { REGION, REGIONS, type Box, type Region } from './regions';

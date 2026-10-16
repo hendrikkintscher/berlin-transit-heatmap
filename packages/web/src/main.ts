@@ -69,6 +69,7 @@ import {
   isoDay,
   catchUp,
   fullHour,
+  nextDayWindow,
   sameWhen,
   type Direction,
   type When,
@@ -514,16 +515,21 @@ let preloadTimer = 0;
 
 /**
  * Loads the hour after the shown one in the background, so stepping to it is instant:
- * fetched, decoded and prepared in the worker while the map is being looked at. Skipped
- * with the data saver on or on a slow (2G) connection.
+ * fetched, decoded and prepared in the worker while the map is being looked at. After
+ * 23 Uhr, the next day's 0 Uhr as a missed connection rolls on with it (its times read as
+ * the evening's). Skipped with the data saver on or on a slow (2G) connection.
  */
 function preloadNextHour() {
   clearTimeout(preloadTimer);
   const conn = (navigator as { connection?: { saveData?: boolean; effectiveType?: string } })
     .connection;
   if (conn?.saveData || /2g/.test(conn?.effectiveType ?? '')) return;
-  if (state.when.hour >= 23) return;
-  const next = computeWindow({ ...state.when, hour: state.when.hour + 1 }, state.direction);
+  const late = state.when.hour >= 23;
+  // Arriving, nothing rolls on past the hour (tap.ts).
+  if (late && state.direction === 'arrive') return;
+  const next = late
+    ? nextDayWindow(state.when)
+    : computeWindow({ ...state.when, hour: state.when.hour + 1 }, state.direction);
   preloadTimer = window.setTimeout(
     () =>
       send({
@@ -533,6 +539,7 @@ function preloadNextHour() {
         direction: mapDirection(state),
         ...(state.stepFree ? { stepFree: true } : {}),
         ...(state.travel === 'bike' ? { bike: true } : {}),
+        ...(late ? { shift: 86400 } : {}),
       }),
     PRELOAD_DELAY_MS,
   );

@@ -241,30 +241,60 @@ export function isNow(when: When, now = new Date()): boolean {
 
 /**
  * Seconds since midnight in Berlin now, when `when` is today (or the typical day of
- * today's kind), so a trip's times can count down; null for another day.
+ * today's kind), so a trip's times can count down; null for another day. In the night
+ * after a late evening (21 Uhr on) the clock goes on counting from that evening (0:10 is
+ * 24:10), so its card keeps rolling on past midnight.
  */
 export function clockNow(when: When, now = new Date()): number | null {
   const w = whenAt(now);
-  if (when.day !== w.day && when.day !== dayType(w.day)) return null;
-  return w.hour * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
+  const seconds = w.hour * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
+  if (when.day === w.day) return seconds;
+  const yesterday = addDays(w.day, -1);
+  const evening = isDate(when.day) ? when.day === yesterday : when.day === dayType(yesterday);
+  if (evening && when.hour >= 21 && isNightHour(w.hour)) return seconds + 86400;
+  return when.day === dayType(w.day) ? seconds : null;
 }
 
 /**
- * An hour's timetable file also holds the trips of the next two hours. A missed connection
- * rolls on to the next one from it while the clock is within the hour after the chosen one
- * (the second leaves room for the ride itself); past that, the hour has to be chosen anew.
+ * An hour's timetable file holds the trips leaving up to two hours after it. A missed
+ * connection rolls on to the next one, on the next hour's file once the clock is past the
+ * chosen hour (rolledWindow), until the hour after that one is over: the last hour the
+ * next hour's file holds leaves room for the ride itself. Past that, the hour has to be
+ * chosen anew.
  */
-export const rollsOn = (when: When, now: number) => now < (when.hour + 2) * 3600;
+export const rollsOn = (when: When, now: number) => now < (when.hour + 3) * 3600;
+
+/** The file a missed connection rolls on with, and how far its times are behind the card's. */
+export interface RolledWindow {
+  window: string;
+  /** Seconds to add to the file's times: a day for the next day's 0 Uhr after 23 Uhr. */
+  shift: number;
+}
 
 /**
  * The file a missed connection rolls on with, once the clock is past the chosen hour: the
  * next hour's, which holds the trips leaving then all the way (the chosen hour's stops two
- * hours after it, so trips over an hour late in the next hour came out worse). Null within
- * the hour, and after 23 Uhr (the chosen hour's file stays).
+ * hours after it, so trips over an hour late in the next hour came out worse). After
+ * 23 Uhr that is the next day's 0 Uhr (nextDayWindow). Null within the hour.
  */
-export function rolledWindow(when: When, now: number): string | null {
-  if (now < (when.hour + 1) * 3600 || when.hour >= 23) return null;
-  return windowName({ day: when.day, hour: when.hour + 1 });
+export function rolledWindow(when: When, now: number, today = new Date()): RolledWindow | null {
+  if (now < (when.hour + 1) * 3600) return null;
+  if (when.hour >= 23) return { window: nextDayWindow(when, today), shift: 86400 };
+  return { window: windowName({ day: when.day, hour: when.hour + 1 }), shift: 0 };
+}
+
+/**
+ * The 0 Uhr file after the evening of `when`: the next date's, or for a typical day the
+ * typical day of tomorrow when `when` stands for today (a Friday's night is the weekend's
+ * 0 Uhr, a Sunday's the weekday's), else the same typical day.
+ */
+export function nextDayWindow(when: When, now = new Date()): string {
+  if (isDate(when.day)) return windowName({ day: addDays(when.day, 1), hour: 0 });
+  const w = whenAt(now);
+  // Before 5 Uhr the evening was yesterday's.
+  const evening = isNightHour(w.hour) ? addDays(w.day, -1) : w.day;
+  const day = dayType(evening) === when.day ? dayType(addDays(evening, 1)) : when.day;
+  return windowName({ day, hour: 0 });
 }
 
 /** "+15", "+30", "+60" in the time panel: that many minutes from now in Berlin, exact. */

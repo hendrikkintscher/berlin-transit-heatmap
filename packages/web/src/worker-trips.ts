@@ -802,15 +802,16 @@ export interface NextHour {
 
 /**
  * Loads the next hour's file (`window`) the way the last map runs, and the other way round,
- * for a trip leaving after the map's hour: the map's own file holds the trips starting up to
+ * for a trip leaving after the map's hour (`shift`: see protocol.ts): the map's own file holds the trips starting up to
  * two hours after its hour, so trips over an hour, asked for late in the next hour, would
  * come out worse or not at all. The app preloads that hour after each map, so this is
  * usually there already; null when it cannot be had (the map's own file is used then).
  */
-export async function nextHour(window: string): Promise<NextHour | null> {
+export async function nextHour(window: string, shift = 0): Promise<NextHour | null> {
   const last = lastTrip;
   if (!last || last.travel === 'bikeonly') return null;
-  const variant = last.variant ?? {};
+  // After 23 Uhr the next day's file, its times read as the evening's (24:10 for 0:10).
+  const variant = { ...last.variant, ...(shift ? { shift } : {}) };
   try {
     const [tt, other] = await Promise.all([
       prepared(window, last.direction, variant),
