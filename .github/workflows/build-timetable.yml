@@ -142,7 +142,7 @@ jobs:
           ceil_bytes=$((MAX_BYTES * CEILING_PERCENT / 100))
           ceil_gz=$((MAX_GZIP_BYTES * CEILING_PERCENT / 100))
           over=0
-          for path in work/out/timetable-*.bin; do
+          for path in work/out/stoplist.bin work/out/timetable-*.bin; do
             f=$(basename "$path")
             bytes=$(jq ".files[\"$f\"].bytes" work/out/build-info.json)
             gz=$(jq ".files[\"$f\"].gzipBytes" work/out/build-info.json)

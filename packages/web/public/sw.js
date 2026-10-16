@@ -1,8 +1,9 @@
 // Service worker: offline app shell, cached timetable files and the basemap.
 // Bump VERSION to drop old caches after a breaking change.
 const VERSION = 'v2';
-// Hourly timetables are 0.5–0.7 MB gzipped each: keep the 12 most recently used ones
-// (a few hours of a few days, about 8 MB). The other data files are few and always kept.
+// Hourly timetables: keep the 12 most recently used ones (a few hours of a few days). The
+// other data files, such as the stop list every hour needs (stoplist.bin, 0.25 MB gzipped),
+// are few and always kept.
 const MAX_TIMETABLES = 12;
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;

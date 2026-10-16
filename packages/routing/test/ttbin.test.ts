@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { decodeTimetable, encodeTimetable, type TimetableData } from '../src';
+import {
+  decodeStopList,
+  decodeTimetable,
+  encodeStopList,
+  encodeTimetable,
+  needsStopList,
+  type TimetableData,
+} from '../src';
 
 const tt: TimetableData = {
   version: 1,
@@ -78,5 +85,52 @@ describe('binary timetable', () => {
     expect(() => decodeTimetable(new Uint8Array([1, 2, 3, 4, 1]))).toThrow();
     const bin = encodeTimetable(tt);
     expect(() => decodeTimetable(bin.subarray(0, bin.length - 3))).toThrow();
+  });
+});
+
+describe('stop list and hourly files', () => {
+  const whole = decodeTimetable(encodeTimetable(tt));
+
+  it('reads an hour back with its stop list as from a whole file', () => {
+    const list = encodeStopList(tt);
+    const hour = encodeTimetable(tt, list.id);
+    expect(needsStopList(hour)).toBe(true);
+    expect(needsStopList(encodeTimetable(tt))).toBe(false);
+    const stops = decodeStopList(list.data);
+    expect(stops.id).toBe(list.id);
+    expect(stops.feedVersion).toBe('test');
+    const back = decodeTimetable(hour, stops);
+    expect(back).toEqual(whole);
+    // Every hour shares the one list's stops and footpaths.
+    const later = decodeTimetable(encodeTimetable({ ...tt, window: 'weekday-11' }, list.id), stops);
+    expect(later.stops).toBe(back.stops);
+    expect(later.transfers).toBe(back.transfers);
+  });
+
+  it('gives the same stops the same id, and other stops another', () => {
+    // Only the stops and footpaths count, not the routes.
+    const noRoutes = { feedVersion: tt.feedVersion, stops: tt.stops, transfers: tt.transfers };
+    expect(encodeStopList(tt).id).toBe(encodeStopList(noRoutes).id);
+    const moved = { ...tt, stops: [{ ...tt.stops[0]!, lat: 52.5 }, ...tt.stops.slice(1)] };
+    expect(encodeStopList(moved).id).not.toBe(encodeStopList(tt).id);
+    const longer = {
+      ...tt,
+      transfers: tt.transfers.map((t) => ({ ...t, seconds: t.seconds + 1 })),
+    };
+    expect(encodeStopList(longer).id).not.toBe(encodeStopList(tt).id);
+  });
+
+  it("refuses an hour without its stop list, or with another build's", () => {
+    const hour = encodeTimetable(tt, encodeStopList(tt).id);
+    expect(() => decodeTimetable(hour)).toThrow(/stop list/);
+    const moved = { ...tt, stops: [{ ...tt.stops[0]!, lat: 52.5 }, ...tt.stops.slice(1)] };
+    const other = decodeStopList(encodeStopList(moved).data);
+    expect(() => decodeTimetable(hour, other)).toThrow(/different builds/);
+  });
+
+  it('rejects broken stop lists', () => {
+    const { data } = encodeStopList(tt);
+    expect(() => decodeStopList(data.subarray(0, data.length - 2))).toThrow();
+    expect(() => decodeStopList(encodeTimetable(tt))).toThrow();
   });
 });

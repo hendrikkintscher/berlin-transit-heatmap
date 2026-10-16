@@ -28,7 +28,7 @@ each gzipped JS and CSS file must stay within `scripts/speed/budget.json`, and t
 map computation, timetable loading and timetable file size, measured on the real data,
 must not be worse than on main. A deliberate size increase raises the budget in the same
 pull request (`node scripts/speed/check.mjs --write` after `pnpm --dir packages/web build`).
-Locally: `node scripts/speed/check.mjs --data <dir with timetable-weekday-10.bin and walk.bin> [--base <checkout of main>]`.
+Locally: `node scripts/speed/check.mjs --data <dir with timetable-weekday-10.bin, stoplist.bin and walk.bin> [--base <checkout of main>]`.
 
 ## Timetable data
 
@@ -50,7 +50,7 @@ The feed is about 50–100 MB, so it lives in releases rather than in git:
 
 ### Timetable build
 
-[`.github/workflows/build-timetable.yml`](.github/workflows/build-timetable.yml) runs after every successful refresh and by hand. It turns `gtfs-latest` into the hourly binary timetables (`timetable-*.bin`, for typical days and the coming week's dates), `walk.bin`, `lines.bin`, `streets.json`, `stop-ids.json`, `changes.json` and `build-info.json` (see [`packages/timetable-build`](packages/timetable-build/README.md)) and publishes them on the release `timetable-latest`, which the web app deploy picks up. [`scripts/publish`](scripts/publish/publish.mjs) uploads only new and changed files (by the sha256 in `checksums.json`), never removes a file before its new copy is up, and switches to a fresh release when most files changed, so a run stays well inside the hourly API budget.
+[`.github/workflows/build-timetable.yml`](.github/workflows/build-timetable.yml) runs after every successful refresh and by hand. It turns `gtfs-latest` into the hourly binary timetables (`timetable-*.bin`, for typical days and the coming week's dates) with the stops and footpaths they share (`stoplist.bin`), `walk.bin`, `lines.bin`, `streets.json`, `stop-ids.json`, `changes.json` and `build-info.json` (see [`packages/timetable-build`](packages/timetable-build/README.md)) and publishes them on the release `timetable-latest`, which the web app deploy picks up. [`scripts/publish`](scripts/publish/publish.mjs) uploads only new and changed files (by the sha256 in `checksums.json`), never removes a file before its new copy is up, and switches to a fresh release when most files changed, so a run stays well inside the hourly API budget.
 
 ### Using the data locally
 

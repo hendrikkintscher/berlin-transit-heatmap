@@ -1,7 +1,8 @@
 // The timing box ("?timing" in the link, roadmap 0.13.0): how long the first map, the base
 // map, the footpaths (0.13.1) and each tap's trip took on this device, and whether the first
-// timetable came down once or twice (the start page and the worker both ask for it). Loaded
-// only with the link key, so it costs nothing otherwise. Times in ms since the page opened.
+// timetable and the stop list came down once or twice (the start page and the worker both
+// ask for them). Loaded only with the link key, so it costs nothing otherwise. Times in ms
+// since the page opened.
 import { send, worker } from './boot';
 import type { Download, FromWorker } from './protocol';
 
@@ -15,7 +16,8 @@ document.body.append(box);
 
 const ms = (x: number | undefined) => (x === undefined ? '…' : `${Math.round(x)}`);
 const mark = (name: string) => performance.getEntriesByName(name, 'mark')[0]?.startTime;
-const file = (url: string) => /timetable-[\w-]+\.bin/.exec(url)?.[0];
+const file = (url: string) => /timetable-[\w-]+\.bin|stoplist\.bin/.exec(url)?.[0];
+const STOP_LIST = 'stoplist.bin';
 
 /** The worker's timetable downloads, in the page's time. */
 let workerDownloads: Download[] = [];
@@ -42,11 +44,14 @@ function downloads(): string[] {
     ...page,
     ...workerDownloads.filter((d) => file(d.name)).map((d) => ({ by: 'worker', ...d })),
   ];
-  const first = all[0] && file(all[0].name);
-  const lines = all
-    .filter((d) => file(d.name) === first)
-    .map((d) => `  ${d.by}: ${ms(d.start)}–${ms(d.end)}, ${Math.round(d.bytes / 1024)} KB`);
-  return first ? [`timetable ${first}`, ...lines] : [];
+  const first = all.map((d) => file(d.name)).find((f) => f !== STOP_LIST);
+  const lines = (name: string | undefined, title: string) => {
+    const list = all
+      .filter((d) => file(d.name) === name)
+      .map((d) => `  ${d.by}: ${ms(d.start)}–${ms(d.end)}, ${Math.round(d.bytes / 1024)} KB`);
+    return list.length ? [title, ...list] : [];
+  };
+  return [...lines(first, `timetable ${first}`), ...lines(STOP_LIST, 'stop list')];
 }
 
 /** Each tap and how long until its trip was on the card. */
