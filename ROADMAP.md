@@ -1,6 +1,6 @@
-# Roadmap V1.52
+# Roadmap V1.53
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.10**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.11**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## How to use this roadmap
 
@@ -19,12 +19,9 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 ## Inbox
 
 - 2026-10-16 (from 0.13.9): Trips on tap may now walk up to 30 minutes at an end when that is faster (58 of 390 checked trips, 11 minutes earlier in the median); the card shows the walk's minutes but says nothing about it being long. A short hint ("langer Fußweg") or the slower trip with less walking in the drawer could help.
+- 2026-10-16 (from 0.13.11): Under Bestfall with Ankommen the trip on tap (the last connection of the hour) is 3 or more minutes off the map in 53 % of places (Typisch differs by design: the map counts waiting). Of the trips arriving by each 10 minutes of the hour, the quickest would match within a minute in 86 % (38 % before, 44 % now), but takes six searches per tap (68 ms against 11.5 ms in Node, bench/arrivehour.ts).
 
 ## 0.13 Faster and steadier routing
-
-- **0.13.11 Ankommen under Typisch and Bestfall: trip and map agree**. Inbox note from 0.13.4 (2026-10-15): with Ankommen under Typisch or Bestfall, a tapped place's trip arrives by the start of the hour, but the map counts arrivals within that hour ("Ankunft 10 bis 11 Uhr"), so the two can be about an hour apart.
-  - a. Count how often and by how much card and map differ today (random places, a few hours).
-  - b. Let the trip on tap arrive within the hour the map counts (for example by its end, or the one closest to the map's minutes), so card and map tell the same; tap timings stay as they are.
 
 - **0.13.12 Map to a Ziel with a departure time: follow-ups**. Inbox notes from 0.13.5 (2026-10-15) on the map built there (⇅ or the rings with Losfahren).
   - a. A tap on that map runs three searches for its trip (about 11 ms more than the arrival map's one in Node); keep the Ziel's walks to the stops per map, and measure the tap before and after.

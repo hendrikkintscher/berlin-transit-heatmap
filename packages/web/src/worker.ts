@@ -188,7 +188,9 @@ async function makeMap(msg: ComputeMsg, fresh: () => boolean) {
     tt,
     runs,
     travel,
-    from: now(tt),
+    // Arriving under Typisch and Bestfall the map counts arrivals within the hour, so trips
+    // on tap arrive by its end, not by its start (roadmap 0.13.11).
+    from: !goal && msg.direction === 'arrive' && msg.measure !== 'next' ? tt.windowStart : now(tt),
     grid,
     used,
     shown,

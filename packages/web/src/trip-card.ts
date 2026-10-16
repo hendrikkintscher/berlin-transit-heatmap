@@ -84,7 +84,7 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
       walk ? t('tripWalk', { n: walk }) : '',
     ].filter(Boolean);
     // Leaving: the next connection's own minutes, its arrival, and when to set off.
-    // Arriving (Typisch, Bestfall): the last connection by the hour, with its minutes.
+    // Arriving (Typisch, Bestfall): the last connection of the hour, with its minutes.
     const n =
       j.leave !== undefined && j.arrive !== undefined
         ? Math.max(1, Math.round((j.arrive - j.leave) / 60))
