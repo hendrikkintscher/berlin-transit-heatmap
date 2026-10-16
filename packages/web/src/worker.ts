@@ -284,7 +284,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       await loading;
     } else if (msg.type === 'load') {
       // A quiet (background) load that fails is retried when the window is actually needed.
-      const variant = { stepFree: msg.stepFree, bike: msg.bike };
+      const variant = { stepFree: msg.stepFree, bike: msg.bike, shift: msg.shift };
       const p = prepared(msg.window, msg.direction ?? 'depart', variant);
       await (msg.quiet ? p.catch(() => undefined) : p);
     } else if (msg.type === 'loadWalk') {
@@ -390,7 +390,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       if (msg.id !== latestTrip) return;
       await tripsReady();
       // A connection rolled on past the map's hour: the next hour's file has its trips.
-      const next = msg.window && msg.leaveAt !== undefined ? await nextHour(msg.window) : null;
+      const next =
+        msg.window && msg.leaveAt !== undefined ? await nextHour(msg.window, msg.shift) : null;
       if (msg.id !== latestTrip) return;
       post({ type: 'trip', id: msg.id, ...tapTrip(msg, next) });
     } else msg satisfies never;

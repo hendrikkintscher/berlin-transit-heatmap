@@ -477,22 +477,24 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
       el.textContent = leaveText(leave, now);
       // Arriving, the connection is the last one by the time: no later one to ask for.
       if (leave >= now - 30 || tripAt.askedLater || state.direction === 'arrive') continue;
-      // The next one comes from the loaded file, past the full hour too; once the file
-      // no longer covers it, the card only says the connection is gone.
+      // The next one comes from the loaded file, past the full hour from the next hour's
+      // (after 23 Uhr the next day's 0 Uhr); once that no longer covers it, the card only
+      // says the connection is gone.
       if (!rollsOn(state.when, now)) {
         el.textContent = t('tripMissed');
         continue;
       }
       tripAt.askedLater = true;
       tripId++;
-      const window = rolledWindow(state.when, now);
+      const rolled = rolledWindow(state.when, now);
       send({
         type: 'trip',
         id: tripId,
         lat: tripAt.lat,
         lon: tripAt.lon,
         leaveAt: now,
-        ...(window ? { window } : {}),
+        ...(rolled ? { window: rolled.window } : {}),
+        ...(rolled?.shift ? { shift: rolled.shift } : {}),
       });
     }
   }, 15_000);

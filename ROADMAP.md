@@ -1,6 +1,6 @@
-# Roadmap V2.2
+# Roadmap V2.3
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.13**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.14**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## North star
 
@@ -10,7 +10,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 | When  | Theme (outcome)                                 | Steps                                    |
 | ----- | ----------------------------------------------- | ---------------------------------------- |
-| Now   | A. Trip and map agree (0.13)                    | 0.13.14, 0.13.15, 0.13.17–18             |
+| Now   | A. Trip and map agree (0.13)                    | 0.13.15, 0.13.17–18                      |
 | Now   | B. Fast and steady loading and measuring (0.13) | 0.13.16                                  |
 | Next  | C. Map handling (0.14)                          | 0.14.0                                   |
 | Next  | D. Clear and welcoming looks (0.15)             | 0.15.0–0.15.5, 0.15.11                   |
@@ -41,13 +41,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 ## Now: A. Trip and map agree
 
 Outcome: the trip on tap and the map's minutes match, in every mode and at every hour.
-
-- **0.13.14 Rolling on further and past midnight** · should · build
-  - Why: note from 0.13.6 (2026-10-15): a missed connection still rolls on only until two hours after the chosen hour (rollsOn), although the next hour's file it now uses holds trips further on; after 23 Uhr it stays on the chosen file (the next day's 0 Uhr is not used).
-  - Done when: late-evening trips roll on into the next day, with tap timings unchanged.
-  - a. Let the card and the drawer roll on as far as the next hour's file reaches.
-  - b. After 23 Uhr use the next day's 0 Uhr file (the coming week's date, or the right typical day), preloaded like the next hour's.
-  - c. Tap timings stay as they are; check a few late-evening trips at 360×740.
 
 - **0.13.15 A trip kept before the footpaths: hold the move?** · could · decision
   - Why: note from 0.13.8 (2026-10-16): a trip kept by moving the map to its other end before the footpaths are in now stays on the card in 7 of 9 checked moves. Evidence: `bench/kept.ts` over 296 random trips: same rides in 38 %, 43 % counting the usual trip where none fits, against 24 % before; in the rest the footpath walks at the ends miss the kept vehicles. Asking by the rides themselves (first departure less the new walk, last arrival plus it) measured no better (38 %).
@@ -162,3 +155,4 @@ Outcome: the pictures show the finished app, and the Berlin app is called done. 
 - 2026-10-16 (from 0.13.12): under Typisch the lines of the map to a Ziel leaving still follow a pass arriving 40 minutes on (its cells average the hour and take no one trip).
 - 2026-10-16 (from 0.13.13): hourly timetables are now 40–60 KB gzipped, so the service worker could keep far more than 12 of them (48 would be about 2.5 MB): more hours and days offline, and fewer downloads when going back and forth in the Zeit panel.
 - 2026-10-16 (from 0.13.13): `stop-ids.json` (the live status's station numbers) is another per-stop file loaded on its own; it could ride in `stoplist.bin`, one file fewer.
+- 2026-10-16 (from 0.13.14): in the last hour of rolling on (two hours after the chosen one) the next hour's file runs out: 8–15 % of trips come out as "keine Verbindung" and 8–11 % later than on the clock hour's own file (`bench/rollon.ts`); rolling on with the clock hour's file would match, at one more download while the card stays open.

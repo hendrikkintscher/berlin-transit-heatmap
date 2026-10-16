@@ -7,6 +7,8 @@ import {
   eveningWindow,
   isNow,
   laterWhen,
+  clockNow,
+  nextDayWindow,
   rolledWindow,
   rollsOn,
   isPastHour,
@@ -217,13 +219,17 @@ describe('laterWhen', () => {
 
 describe('rollsOn', () => {
   const when = { day: '20261013', hour: 17 };
-  it('rolls on within the chosen hour and the one after it', () => {
+  it('rolls on within the chosen hour and the two after it', () => {
     expect(rollsOn(when, 17 * 3600 + 59 * 60)).toBe(true);
     expect(rollsOn(when, 18 * 3600)).toBe(true);
-    expect(rollsOn(when, 18 * 3600 + 59 * 60)).toBe(true);
+    expect(rollsOn(when, 19 * 3600 + 59 * 60)).toBe(true);
   });
-  it('stops once the loaded file no longer covers the ride', () => {
-    expect(rollsOn(when, 19 * 3600)).toBe(false);
+  it("stops once the next hour's file no longer covers the ride", () => {
+    expect(rollsOn(when, 20 * 3600)).toBe(false);
+  });
+  it('rolls on past midnight after a late hour', () => {
+    expect(rollsOn({ day: 'weekday', hour: 23 }, 25 * 3600 + 59 * 60)).toBe(true);
+    expect(rollsOn({ day: 'weekday', hour: 23 }, 26 * 3600)).toBe(false);
   });
 });
 
@@ -233,10 +239,58 @@ describe('rolledWindow', () => {
     expect(rolledWindow(when, 17 * 3600 + 59 * 60)).toBeNull();
   });
   it("takes the next hour's file once the clock is past it", () => {
-    expect(rolledWindow(when, 18 * 3600)).toBe('20261013-18');
-    expect(rolledWindow({ day: 'weekend', hour: 9 }, 10 * 3600 + 1800)).toBe('weekend-10');
+    expect(rolledWindow(when, 18 * 3600)).toEqual({ window: '20261013-18', shift: 0 });
+    expect(rolledWindow(when, 19 * 3600 + 1800)).toEqual({ window: '20261013-18', shift: 0 });
+    expect(rolledWindow({ day: 'weekend', hour: 9 }, 10 * 3600 + 1800)).toEqual({
+      window: 'weekend-10',
+      shift: 0,
+    });
   });
-  it('stays on the chosen file after 23 Uhr', () => {
-    expect(rolledWindow({ day: 'weekday', hour: 23 }, 24 * 3600 + 600)).toBeNull();
+  it("takes the next day's 0 Uhr after 23 Uhr, a day behind", () => {
+    expect(rolledWindow({ day: '20261013', hour: 23 }, 23 * 3600 + 600)).toBeNull();
+    expect(rolledWindow({ day: '20261013', hour: 23 }, 24 * 3600 + 600)).toEqual({
+      window: '20261014-00',
+      shift: 86400,
+    });
+  });
+});
+
+describe('nextDayWindow', () => {
+  // Berlin is two hours ahead of UTC in October.
+  const thursday = new Date('2026-10-15T21:30:00Z');
+  const friday = new Date('2026-10-16T21:30:00Z');
+  const fridayNight = new Date('2026-10-16T22:30:00Z');
+  const sunday = new Date('2026-10-18T21:30:00Z');
+  it("is the next date's 0 Uhr", () => {
+    expect(nextDayWindow({ day: '20261016', hour: 23 }, friday)).toBe('20261017-00');
+  });
+  it("follows the real tomorrow for today's typical day", () => {
+    expect(nextDayWindow({ day: 'weekday', hour: 23 }, thursday)).toBe('weekday-00');
+    expect(nextDayWindow({ day: 'weekday', hour: 23 }, friday)).toBe('weekend-00');
+    expect(nextDayWindow({ day: 'weekday', hour: 23 }, fridayNight)).toBe('weekend-00');
+    expect(nextDayWindow({ day: 'weekend', hour: 23 }, sunday)).toBe('weekday-00');
+  });
+  it('keeps a typical day that is not today', () => {
+    expect(nextDayWindow({ day: 'weekend', hour: 23 }, thursday)).toBe('weekend-00');
+  });
+});
+
+describe('clockNow', () => {
+  // Saturday 00:30 in Berlin.
+  const night = new Date('2026-10-16T22:30:00Z');
+  it("counts today's seconds", () => {
+    expect(clockNow({ day: '20261016', hour: 20 }, new Date('2026-10-16T18:30:00Z'))).toBe(
+      20 * 3600 + 1800,
+    );
+    expect(clockNow({ day: 'weekend', hour: 0 }, night)).toBe(1800);
+  });
+  it('goes on from a late evening in the night after it', () => {
+    expect(clockNow({ day: '20261016', hour: 23 }, night)).toBe(24 * 3600 + 1800);
+    expect(clockNow({ day: 'weekday', hour: 22 }, night)).toBe(24 * 3600 + 1800);
+  });
+  it('is null for another day', () => {
+    expect(clockNow({ day: '20261016', hour: 10 }, night)).toBeNull();
+    expect(clockNow({ day: '20261016', hour: 23 }, new Date('2026-10-17T08:00:00Z'))).toBeNull();
+    expect(clockNow({ day: 'weekday', hour: 10 }, night)).toBeNull();
   });
 });

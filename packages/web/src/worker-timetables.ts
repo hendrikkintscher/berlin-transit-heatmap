@@ -8,6 +8,7 @@ import {
   loadTimetable,
   needsStopList,
   reverseTimetable,
+  shiftTimetable,
   stepFreeTimetable,
   type PreparedTimetable,
   type StopListData,
@@ -167,15 +168,23 @@ function rawTimetable(window: Window): Promise<Timetable> {
   return p;
 }
 
-/** Filtered timetables: step-free, and without the lines that do not take bikes. */
+/**
+ * Filtered timetables: step-free, and without the lines that do not take bikes; `shift`
+ * seconds later (the next day's 0 Uhr read as the evening's, for a trip rolling on).
+ */
 export interface Variant {
   stepFree?: boolean;
   bike?: boolean;
+  shift?: number;
 }
 const variantKey = (window: Window, v: Variant) =>
-  window + (v.stepFree ? '|step-free' : '') + (v.bike ? '|bike' : '');
+  window +
+  (v.stepFree ? '|step-free' : '') +
+  (v.bike ? '|bike' : '') +
+  (v.shift ? `|+${v.shift}` : '');
 function filtered(json: Timetable, v: Variant): Timetable {
-  const sf = v.stepFree ? stepFreeTimetable(json) : json;
+  const shifted = v.shift ? shiftTimetable(json, v.shift) : json;
+  const sf = v.stepFree ? stepFreeTimetable(shifted) : shifted;
   return v.bike ? bikeTimetable(sf) : sf;
 }
 
@@ -226,11 +235,10 @@ export async function prepared(
   const key = variantKey(window, variant);
   let p = reversed.get(key);
   if (!p) {
-    p = rawTimetable(window).then((json) =>
-      loadTimetable(
-        reverseTimetable(filtered(json, variant), json.windowEnd, json.windowEnd + 3600),
-      ),
-    );
+    p = rawTimetable(window).then((json) => {
+      const f = filtered(json, variant);
+      return loadTimetable(reverseTimetable(f, f.windowEnd, f.windowEnd + 3600));
+    });
     p.catch(() => reversed.delete(key));
     reversed.set(key, p);
     while (reversed.size > KEEP_LOADED) reversed.delete(reversed.keys().next().value!);

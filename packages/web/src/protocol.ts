@@ -54,6 +54,8 @@ export type ToWorker =
       direction?: Direction;
       stepFree?: boolean;
       bike?: boolean;
+      /** Seconds added to the file's times: a day for the next day's 0 Uhr after 23 Uhr. */
+      shift?: number;
     }
   | {
       type: 'compute';
@@ -118,6 +120,8 @@ export type ToWorker =
        * trips leaving then all the way (the map's own file stops two hours after its hour).
        */
       window?: Window;
+      /** Seconds added to that file's times: a day for the next day's 0 Uhr after 23 Uhr. */
+      shift?: number;
       span?: { leave: number; arrive: number };
     }
   /** The worker's own downloads so far, for the timing box (?timing in the link). */
