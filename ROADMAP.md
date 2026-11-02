@@ -1,4 +1,4 @@
-# Roadmap V2.3
+# Roadmap V2.4
 
 Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.14**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
@@ -10,8 +10,8 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 | When  | Theme (outcome)                                 | Steps                                    |
 | ----- | ----------------------------------------------- | ---------------------------------------- |
-| Now   | A. Trip and map agree (0.13)                    | 0.13.15, 0.13.17–18                      |
-| Now   | B. Fast and steady loading and measuring (0.13) | 0.13.16                                  |
+| Now   | A. Trip and map agree (0.13)                    | 0.13.17–18, 0.13.20, 0.13.23             |
+| Now   | B. Fast and steady loading and measuring (0.13) | 0.13.16, 0.13.19, 0.13.21–22             |
 | Next  | C. Map handling (0.14)                          | 0.14.0                                   |
 | Next  | D. Clear and welcoming looks (0.15)             | 0.15.0–0.15.5, 0.15.11                   |
 | Next  | E. Treffpunkt that shows fairness (0.15)        | 0.15.6 → 0.15.7 → 0.15.8                 |
@@ -42,11 +42,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 Outcome: the trip on tap and the map's minutes match, in every mode and at every hour.
 
-- **0.13.15 A trip kept before the footpaths: hold the move?** · could · decision
-  - Why: note from 0.13.8 (2026-10-16): a trip kept by moving the map to its other end before the footpaths are in now stays on the card in 7 of 9 checked moves. Evidence: `bench/kept.ts` over 296 random trips: same rides in 38 %, 43 % counting the usual trip where none fits, against 24 % before; in the rest the footpath walks at the ends miss the kept vehicles. Asking by the rides themselves (first departure less the new walk, last arrival plus it) measured no better (38 %).
-  - a. Measure how long a move before the footpaths would wait if it were held until they are in (fresh visits at 360×740, also with the page CPU slowed 4×), and how often a move comes that early.
-  - b. Hendrik gets the numbers and a recommendation: hold the move (the trip kept every time, an early move slower) or leave it as it is; nothing changes without his yes.
-
 - **0.13.17 Long walks shown on the card** · should · build
   - Why: note from 0.13.9 (2026-10-16): trips on tap may now walk up to 30 minutes at an end when that is faster (58 of 390 checked trips, 11 minutes earlier in the median; `bench/walkrule.ts`, #333); the card shows the walk's minutes but says nothing about it being long.
   - Done when: a long walk is visible at a glance, with tap timings unchanged.
@@ -59,6 +54,17 @@ Outcome: the trip on tap and the map's minutes match, in every mode and at every
   - a. Of the trips arriving by each 10 minutes of the hour, the quickest would match within a minute in 86 % (38 % before, 44 % now), but takes six searches per tap (68 ms against 11.5 ms in Node). Measure cheaper variants (fewer slots, reusing one search) and the tap in the browser at 360×740.
   - b. Hendrik gets a short table and a recommendation; nothing changes without his yes.
 
+- **0.13.20 Typisch lines on the map to a Ziel leaving** · could · decision
+  - Why: note from 0.13.12 (2026-10-16): under Typisch the lines of the map to a Ziel leaving still follow a pass arriving 40 minutes on, as its cells average the hour and take no one trip (Nächste and Bestfall follow the cells' own trips since 0.13.12).
+  - a. Measure how far those lines are from the lines of the trips on tap over random places, and what lines from the cells' most common trips would cost per map.
+  - b. Hendrik gets the numbers and a recommendation; nothing changes without his yes.
+
+- **0.13.23 The last hour of rolling on from the clock hour's file** · should · build
+  - Why: note from 0.13.14 (2026-10-16): in the last hour of rolling on (two hours after the chosen one) the next hour's file runs out: 8–15 % of trips come out as "keine Verbindung" and 8–11 % later than on the clock hour's own file (`bench/rollon.ts`).
+  - Done when: a card rolled on into that hour finds the same trips as the clock hour's own file, with tap timings unchanged.
+  - a. Rolling on into the second hour after the chosen one loads the clock hour's file (one more download while the card stays open, 40–60 KB gzipped) and searches on it.
+  - b. Measure with `bench/rollon.ts` and check at 360×740 that the card's countdown does not stall while the file loads.
+
 ## Now: B. Fast and steady loading and measuring
 
 Outcome: less to download on every visit, and speed numbers that can be trusted.
@@ -68,6 +74,22 @@ Outcome: less to download on every visit, and speed numbers that can be trusted.
   - Done when: the job reports medians that stay within a few per cent between runs.
   - a. Run each map several times (for example 5) and report the median, measured against today's single runs on the same machine; the job may take only a little longer.
   - b. If the medians stay within a few per cent, propose a budget on them (a deliberate edit with the reason, as for the file sizes).
+
+- **0.13.19 Quicker tap on the map to a Ziel leaving** · could · decision
+  - Why: note from 0.13.12 (2026-10-16): that tap still takes about twice the arrival map's in Node (5–8 against 3–4 ms: three searches against one, the arrival map's tap gets the map's own pass); in the browser 195 against about 175 ms.
+  - a. Measure whether the latest leaving (the tap's second search) can be read off the map's profile search, and how much of the tap that saves in Node and in the browser at 360×740 (also with the page CPU slowed 4×), with the trips unchanged.
+  - b. Hendrik gets the numbers and a recommendation; nothing changes without his yes.
+
+- **0.13.21 More hours kept offline** · should · build
+  - Why: note from 0.13.13 (2026-10-16): hourly timetables are now 40–60 KB gzipped, so the service worker could keep far more than 12 of them (48 would be about 2.5 MB): more hours and days offline, and fewer downloads when going back and forth in the Zeit panel.
+  - Done when: the service worker keeps up to 48 hourly files, first visit and taps unchanged.
+  - a. Raise the service worker's limit for hourly files (for example to 48), oldest out first; nothing extra is downloaded ahead.
+  - b. Check the stored size after a day of use and that the Zeit panel's hours come from the cache.
+
+- **0.13.22 Station numbers in the stop list** · could · build
+  - Why: note from 0.13.13 (2026-10-16): `stop-ids.json` (the live status's station numbers) is another per-stop file loaded on its own; it could ride in `stoplist.bin`, one file fewer.
+  - a. The timetable build writes the station numbers into `stoplist.bin`; the live status reads them from there, and `stop-ids.json` goes.
+  - b. Report the stop list's size before and after (gzipped) and check that first map timings stay the same.
 
 ## Next: C. Map handling (0.14)
 
@@ -151,8 +173,4 @@ Outcome: the pictures show the finished app, and the Berlin app is called done. 
 
 ## Inbox
 
-- 2026-10-16 (from 0.13.12): the tap on the map to a Ziel leaving still takes about twice the arrival map's in Node (5–8 against 3–4 ms: three searches against one, the arrival map's tap gets the map's own pass); in the browser 195 against about 175 ms. The latest leaving (its second search) might be read off the map's profile search.
-- 2026-10-16 (from 0.13.12): under Typisch the lines of the map to a Ziel leaving still follow a pass arriving 40 minutes on (its cells average the hour and take no one trip).
-- 2026-10-16 (from 0.13.13): hourly timetables are now 40–60 KB gzipped, so the service worker could keep far more than 12 of them (48 would be about 2.5 MB): more hours and days offline, and fewer downloads when going back and forth in the Zeit panel.
-- 2026-10-16 (from 0.13.13): `stop-ids.json` (the live status's station numbers) is another per-stop file loaded on its own; it could ride in `stoplist.bin`, one file fewer.
-- 2026-10-16 (from 0.13.14): in the last hour of rolling on (two hours after the chosen one) the next hour's file runs out: 8–15 % of trips come out as "keine Verbindung" and 8–11 % later than on the clock hour's own file (`bench/rollon.ts`); rolling on with the clock hour's file would match, at one more download while the card stays open.
+- 2026-11-02 (from 0.13.15): on a 5 Mbit/s line the footpaths are in 7–8 s after the first map (walk.bin is 3.5 MB), so every trip on tap until then uses straight-line walks; a smaller footpath file, or the part around the start first, would shorten that window.
