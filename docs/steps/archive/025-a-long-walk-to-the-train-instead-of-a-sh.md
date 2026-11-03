@@ -6,7 +6,7 @@ kind: research
 priority: P3
 size: S
 needs: -
-status: open
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -19,7 +19,7 @@ past Bernau: 35 min on foot to Friedrichstr. for the S2), and whether a short ri
 ## Decision
 - Question: Is this the fewest-rides choice taking a long walk over one more short ride, and should the trip prefer the ride?
 - Measure: how often a trip's first or last walk could be replaced by a ride of a few stops arriving as early, over random places; what changing it costs a tap.
-- Results: <table and one-line recommendation once measured>
+- Results: yes, a tie on arrival kept with the fewest rides, 3–4 % of trips from Alexanderplatz, nearly all past the city edge (an hourly bus at the end decides the arrival). Decided: leave as is (decision 0005).
 
 ## Notes
 - Seen during S004 (2026-11-03) on the Nächste map's trips from Alexanderplatz, weekday 10 Uhr (measure-S004/longwalk.ts in the project files).
