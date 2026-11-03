@@ -17,6 +17,11 @@ import {
   diffBandOf,
   diffLut,
   MAX_BAND,
+  MEET_COLORS,
+  MEET_EDGES_MIN,
+  MEET_TICKS,
+  meetGreyOf,
+  meetLut,
   oklab,
   LAND,
   RING_COLORS,
@@ -197,5 +202,41 @@ describe('colour thresholds (S034)', () => {
   it('is purple from 60 and blue from 90 min', () => {
     for (let m = 60; m < 90; m += 1) expect(isPurple(hue(min(m)))).toBe(true);
     for (let m = 90; m < 120; m += 1) expect(isBlue(hue(min(m)))).toBe(true);
+  });
+});
+
+describe('Treffpunkt scale (S017)', () => {
+  it('is green at +0, yellow from +5, red from +15, purple from +25 and dark blue from +40', () => {
+    expect(MEET_COLORS).toHaveLength(MEET_EDGES_MIN.length);
+    const at = (min: number) => MEET_COLORS[bandOf(min * 60, MEET_EDGES_MIN)];
+    expect(at(0)).toBe('#0f7a52');
+    expect(at(5)).toBe('#ffe83d');
+    expect(at(15)).toBe('#e0263c');
+    expect(at(25)).toBe('#a040b4');
+    expect(at(40)).toBe('#22427f');
+    expect(at(90)).toBe('#22427f');
+    for (const m of MEET_TICKS) expect(MEET_EDGES_MIN).toContain(m);
+  });
+
+  it('keeps neighbouring bands visibly distinct', () => {
+    const lab = MEET_COLORS.map(oklab);
+    for (let i = 1; i < lab.length; i++) {
+      const d = Math.hypot(...lab[i].map((v, k) => v - lab[i - 1][k]));
+      expect(d).toBeGreaterThan(0.05);
+    }
+  });
+
+  it('builds its lookup up to +40 min', () => {
+    const lut = meetLut();
+    expect(lut.length).toBe((40 * 60 + 1) * 4);
+    expect([lut[5 * 60 * 4], lut[5 * 60 * 4 + 1], lut[5 * 60 * 4 + 2]]).toEqual([255, 232, 61]);
+  });
+
+  it('fades to grey from an 8 to a 20 minute gap', () => {
+    expect(meetGreyOf(0)).toBe(0);
+    expect(meetGreyOf(8 * 60)).toBe(0);
+    expect(meetGreyOf(14 * 60)).toBeCloseTo(0.5);
+    expect(meetGreyOf(20 * 60)).toBe(1);
+    expect(meetGreyOf(60 * 60)).toBe(1);
   });
 });

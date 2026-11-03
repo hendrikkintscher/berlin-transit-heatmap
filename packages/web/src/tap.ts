@@ -220,8 +220,10 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
           return `<span class="each">${mark}<i class="p${i + 1}"></i>${name}${s < Infinity ? Math.round(s / 60) : '–'}${unit}</span>`;
         });
         parts.push(`<b>${each.join(' ')}</b>`);
-        // How much worse than the best spot, left out when it hardly is.
-        const extra = r.extraBase !== undefined ? Math.round((secs - r.extraBase) / 60) : 0;
+        // How much worse than the best spot on average (as the colours), left out when it
+        // hardly is.
+        const avg = r.each.reduce((a, v) => a + gridSeconds(r, lat, lng, v), 0) / r.each.length;
+        const extra = r.extraBase !== undefined ? Math.round((avg - r.extraBase) / 60) : 0;
         if (extra > 2) parts.push(`<small>${t('extraMinutes', { n: extra })}</small>`);
       } else if (secs >= 0) {
         // The next connection's own minutes and arrival take this line's place when they come.

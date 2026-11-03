@@ -13,6 +13,9 @@ import {
   HOME_COLORS,
   HOME_TICKS,
   LIMIT_VEIL,
+  MEET_COLORS,
+  MEET_EDGES_MIN,
+  MEET_TICKS,
   bandLabel,
 } from './colors';
 import { formatDate, shortStop, escapeHtml } from './format';
@@ -98,10 +101,8 @@ const tipText = $('tip-text');
 const tipAction = $<HTMLButtonElement>('tip-action');
 const installBtn = $<HTMLButtonElement>('install-btn');
 const secondBtn = $<HTMLButtonElement>('second-btn');
-// With one start, a person closed out of Treffpunkt comes back first (see 'meet-close').
-secondBtn.addEventListener('click', () =>
-  closedMeet && starts().length === 1 ? addStart(closedMeet.second) : search.open('another'),
-);
+// In a meeting point: search for one more person's start.
+secondBtn.addEventListener('click', () => search.open('another'));
 
 // ---------- state, from the link (see url.ts) ----------
 const { state, link, outside: linkOutside } = linkState(location.search);
@@ -185,13 +186,31 @@ $('home-ticks').append(
   }),
   homeEnd('legendBefore23'),
 );
+// Treffpunkt (S017): the group's average minutes over the best place, and the grey of unfair
+// places under the bar.
+$('meet-bar').append(
+  ...MEET_COLORS.map((c) => {
+    const s = document.createElement('span');
+    s.style.background = c;
+    return s;
+  }),
+);
+$('meet-ticks').append(
+  ...MEET_TICKS.map((m) => {
+    const tick = document.createElement('span');
+    tick.style.top = `${(100 * MEET_EDGES_MIN.indexOf(m)) / MEET_COLORS.length}%`;
+    tick.textContent = `+${m}`;
+    return tick;
+  }),
+);
 
 /**
- * The travel-time legend (with `extra`: meeting point minutes "+0 … +120"), the comparison
- * legend, or the home map's clock times.
+ * The travel-time legend, the meeting point's (its own scale and the grey of unfair
+ * places), the comparison legend, or the home map's clock times.
  */
-function showLegend(kind: 'time' | 'diff' | 'home', extra = false, avg = false) {
+function showLegend(kind: 'time' | 'meet' | 'diff' | 'home', avg = false) {
   for (const id of ['legend-bar', 'legend-ticks']) $(id).hidden = kind !== 'time';
+  for (const id of ['meet-bar', 'meet-ticks', 'meet-unfair']) $(id).hidden = kind !== 'meet';
   for (const id of ['diff-bar', 'diff-ticks']) $(id).hidden = kind !== 'diff';
   for (const id of ['home-bar', 'home-ticks']) $(id).hidden = kind !== 'home';
   $('legend-bar').parentElement!.setAttribute(
@@ -201,25 +220,15 @@ function showLegend(kind: 'time' | 'diff' | 'home', extra = false, avg = false) 
         ? 'legendDiff'
         : kind === 'home'
           ? 'legendHome'
-          : extra
+          : kind === 'meet'
             ? 'legendExtra'
             : 'legend',
     ),
   );
-  for (const tick of legendTicks) {
-    const m = Number(tick.dataset.m);
-    if (m === 120) {
-      tick.dataset.t = extra ? 'legendMaxExtra' : 'legendMax';
-      tick.textContent = t(tick.dataset.t as 'legendMax');
-    } else if (m === 0 && !extra) {
-      // The where-to-live map shows averages: its key says so.
-      tick.dataset.t = avg ? 'legendMinAvg' : 'legendMin';
-      tick.textContent = t(tick.dataset.t as 'legendMin');
-    } else {
-      delete tick.dataset.t;
-      tick.textContent = extra ? `+${m}` : String(m);
-    }
-  }
+  // The where-to-live map shows averages: its key says so.
+  const zero = legendTicks[0];
+  zero.dataset.t = avg ? 'legendMinAvg' : 'legendMin';
+  zero.textContent = t(zero.dataset.t as 'legendMin');
 }
 
 /**
@@ -664,14 +673,13 @@ function showOrigin() {
   meetChip.hidden = list.length < 2;
   document.body.classList.toggle('example', state.example);
   showHint((!list.length || state.example) && !state.special && !search.isOpen());
-  // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
-  secondBtn.hidden = !list.length || state.example || list.length >= MAX_STARTS || !!state.special;
-  // With one start it starts a meeting (Treffpunkt); in one it adds a person.
-  secondBtn.querySelector('span')!.textContent = t(list.length === 1 ? 'meetUp' : 'addPerson');
-  secondBtn.setAttribute(
-    'aria-label',
-    list.length === 1 ? t('meetUpLabel') : t('secondHere', { n: list.length + 1 }),
-  );
+  // "+ Person" (one more start by search) in a meeting point while no card is shown; CSS
+  // hides it under a card. With one start there is none (S017): a meeting starts from a
+  // place's card or the start card's "Wo treffen wir uns?".
+  secondBtn.hidden = list.length < 2 || list.length >= MAX_STARTS || !!state.special;
+  const label = t('secondHere', { n: list.length + 1 });
+  secondBtn.setAttribute('aria-label', label);
+  secondBtn.title = label;
 }
 
 /** The starts changed: markers, the tapped place, the link and the map follow. */
@@ -1045,7 +1053,10 @@ function showResult(r: Result, rings = true) {
   renderBest(r);
   frameResult(r);
   favPlaces.render();
-  showLegend(r.compare ? 'diff' : r.home ? 'home' : 'time', r.extraBase !== undefined, !!r.living);
+  showLegend(
+    r.compare ? 'diff' : r.home ? 'home' : r.extraBase !== undefined ? 'meet' : 'time',
+    !!r.living,
+  );
   if (!state.mapReady) return;
   drawHeat(r);
   if (rings) showLines(r);

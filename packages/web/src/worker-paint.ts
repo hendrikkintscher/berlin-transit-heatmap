@@ -1,23 +1,45 @@
 // The worker's colour images beyond a start's own map: "Bis N Min.", comparing two
 // times, and the transit-desert layer.
 import type { HeatGrid } from '@berlin-transit-heatmap/routing';
-import { DIFF_MAX_S, DIFF_MIN_S, diffLut, homeLut, limitLut, LIMIT_FEATHER_S } from './colors';
-import { LUT, mercY, paint, UPSAMPLE, windowUpTo } from './paint';
+import {
+  DIFF_MAX_S,
+  DIFF_MIN_S,
+  diffLut,
+  homeLut,
+  limitLut,
+  LIMIT_FEATHER_S,
+  MEET_GREY_FROM_S,
+  MEET_GREY_FULL_S,
+  MEET_GREY_RGB,
+  meetLut,
+} from './colors';
+import { type Fade, LUT, mercY, paint, SOFT, UPSAMPLE, windowUpTo } from './paint';
 import type { RasterLayer } from './protocol';
 import { blurSeconds } from './soften';
 
 const DIFF_LUT = diffLut();
 export const HOME_LUT = homeLut();
 const LIMIT_LUTS = new Map<number, Uint8Array>();
-/** A map's grid as shown: `offset` is added to its times for the colours. */
+const MEET_LUT = meetLut(SOFT.featherSeconds);
+/**
+ * A map's grid as shown: `offset` is added to its times for the colours. A meeting point's
+ * colours follow `meet` instead (the grid keeps the slowest times, for "Bis N Min.").
+ */
 export interface Shown {
   id: number;
   grid: HeatGrid;
   offset: number;
+  meet?: MeetFields;
 }
 
-/** The colour image of the last map: its travel times, or "Bis N Min." in one colour. */
+/**
+ * The colour image of the last map: its travel times (a meeting point: the group's
+ * average, greyed where unfair), or "Bis N Min." in one colour.
+ */
 export function paintShown(shown: Shown, limit?: number) {
+  const { meet } = shown;
+  if (!limit && meet)
+    return paint(shown.grid, meet.avg, MEET_LUT, shown.offset, undefined, false, meet.fade);
   if (!limit) return paint(shown.grid, shown.grid.seconds, LUT, shown.offset);
   let lut = LIMIT_LUTS.get(limit);
   if (!lut) LIMIT_LUTS.set(limit, (lut = limitLut(limit)));
@@ -99,4 +121,60 @@ export function paintDesert(
   }
   const raw = grid.seconds as Float32Array<ArrayBuffer>;
   return { image: { width, height, rgba }, bbox: grid.bbox, grid: { cols, rows, seconds: raw } };
+}
+
+/** A meeting point's fields: the average time per cell, and the fade for unfair places. */
+export interface MeetFields {
+  avg: Float32Array;
+  fade: Fade;
+}
+/**
+ * Blur of the gap, in cells of its half-resolution grid (100 m): one box pass, as the grey
+ * only fades over a few hundred metres.
+ */
+const GAP_BLUR_CELLS = 2;
+
+/**
+ * The group's average time per cell (Infinity where anyone cannot get there) and, on a grid
+ * of half the cells each way, the gap between the slowest and the quickest person, blurred:
+ * the grey only needs to be smooth, and a quarter of the cells blurs at a quarter of the cost.
+ */
+export function meetFields(grids: Float32Array[], cols: number, rows: number): MeetFields {
+  const people = grids.length;
+  // One person at a time over the whole grid (a plain loop the engine runs fastest).
+  const avg = grids[0].slice();
+  for (let p = 1; p < people; p++) {
+    const g = grids[p];
+    for (let i = 0; i < avg.length; i++) avg[i] += g[i];
+  }
+  if (people > 1) for (let i = 0; i < avg.length; i++) avg[i] /= people;
+  // The gap from one cell of each 2 x 2 block: the blur below smooths it anyway.
+  const hCols = (cols + 1) >> 1;
+  const hRows = (rows + 1) >> 1;
+  const sum = new Float32Array(hCols * hRows);
+  for (let h = 0, r = 0; r < rows; r += 2) {
+    for (let c = 0; c < cols; c += 2, h++) {
+      const i = r * cols + c;
+      let lo = Infinity;
+      let hi = 0;
+      for (let p = 0; p < people; p++) {
+        const v = grids[p][i];
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+      sum[h] = hi < Infinity ? hi - lo : Infinity;
+    }
+  }
+  const gap = blurSeconds(sum, hCols, hRows, GAP_BLUR_CELLS, 1);
+  return {
+    avg,
+    fade: {
+      gap,
+      cols: hCols,
+      rows: hRows,
+      from: MEET_GREY_FROM_S,
+      perSecond: 1 / (MEET_GREY_FULL_S - MEET_GREY_FROM_S),
+      rgb: MEET_GREY_RGB,
+    },
+  };
 }

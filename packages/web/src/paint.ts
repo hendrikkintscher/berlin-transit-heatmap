@@ -35,6 +35,8 @@ export function paint(
   win?: PaintWindow,
   /** Unreached cells take the lookup's last entry instead of staying clear. */
   fillUnreached = false,
+  /** Treffpunkt: places fade to grey where the people's times are far apart (whole grid only). */
+  fade?: Fade,
 ): { width: number; height: number; rgba: Uint8ClampedArray<ArrayBuffer>; bbox?: Bbox } {
   const { cols: fullCols } = grid;
   const { c0, r0, cols, rows } = win ?? { c0: 0, r0: 0, cols: grid.cols, rows: grid.rows };
@@ -61,6 +63,11 @@ export function paint(
   const yS = mercY(south);
   // The wobble is the whole grid's, so a window has the same shapes as the full map.
   const warp = warpOf(fullCols, grid.rows);
+  const gap = fade?.gap;
+  const gCols = fade?.cols ?? 0;
+  const gMaxX = gCols - 1;
+  const gMaxY = (fade?.rows ?? 0) - 1;
+  const [greyR, greyG, greyB] = fade?.rgb ?? [0, 0, 0];
   for (let j = 0; j < height; j++) {
     const lat = (Math.atan(Math.sinh(yN - ((j + 0.5) * (yN - yS)) / height)) * 180) / Math.PI;
     const fy0 = (north - lat) / dLat - 0.5;
@@ -94,9 +101,33 @@ export function paint(
       }
       const i = v + offset;
       const k = (i >= lutMax ? lutMax : i <= 0 ? 0 : (i + 0.5) | 0) * 4;
-      rgba[o] = lut[k];
-      rgba[o + 1] = lut[k + 1];
-      rgba[o + 2] = lut[k + 2];
+      if (gap) {
+        // The gap field has half the cells each way: cell g's centre is full cell 2g + 0.5.
+        let gx = (fx - 0.5) * 0.5;
+        let gy = (fy - 0.5) * 0.5;
+        gx = gx < 0 ? 0 : gx > gMaxX ? gMaxX : gx;
+        gy = gy < 0 ? 0 : gy > gMaxY ? gMaxY : gy;
+        let gc = gx | 0;
+        let gr = gy | 0;
+        if (gc > gMaxX - 1) gc = gMaxX - 1;
+        if (gr > gMaxY - 1) gr = gMaxY - 1;
+        const tx = gx - gc;
+        const ty = gy - gr;
+        const g0 = gr * gCols + gc;
+        const g =
+          (gap[g0] + (gap[g0 + 1] - gap[g0]) * tx) * (1 - ty) +
+          (gap[g0 + gCols] + (gap[g0 + gCols + 1] - gap[g0 + gCols]) * tx) * ty;
+        // (NaN, next to a place nobody shares, stays in colour.)
+        let f = (g - fade!.from) * fade!.perSecond;
+        f = f > 0 ? (f < 1 ? f : 1) : 0;
+        rgba[o] = lut[k] + (greyR - lut[k]) * f;
+        rgba[o + 1] = lut[k + 1] + (greyG - lut[k + 1]) * f;
+        rgba[o + 2] = lut[k + 2] + (greyB - lut[k + 2]) * f;
+      } else {
+        rgba[o] = lut[k];
+        rgba[o + 1] = lut[k + 1];
+        rgba[o + 2] = lut[k + 2];
+      }
       rgba[o + 3] = lut[k + 3];
     }
   }
@@ -106,6 +137,19 @@ export function paint(
 }
 
 type Bbox = [number, number, number, number];
+/**
+ * A field that fades the colours to grey: `gap` in seconds on a grid of `cols` x `rows`
+ * cells, each 2 x 2 of the painted grid's; the fade runs from `from` seconds at
+ * `perSecond` (1 / its span) to full `rgb`.
+ */
+export interface Fade {
+  gap: Float32Array;
+  cols: number;
+  rows: number;
+  from: number;
+  perSecond: number;
+  rgb: readonly [number, number, number];
+}
 /** A rectangle of grid cells: its first column and row and its size. */
 interface PaintWindow {
   c0: number;

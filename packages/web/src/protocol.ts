@@ -268,13 +268,14 @@ export type FromWorker =
       bbox: [number, number, number, number];
       /** Grid travel times for the tap readout (row 0 = north, rows evenly spaced in latitude). */
       grid: { cols: number; rows: number; seconds: Float32Array<ArrayBuffer> };
-      /** Meeting point: each start's own times on the same grid (the map shows their max). */
+      /** Meeting point: each start's own times on the same grid (`grid` holds their max). */
       each?: Float32Array<ArrayBuffer>[];
       /** Meeting point: up to three suggested meeting points, best first. */
       meet?: MeetSuggestion[];
       /**
-       * Meeting point (not comparing): the smallest slowest-of-all time on the grid.
-       * The image and outlines show extra minutes over it; `grid` keeps the actual times.
+       * Meeting point (not comparing): the smallest average of everyone's times on the grid.
+       * The image and outlines show the average's extra minutes over it (S017); `grid`
+       * keeps the slowest times.
        */
       extraBase?: number;
       /** "Where can I live?": `grid` holds the weighted average to the favourites, not trip times. */

@@ -14,7 +14,7 @@ import { whenAt } from './when';
 import { setDataVersions } from './data-url';
 import type { Direction, FromWorker, ToWorker } from './protocol';
 import { cancelSpecial, home, homeTrip, living, livingAt } from './worker-home';
-import { paintDesert, paintDiff, paintShown, type Shown } from './worker-paint';
+import { meetFields, paintDesert, paintDiff, paintShown, type Shown } from './worker-paint';
 import {
   labelLines,
   lastTimetable,
@@ -164,10 +164,20 @@ async function makeMap(msg: ComputeMsg, fresh: () => boolean) {
     image = paintDiff(grid, g2);
     outlines = { type: 'FeatureCollection', features: [] };
   } else {
-    // Meeting point: colour the extra minutes over the best spot, so it is always green.
-    extraBase = meeting ? minFinite(grid.seconds) : 0;
+    // Meeting point (S017, decision 0010): colour the group's average minutes over the best
+    // place, so it is always green there, and grey out where the trips are far apart. The
+    // time lines follow the same average, so they fall on the colours' edges.
+    const meet = meeting
+      ? meetFields(
+          runs.map((r) => r.shown.seconds),
+          grid.cols,
+          grid.rows,
+        )
+      : undefined;
+    const field = meet ? meet.avg : grid.seconds;
+    extraBase = meeting ? minFinite(field) : 0;
     // (Painted and traced with the offset, so the grid is not copied.)
-    shown = { id: msg.id, grid, offset: -extraBase };
+    shown = { id: msg.id, grid, offset: -extraBase, ...(meet ? { meet } : {}) };
     if (msg.noImage && !msg.limit) {
       // Heatmap off: the outlines come first; the colours wait for a 'paint'.
       image = { width: 1, height: 1, rgba: new Uint8ClampedArray(4) };
@@ -175,7 +185,7 @@ async function makeMap(msg: ComputeMsg, fresh: () => boolean) {
     } else image = paintShown(shown, msg.limit);
     // Outlines follow a more strongly blurred field, so walk bubbles round off.
     outlines = traceOutlines(
-      grid.seconds,
+      field,
       grid.cols,
       grid.rows,
       grid.bbox,

@@ -471,12 +471,14 @@ body.no-legend .legend {
   height: min(44vh, 380px);
   display: grid;
   grid-template-columns: auto 9px;
+  grid-template-rows: 1fr auto;
   column-gap: 5px;
   pointer-events: none;
 }
 #legend-bar,
 #diff-bar,
-#home-bar {
+#home-bar,
+#meet-bar {
   grid-row: 1;
   grid-column: 2;
   display: flex;
@@ -488,8 +490,33 @@ body.no-legend .legend {
 }
 #legend-bar span,
 #diff-bar span,
-#home-bar span {
+#home-bar span,
+#meet-bar span {
   flex: 1;
+}
+/* Treffpunkt: the grey of unfair places, under the bar. */
+.legend-unfair {
+  grid-row: 2;
+  grid-column: 1 / 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  text-shadow:
+    0 0 3px #fff,
+    0 0 3px #fff,
+    0 0 2px #fff;
+}
+.legend-unfair i {
+  width: 9px;
+  height: 14px;
+  border-radius: 3px;
+  background: #d2d2d2;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.9);
 }
 .legend-ticks {
   grid-row: 1;
@@ -1790,7 +1817,10 @@ body.special .legend {
 #home-bar[hidden],
 #home-ticks[hidden],
 #legend-bar[hidden],
-#legend-ticks[hidden] {
+#legend-ticks[hidden],
+#meet-bar[hidden],
+#meet-ticks[hidden],
+#meet-unfair[hidden] {
   display: none;
 }
 #diff-ticks span:first-child {
@@ -2091,18 +2121,7 @@ body.special .legend {
 }
 .second-btn {
   margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 44px;
-  padding: 0 16px 0 13px;
-  border: 0;
-  border-radius: var(--r-pill);
-  background: var(--panel);
-  box-shadow: var(--shadow);
   color: var(--accent);
-  font: inherit;
-  font-weight: 700;
   cursor: pointer;
 }
 .bottom:has(#readout:not([hidden])) .second-btn {
