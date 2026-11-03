@@ -85,6 +85,51 @@ describe('trip card', () => {
     ).toContain('<small class="trip-ends">Kino → Zoologischer Garten</small>');
   });
 
+  it("shows the map's place by the rings on its dot, the other dot as the slot", () => {
+    const journey = {
+      transfers: 0,
+      legs: [
+        ride('S7', 'sbahn', 'S Ostkreuz Bhf (Berlin)', 'S+U Zoologischer Garten Bhf (Berlin)'),
+      ],
+      ends: ['S Ostkreuz Bhf', 'S+U Zoologischer Garten Bhf'] as [string, string],
+    };
+    // Each row as its class, what leads it (the rings, or the slot with a plain dot) and
+    // what ends it: nothing after the name any more.
+    const rows = (direction: TripContext['direction']) =>
+      [
+        ...tripHtml(
+          { journeys: [journey] },
+          { ...ctx, direction, rows: { anchorTitle: 'Hier rechnet die Karte' } },
+        ).matchAll(
+          /<span class="(trip-row [^"]*)">(.*?)<small class="role">.*?<\/small><span class="name">([^<]*)<\/span><\/span>/g,
+        ),
+      ].map(([, cls, lead, name]) => [
+        cls,
+        lead.startsWith('<i class="rings"')
+          ? 'rings'
+          : lead === '<span class="anchor-slot"><i class="dot"></i></span>'
+            ? 'dot'
+            : lead,
+        name,
+      ]);
+    // Leaving: the map is computed from the Start.
+    expect(rows('depart')).toEqual([
+      ['trip-row start anchor', 'rings', 'Ostkreuz'],
+      ['trip-row end', 'dot', 'Zoologischer Garten'],
+    ]);
+    // Arriving (after ⇅ or the rings moved): the rings sit on the Ziel's dot.
+    expect(rows('arrive')).toEqual([
+      ['trip-row start', 'dot', 'Ostkreuz'],
+      ['trip-row end anchor', 'rings', 'Zoologischer Garten'],
+    ]);
+    expect(
+      tripHtml(
+        { journeys: [journey] },
+        { ...ctx, rows: { anchorTitle: 'Hier rechnet die Karte' } },
+      ),
+    ).toContain('<i class="rings" role="img" aria-label="Hier rechnet die Karte"');
+  });
+
   it('lists the lines, changes, walking and stops', () => {
     const html = tripHtml(
       {

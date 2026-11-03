@@ -305,8 +305,9 @@ body.no-legend .legend {
   min-height: 40px;
   border-radius: 50%;
 }
-/* The trip's ends as rows: Start and Ziel with the map's marker colours, the name, and
-   the rings where the map is computed (the button in the other row moves them there). */
+/* The trip's ends as rows: Start and Ziel with the map's marker colours, the name, and the
+   dot in front. The map's place has the rings for its dot; the other dot is the button that
+   moves them there (#readout-anchor, its 30 px tap area round the dot). */
 #readout .trip-rows {
   display: block;
   margin: 2px 0 6px;
@@ -314,10 +315,27 @@ body.no-legend .legend {
 #readout .trip-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   min-height: 30px;
 }
-#readout .trip-row .dot {
+#readout .trip-row .rings,
+#readout .trip-row .anchor-slot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  /* The dot lines up with the card's left edge. */
+  margin-left: -9px;
+}
+#readout .trip-row .rings {
+  color: var(--accent);
+}
+#readout .trip-row.end .rings {
+  color: var(--trip-end);
+}
+#readout .dot {
+  display: block;
   flex: none;
   width: 12px;
   height: 12px;
@@ -332,7 +350,7 @@ body.no-legend .legend {
 }
 #readout .trip-row .role {
   flex: none;
-  width: 34px;
+  width: 38px;
   margin: 0;
   font-size: 12px;
 }
@@ -344,28 +362,26 @@ body.no-legend .legend {
   white-space: nowrap;
   font-weight: 600;
 }
-#readout .trip-row .rings,
-#readout .trip-row .anchor-slot {
-  flex: none;
+/* The rings button: the rings in the side column, the plain dot in a row. */
+#readout-anchor .dot,
+#readout .trip-row #readout-anchor .ico {
+  display: none;
+}
+#readout .trip-row #readout-anchor {
   display: grid;
   place-items: center;
   width: 30px;
-  height: 30px;
-}
-#readout .trip-row .rings {
-  color: var(--accent);
-}
-/* The rings button in a row: smaller and grey, until it is tapped. */
-#readout .trip-row #readout-anchor {
-  width: 30px;
   min-height: 30px;
+  padding: 0;
   border-radius: 50%;
-  color: var(--muted);
-  opacity: 0.5;
+  background: transparent;
+  box-shadow: none;
 }
-#readout .trip-row #readout-anchor .ico {
-  width: 20px;
-  height: 20px;
+#readout .trip-row #readout-anchor .dot {
+  display: block;
+}
+#readout .trip-row #readout-anchor:active {
+  background: var(--accent-soft);
 }
 /* After ⇅ the roles blink; after the rings moved, they grow in at their new row. */
 @keyframes role-flash {
