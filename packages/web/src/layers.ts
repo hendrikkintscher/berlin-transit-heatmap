@@ -5,10 +5,12 @@ import {
   heatGrid,
   type HeatGrid,
   type PreparedTimetable,
+  type RouteMode,
   type WalkNetwork,
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, Point } from 'geojson';
-import type { StationProps } from './protocol';
+import type { StationProps, StopProps } from './protocol';
+import { STOP_MODES } from './colors';
 import { stationName } from './stop-name';
 
 /** Desert grid cell size; coarser than the heatmap, the shading is a broad-brush view. */
@@ -43,10 +45,72 @@ export function departuresPerHour(tt: PreparedTimetable): Float32Array {
   return counts;
 }
 
+interface StationGroup {
+  name: string;
+  /** The first platform's position, for merging by distance. */
+  lat: number;
+  lon: number;
+  sumLat: number;
+  sumLon: number;
+  n: number;
+}
+
 /**
- * Merges platforms into stations (by parent stop, then by name within MERGE_M) and
- * returns one point per station with its departures per hour over all platforms and
- * directions, and up to eight line names.
+ * Merges platforms into stations: by parent stop, then stops of the same tidied name within
+ * MERGE_M. Only stops that `keep` accepts take part. `of[s]` is the index in `groups` of stop
+ * s's station (-1 for the rest); a station sits at the mean of its platforms.
+ */
+function mergeStations(
+  tt: PreparedTimetable,
+  keep: (s: number) => boolean,
+): { groups: StationGroup[]; of: Int32Array } {
+  const of = new Int32Array(tt.stopCount).fill(-1);
+  const byRoot = new Map<number, number>();
+  const byName = new Map<string, number[]>();
+  const found: StationGroup[] = [];
+  const mPerLon = tt.proj.mPerLon;
+  const mPerLat = tt.proj.mPerLat;
+  for (let s = 0; s < tt.stopCount; s++) {
+    if (!keep(s)) continue;
+    const root = tt.stops[s].parent ?? s;
+    let gi = byRoot.get(root);
+    if (gi === undefined) {
+      const name = stationName(tt.stops[root].name);
+      const lat = tt.stopLat[s];
+      const lon = tt.stopLon[s];
+      const same = byName.get(name) ?? [];
+      gi = same.find(
+        (i) => Math.hypot((found[i].lat - lat) * mPerLat, (found[i].lon - lon) * mPerLon) < MERGE_M,
+      );
+      if (gi === undefined) {
+        gi = found.push({ name, lat, lon, sumLat: 0, sumLon: 0, n: 0 }) - 1;
+        same.push(gi);
+        byName.set(name, same);
+      }
+      byRoot.set(root, gi);
+    }
+    const g = found[gi];
+    g.sumLat += tt.stopLat[s];
+    g.sumLon += tt.stopLon[s];
+    g.n++;
+    of[s] = gi;
+  }
+  // Stations of one name next to each other, as the list has always been ordered.
+  const order = [...byName.values()].flat();
+  const at = new Int32Array(found.length);
+  order.forEach((gi, i) => (at[gi] = i));
+  for (let s = 0; s < of.length; s++) if (of[s] >= 0) of[s] = at[of[s]];
+  return { groups: order.map((gi) => found[gi]), of };
+}
+
+const centre = (g: StationGroup): [number, number] => [
+  round5(g.sumLon / g.n),
+  round5(g.sumLat / g.n),
+];
+
+/**
+ * One point per station (platforms merged) with its departures per hour over all platforms
+ * and directions, and up to eight line names.
  */
 export function stations(
   tt: PreparedTimetable,
@@ -62,57 +126,61 @@ export function stations(
       set.add(tt.routeNames[r]);
     }
   }
-  interface Group {
-    name: string;
-    lat: number;
-    lon: number;
-    sumLat: number;
-    sumLon: number;
-    n: number;
-    perHour: number;
-    lines: Set<string>;
-  }
-  const byRoot = new Map<number, Group>();
-  const byName = new Map<string, Group[]>();
-  const mPerLon = tt.proj.mPerLon;
-  const mPerLat = tt.proj.mPerLat;
+  const { groups, of } = mergeStations(tt, (s) => perHour[s] > 0);
+  const sums = groups.map((g) => ({ g, perHour: 0, lines: new Set<string>() }));
   for (let s = 0; s < tt.stopCount; s++) {
-    if (!(perHour[s] > 0)) continue;
-    const root = tt.stops[s].parent ?? s;
-    let g = byRoot.get(root);
-    if (!g) {
-      const name = stationName(tt.stops[root].name);
-      const lat = tt.stopLat[s];
-      const lon = tt.stopLon[s];
-      const same = byName.get(name) ?? [];
-      g = same.find((o) => Math.hypot((o.lat - lat) * mPerLat, (o.lon - lon) * mPerLon) < MERGE_M);
-      if (!g) {
-        g = { name, lat, lon, sumLat: 0, sumLon: 0, n: 0, perHour: 0, lines: new Set() };
-        same.push(g);
-        byName.set(name, same);
-      }
-      byRoot.set(root, g);
-    }
-    g.sumLat += tt.stopLat[s];
-    g.sumLon += tt.stopLon[s];
-    g.n++;
-    g.perHour += perHour[s];
-    for (const l of lines.get(s) ?? []) g.lines.add(l);
+    if (of[s] < 0) continue;
+    const a = sums[of[s]];
+    a.perHour += perHour[s];
+    for (const l of lines.get(s) ?? []) a.lines.add(l);
   }
-  const groups = [...byName.values()].flat().sort((a, b) => a.perHour - b.perHour);
+  sums.sort((a, b) => a.perHour - b.perHour);
   return {
     type: 'FeatureCollection',
     // Quietest first, so busy stations draw on top.
-    features: groups.map((g) => ({
+    features: sums.map((a) => ({
       type: 'Feature',
-      geometry: { type: 'Point', coordinates: [round5(g.sumLon / g.n), round5(g.sumLat / g.n)] },
+      geometry: { type: 'Point', coordinates: centre(a.g) },
       properties: {
-        name: g.name,
-        perHour: Math.round(g.perHour),
-        lines: [...g.lines].sort(compareLines).slice(0, 8).join(', '),
+        name: a.g.name,
+        perHour: Math.round(a.perHour),
+        lines: [...a.lines].sort(compareLines).slice(0, 8).join(', '),
       },
     })),
   };
+}
+
+const STOP_RANK = (m: RouteMode) => {
+  const k = (STOP_MODES as readonly string[]).indexOf(m);
+  return k < 0 ? STOP_MODES.length - 1 : k;
+};
+
+/**
+ * Every stop on the map (S032): one point per station, merged as in `stations`, with its
+ * name and strongest mode `k` (the index in STOP_MODES). Unlike `stations`, a stop counts when any line in
+ * the loaded timetable calls there, whatever the hour. Major stations come last, so they draw
+ * on top.
+ */
+export function stopPoints(tt: PreparedTimetable): FeatureCollection<Point, StopProps> {
+  const rank = new Uint8Array(tt.stopCount).fill(255);
+  for (let r = 0; r < tt.routeCount; r++) {
+    const k = STOP_RANK(tt.routeModes[r]);
+    for (let i = tt.routeStopOffset[r]; i < tt.routeStopOffset[r + 1]; i++) {
+      const s = tt.routeStops[i];
+      if (k < rank[s]) rank[s] = k;
+    }
+  }
+  const { groups, of } = mergeStations(tt, (s) => rank[s] !== 255);
+  const best = new Uint8Array(groups.length).fill(255);
+  for (let s = 0; s < tt.stopCount; s++)
+    if (of[s] >= 0 && rank[s] < best[of[s]]) best[of[s]] = rank[s];
+  const features = groups.map((g, i) => ({
+    type: 'Feature' as const,
+    geometry: { type: 'Point' as const, coordinates: centre(g) },
+    properties: { name: g.name, k: best[i] },
+  }));
+  features.sort((a, b) => b.properties.k - a.properties.k);
+  return { type: 'FeatureCollection', features };
 }
 
 const round5 = (x: number) => Math.round(x * 1e5) / 1e5;

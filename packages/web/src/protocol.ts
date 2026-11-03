@@ -145,6 +145,8 @@ export type ToWorker =
   | { type: 'layers'; window: Window; thresholds: readonly [number, number]; walkKmh: number }
   /** Station names and places for search suggestions, from the loaded timetable. */
   | { type: 'stations'; window: Window }
+  /** Every stop for the map's stop layer, once the first map is shown (S032). */
+  | { type: 'stops'; window: Window }
   /** Fetch the footpath network now (the first map is on screen, or there is none to wait for). */
   | { type: 'loadWalk' }
   /** The base map is up too: the lines' courses may load now (and the footpaths, if not yet). */
@@ -216,6 +218,12 @@ export interface StationProps {
   perHour: number;
   /** Up to eight line names, S/U/Metro first, joined with ", ". */
   lines: string;
+}
+
+/** A stop on the map: its station name and strongest mode `k`, its index in STOP_MODES (colors.ts). */
+export interface StopProps {
+  name: string;
+  k: number;
 }
 
 /** A grid drawn as an image over [west, south, east, north], with its raw values for taps. */
@@ -302,6 +310,7 @@ export type FromWorker =
       limit?: number;
     }
   | { type: 'stations'; list: SearchStation[] }
+  | { type: 'stops'; stops: FeatureCollection<Point, StopProps> }
   /**
    * More connections for the drawer, each drawn as a trip would be; the same `id` may come
    * again with a longer list (connections on other lines, found one search at a time);

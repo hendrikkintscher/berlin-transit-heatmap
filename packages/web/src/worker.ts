@@ -6,7 +6,7 @@
 import { REGION, type PreparedTimetable } from '@berlin-transit-heatmap/routing';
 import { outlines as traceOutlines } from './contours';
 import { OUTLINE_BLUR_CELLS, type paint } from './paint';
-import { accessGrid, departuresPerHour, stations } from './layers';
+import { accessGrid, departuresPerHour, stations, stopPoints } from './layers';
 import { suggestMeetingPoints } from './meet';
 import { earlyLoad, linkHasStart } from './early';
 import { computeRequest, linkState, readFrom, sameRequest, type ComputeRequest } from './state';
@@ -333,6 +333,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
         perHour: f.properties.perHour,
       }));
       post({ type: 'stations', list });
+    } else if (msg.type === 'stops') {
+      post({ type: 'stops', stops: stopPoints(await ensure(msg.window)) });
     } else if (msg.type === 'layers') {
       setWalkKmh(msg.walkKmh);
       const tt = await ensure(msg.window);

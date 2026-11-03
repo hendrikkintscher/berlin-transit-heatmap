@@ -6,7 +6,7 @@ kind: feature
 priority: P2
 size: S
 needs: -
-status: open
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -19,11 +19,11 @@ stops as dots from street zoom with names a step closer. Taken from the timetabl
 already has, after the first map, so nothing loads or waits for it.
 
 ## Build steps only — acceptance criteria
-- [ ] The worker builds one point per station (platforms merged as in `layers.ts`) with its strongest mode, once the first map is shown; the page draws them under the trip and over the colours and time rings
-- [ ] S/U/RE dots and names from the city view (S/U with a bold letter from about zoom 13); tram/bus/ferry dots from about zoom 13, names from about zoom 14; S/U names win where labels collide
-- [ ] Names are the app's own stop names (same as the trip card), in the map's regular font
-- [ ] First map, tap to trip, ⇅ and the rings no slower at 360×740, also at 4× CPU (medians of 6–8 visits); bundle budget kept
-- [ ] Tests cover the station list (merging, mode, names)
+- [x] The worker builds one point per station (platforms merged as in `layers.ts`) with its strongest mode, once the first map is shown; the page draws them under the trip and over the colours and time rings
+- [x] S/U/RE dots and names from the city view (S/U with a bold letter from about zoom 13); tram/bus/ferry dots from about zoom 13, names from about zoom 14; S/U names win where labels collide
+- [x] Names are the app's own stop names (same as the trip card), in the map's regular font
+- [x] First map, tap to trip, ⇅ and the rings no slower at 360×740, also at 4× CPU (medians of 6–8 visits); bundle budget kept
+- [x] Tests cover the station list (merging, mode, names)
 
 ## Notes
 - Prototype, script and timings: project files `measure-S028/` (`prototype.patch`, `stops.mjs`, `timings.txt`, `compare.png`).

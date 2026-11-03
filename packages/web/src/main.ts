@@ -38,6 +38,7 @@ import {
   ROUTES_SOURCE,
   STATIONS_LAYER,
   STATIONS_SOURCE,
+  STOPS_SOURCE,
   VEIL_LAYER,
   VEIL_SOURCE,
   veilAround,
@@ -423,6 +424,9 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (held !== r) showLines(r, false);
   } else if (m.type === 'moreTrips') {
     tap.onMoreTrips(m);
+  } else if (m.type === 'stops') {
+    (map.getSource(STOPS_SOURCE) as GeoJSONSource | undefined)?.setData(m.stops);
+    performance.mark('stops');
   } else if (m.type === 'placeName') {
     tap.onPlaceName(m);
   } else if (m.type === 'stations') {
@@ -1028,6 +1032,9 @@ function showResult(r: Result, rings = true) {
   if (!firstMapShown) {
     firstMapShown = true;
     performance.mark('first-map');
+    // The stops on the map come from the timetable already loaded, once this frame is painted.
+    const window = computedWindow();
+    requestAnimationFrame(() => setTimeout(() => send({ type: 'stops', window })));
     // On a fast line the footpaths start downloading once this frame is painted, not with the
     // base map.
     if (fastLine()) requestAnimationFrame(() => setTimeout(askWalk));

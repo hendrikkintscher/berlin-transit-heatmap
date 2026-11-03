@@ -252,6 +252,15 @@ export const RING_MINUTES = [15, 30, 45, 60];
 export const RING_COLORS = ['#1a0848', '#3b1d86', '#6440b4', '#7553c0'];
 
 /** Line colours, roughly following the usual Berlin map conventions. */
+/**
+ * Stops on the map by their strongest mode, strongest first (S032): the index is a stop's
+ * rank `k`. S-Bahn, U-Bahn and regional stations show from the city view, the rest closer;
+ * an S+U station counts as S-Bahn, and other modes as bus.
+ */
+export const STOP_MODES = ['sbahn', 'ubahn', 'regional', 'tram', 'ferry', 'bus'] as const;
+/** Ranks up to this one show with their names from the city view. */
+export const MAJOR_STOP_RANK = 2;
+
 export const MODE_COLORS: Record<string, string> = {
   sbahn: '#00843d',
   ubahn: '#0a5ea8',
