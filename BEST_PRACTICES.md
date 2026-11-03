@@ -17,8 +17,8 @@ How to write each language this repo uses, checked against the current reference
 
 - Run `pnpm check` before every push; `npx prettier --write` on changed docs. Prettier settings
   (`.prettierrc`): single quotes, 100 columns, trailing commas. Don't argue with the formatter.
-- Comments say _why_ and give numbers ("0.5–0.7 MB gzipped each: keep the 12 most recently
-  used"), not what the next line does. Match the comment density of the file you are in.
+- Comments say _why_ and give numbers ("50–65 KB gzipped each: keep the 48 most recently
+  stored"), not what the next line does. Match the comment density of the file you are in.
 - Names are plain English words, the same word for the same thing across packages (Ziel, rings,
   card, trip).
 - Small diffs: one roadmap step per PR, no drive-by refactors.

@@ -32,7 +32,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Now · B. Fast and steady loading and measuring (0.13)
 
-- S006 · build · feature · P2 · XS · More hours kept offline
 - S007 · build · refactor · P3 · S · Station numbers in the stop list
 - S008 · decision · research · P3 · S · Footpaths sooner on a slow line
 

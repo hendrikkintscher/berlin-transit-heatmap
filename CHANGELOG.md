@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.13.22] — 2026-11-03
+
+- S006: The service worker keeps the 48 most recently stored hourly timetables instead of 12, oldest out first, nothing fetched ahead: two days of every hour (or the usual hours of several days) come from the phone instead of the network. Asking for 48 hours twice: second round 0/48 → 48/48 from the cache. Stored on the phone (unzipped, as the Cache API keeps it) 3.8 → 14.5 MB, about 0.3 MB per hour; the download for those 48 hours is 2.8 MB gzipped, once. At 360×740 first map 926 → 897 ms, tap to trip 87 → 84 ms; 4× CPU first map 1613 → 1393 ms (bimodal), tap 131 → 130 ms: within noise, the first visit and taps take the same path.
+
 ## [0.13.21] — 2026-11-03
 
 - S005: A tap on a map to a Ziel leaving reads its latest leaving off the map's own profile search instead of searching for it (checked by the trip leaving then; searched as before where the trip with the fewest rides leaves earlier). Same trips (1799 of 1799 places); tap in Node 7.7–10.6 → 6.7–9.7 ms (−5 to −24 %). At 360×740 tap to trip 119 → 118 ms (Nächste), 110 → 113 ms (Typisch), 4× CPU 177–186 → 172–202 ms, first map unchanged: within noise, the worker's ~110 ms answer is mostly not the searches (new step S026). Decision 0006.
