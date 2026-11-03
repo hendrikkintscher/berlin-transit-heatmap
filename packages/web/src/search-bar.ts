@@ -22,7 +22,7 @@ import {
   type LocalStreet,
   type StreetsFile,
 } from './search-local';
-import { $, type State } from './state';
+import { $, chosenStart, type State } from './state';
 import type { Point } from './url';
 
 /** What a picked search result does: set the start, add a favourite place or one more start. */
@@ -178,7 +178,7 @@ export function initSearch(deps: SearchDeps) {
     searchPanel.classList.remove('open');
     searchClose.hidden = true;
     searchInput.setAttribute('aria-expanded', 'false');
-    hint.hidden = !!state.origin || !!state.special;
+    hint.hidden = !!chosenStart(state) || !!state.special;
     searchAbort?.abort();
     clearTimeout(searchTimer);
     searchInput.blur();
@@ -337,7 +337,7 @@ export function initSearch(deps: SearchDeps) {
     searchInput.value = '';
     // With a start set, the place may be a new start, a destination or another start:
     // show the trip there, with buttons for the other two, and the starts with it in view.
-    if (state.origin && state.result) {
+    if (chosenStart(state) && state.result) {
       deps.frameView([...deps.starts(), p], true);
       deps.tapAt(p.lat, p.lon, undefined, p.label, true);
     } else {

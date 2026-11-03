@@ -24,6 +24,11 @@ export interface Region {
   town: string;
   /** Where the map opens: [lon, lat]. */
   center: [number, number];
+  /**
+   * The start of the example map a visit without a start opens on (S014): a central stop,
+   * so the colours show how far the network reaches. A tap or search replaces it.
+   */
+  example: { lat: number; lon: number };
   /** The GTFS feed the timetables are built from. */
   gtfsUrl: string;
   /** Geofabrik extracts (europe/germany/<name>) merged for the footpaths. */
@@ -47,6 +52,8 @@ export const REGIONS = {
     osmBbox: [12.8, 52.2, 14.0, 52.85],
     town: 'Berlin',
     center: [13.405, 52.515],
+    // S+U Alexanderplatz.
+    example: { lat: 52.5219, lon: 13.4132 },
     gtfsUrl: 'https://www.vbb.de/vbbgtfs',
     osmExtracts: ['berlin', 'brandenburg'],
     orientation: true,

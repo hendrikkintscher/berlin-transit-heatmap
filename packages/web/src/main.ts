@@ -52,6 +52,7 @@ import {
   $,
   computeRequest,
   inArea,
+  chosenStart,
   linkState,
   mapDirection,
   mapToGoal,
@@ -402,7 +403,8 @@ listen((ev: MessageEvent<FromWorker>) => {
     if (refined) walkNoteDue = false;
     if (walkLoading) walkLine();
     else setStatus(note ? () => t('walkReady') : () => '', note);
-    showTips();
+    // (The example map keeps the start card up instead, S014.)
+    if (!state.example) showTips();
   } else if (m.type === 'image') {
     const r = state.result;
     // Only the image the switches still want (they may have changed while it was painted).
@@ -551,6 +553,8 @@ let computedMinute = 0;
 
 /** The map whose colours the worker sends without a 'paint' (its first, S013). */
 let paintComing = 0;
+/** The last map asked for was the example's (S014). */
+let askedExample = false;
 
 function compute() {
   clearTimeout(preloadTimer);
@@ -567,7 +571,10 @@ function compute() {
   loadbar.hidden = false;
   loadbar.classList.add('indeterminate');
   setStatus(() => '');
-  const first = !state.result;
+  // The first map from a start of one's own comes like a first map, outlines first (S013),
+  // also after the example map.
+  const first = !state.result || (askedExample && !state.example);
+  askedExample = state.example;
   paintComing = first && state.heat && !state.limit ? state.requestId : 0;
   send({
     type: 'compute',
@@ -578,7 +585,7 @@ function compute() {
 
 function writeUrl() {
   const q = linkQuery(
-    { ...state, to: tap.spot(), span: tap.span() },
+    { ...state, origin: chosenStart(state), to: tap.spot(), span: tap.span() },
     NOW_WHEN,
     // Keep an explicit ?lang= so a shared English link stays English.
     urlLang && urlLang === lang() ? urlLang : null,
@@ -630,6 +637,8 @@ function startMarker(i: number): maplibregl.Marker {
     e.stopPropagation();
     // The click a long press leaves when the marker it moved now sits under the finger.
     if (longPress.swallow() || Date.now() - draggedAt < 400) return;
+    // The example map's start (S014): a tap on it makes it the start, as a tap beside it.
+    if (state.example) return setOrigin({ ...state.origin! });
     tap.showStartCard(i);
   });
   return (startMarkers[i] = m);
@@ -651,9 +660,10 @@ function showOrigin() {
     el.title = name;
   });
   meetChip.hidden = list.length < 2;
-  showHint(!list.length && !state.special && !search.isOpen());
+  document.body.classList.toggle('example', state.example);
+  showHint((!list.length || state.example) && !state.special && !search.isOpen());
   // "2. Start" (one more start by search) while no card is shown; CSS hides it under a card.
-  secondBtn.hidden = !list.length || list.length >= MAX_STARTS || !!state.special;
+  secondBtn.hidden = !list.length || state.example || list.length >= MAX_STARTS || !!state.special;
   // With one start it starts a meeting (Treffpunkt); in one it adds a person.
   secondBtn.querySelector('span')!.textContent = t(list.length === 1 ? 'meetUp' : 'addPerson');
   secondBtn.setAttribute(
@@ -664,6 +674,8 @@ function showOrigin() {
 
 /** The starts changed: markers, the tapped place, the link and the map follow. */
 function startsChanged() {
+  // A start of one's own ends the example map (S014).
+  state.example = false;
   // Setting a start leaves the where-to-live map for the start's own map.
   if (state.special) {
     state.special = null;
@@ -735,7 +747,7 @@ let undoTo: {
 let undoTimer = 0;
 /** A start is about to move: for a few seconds, one tap brings the starts and place back. */
 function offerUndo(spot: Point | null, text?: string) {
-  if (!state.origin) return;
+  if (!chosenStart(state)) return;
   undoTo = {
     starts: starts(),
     spot,
@@ -817,7 +829,7 @@ let closedMeet: { second: Point; names: string[] } | null = null;
 
 /** Meeting point: one more start, up to MAX_STARTS. */
 function addStart(p: Point) {
-  if (!state.origin || starts().length >= MAX_STARTS) return;
+  if (!chosenStart(state) || starts().length >= MAX_STARTS) return;
   // A meeting point starts from the places: the place is not the Ziel any more.
   state.toGoal = false;
   const back = closedMeet;
@@ -1235,7 +1247,7 @@ const longPress = new LongPress((x, y) => {
   if (search.isOpen() || chips.isOpen()) return;
   const { lat, lng } = map.unproject([x, y]);
   navigator.vibrate?.(15);
-  if (!state.origin) return setOrigin({ lat, lon: lng });
+  if (!chosenStart(state)) return setOrigin({ lat, lon: lng });
   moveStart(0, { lat, lon: lng });
 });
 listenLongPress(map.getCanvas(), map.getContainer(), longPress);
@@ -1595,7 +1607,7 @@ menu.applyLang(lang(), false);
 // paints the HTML's placeholder time or German labels for an English link).
 $('chips').classList.remove('unrendered');
 search.panel.classList.remove('unrendered');
-showHint(!state.origin && !state.special);
+showHint(!chosenStart(state) && !state.special);
 showHeat();
 if (linkOutside) setStatus(() => t('linkOutside'), true);
 

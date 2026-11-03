@@ -303,6 +303,12 @@ try {
   const f = await fresh.newPage();
   f.on('pageerror', (e) => errors.push(`fresh: ${e.message}`));
   await f.goto(base);
+  // A visit without a start opens on the example map, with the start card over it (S014).
+  const example = await f
+    .waitForSelector('body.example #hint:not([hidden])', { timeout: 15000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!example) failures.push('first screen: no example map under the start card');
   await f.evaluate(async () => {
     await navigator.serviceWorker.ready;
     await caches.open('data-v2');

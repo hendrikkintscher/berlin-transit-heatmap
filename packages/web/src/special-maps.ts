@@ -11,7 +11,7 @@ import { nightText, whenText } from './format';
 import { t } from './i18n';
 import type { ToWorker } from './protocol';
 import { cappedLine } from './status-lines';
-import { $, type Result, type Special, type State } from './state';
+import { $, chosenStart, type Result, type Special, type State } from './state';
 import { computeWindow, eveningWindow } from './when';
 
 /** The evening and night hours the home map reads, in order. */
@@ -47,7 +47,7 @@ export function initSpecialMaps(deps: SpecialDeps) {
     chip.hidden = !s;
     document.body.classList.toggle('special', !!s);
     // The "tap the map or search a start" hint would sit on the banner.
-    hint.hidden = !!s || !!state.origin || deps.isSearchOpen();
+    hint.hidden = !!s || !!chosenStart(state) || deps.isSearchOpen();
     if (!s) return;
     $('special-text').textContent =
       s.kind === 'living'

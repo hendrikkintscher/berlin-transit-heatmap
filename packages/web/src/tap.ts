@@ -15,7 +15,7 @@ import {
 } from './map-layers';
 import type { StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
-import { $, mapDirection, mapToGoal, type State } from './state';
+import { $, chosenStart, mapDirection, mapToGoal, type State } from './state';
 import { arrivedBy, changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
 import { refitRows, ridesKey } from './more-rows';
@@ -178,7 +178,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
       html =
         t('stationFreq', { name: escapeHtml(p.name), n: p.perHour }) +
         (p.lines ? `<small>${escapeHtml(p.lines)}</small>` : '');
-    } else if (!state.origin && !state.special && !(state.desert && data)) {
+    } else if (!chosenStart(state) && !state.special && !(state.desert && data)) {
       setSpot(null);
       deps.setOrigin({ lat, lon: lng });
       return;
