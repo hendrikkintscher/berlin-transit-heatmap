@@ -6,7 +6,7 @@ kind: research
 priority: P3
 size: S
 needs: -
-status: waiting
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -30,6 +30,7 @@ Under Typisch, the lines of the map to a Ziel leaving follow the trips people wo
   | Vehicle caught leaving on the hour | 1243 | 71 % | 39 % | 86 % | +40 ms |
 
   Recommendation: lines from each stop's cells spread over its trips by the share of the hour (row 3): fewer lines, a third more of the tap trips on them, 93 % of drawn lines really ridden; only Typisch maps to a Ziel leaving get about 10 ms slower (of ~200 ms), every other map and every tap unchanged.
+- Decision (2026-11-03): Hendrik said yes; built in 0.13.19, decision 0003.
 
 ## Notes
 - Planned as 0.13.20. Note from 0.13.12 (2026-10-16): Typisch cells average the hour and take no one trip; Nächste and Bestfall follow the cells' own trips since 0.13.12.

@@ -128,3 +128,33 @@ export function goalArrival(p: StopProfile, s: number, leave: number): number {
   const i = firstAllowing(p, s, leave);
   return i < 0 ? Infinity : -p.departure[i];
 }
+
+/**
+ * Typisch, whose cells take no one trip: each stop's cells in `grid` (made with trackStops)
+ * spread over the stop's events by the share of [from, to] each serves as the first to
+ * allow leaving then, for goalUsage. One per profile event, as goalCells' `cells`. The walk
+ * to the stop is left out (it shifts the hour only by a few minutes); weighting each cell by
+ * its own walk drew about the same lines for ten times the cost (bench/typlines.ts).
+ */
+export function goalShares(p: StopProfile, grid: HeatGrid, from: number, to: number): Float64Array {
+  const stop = grid.stop;
+  if (!stop) throw new Error('goalShares needs a grid made with trackStops');
+  const S = p.offset.length - 1;
+  const per = new Float64Array(S);
+  for (let k = 0; k < stop.length; k++)
+    if (stop[k] >= 0 && grid.seconds[k] < Infinity) per[stop[k]]++;
+  const cells = new Float64Array(p.departure.length);
+  const hour = to - from;
+  for (let s = 0; s < S; s++) {
+    if (per[s] === 0) continue;
+    let before = -Infinity;
+    for (let i = p.offset[s]; i < p.offset[s + 1]; i++) {
+      const reach = -p.arrival[i];
+      // Leaving in (before, reach] takes this event.
+      const len = Math.min(reach, to) - Math.max(before, from);
+      before = reach;
+      if (len > 0) cells[i] = (per[s] * len) / hour;
+    }
+  }
+  return cells;
+}

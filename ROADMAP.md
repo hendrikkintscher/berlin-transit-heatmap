@@ -32,7 +32,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Now · A. Trip and map agree (0.13)
 
-- S002 · decision · research · P3 · S · Typisch lines on the map to a Ziel leaving
 - S003 · build · fix · P2 · M · Last hour of rolling on from the clock hour's file
 - S004 · decision · research · P3 · S · Long walk on the trip card over the 30-minute walk rule
 
