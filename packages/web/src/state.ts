@@ -1,6 +1,6 @@
 // The app's settings and what is on the map, shared by main.ts and the modules it wires up.
 
-import { DEFAULT_BBOX } from '@berlin-transit-heatmap/routing';
+import { DEFAULT_BBOX, REGION } from '@berlin-transit-heatmap/routing';
 import type { FromWorker, Measure, TimetableInfo, ToWorker, Travel, Window } from './protocol';
 import { DEFAULT_WALK_KMH, readLink, TRAVELS, walkSpeed, type Point } from './url';
 import { computeWindow, leaveOffset, whenAt, windowName, type Direction, type When } from './when';
@@ -65,6 +65,11 @@ export interface State {
   /** Compare: a second time; the map then shows how much longer trips take then. */
   compare: When | null;
   origin: Point | null;
+  /**
+   * The origin is the region's example start (S014): a visit without a start opens on its map.
+   * It counts as no start for taps, the link and the start card; setting a start ends it.
+   */
+  example: boolean;
   /** Meeting point: the other people's starts (up to four). */
   others: Point[];
   /** Meeting point: each start's name, by position ("" for none). */
@@ -117,6 +122,7 @@ export function createState(read = readNumber, when = NOW_WHEN): State {
     measureBefore: null,
     compare: null,
     origin: null,
+    example: false,
     others: [],
     names: [],
     special: null,
@@ -164,10 +170,16 @@ export function linkState(search: string, read = readNumber, when = NOW_WHEN) {
     state.others = kept.slice(1);
   }
   if (link.to && (!state.origin || !inArea(link.to))) [link.to, link.span] = [null, null];
+  // No start: the example map (S014), the same here and in the worker's first map.
+  if (!state.origin) Object.assign(state, { origin: { ...REGION.example }, example: true });
   // A meeting-point link on Typisch goes back to "Nächste" without the other starts.
   if (state.others.length && state.measure === 'typical') state.measureBefore = 'next';
   return { state, link, outside };
 }
+
+/** The start the person chose: null before one (the example map's start does not count). */
+export const chosenStart = (s: Pick<State, 'origin' | 'example'>): Point | null =>
+  s.example ? null : s.origin;
 
 /** Whether the map shows the trips to its place (the Ziel): arriving, or leaving to the Ziel. */
 export const mapToGoal = (s: Pick<State, 'direction' | 'toGoal'>) =>

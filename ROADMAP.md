@@ -36,7 +36,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · D. Clear and welcoming looks (0.15)
 
-- S014 · build · feature · P3 · M · Example map on the first screen
 - S015 · build · feature · P3 · S · Question entries on the start screen
 
 ### Next · E. Treffpunkt that shows fairness (0.15)

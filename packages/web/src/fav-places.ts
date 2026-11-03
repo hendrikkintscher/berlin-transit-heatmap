@@ -18,7 +18,7 @@ import { icon } from './icons';
 import { lang, t } from './i18n';
 import { region } from './region';
 import { reverseStreet, searchPlaces, type Place } from './search';
-import { $, type State } from './state';
+import { $, chosenStart, type State } from './state';
 import type { Point } from './url';
 
 export interface FavouriteDeps {
@@ -56,7 +56,7 @@ export function initFavouritePlaces(deps: FavouriteDeps) {
 
   function favouriteTimes() {
     const r = state.result;
-    return r && state.origin && !r.living && !r.home
+    return r && chosenStart(state) && !r.living && !r.home
       ? score(favourites, (lat, lon) => gridSeconds(r, lat, lon))
       : null;
   }

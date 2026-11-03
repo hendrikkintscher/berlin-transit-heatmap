@@ -195,6 +195,18 @@ body {
   color: var(--muted);
   font-size: 13px;
 }
+/* Over the example map (S014) the card sits low, so the colours around its start show. */
+#hint .hint-example {
+  display: none;
+  margin: 0 0 6px;
+}
+body.example #hint {
+  top: auto;
+  bottom: calc(var(--bottom-h, 0px) + 12px);
+}
+body.example #hint .hint-example {
+  display: block;
+}
 /* The status line as the card's last row while the card is up (main.ts showHint). */
 #hint .status {
   margin-top: 4px;

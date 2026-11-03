@@ -26,3 +26,6 @@ the worker: a default place and view whose colour map ships ready-made (Hendrik,
 ## Notes
 - Came up during S013 (fill on by default). Needs a build-time paint (pipeline) and a default
   place for first-time visitors, so it is its own step.
+- S014 (0.15.8) now opens a visit without a start on the computed map from Alexanderplatz
+  (fresh visit, 360×740, blank basemap): colours at about 1.3–1.5 s (1×) and 1.6–1.9 s (4×),
+  with the start card up at 0.3 s / 0.85 s. A prerendered fill could only win that gap.

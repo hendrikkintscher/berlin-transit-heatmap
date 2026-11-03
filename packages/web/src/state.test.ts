@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { computeRequest, linkState, mapDirection, mapToGoal, readFrom, sameRequest } from './state';
+import {
+  chosenStart,
+  computeRequest,
+  linkState,
+  mapDirection,
+  mapToGoal,
+  readFrom,
+  sameRequest,
+} from './state';
 
 describe('the first map, as the worker makes it ahead', () => {
   const search = '?from=52.52190,13.41320&t=weekday-10';
@@ -50,8 +58,34 @@ describe('the first map, as the worker makes it ahead', () => {
     expect(sameRequest(made, { ...asked, paintNext: undefined })).toBe(false);
   });
 
-  it('drops starts outside the area', () => {
-    expect(linkState('?from=48.1,11.5', readFrom({})).state.origin).toBeNull();
+  it('drops starts outside the area, for the example map', () => {
+    const { state, outside } = linkState('?from=48.1,11.5', readFrom({}));
+    expect(outside).toBe(true);
+    expect(state.example).toBe(true);
+    expect(chosenStart(state)).toBeNull();
+  });
+});
+
+describe('the example map on a visit without a start (S014)', () => {
+  it('opens on the example start of the region, which is not a start chosen by anyone', () => {
+    for (const search of ['', '?t=weekday-10&lang=en', '?h=8&layers=freq']) {
+      const { state } = linkState(search, readFrom({}));
+      expect(state.example).toBe(true);
+      expect(state.origin).toEqual({ lat: 52.5219, lon: 13.4132 });
+      expect(chosenStart(state)).toBeNull();
+    }
+  });
+
+  it('is not used when the link has a start', () => {
+    const { state } = linkState('?from=52.5,13.4', readFrom({}));
+    expect(state.example).toBe(false);
+    expect(chosenStart(state)).toEqual({ lat: 52.5, lon: 13.4 });
+  });
+
+  it('keeps a destination in the link only with a start of its own', () => {
+    const { state, link } = linkState('?to=52.5,13.4', readFrom({}));
+    expect(state.example).toBe(true);
+    expect(link.to).toBeNull();
   });
 });
 
