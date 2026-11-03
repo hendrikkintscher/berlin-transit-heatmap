@@ -2266,3 +2266,10 @@ body.special .legend {
     scroll-behavior: auto !important;
   }
 }
+
+/* A long press on the map moves the start (S009): no callout or text selection on iOS. */
+.maplibregl-canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

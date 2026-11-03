@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.14.0] — 2026-11-03
+
+- S009: A long press on the map (finger held still about 0.5 s; on a computer a right-click) moves the map's place there, keeping its role (Start or Ziel), with one new map; the tapped place keeps its card, which then shows the trip from the new place, and "Rückgängig" brings the old place back for 5 s. Before any start it sets the first one; in a Treffpunkt it moves the first start. A short tap, panning (more than 10 px) and pinch zoom work as before, and nothing waits for the press: the tap goes on as a click at once. Markers keep their own presses (the listener is on the map's canvas only). The tip and the help text mention it. At 360×740 with GPU compositing (Typisch from Alexanderplatz, 7 visits, finger taps) finger down → trip 75 → 70 ms, first map 1340 → 1399 ms (noise); 4× CPU finger down → trip 142 → 132 ms, first map 2498 → 2466 ms. Long press → trip on the card 1031 ms (4×: 1460 ms), against 1162 ms (4×: 1505 ms) for the rings button on main: one map, as the rings button.
+
 ## [0.13.24] — 2026-11-03
 
 - S027: On a map to a Ziel leaving, the worker finds the Ziel's walks to its stops right after the map (and again after its footpaths map) instead of on the first tap, unless a tap or a newer map is already waiting. Same trips. At 360×740 with GPU compositing (Typisch to Alexanderplatz, 8 visits) first tap 130 → 54 ms, later taps 49 → 54 ms, first map 1038 → 941 ms, lines in 1136 → 1055 ms, footpaths map in 2350 → 2191 ms (within noise); 4× CPU (two rounds, 8 + 10 visits) first tap 120/120 → 84/88 ms, later taps 73/72 → 69/70 ms, first map 1628/1588 → 1512/1637 ms. The cost accepted in decision 0008: a ring move asked in the moment the footpaths map comes in waits 225 → 246 ms (4×: 229/231 → 333/289 ms); a ring move later 30 → 31 ms.

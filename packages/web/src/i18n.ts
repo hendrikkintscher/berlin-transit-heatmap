@@ -45,7 +45,7 @@ const de = {
   legendExtra: 'Legende: Minuten mehr als am besten Treffpunkt',
   close: 'Schließen',
   aboutHow:
-    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Zeitlinien zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen, gemessen auf echten Straßen und Wegen mit 5 km/h (unter Bahn einstellbar). Unter Ebenen schaltest du Farben dazu: 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin: ⇅ tauscht Start und Ziel, das Ring-Symbol zieht die Karte zum anderen Ort. Um einen Startpunkt zu entfernen, tippe ihn an und dann auf Entfernen.',
+    'Tippe irgendwo auf die Karte oder suche eine Adresse, um einen Startpunkt zu setzen. Die Zeitlinien zeigen die Reisezeit mit Bus und Bahn zu jedem Ort, inklusive Fußwegen zu und von den Haltestellen, gemessen auf echten Straßen und Wegen mit 5 km/h (unter Bahn einstellbar). Unter Ebenen schaltest du Farben dazu: 5-Minuten-Stufen bis 20 Minuten, 2½-Minuten-Stufen von 20 bis 50 Minuten und breitere Stufen darüber. Tippst du danach auf einen Ort, siehst du die Minuten und die Verbindung dorthin: ⇅ tauscht Start und Ziel, das Ring-Symbol zieht die Karte zum anderen Ort. Hältst du den Finger auf der Karte (am Computer: Rechtsklick), rückt der Startpunkt (oder das Ziel) dorthin. Um einen Startpunkt zu entfernen, tippe ihn an und dann auf Entfernen.',
   aboutLines:
     '<b>Linien</b> zeigt die Abschnitte von S-Bahn, U-Bahn, Tram und Bus, auf die die schnellsten Fahrten von deinem Startpunkt angewiesen sind. Je dicker die Linie, desto mehr der Karte erreichst du darüber. Tippe auf eine Linie, um ihren Namen zu sehen.',
   aboutWindows:
@@ -214,7 +214,8 @@ const de = {
     'Für heute und die nächsten sechs Tage nutzt die Karte den echten Fahrplan jedes Tages aus dem VBB-Datensatz, der täglich neu geladen wird: Baustellen, Ersatzverkehr und Feiertage sind an genau den Tagen drin, an denen sie stattfinden. Kurzfristige Störungen und Ausfälle stehen nicht im Fahrplan und fehlen deshalb. Zum Planen gibt es außerdem einen typischen Werktag (Dienstag bis Donnerstag) und einen typischen Samstag.',
   tipClose: 'Hinweis schließen',
   readoutClose: 'Auswahl schließen',
-  tipTap: 'Tippe auf einen Ort für die Minuten. Den Startpunkt kannst du ziehen.',
+  tipTap:
+    'Tippe auf einen Ort für die Minuten. Halte den Finger auf der Karte, um den Startpunkt dorthin zu setzen.',
   tipInstall: 'Als App auf dem Startbildschirm, auch offline.',
   tipInstallIos: 'Als App: Teilen-Symbol, dann „Zum Home-Bildschirm“.',
   legendMax: '120+ Min.',
@@ -355,7 +356,7 @@ const en: Record<Key, string> = {
   legendExtra: 'Legend: minutes more than at the best meeting spot',
   close: 'Close',
   aboutHow:
-    'Tap anywhere or search for an address to set a starting point. The time lines show the public-transport travel time to each spot, including walking to and from stops, measured along real streets and paths at 5 km/h (adjustable under Transit). Under Layers you can add colours: 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there: ⇅ swaps start and end, the rings symbol moves the map to the other place. To remove a starting point, tap it and then Remove.',
+    'Tap anywhere or search for an address to set a starting point. The time lines show the public-transport travel time to each spot, including walking to and from stops, measured along real streets and paths at 5 km/h (adjustable under Transit). Under Layers you can add colours: 5-minute bands up to 20 minutes, 2½-minute bands from 20 to 50 minutes, and wider bands beyond. Tap a place afterwards to see the minutes and the connection there: ⇅ swaps start and end, the rings symbol moves the map to the other place. Press and hold on the map (on a computer: right-click) to move the starting point (or destination) there. To remove a starting point, tap it and then Remove.',
   aboutLines:
     '<b>Lines</b> shows the stretches of S-Bahn, U-Bahn, tram and bus that the fastest trips from your starting point rely on. The thicker the line, the more of the map is reached over it. Tap a line to see its name.',
   aboutWindows:
@@ -525,7 +526,8 @@ const en: Record<Key, string> = {
     "For today and the next six days the map uses each day's real timetable from the VBB feed, which is reloaded daily: engineering works, replacement services and holidays show on exactly the days they happen. Short-notice disruptions and cancellations aren't in the timetable, so they are missing. For planning there is also a typical weekday (Tuesday to Thursday) and a typical Saturday.",
   tipClose: 'Close hint',
   readoutClose: 'Close selection',
-  tipTap: 'Tap a place to see the minutes. You can drag the starting point.',
+  tipTap:
+    'Tap a place to see the minutes. Press and hold on the map to move the starting point there.',
   tipInstall: 'Install it on your home screen, works offline too.',
   tipInstallIos: 'As an app: tap Share, then “Add to Home Screen”.',
   legendMax: '120+ min',
