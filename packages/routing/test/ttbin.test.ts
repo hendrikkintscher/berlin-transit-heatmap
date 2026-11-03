@@ -128,6 +128,35 @@ describe('stop list and hourly files', () => {
     expect(() => decodeTimetable(hour, other)).toThrow(/different builds/);
   });
 
+  it("keeps the stops' station numbers, given by index or on the stops", () => {
+    const stations = tt.stops.map((_, i) => (i === 1 ? 0 : 900100003 + i * 7));
+    const list = encodeStopList(tt, stations);
+    const back = decodeStopList(list.data);
+    expect(back.stops.map((s) => s.station ?? 0)).toEqual(stations);
+    // A stop without a number has no field, so it reads back as before.
+    expect('station' in back.stops[1]!).toBe(false);
+    const own = {
+      ...tt,
+      stops: tt.stops.map((s, i) => ({ ...s, station: stations[i] || undefined })),
+    };
+    expect(encodeStopList(own).id).toBe(list.id);
+    // The numbers are part of the list: another set, another id.
+    expect(encodeStopList(tt).id).not.toBe(list.id);
+    // Hours read with the list share its stops, numbers included.
+    const hour = decodeTimetable(encodeTimetable(tt, list.id), back);
+    expect(hour.stops[0]!.station).toBe(900100003);
+  });
+
+  it('still reads a stop list from before the station numbers (version 1)', () => {
+    // Version 2 is version 1 plus one svar per stop at the end: 0 for a stop without a number.
+    const { data } = encodeStopList(tt);
+    const v1 = data.slice(0, data.length - tt.stops.length);
+    v1[4] = 1;
+    const back = decodeStopList(v1);
+    expect(back.stops).toEqual(decodeStopList(data).stops);
+    expect(back.stops.some((s) => s.station !== undefined)).toBe(false);
+  });
+
   it('rejects broken stop lists', () => {
     const { data } = encodeStopList(tt);
     expect(() => decodeStopList(data.subarray(0, data.length - 2))).toThrow();

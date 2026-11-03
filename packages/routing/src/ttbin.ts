@@ -9,12 +9,14 @@
  * - the header: byte length, then UTF-8 JSON;
  * - a string table: count, then per string its UTF-8 byte length and bytes.
  *
- * The stop list (magic "BTHS", version 1): the header has version, id and feedVersion; the
- * strings are the stop names; then
+ * The stop list (magic "BTHS", version 2; 1 has no station numbers): the header has version,
+ * id and feedVersion; the strings are the stop names; then
  * - stops: count; per stop svar lon and lat in 1e-5 degrees from the previous stop,
  *   the name's string index, flags (bit 0: not step-free) and parent + 1 (0: none);
  * - transfers: per stop the count, then the targets in ascending order (svar from the
- *   stop for the first, gaps after), then the seconds.
+ *   stop for the first, gaps after), then the seconds;
+ * - stations (version 2): per stop svar its station number (VBB's 900100003 for
+ *   Alexanderplatz, 0: none) minus the previous stop's, for the app's live status.
  * Its id is a hash of everything after the header.
  *
  * A timetable (magic "BTHT"): the header has version, window, serviceDate, windowStart,
@@ -50,6 +52,8 @@ export interface TimetableData {
     lon: number;
     parent?: number;
     stepFree?: false;
+    /** The region's station number, for live departures (stop lists since version 2). */
+    station?: number;
   }[];
   routes: {
     name: string;
@@ -192,8 +196,14 @@ function hash(bytes: ArrayLike<number>): string {
   return (h >>> 0).toString(16).padStart(8, '0');
 }
 
-/** The stop list file for a build's stops and footpaths, and its id. */
-export function encodeStopList(tt: Pick<TimetableData, 'feedVersion' | 'stops' | 'transfers'>): {
+/**
+ * The stop list file for a build's stops and footpaths, and its id. The station numbers are
+ * the stops' own (`station`) unless given by stop index (0: none).
+ */
+export function encodeStopList(
+  tt: Pick<TimetableData, 'feedVersion' | 'stops' | 'transfers'>,
+  stations?: ArrayLike<number>,
+): {
   data: Uint8Array;
   id: string;
 } {
@@ -203,10 +213,17 @@ export function encodeStopList(tt: Pick<TimetableData, 'feedVersion' | 'stops' |
   body.table();
   writeStops(body, tt.stops);
   writeTransfers(body, tt.stops.length, tt.transfers);
+  // Neighbouring stops are mostly of one station (same number) or the next one along.
+  let prev = 0;
+  for (const [i, s] of tt.stops.entries()) {
+    const station = stations ? (stations[i] ?? 0) : (s.station ?? 0);
+    body.svar(station - prev);
+    prev = station;
+  }
   const id = hash(body.out);
   const head = writer();
-  head.out.push(0x42, 0x54, 0x48, 0x53, 1);
-  head.json({ version: 1, id, feedVersion: tt.feedVersion });
+  head.out.push(0x42, 0x54, 0x48, 0x53, 2);
+  head.json({ version: 2, id, feedVersion: tt.feedVersion });
   return { data: joined(head.out, body.out), id };
 }
 
@@ -358,11 +375,19 @@ function readRoutes(r: Reader): TimetableData['routes'] {
 
 export function decodeStopList(data: ArrayBuffer | Uint8Array): StopListData {
   const r = reader(data, STOP_LIST_MAGIC, 'stop list');
-  if (r.version !== 1) throw new Error(`Unsupported stop list version ${r.version}`);
+  if (r.version !== 1 && r.version !== 2)
+    throw new Error(`Unsupported stop list version ${r.version}`);
   const head = JSON.parse(r.text()) as { id: string; feedVersion: string };
   r.table();
   const stops = readStops(r);
   const transfers = readTransfers(r, stops.length);
+  if (r.version === 2) {
+    let station = 0;
+    for (const s of stops) {
+      station += r.svar();
+      if (station) s.station = station;
+    }
+  }
   r.end();
   return { id: head.id, feedVersion: head.feedVersion, stops, transfers };
 }

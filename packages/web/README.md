@@ -12,9 +12,9 @@ pnpm --dir packages/web build     # -> packages/web/dist
 - **Data.** The region's files come from `./data/<region>/` (copied in by `deploy-pages.yml` from
   the `timetable-latest` release): one binary timetable per hour (`timetable-weekday-HH.bin`,
   `timetable-weekend-HH.bin`, and `timetable-YYYYMMDD-HH.bin` for the coming week) with the
-  stops and footpaths they share in `stoplist.bin` (loaded once, `worker-timetables.ts`), `walk.bin`
-  (footpaths), `lines.bin` (the lines' courses), `streets.json` (search), `changes.json` and
-  `stop-ids.json`. URLs carry a `?v=` hash from the deploy (`data-url.ts`), so the service
+  stops, their station numbers (for live delays) and footpaths they share in `stoplist.bin`
+  (loaded once, `worker-timetables.ts`), `walk.bin` (footpaths), `lines.bin` (the lines'
+  courses), `streets.json` (search) and `changes.json`. URLs carry a `?v=` hash from the deploy (`data-url.ts`), so the service
   worker (`sw.js`) can keep them. For local testing, drop the release files into
   `packages/web/public/data/berlin/`.
 - **Start.** `boot.ts` starts the worker and, with a start in the link, its first timetable

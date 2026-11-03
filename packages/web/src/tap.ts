@@ -22,7 +22,6 @@ import { refitRows, ridesKey } from './more-rows';
 import { icon } from './icons';
 import { MAX_NAME, MAX_STARTS, type Point, type Span } from './url';
 import { liveStatus, liveText, type Board } from './live';
-import { dataBase } from './region';
 import { clockNow, isDate, rolledWindow, rollsOn } from './when';
 
 /** The tapped place; `title` names it (a meeting-point suggestion or a search result). */
@@ -727,7 +726,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     if (!b || !isDate(day) || clockNow(state.when) === null) return;
     liveAt = Date.now();
     const id = tripId;
-    void liveStatus(b, day, dataBase()).then((s) => {
+    void liveStatus(b, day).then((s) => {
       const el = document.querySelector<HTMLElement>('#trip .trip-live');
       if (!s || !el || id !== tripId || b !== board) return;
       const { text, bad } = liveText(b.line, s);

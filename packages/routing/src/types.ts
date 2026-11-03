@@ -33,6 +33,8 @@ export interface Stop {
   parent?: number;
   /** false: reached only by stairs or escalators. Absent: step-free or unknown. (Addition to Contract 1.) */
   stepFree?: false;
+  /** The region's station number for live departures (900100003 for Alexanderplatz), if known. */
+  station?: number;
 }
 
 export type RouteMode = 'sbahn' | 'ubahn' | 'tram' | 'bus' | 'ferry' | 'regional' | 'other';

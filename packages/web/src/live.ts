@@ -6,32 +6,20 @@
 
 import { t } from './i18n';
 import { region } from './region';
-import { dataUrl } from './data-url';
 
 /** The region's journey API; without one the card shows no live line. */
 const API = region.liveApi;
 const TIMEOUT_MS = 6000;
 
 export interface Board {
-  /** Stop index in the timetable (its VBB station number comes from stop-ids.json). */
-  stop: number;
+  /** The stop's VBB station number (900100003 for Alexanderplatz), from the stop list. */
+  station: number;
   line: string;
   /** Planned departure, seconds of the service day. */
   at: number;
 }
 
 export type LiveStatus = { cancelled: true } | { cancelled: false; delay: number };
-
-let stationIds: Promise<number[] | null> | null = null;
-
-/** VBB station numbers by stop index (900100003 for Alexanderplatz), loaded on first use. */
-function stationId(dataBase: string, stop: number): Promise<number | null> {
-  stationIds ??= fetch(dataUrl(dataBase, 'stop-ids.json'))
-    .then((r) => (r.ok ? (r.json() as Promise<{ ids?: number[] }>) : null))
-    .then((f) => f?.ids ?? null)
-    .catch(() => (stationIds = null));
-  return stationIds.then((ids) => ids?.[stop] || null);
-}
 
 /** The moment `seconds` after midnight of a Berlin date (YYYYMMDD), DST included. */
 export function berlinTime(day: string, seconds: number): Date {
@@ -74,14 +62,8 @@ export function pickStatus(deps: Departure[], line: string, when: Date): LiveSta
 }
 
 /** Asks the API; null when it has no live data for that departure or does not answer. */
-export async function liveStatus(
-  board: Board,
-  day: string,
-  dataBase: string,
-): Promise<LiveStatus | null> {
-  if (!API) return null;
-  const id = await stationId(dataBase, board.stop);
-  if (!id) return null;
+export async function liveStatus(board: Board, day: string): Promise<LiveStatus | null> {
+  if (!API || !board.station) return null;
   const when = berlinTime(day, board.at);
   const q = new URLSearchParams({
     when: new Date(when.getTime() - 60_000).toISOString(),
@@ -94,7 +76,9 @@ export async function liveStatus(
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(`${API}/stops/${id}/departures?${q}`, { signal: ctrl.signal });
+    const res = await fetch(`${API}/stops/${board.station}/departures?${q}`, {
+      signal: ctrl.signal,
+    });
     if (!res.ok) return null;
     const body = (await res.json()) as { departures?: Departure[] } | Departure[];
     const deps = Array.isArray(body) ? body : (body.departures ?? []);
