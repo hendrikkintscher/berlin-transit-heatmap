@@ -12,7 +12,7 @@ function load() {
   >;
   vm.createContext(sandbox);
   vm.runInContext(
-    `${src}\nthis.trim = trim; this.today = today; this.pruneAssets = pruneAssets; this.trimTiles = trimTiles; this.isStartPage = isStartPage;`,
+    `${src}\nthis.trim = trim; this.today = today; this.pruneAssets = pruneAssets; this.trimTiles = trimTiles; this.isStartPage = isStartPage; this.shellReady = shellReady;`,
     sandbox,
   );
   return sandbox as unknown as {
@@ -21,6 +21,7 @@ function load() {
     pruneAssets: (cache: unknown, html: string) => Promise<void>;
     trimTiles: (cache: unknown) => Promise<void>;
     isStartPage: (url: URL, swUrl: string) => boolean;
+    shellReady: (page: Response, cache: unknown, swUrl: string) => Promise<boolean>;
   };
 }
 
@@ -96,6 +97,44 @@ describe('offline app cache', () => {
       'worker-NEWNEW03.js',
       'index-NEWNEW04.css',
     ]);
+  });
+
+  it('keeps the bundles of the page before the new one: it may be loading right now', async () => {
+    const a = 'https://x/app/assets/';
+    const cache = fakeCache({
+      [`${a}index-OLDOLD01.js`]: 'import("./main-OLDOLD02.js")',
+      [`${a}main-OLDOLD02.js`]: 'old main',
+      [`${a}worker-OLDOLD03.js`]: 'old worker',
+      [`${a}main-OLDEST02.js`]: 'oldest main',
+    });
+    const oldPage =
+      '<script src="./assets/index-OLDOLD01.js"></script>new URL("worker-OLDOLD03.js")';
+    await load().pruneAssets(
+      cache,
+      `<script src="./assets/index-NEWNEW01.js"></script>\n${oldPage}`,
+    );
+    expect(cache.left()).toEqual(['index-OLDOLD01.js', 'main-OLDOLD02.js', 'worker-OLDOLD03.js']);
+  });
+
+  it('serves the stored page on a slow network only when its bundles are stored too', async () => {
+    const sw = load();
+    const page =
+      '<script src="./assets/index-AAAAAA01.js"></script><link href="./assets/index-AAAAAA02.css">';
+    const stored = (urls: string[]) => ({
+      match: async (u: string) => (urls.includes(u) ? {} : undefined),
+    });
+    const a = 'https://x/app/assets/';
+    const swUrl = 'https://x/app/sw.js';
+    expect(
+      await sw.shellReady(
+        new Response(page),
+        stored([`${a}index-AAAAAA01.js`, `${a}index-AAAAAA02.css`]),
+        swUrl,
+      ),
+    ).toBe(true);
+    expect(await sw.shellReady(new Response(page), stored([`${a}index-AAAAAA01.js`]), swUrl)).toBe(
+      false,
+    );
   });
 
   it('leaves the cache alone for a page that names no bundles', async () => {

@@ -61,24 +61,32 @@ self.addEventListener('fetch', (event) => {
           const copy = res.clone();
           const html = await res.clone().text();
           const c = await caches.open(SHELL);
+          const before = await c.match('./');
+          const oldHtml = before ? await before.text() : '';
           await c.put('./', copy);
-          // Old app versions' bundles go once the new page is stored.
-          await pruneAssets(c, html);
+          // Older app versions' bundles go once the new page is stored. The page before it
+          // keeps its own: it may be the one loading right now (served from the cache below
+          // while this fetch was slow), and its bundles are no longer on the server.
+          await pruneAssets(c, `${html}\n${oldHtml}`);
         })
         .catch(() => {}),
     );
     event.respondWith(
       new Promise((resolve) => {
         let done = false;
-        const cached = () =>
-          caches.match('./').then((hit) => {
+        const cached = (complete) =>
+          caches.match('./').then(async (hit) => {
+            // On a slow network only a stored page whose bundles are stored too: one whose
+            // bundles were never stored (or are gone) would ask the server for files a newer
+            // deploy removed, and stay a page without the app. Keep waiting for it instead.
+            if (hit && complete && !(await shellReady(hit))) return null;
             if (hit && !done) {
               done = true;
               resolve(hit);
             }
             return hit;
           });
-        const timer = setTimeout(cached, NAV_TIMEOUT_MS);
+        const timer = setTimeout(() => cached(true), NAV_TIMEOUT_MS);
         fresh.then(
           (res) => {
             clearTimeout(timer);
@@ -231,6 +239,16 @@ async function trimTiles(cache) {
 
 /** Hashed bundle names a page or bundle refers to ("main-Bz2Qz9WU.js"). */
 const assetNames = (text) => new Set(text.match(/[\w-]+-[\w-]{8}\.(?:js|css)\b/g) ?? []);
+
+/**
+ * Whether every bundle the stored page names (the boot script, main, the worker, the styles)
+ * is in the cache, so the page can start without the server.
+ */
+async function shellReady(page, cache = caches, swUrl = self.location.href) {
+  const names = [...assetNames(await page.clone().text())];
+  const hits = await Promise.all(names.map((n) => cache.match(new URL(`assets/${n}`, swUrl).href)));
+  return hits.every(Boolean);
+}
 
 /**
  * Deletes cached /assets/ files the current page no longer uses: everything not named by
