@@ -162,8 +162,9 @@ try {
           if (!b.getClientRects().length || b.id === 'menu-close') continue;
           const r = b.getBoundingClientRect();
           const name = b.textContent.trim() || b.className || b.tagName;
-          if (b.tagName === 'BUTTON' && (r.height < 40 || r.height > 43))
-            bad.push(`${name} is ${Math.round(r.height)} px high`);
+          // Half a pixel either way: on the CI machine some 40 px buttons measure 39.x px.
+          if (b.tagName === 'BUTTON' && (r.height < 39.5 || r.height > 43.5))
+            bad.push(`${name} is ${r.height.toFixed(1)} px high`);
           if (!b.closest('.day-row') && r.right > edge + 0.5)
             bad.push(`${name} ends ${Math.round(r.right - edge)} px past the edge`);
         }
