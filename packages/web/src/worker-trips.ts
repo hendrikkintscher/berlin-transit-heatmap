@@ -14,6 +14,7 @@ import {
   walkPath,
   type Journey,
   type PreparedTimetable,
+  type StopProfile,
   type TravelTimeResult,
   type TripTime,
   type WalkNetwork,
@@ -359,7 +360,8 @@ function originWalks(
  * the trip's span or moment if not the map's own. Null without the timetable the other way
  * round, by bike all the way, or out of reach (the map's own grid then finds it, as before).
  * To the Ziel leaving, the map's place is the trip's end and the trip leaves at `leaving`;
- * `mapSeconds`, the map's minutes at the tapped place, then bound its first search.
+ * `mapSeconds`, the map's minutes at the tapped place, then bound its first search, and
+ * `profile`, the map's profile search from the Ziel, gives its latest leaving.
  */
 function bothWays(
   last: LastTrip,
@@ -368,6 +370,7 @@ function bothWays(
   at: { lat: number; lon: number },
   time?: TripTime,
   mapSeconds?: number,
+  profile?: StopProfile,
 ) {
   const other = last.otherTt;
   if (!other || last.travel === 'bikeonly' || !origin) return null;
@@ -402,6 +405,8 @@ function bothWays(
       ...(!time && last.leaving !== undefined && mapSeconds !== undefined && mapSeconds < Infinity
         ? { arriveByHint: last.leaving + mapSeconds + HINT_ROOM_S }
         : {}),
+      // ...and its latest leaving is read off the map's own profile search (S005).
+      ...(!time && last.leaving !== undefined && profile ? { toProfile: profile } : {}),
     },
     time ? undefined : pass,
   );
@@ -795,7 +800,16 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: Nex
       // leaving at the map's time, as on a map from a start (0.13.8).
       const kept = msg.span && bothWays(at, r.result.origin, undefined, msg, msg.span);
       return (
-        kept || bothWays(at, r.result.origin, undefined, msg, undefined, cellSeconds(r.best, msg))
+        kept ||
+        bothWays(
+          at,
+          r.result.origin,
+          undefined,
+          msg,
+          undefined,
+          cellSeconds(r.best, msg),
+          r.result.profile,
+        )
       );
     }
     const quick = !later && !msg.span && at.quickest && at.otherTt ? quickestTime(r, msg) : null;

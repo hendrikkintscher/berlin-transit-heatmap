@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.13.21] — 2026-11-03
+
+- S005: A tap on a map to a Ziel leaving reads its latest leaving off the map's own profile search instead of searching for it (checked by the trip leaving then; searched as before where the trip with the fewest rides leaves earlier). Same trips (1799 of 1799 places); tap in Node 7.7–10.6 → 6.7–9.7 ms (−5 to −24 %). At 360×740 tap to trip 119 → 118 ms (Nächste), 110 → 113 ms (Typisch), 4× CPU 177–186 → 172–202 ms, first map unchanged: within noise, the worker's ~110 ms answer is mostly not the searches (new step S026). Decision 0006.
+
 ## [0.13.20] — 2026-11-03
 
 - S003: A missed connection rolled on into the second hour after the chosen one searches on that clock hour's own file (one more download while the card stays open: 20–61 KB gzipped), so trips over an hour late in that hour no longer come out as "keine Verbindung" (up to 30 of 150 places at 1:48 after 23 Uhr) or later (up to 16 of 150); `rollon.ts` now matches the clock hour's own file everywhere. The countdown keeps ticking while the file loads. At 360×740 tap 84 → 78 ms (4× CPU 123 → 114 ms), first map 618 → 658 ms (4× bimodal, 1344 → 855 ms), within noise: taps and first map take the same path as before.

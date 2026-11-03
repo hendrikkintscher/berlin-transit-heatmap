@@ -44,6 +44,7 @@ export { departureAt, journeyTo, journeyVia, laterStart } from './journey';
 export {
   directSeconds,
   tripBetween,
+  latestLeaving,
   walksToStops,
   type FixedTrip,
   type TripOptions,

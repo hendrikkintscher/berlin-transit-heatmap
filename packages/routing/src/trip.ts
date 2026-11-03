@@ -2,7 +2,7 @@ import { distanceM } from './geo';
 import { journeyVia, laterStart, type Journey } from './journey';
 import { UNREACHED, type PreparedTimetable } from './prepare';
 import { travelTimes } from './raptor';
-import type { Origin, TravelTimeOptions, TravelTimeResult } from './types';
+import type { Origin, StopProfile, TravelTimeOptions, TravelTimeResult } from './types';
 import { walkPath, walkSpeeds } from './walk';
 
 /** Walking all the way is a trip of its own up to this long (as the map's 15 minutes). */
@@ -93,6 +93,12 @@ export type TripOptions = TravelTimeOptions & {
    * room), so the first search does less. If nothing arrives by it, it searches again.
    */
   arriveByHint?: number;
+  /**
+   * Leaving at a time, to `to`: the profile search from `to` on `back` (a map to a Ziel
+   * leaving), if at hand. The latest leaving is read off it instead of searched for, and
+   * kept when the trip from then still arrives in time with as few rides (else searched).
+   */
+  toProfile?: StopProfile;
 };
 
 /** When a trip is to be: leaving at, arriving by, or within a span (both). */
@@ -120,7 +126,7 @@ export function tripBetween(
   opts: TripOptions = {},
   given?: TravelTimeResult,
 ): FixedTrip | null {
-  const { directMaxSeconds, fromWalks: fw, toWalks: tw, arriveByHint, ...o } = opts;
+  const { directMaxSeconds, fromWalks: fw, toWalks: tw, arriveByHint, toProfile, ...o } = opts;
   const walk = directSeconds(from, to, o, directMaxSeconds);
   // Each end's walks are found once and given to every search from that end.
   const toWalks = tw ?? walksToStops(fwd, to, o);
@@ -166,24 +172,31 @@ export function tripBetween(
       arrive: hi,
     };
   if (rides === 0) return null;
+  const ride = (at: number) =>
+    travelTimes(fwd, from, { ...fromOpts, leaveAt: at, maxRounds: rides, trackLegs: true });
+  let r: TravelTimeResult | null = null;
+  if (leave === null && toProfile) {
+    // The latest leaving by `hi` with any rides, from the profile: it is the one with this
+    // many rides too when the trip leaving then still gets there in time.
+    const guess = latestLeaving(toProfile, fromWalks, hi);
+    if (guess >= lo) {
+      const g = ride(guess);
+      if (byRides(g, toWalks)[rides]! <= hi) [leave, r] = [guess, g];
+    }
+  }
   if (leave === null) {
     // The latest leaving with that many rides that still arrives by `hi`.
-    const r = travelTimes(back, to, {
+    const r0 = travelTimes(back, to, {
       ...toOpts,
       leaveAt: -hi,
       arriveBy: -lo,
       maxRounds: rides,
       trackLegs: true,
     });
-    const leaving = byRides(r, fromWalks)[rides]!;
+    const leaving = byRides(r0, fromWalks)[rides]!;
     leave = leaving < Infinity ? -leaving : lo;
   }
-  const r = travelTimes(fwd, from, {
-    ...fromOpts,
-    leaveAt: leave,
-    maxRounds: rides,
-    trackLegs: true,
-  });
+  r ??= ride(leave);
   // The last stop: reached by a ride (not walked to from the start), quickest on.
   const rounds = r.legs!.rounds!;
   let last = -1;
@@ -204,4 +217,28 @@ export function tripBetween(
     leave,
     arrive: leave + seconds,
   };
+}
+
+/**
+ * From a profile search from the destination on the reversed timetable: the latest moment
+ * to leave a place whose walks to the stops are `walks` and still arrive by `by` (real
+ * seconds), with any number of rides; -Infinity if none.
+ */
+export function latestLeaving(p: StopProfile, walks: Float32Array, by: number): number {
+  let best = -Infinity;
+  for (let s = 0; s < walks.length; s++) {
+    const w = walks[s];
+    if (!(w < Infinity)) continue;
+    // Along a stop's events both the arrival (-departure) and the latest leaving rise: the
+    // last event arriving by `by`.
+    let lo = p.offset[s];
+    let hi = p.offset[s + 1];
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (-p.departure[mid] <= by) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > p.offset[s] && -p.arrival[lo - 1] - w > best) best = -p.arrival[lo - 1] - w;
+  }
+  return best;
 }
