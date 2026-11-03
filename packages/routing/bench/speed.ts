@@ -66,21 +66,28 @@ const loadMs = performance.now() - t;
 
 const origins: Record<string, number> = {};
 const draw = { colours: 0, outlines: 0 };
+const mapFrom = (origin: { lat: number; lon: number }) => {
+  const w = { walk, walkSpeedMps: WALK_MPS };
+  const result = r.travelTimes(tt, origin, { trackLegs: true, typical: true, ...w });
+  const grid = r.heatGrid(
+    tt,
+    { ...result, stopSeconds: result.typicalSeconds! },
+    { cellSizeM: CELL_M, trackStops: true, ...w },
+  );
+  r.routeUsage(tt, result, grid, { minShare: 0.01 });
+  return grid;
+};
+// A warm-up map from every origin first (0.13.16): with one warm-up before its own runs,
+// the first origin (Alexanderplatz) still paid for the code warming up and moved by ±10 %
+// between runs. Then the fastest of five per origin: the least disturbed run.
+for (const origin of Object.values(ORIGINS)) mapFrom(origin);
 for (const [name, origin] of Object.entries(ORIGINS)) {
   let best = Infinity;
   let grid: ReturnType<Routing['heatGrid']> | undefined;
-  // One warm-up, then the fastest of three: the least disturbed run.
-  for (let rep = 0; rep < 4; rep++) {
+  for (let rep = 0; rep < 5; rep++) {
     t = performance.now();
-    const w = { walk, walkSpeedMps: WALK_MPS };
-    const result = r.travelTimes(tt, origin, { trackLegs: true, typical: true, ...w });
-    grid = r.heatGrid(
-      tt,
-      { ...result, stopSeconds: result.typicalSeconds! },
-      { cellSizeM: CELL_M, trackStops: true, ...w },
-    );
-    r.routeUsage(tt, result, grid, { minShare: 0.01 });
-    if (rep > 0) best = Math.min(best, performance.now() - t);
+    grid = mapFrom(origin);
+    best = Math.min(best, performance.now() - t);
   }
   origins[name] = best;
   if (!web || !grid) continue;

@@ -11,6 +11,7 @@
 //   since 0.13.13, stoplist.bin). With --base, the same probe runs main's routing code in
 //   turns with this one on the same machine, and
 //   this one may not be slower than the tolerance, nor write a bigger timetable file.
+//   Each measure is the median of the runs (--runs, default 5).
 //   It also times drawing the maps (colours and outlines, from packages/web/src) and
 //   snapping the grid cells to the footpaths.
 import { spawnSync } from 'node:child_process';
@@ -26,7 +27,7 @@ const { values: args } = parseArgs({
     dist: { type: 'string', default: 'packages/web/dist' },
     data: { type: 'string' },
     base: { type: 'string' },
-    runs: { type: 'string', default: '3' },
+    runs: { type: 'string', default: '5' },
     write: { type: 'boolean', default: false },
   },
 });
@@ -93,9 +94,12 @@ if (args.data) {
     const src = sources(resolve(args.base));
     if (existsSync(src.routing)) sides.main = src;
   }
-  // Turns (main, this, main, this, …) so a busy moment on the machine hits both alike;
-  // each side keeps its fastest run per measure.
-  const best = {};
+  // Turns (main, this, main, this, …) so a busy moment on the machine hits both alike.
+  // Each side reports the median of its runs per measure (0.13.16). On a GitHub runner, two
+  // jobs on the same code differed (9 in 10 times) by up to ±10 % for a map and ±3.3 % for
+  // all maps with the fastest of three runs; with the median of five and the probe's
+  // warm-up pass, ±3.7 % and ±1.4 %.
+  const runs = {};
   for (let i = 0; i < Number(args.runs); i++)
     for (const [side, src] of Object.entries(sides)) {
       let r;
@@ -105,25 +109,39 @@ if (args.data) {
         if (side === 'pr') throw e;
         console.warn(`main's routing code cannot be timed with this probe, skipping: ${e}`);
         delete sides.main;
+        delete runs.main;
         continue;
       }
-      const { binGzip, listGzip } = r;
-      const b = (best[side] ??= { loadMs: Infinity, origins: {}, draw: {}, binGzip, listGzip });
-      b.loadMs = Math.min(b.loadMs, r.loadMs);
-      // Older probes did not time these.
-      if (r.snapMs !== undefined) b.snapMs = Math.min(b.snapMs ?? Infinity, r.snapMs);
-      for (const [d, v] of Object.entries(r.draw ?? {}))
-        b.draw[d] = Math.min(b.draw[d] ?? Infinity, v);
-      for (const [o, v] of Object.entries(r.origins))
-        b.origins[o] = Math.min(b.origins[o] ?? Infinity, v);
+      (runs[side] ??= []).push(r);
     }
+  const median = (vs) => {
+    const s = vs.filter((v) => v !== undefined).sort((a, b) => a - b);
+    if (!s.length) return undefined;
+    const m = s.length >> 1;
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  };
+  const best = {};
+  for (const [side, rs] of Object.entries(runs)) {
+    const at = (f) => median(rs.map(f));
+    const keys = (f) => [...new Set(rs.flatMap((r) => Object.keys(f(r) ?? {})))];
+    const { binGzip, listGzip } = rs[0];
+    best[side] = {
+      binGzip,
+      listGzip,
+      loadMs: at((r) => r.loadMs),
+      // Older probes did not time these.
+      snapMs: at((r) => r.snapMs),
+      origins: Object.fromEntries(keys((r) => r.origins).map((o) => [o, at((r) => r.origins[o])])),
+      draw: Object.fromEntries(keys((r) => r.draw).map((d) => [d, at((r) => r.draw?.[d])])),
+    };
+  }
   const total = (s) => Object.values(s.origins).reduce((a, v) => a + v, 0);
   const pr = best.pr;
   const main = best.main;
   const tol = budget.timingTolerance;
   lines.push(
     '',
-    '### Routing (Node, fastest of the runs)',
+    `### Routing (Node, median of ${args.runs} runs)`,
     '',
     `| Measure | This change | main | |`,
     '| --- | --: | --: | --- |',
@@ -135,19 +153,13 @@ if (args.data) {
       `| ${name} | ${fmt(a)} | ${b === undefined ? '–' : fmt(b)} | ${ok ? '✅' : '❌'} ${pct(a, b)} |`,
     );
   };
-  for (const o of Object.keys(pr.origins)) {
-    const b = main?.origins[o];
-    row(
-      `Map from ${o}`,
-      pr.origins[o],
-      b,
-      ms,
-      b === undefined ? 0 : b * (1 + tol.percent / 100) + tol.ms,
-    );
-  }
-  const limit = (b) => (b === undefined ? 0 : b * (1 + tol.percent / 100) + tol.ms);
+  const limit = (b, t = tol) => (b === undefined ? 0 : b * (1 + t.percent / 100) + t.ms);
+  // The maps themselves have tighter tolerances since their medians hold steady (0.13.16).
+  const maps = budget.mapTolerance ?? { each: tol, all: tol };
+  for (const o of Object.keys(pr.origins))
+    row(`Map from ${o}`, pr.origins[o], main?.origins[o], ms, limit(main?.origins[o], maps.each));
   const tb = main && total(main);
-  row('All maps', total(pr), tb, ms, limit(tb));
+  row('All maps', total(pr), tb, ms, limit(tb, maps.all));
   const DRAW = { colours: 'Colours, all maps', outlines: 'Outlines, all maps' };
   for (const [d, name] of Object.entries(DRAW))
     if (pr.draw[d] !== undefined) row(name, pr.draw[d], main?.draw[d], ms, limit(main?.draw[d]));
@@ -161,6 +173,13 @@ if (args.data) {
   const fm = main && first(main);
   row('With the stop list (first visit)', first(pr), fm, kb, main ? fm * 1.005 : 0);
   if (!main) lines.push('', '_No main checkout given: routing times are shown, not compared._');
+  else {
+    const t = (x) => `${x.percent} % + ${x.ms} ms`;
+    lines.push(
+      '',
+      `_Allowed over main: each map ${t(maps.each)}, all maps ${t(maps.all)}, the rest ${t(tol)}._`,
+    );
+  }
 }
 
 const report = [

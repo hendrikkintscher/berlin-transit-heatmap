@@ -1,6 +1,6 @@
-# Roadmap V2.4
+# Roadmap V2.5
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.14**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.16**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## North star
 
@@ -11,7 +11,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 | When  | Theme (outcome)                                 | Steps                                    |
 | ----- | ----------------------------------------------- | ---------------------------------------- |
 | Now   | A. Trip and map agree (0.13)                    | 0.13.17–18, 0.13.20, 0.13.23             |
-| Now   | B. Fast and steady loading and measuring (0.13) | 0.13.16, 0.13.19, 0.13.21–22             |
+| Now   | B. Fast and steady loading and measuring (0.13) | 0.13.19, 0.13.21–22, 0.13.24             |
 | Next  | C. Map handling (0.14)                          | 0.14.0                                   |
 | Next  | D. Clear and welcoming looks (0.15)             | 0.15.0–0.15.5, 0.15.11                   |
 | Next  | E. Treffpunkt that shows fairness (0.15)        | 0.15.6 → 0.15.7 → 0.15.8                 |
@@ -69,12 +69,6 @@ Outcome: the trip on tap and the map's minutes match, in every mode and at every
 
 Outcome: less to download on every visit, and speed numbers that can be trusted.
 
-- **0.13.16 Steadier Node map timings in the speed check** · should · build
-  - Why: note from 0.13.8 (2026-10-16): the CI speed job's Node map timings vary by up to ±9 % between runs with no routing change (Köpenick 134 against 123 ms on the same machine), so a budget on them would need several runs or a wider margin.
-  - Done when: the job reports medians that stay within a few per cent between runs.
-  - a. Run each map several times (for example 5) and report the median, measured against today's single runs on the same machine; the job may take only a little longer.
-  - b. If the medians stay within a few per cent, propose a budget on them (a deliberate edit with the reason, as for the file sizes).
-
 - **0.13.19 Quicker tap on the map to a Ziel leaving** · could · decision
   - Why: note from 0.13.12 (2026-10-16): that tap still takes about twice the arrival map's in Node (5–8 against 3–4 ms: three searches against one, the arrival map's tap gets the map's own pass); in the browser 195 against about 175 ms.
   - a. Measure whether the latest leaving (the tap's second search) can be read off the map's profile search, and how much of the tap that saves in Node and in the browser at 360×740 (also with the page CPU slowed 4×), with the trips unchanged.
@@ -90,6 +84,11 @@ Outcome: less to download on every visit, and speed numbers that can be trusted.
   - Why: note from 0.13.13 (2026-10-16): `stop-ids.json` (the live status's station numbers) is another per-stop file loaded on its own; it could ride in `stoplist.bin`, one file fewer.
   - a. The timetable build writes the station numbers into `stoplist.bin`; the live status reads them from there, and `stop-ids.json` goes.
   - b. Report the stop list's size before and after (gzipped) and check that first map timings stay the same.
+
+- **0.13.24 Footpaths sooner on a slow line** · could · decision
+  - Why: note from 0.13.15 (2026-11-02): on a 5 Mbit/s line the footpaths are in 7–8 s after the first map (`walk.bin` is 3.5 MB), so every trip on tap until then uses straight-line walks.
+  - a. Measure what a smaller footpath file (fewer or coarser footpaths, a tighter encoding) or loading the part around the start first would save on a 5 and a 20 Mbit/s line, and what it costs the first map and the taps at 360×740 (also with the page CPU slowed 4×).
+  - b. Hendrik gets the numbers and a recommendation; nothing changes without his yes.
 
 ## Next: C. Map handling (0.14)
 
@@ -173,4 +172,4 @@ Outcome: the pictures show the finished app, and the Berlin app is called done. 
 
 ## Inbox
 
-- 2026-11-02 (from 0.13.15): on a 5 Mbit/s line the footpaths are in 7–8 s after the first map (walk.bin is 3.5 MB), so every trip on tap until then uses straight-line walks; a smaller footpath file, or the part around the start first, would shorten that window.
+Empty.
