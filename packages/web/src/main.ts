@@ -54,8 +54,10 @@ import { initMenu } from './menu';
 import {
   $,
   computeRequest,
+  enterMeetLook,
   inArea,
   chosenStart,
+  leaveMeetLook,
   linkState,
   mapDirection,
   mapToGoal,
@@ -811,7 +813,18 @@ function setStarts(list: Point[]) {
     state.measureBefore = null;
     whenSheet.renderWhen();
   }
+  // And back to the colours before it (S018): the map below is computed with them.
+  if (!state.others.length && leaveMeetLook(state)) lookChanged();
   startsChanged();
+}
+
+/**
+ * Treffpunkt switched the colours (S018): the menu's switches and the chips follow; the map
+ * computed next brings the image, so none is asked for the map shown now.
+ */
+function lookChanged() {
+  menu.syncLook();
+  chips.render();
 }
 
 /** No start: drop the colours, lines and outlines. */
@@ -855,6 +868,9 @@ function addStart(p: Point) {
     state.when = fullHour(state.when);
     whenSheet.renderWhen();
   }
+  // Treffpunkt opens in its own colours (S018), computed with the map below: no repaint of
+  // the map shown now.
+  if (!state.others.length && enterMeetLook(state)) lookChanged();
   state.others = [...state.others, p];
   startsChanged();
 }

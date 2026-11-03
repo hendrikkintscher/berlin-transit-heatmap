@@ -38,7 +38,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · E. Treffpunkt that shows fairness (0.15)
 
-- S018 · build · feature · P2 · S · needs S017 · Treffpunkt opens in its own map look
 
 ### Next · F. New questions to ask (0.15)
 

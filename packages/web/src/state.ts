@@ -62,6 +62,12 @@ export interface State {
    * last other start goes. Null once a choice is made in between.
    */
   measureBefore: Measure | null;
+  /**
+   * Opening Treffpunkt turned its colours on (S018): the Heatmap switch and "Bis N Min."
+   * before it, back when the last other start goes. Null when nothing was changed, or once
+   * either was switched in between.
+   */
+  lookBefore: { heat: boolean; limit: number } | null;
   /** Compare: a second time; the map then shows how much longer trips take then. */
   compare: When | null;
   origin: Point | null;
@@ -120,6 +126,7 @@ export function createState(read = readNumber, when = NOW_WHEN): State {
     toGoal: false,
     measure: 'next',
     measureBefore: null,
+    lookBefore: null,
     compare: null,
     origin: null,
     example: false,
@@ -175,6 +182,29 @@ export function linkState(search: string, read = readNumber, when = NOW_WHEN) {
   // A meeting-point link on Typisch goes back to "Nächste" without the other starts.
   if (state.others.length && state.measure === 'typical') state.measureBefore = 'next';
   return { state, link, outside };
+}
+
+/**
+ * Treffpunkt opens in its own colours (S018): the fill on, "Bis N Min." off, for the map about
+ * to be computed. The look before is kept for `leaveMeetLook`; the device's switch is not
+ * rewritten. True when something changed.
+ */
+export function enterMeetLook(s: Pick<State, 'heat' | 'limit' | 'lookBefore'>): boolean {
+  if (s.heat && !s.limit) return false;
+  s.lookBefore = { heat: s.heat, limit: s.limit };
+  s.heat = true;
+  s.limit = 0;
+  return true;
+}
+
+/** Treffpunkt closed: the look before it comes back, unless one was picked since. */
+export function leaveMeetLook(s: Pick<State, 'heat' | 'limit' | 'lookBefore'>): boolean {
+  const before = s.lookBefore;
+  if (!before) return false;
+  s.lookBefore = null;
+  s.heat = before.heat;
+  s.limit = before.limit;
+  return true;
 }
 
 /** The start the person chose: null before one (the example map's start does not count). */

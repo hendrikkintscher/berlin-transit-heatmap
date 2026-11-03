@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   chosenStart,
   computeRequest,
+  enterMeetLook,
+  leaveMeetLook,
   linkState,
   mapDirection,
   mapToGoal,
@@ -116,5 +118,41 @@ describe('which end the map runs to, apart from the time', () => {
     expect(mapToGoal(from)).toBe(false);
     expect(mapDirection(from)).toBe('depart');
     expect(computeRequest({ ...from, origin: from.origin! }, at)).not.toHaveProperty('toGoal');
+  });
+});
+
+describe('Treffpunkt in its own colours (S018)', () => {
+  const look = (heat: boolean, limit: number) => ({ heat, limit, lookBefore: null });
+
+  it('turns the fill on and "Bis N Min." off, and brings both back after', () => {
+    const s = look(false, 30);
+    expect(enterMeetLook(s)).toBe(true);
+    expect(s).toMatchObject({ heat: true, limit: 0 });
+    expect(leaveMeetLook(s)).toBe(true);
+    expect(s).toEqual(look(false, 30));
+  });
+
+  it('changes nothing when the colours are already on', () => {
+    const s = look(true, 0);
+    expect(enterMeetLook(s)).toBe(false);
+    expect(leaveMeetLook(s)).toBe(false);
+    expect(s).toEqual(look(true, 0));
+  });
+
+  it('keeps a switch picked during the Treffpunkt', () => {
+    const s = look(false, 0);
+    enterMeetLook(s);
+    // The menu's switch clears what was before (menu.ts).
+    Object.assign(s, { heat: false, lookBefore: null });
+    expect(leaveMeetLook(s)).toBe(false);
+    expect(s.heat).toBe(false);
+  });
+
+  it('makes the Treffpunkt map with its colours, not a "Bis" image', () => {
+    const { state } = linkState('?from=52.52190,13.41320&layers=noheat&bis=30', readFrom({}));
+    enterMeetLook(state);
+    const req = computeRequest({ ...state, origin: state.origin! }, new Date());
+    expect(req.limit).toBeUndefined();
+    expect(req.noImage).toBeUndefined();
   });
 });
