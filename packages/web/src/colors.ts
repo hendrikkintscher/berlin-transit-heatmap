@@ -85,11 +85,12 @@ export const BAND_COLORS: string[] = [
 ];
 
 /** Band index for a travel time in seconds (Infinity -> -1). */
-export function bandOf(seconds: number): number {
+export function bandOf(seconds: number, edges: readonly number[] = BAND_EDGES_MIN): number {
   if (!(seconds < Infinity)) return -1;
   const min = seconds / 60;
+  const last = edges.length - 1;
   let b = 0;
-  while (b < MAX_BAND && min >= BAND_EDGES_MIN[b + 1]) b++;
+  while (b < last && min >= edges[b + 1]) b++;
   return b;
 }
 
@@ -105,17 +106,20 @@ export function bandLabel(band: number): string {
  */
 export function colorLut(
   featherSeconds = 0,
-  maxSeconds = BAND_EDGES_MIN[MAX_BAND] * 60,
+  edges: readonly number[] = BAND_EDGES_MIN,
+  colors: readonly string[] = BAND_COLORS,
 ): Uint8Array {
+  const last = edges.length - 1;
+  const maxSeconds = edges[last] * 60;
   const lut = new Uint8Array((maxSeconds + 1) * 4);
-  const rgb = BAND_COLORS.map(hexToRgb);
+  const rgb = colors.map(hexToRgb);
   for (let s = 0; s <= maxSeconds; s++) {
-    const b = bandOf(s);
+    const b = bandOf(s, edges);
     let col = rgb[b];
     if (featherSeconds > 0) {
       // Distance to the nearest edge decides how much of the neighbour band shows.
-      const lo = BAND_EDGES_MIN[b] * 60;
-      const hi = b < MAX_BAND ? BAND_EDGES_MIN[b + 1] * 60 : Infinity;
+      const lo = edges[b] * 60;
+      const hi = b < last ? edges[b + 1] * 60 : Infinity;
       const w = Math.min(featherSeconds, (hi - lo) / 2);
       let other = -1;
       let t = 0;
@@ -140,6 +144,46 @@ export function colorLut(
   }
   return lut;
 }
+
+// Treffpunkt (S017, decision 0010): the colour is the group's average minutes over the best
+// place, on a scale of its own (a few minutes more already matter when meeting): green at +0,
+// yellow from +5, red from +15, purple from +25, dark blue from +40. Places where one person
+// travels much longer than another fade to grey: from an 8 to a 20 minute gap.
+
+/** Lower band edges in average minutes over the best place; the last band is open-ended. */
+export const MEET_EDGES_MIN = [0, 2.5, 5, 7.5, 10, 12.5, 15, 20, 25, 32.5, 40];
+export const MEET_COLORS = [
+  '#0f7a52',
+  '#7cc248',
+  '#ffe83d',
+  '#fcb52f',
+  '#f0802a',
+  '#e8562e',
+  '#e0263c',
+  '#a8173f',
+  '#a040b4',
+  '#5f2290',
+  '#22427f',
+];
+/** Legend ticks (minutes over the best place), at the colour changes. */
+export const MEET_TICKS = [0, 5, 10, 15, 25, 40];
+/** Unfair places: the colour fades to this grey from the first gap to the second (seconds). */
+export const MEET_GREY = '#d2d2d2';
+export const MEET_GREY_FROM_S = 8 * 60;
+export const MEET_GREY_FULL_S = 20 * 60;
+
+/** RGBA lookup for the Treffpunkt colours, indexed by whole seconds over the best place. */
+export function meetLut(featherSeconds = 0): Uint8Array {
+  return colorLut(featherSeconds, MEET_EDGES_MIN, MEET_COLORS);
+}
+
+/** How far a place has faded to grey (0 to 1) for a gap in seconds between slowest and quickest. */
+export function meetGreyOf(gapSeconds: number): number {
+  const t = (gapSeconds - MEET_GREY_FROM_S) / (MEET_GREY_FULL_S - MEET_GREY_FROM_S);
+  return t <= 0 ? 0 : t >= 1 ? 1 : t;
+}
+
+export const MEET_GREY_RGB = hexToRgb(MEET_GREY);
 
 // "Bis N Min.": everything reachable within N minutes stays clear, the rest is greyed out
 // under a light veil, so no transit colour is taken and the answer stays calm.

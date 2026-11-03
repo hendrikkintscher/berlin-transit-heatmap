@@ -6,7 +6,7 @@ kind: feature
 priority: P2
 size: M
 needs: S016
-status: open
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -16,9 +16,9 @@ status: open
 The look Hendrik picks in S016 becomes the meeting map.
 
 ## Acceptance criteria
-- [ ] The meeting map uses the chosen colour coding
-- [ ] The home-screen Treffpunkt button goes and "+ Person" matches the drawer
-- [ ] There is still a direct way to start a meeting with someone new (today the floating button brings back the closed person until all starts are cleared)
+- [x] The meeting map uses the chosen colour coding
+- [x] The home-screen Treffpunkt button goes and "+ Person" matches the drawer
+- [x] There is still a direct way to start a meeting with someone new (today the floating button brings back the closed person until all starts are cleared)
 
 ## Notes
 - Decided in S016 (decision 0010): look 3. Colour = Ø minutes over the best place in the meeting

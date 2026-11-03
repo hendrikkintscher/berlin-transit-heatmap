@@ -488,19 +488,18 @@
             />
           </svg>
         </button>
-        <button id="second-btn" class="second-btn" type="button" hidden>
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <!-- In a meeting point: one more person (the same icon as on the place's card). -->
+        <button id="second-btn" class="round second-btn" type="button" hidden>
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
             <circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="2" />
-            <circle cx="16.5" cy="9" r="2.6" fill="none" stroke="currentColor" stroke-width="2" />
             <path
-              d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5M14.5 14.2c3 0 5.6 1.4 6.3 4.8"
+              d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5M18 8v6M15 11h6"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
               stroke-linecap="round"
             />
           </svg>
-          <span>Treffpunkt</span>
         </button>
       </div>
       <!-- "Heute anders", opened from Mehr or a change note on the card, right above the card. -->
@@ -593,6 +592,11 @@
       <div id="diff-ticks" class="legend-ticks" hidden></div>
       <div id="home-bar" hidden></div>
       <div id="home-ticks" class="legend-ticks" hidden></div>
+      <div id="meet-bar" hidden></div>
+      <div id="meet-ticks" class="legend-ticks" hidden></div>
+      <div id="meet-unfair" class="legend-unfair" hidden>
+        <span data-t="legendUnfair">unfair</span><i></i>
+      </div>
     </div>
 
     <dialog id="menu" class="menu" aria-labelledby="menu-title">
