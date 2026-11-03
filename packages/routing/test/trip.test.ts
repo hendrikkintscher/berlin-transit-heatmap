@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   loadTimetable,
+  NO_DEPARTURE,
   reverseTimetable,
   travelTimes,
   tripBetween,
@@ -48,6 +49,22 @@ describe('tripBetween', () => {
     const u1 = x.journey.legs.find((l) => l.type === 'ride')!;
     expect(u1.type === 'ride' && u1.from).toBe(A);
     expect(x.leave).toBeGreaterThan(H10 + 30);
+  });
+
+  it("arriving by a stop's quickest moment (bestDeparture) takes the map's best-case time", () => {
+    const Z = near(H);
+    const map = travelTimes(back, Z);
+    const X = near(A);
+    const walks = walksToStops(fwd, X);
+    let s0 = -1;
+    for (let s = 0; s < walks.length; s++)
+      if (map.bestDeparture![s] !== NO_DEPARTURE && walks[s] < Infinity)
+        if (s0 < 0 || walks[s] + map.stopSeconds[s] < walks[s0] + map.stopSeconds[s0]) s0 = s;
+    const best = walks[s0] + map.stopSeconds[s0];
+    const x = tripBetween(fwd, back, X, Z, { arrive: -map.bestDeparture![s0] })!;
+    expect(Math.abs(x.arrive - x.leave - best)).toBeLessThanOrEqual(60);
+    const end = tripBetween(fwd, back, X, Z, { arrive: -back.windowStart })!;
+    expect(x.arrive - x.leave).toBeLessThanOrEqual(end.arrive - end.leave);
   });
 
   it('is null out of reach', () => {

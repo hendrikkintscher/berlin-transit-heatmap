@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.13.18] — 2026-11-03
+
+- S001: Ankommen under Bestfall, the trip on tap is the quickest trip of the hour the map counts for that place, not the last one by the hour's end: card and map agree within a minute for about 90 % of places (before 45 %). Tap at 360×740 +4–9 ms (4× CPU +4 ms), first tap +7–13 ms, first map unchanged. Decision 0002.
+
 ## App versions up to 0.13.17
 
 Each step ships as one PR and one version, tagged `vX.Y.Z` on merge. Versions up to 0.7 were assigned afterwards from the PR history.

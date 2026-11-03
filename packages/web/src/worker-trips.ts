@@ -23,7 +23,7 @@ import type { Direction, FromWorker, ToWorker, Travel, TripLeg } from './protoco
 import { bestRows } from './more-rows';
 import { stopName } from './stop-name';
 import { course, walk } from './worker-paths';
-import { CELL_M, cellSeconds, travelOptions, type Run } from './worker-runs';
+import { CELL_M, cellIndex, cellSeconds, travelOptions, type Run } from './worker-runs';
 import { prepared, type Variant } from './worker-timetables';
 
 /** The last computed map, as trips on tap need it. */
@@ -51,6 +51,11 @@ export interface LastTrip {
   otherTt?: PreparedTimetable | null;
   /** The map's timetable variant, for the next hour's file (see tapTrip). */
   variant?: Variant;
+  /**
+   * Arriving under Bestfall: trips on tap arrive by the moment of the tapped cell's quickest
+   * trip of the hour (the map pass's bestDeparture at the cell's stop), not by its end.
+   */
+  quickest?: boolean;
 }
 /** The last computed map, kept for trip lookups on tap. */
 let lastTrip: LastTrip | null = null;
@@ -748,6 +753,18 @@ export function tripMessage(
   };
 }
 
+/**
+ * Arriving under Bestfall: the moment the tapped cell's quickest trip of the hour arrives,
+ * from the map pass (reversed clock: its departure) at the cell's own stop; null where the
+ * cell is walked to or has none (the trip then arrives by the hour's end).
+ */
+function quickestTime(r: Run, p: { lat: number; lon: number }): TripTime | null {
+  const dep = r.result.bestDeparture;
+  const i = cellIndex(r.best, p);
+  const s = i < 0 || !dep || !r.best.stop ? -1 : r.best.stop[i]!;
+  return s < 0 || dep![s]! === -0x7fffffff ? null : { arrive: -dep![s]! };
+}
+
 /** The trip to a tapped place from each start (one start: kept for the drawer's more). */
 export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: NextHour | null) {
   const last = lastTrip;
@@ -781,9 +798,12 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: Nex
         kept || bothWays(at, r.result.origin, undefined, msg, undefined, cellSeconds(r.best, msg))
       );
     }
+    const quick = !later && !msg.span && at.quickest && at.otherTt ? quickestTime(r, msg) : null;
     const fixed =
       at.otherTt &&
-      bothWays(at, r.result.origin, passAt(at, r, !!later), msg, later ? undefined : msg.span);
+      (quick
+        ? bothWays(at, r.result.origin, undefined, msg, quick)
+        : bothWays(at, r.result.origin, passAt(at, r, !!later), msg, later ? undefined : msg.span));
     if (fixed) return fixed;
     return later
       ? trip(later, laterRun(later, r, msg), msg)

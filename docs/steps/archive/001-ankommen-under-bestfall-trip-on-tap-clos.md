@@ -6,7 +6,7 @@ kind: research
 priority: P3
 size: S
 needs: -
-status: waiting
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -30,6 +30,7 @@ Under Bestfall with Ankommen, the trip on tap and the map's minutes tell the sam
 
   Browser, quickest-trip prototype against main: tap→trip median 83 → 88 ms (4× CPU 127 → 130), first tap 94 → 115 ms (4×: 159 → 179), first map unchanged (834 / 841 ms; 4×: 1528 / 1550).
   Recommendation: the map pass keeps each stop's quickest moment and the tap asks for the trip arriving then (prototype in project files measure-S001).
+- Decided 2026-11-03: Hendrik said yes to the cell's quickest trip (decision 0002). Built (8 visits × 6 taps, interleaved with main): tap 83 → 92 ms (4×: 130 → 134), first tap 101 → 114 ms (4×: 154 → 161), first map unchanged.
 
 ## Notes
 - Planned as 0.13.18. Note from 0.13.11 (2026-10-16): the trip on tap (the last connection of the hour) is 3+ minutes off the map in 53 % of places. Typisch differs by design (the map counts waiting).

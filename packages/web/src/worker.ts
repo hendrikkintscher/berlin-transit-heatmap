@@ -231,9 +231,13 @@ function sendMap(msg: ComputeMsg, made: Made, t0: number) {
     travel: made.travel,
     variant: { stepFree: msg.stepFree, bike: made.travel === 'bike' },
     // Trips on tap leave now (or, arriving, arrive by the end of the hour): the map's
-    // own pass for "Nächste", a pass of their own for Typisch and Bestfall. To the Ziel
-    // leaving, each trip is found from its own place (tripBetween).
+    // own pass for "Nächste", a pass of their own for Typisch and Bestfall. Arriving under
+    // Bestfall, by when the tapped cell's quickest trip of the hour arrives (step S001). To
+    // the Ziel leaving, each trip is found from its own place (tripBetween).
     leaveAt: msg.measure === 'next' || msg.toGoal ? null : from,
+    ...(!msg.toGoal && msg.direction === 'arrive' && msg.measure === 'best'
+      ? { quickest: true }
+      : {}),
     from,
     other: once(() =>
       prepared(msg.window, msg.toGoal || msg.direction === 'arrive' ? 'depart' : 'arrive', {
