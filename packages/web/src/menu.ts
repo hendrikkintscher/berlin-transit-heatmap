@@ -174,6 +174,8 @@ export function initMenu(deps: MenuDeps) {
   renderIsoHint();
   heatToggle.addEventListener('change', () => {
     state.heat = heatToggle.checked;
+    // A switch picked in a Treffpunkt stays when it closes (S018).
+    state.lookBefore = null;
     remember('heat', state.heat ? '1' : '0');
     opacityInput.disabled = !state.heat && !state.limit;
     renderIsoHint();
@@ -200,6 +202,7 @@ export function initMenu(deps: MenuDeps) {
     if (minutes === state.limit) return;
     const toggled = !minutes !== !state.limit;
     state.limit = minutes;
+    state.lookBefore = null;
     if (minutes) limitMinutes = minutes;
     renderLimit();
     deps.limitChanged(toggled);
@@ -270,6 +273,12 @@ export function initMenu(deps: MenuDeps) {
       state.limit = limitMinutes = minutes;
       renderLimit();
       deps.writeUrl();
+    },
+    /** Treffpunkt switched the colours or "Bis N Min." (S018): the switches show it. */
+    syncLook: () => {
+      heatToggle.checked = state.heat;
+      if (state.limit) limitMinutes = state.limit;
+      renderLimit();
     },
     close: () => menuDialog.close(),
   };
