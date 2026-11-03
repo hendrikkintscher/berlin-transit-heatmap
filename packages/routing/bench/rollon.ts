@@ -1,8 +1,9 @@
-// Rolling on (roadmap 0.13.14): a missed connection asks for the next one leaving at the
-// clock's time, on the next hour's file (after 23 Uhr the next day's 0 Uhr, its times read
-// a day later). For random pairs of places, the trip leaving at a few clock times on that
-// file against the file of the clock's own hour (the best there is) and, after midnight,
-// against the chosen 23 Uhr file (what the card used before); with the time per trip.
+// Rolling on (S003): a missed connection asks for the next one leaving at the clock's time,
+// on the clock hour's file (past midnight the next day's hour, its times read a day later),
+// as rolledWindow in packages/web/src/when.ts. Before S003 it stayed on the hour after the
+// chosen one, which stops holding trips two hours after its hour. For random pairs of
+// places, the trip leaving at a few clock times on the rolled file against the clock hour's
+// own file (the best there is) and against the file used before; with the time per trip.
 // Needs the hourly files: node packages/timetable-build/bin/build-timetable.js --gtfs
 // data/gtfs --out <dir>. Usage: tsx bench/rollon.ts <dir> [pairs, default 150] [seed, default 3]
 import { readFileSync } from 'node:fs';
@@ -97,20 +98,27 @@ function compare(
   );
 }
 
+/** The file a card on `day` at `chosen` Uhr rolls on with at `leave` (rolledWindow). */
+const files = new Map<string, [PreparedTimetable, PreparedTimetable]>();
+function file(day: string, hour: number) {
+  const key = `${day}-${String(hour % 24).padStart(2, '0')}`;
+  let f = files.get(key);
+  if (!f) files.set(key, (f = both(key, hour >= 24 ? 86400 : 0)));
+  return f;
+}
+const rolled = (day: string, chosen: number, leave: number) =>
+  file(day, Math.min(Math.floor(leave / 3600), chosen + 2));
+
 console.log(`${N} pairs. Found: rolled / other file. Same: arrives within a minute.`);
 console.log('| leave | against | found | same | earlier | later | ms per trip |');
 console.log('| --- | --- | --- | --- | --- | --- | --- |');
-// Chosen 17 Uhr: from 18:00 on the 18 Uhr file; 19:xx is new (it used to stop at 19:00).
-const f18 = both('weekday-18');
-const f19 = both('weekday-19');
-for (const leave of [18.5 * 3600, 19.1 * 3600, 19.8 * 3600])
-  compare("the hour's own file", leave, run(f18, leave), run(leave < 19 * 3600 ? f18 : f19, leave));
-// Chosen 23 Uhr: past midnight on the next day's 0 Uhr, a day later.
-const f23 = both('weekday-23');
-const f00 = both('weekday-00', 86400);
-const f01 = both('weekday-01', 86400);
-for (const leave of [24.2 * 3600, 24.8 * 3600, 25.5 * 3600]) {
-  const rolled = run(f00, leave);
-  compare('the 23 Uhr file (before)', leave, rolled, run(f23, leave));
-  if (leave >= 25 * 3600) compare("the hour's own file", leave, rolled, run(f01, leave));
+// Chosen 17 Uhr: from 18:00 on the 18 Uhr file, from 19:00 on the 19 Uhr file.
+// Chosen 23 Uhr: past midnight on the next day's 0 Uhr, from 1:00 on its 1 Uhr, a day later.
+for (const chosen of [17, 23]) {
+  for (const h of [1.2, 1.8, 2.1, 2.5, 2.8]) {
+    const leave = (chosen + h) * 3600;
+    const r = run(rolled('weekday', chosen, leave), leave);
+    compare("the hour's own file", leave, r, run(file('weekday', Math.floor(leave / 3600)), leave));
+    if (h > 2) compare('the file before S003', leave, r, run(file('weekday', chosen + 1), leave));
+  }
 }

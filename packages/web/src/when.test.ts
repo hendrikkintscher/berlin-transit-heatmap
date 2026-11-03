@@ -238,18 +238,49 @@ describe('rolledWindow', () => {
   it('keeps the chosen hour within it', () => {
     expect(rolledWindow(when, 17 * 3600 + 59 * 60)).toBeNull();
   });
-  it("takes the next hour's file once the clock is past it", () => {
+  it("takes the clock hour's file once the clock is past it", () => {
     expect(rolledWindow(when, 18 * 3600)).toEqual({ window: '20261013-18', shift: 0 });
-    expect(rolledWindow(when, 19 * 3600 + 1800)).toEqual({ window: '20261013-18', shift: 0 });
+    expect(rolledWindow(when, 18 * 3600 + 3599)).toEqual({ window: '20261013-18', shift: 0 });
     expect(rolledWindow({ day: 'weekend', hour: 9 }, 10 * 3600 + 1800)).toEqual({
       window: 'weekend-10',
       shift: 0,
     });
   });
-  it("takes the next day's 0 Uhr after 23 Uhr, a day behind", () => {
+  it("takes the second hour's own file in the second hour after the chosen one", () => {
+    expect(rolledWindow(when, 19 * 3600)).toEqual({ window: '20261013-19', shift: 0 });
+    expect(rolledWindow(when, 19 * 3600 + 1800)).toEqual({ window: '20261013-19', shift: 0 });
+    expect(rolledWindow({ day: 'weekend', hour: 9 }, 11 * 3600 + 3000)).toEqual({
+      window: 'weekend-11',
+      shift: 0,
+    });
+  });
+  it('never goes past the second hour after the chosen one', () => {
+    expect(rolledWindow(when, 20 * 3600 + 600)).toEqual({ window: '20261013-19', shift: 0 });
+  });
+  it("takes the next day's hours after midnight, a day behind", () => {
     expect(rolledWindow({ day: '20261013', hour: 23 }, 23 * 3600 + 600)).toBeNull();
     expect(rolledWindow({ day: '20261013', hour: 23 }, 24 * 3600 + 600)).toEqual({
       window: '20261014-00',
+      shift: 86400,
+    });
+    expect(rolledWindow({ day: '20261013', hour: 23 }, 25 * 3600 + 600)).toEqual({
+      window: '20261014-01',
+      shift: 86400,
+    });
+    expect(rolledWindow({ day: '20261013', hour: 22 }, 23 * 3600 + 600)).toEqual({
+      window: '20261013-23',
+      shift: 0,
+    });
+    expect(rolledWindow({ day: '20261013', hour: 22 }, 24 * 3600 + 600)).toEqual({
+      window: '20261014-00',
+      shift: 86400,
+    });
+  });
+  it("follows the real tomorrow for today's typical day", () => {
+    // Friday 23:30 in Berlin; the night's hours are the weekend's.
+    const friday = new Date('2026-10-16T21:30:00Z');
+    expect(rolledWindow({ day: 'weekday', hour: 23 }, 25 * 3600 + 600, friday)).toEqual({
+      window: 'weekend-01',
       shift: 86400,
     });
   });
@@ -272,6 +303,10 @@ describe('nextDayWindow', () => {
   });
   it('keeps a typical day that is not today', () => {
     expect(nextDayWindow({ day: 'weekend', hour: 23 }, thursday)).toBe('weekend-00');
+  });
+  it('gives a later hour of that day', () => {
+    expect(nextDayWindow({ day: '20261016', hour: 23 }, friday, 1)).toBe('20261017-01');
+    expect(nextDayWindow({ day: 'weekday', hour: 23 }, friday, 1)).toBe('weekend-01');
   });
 });
 

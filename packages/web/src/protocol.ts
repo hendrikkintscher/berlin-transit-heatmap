@@ -116,11 +116,11 @@ export type ToWorker =
       lon: number;
       leaveAt?: number;
       /**
-       * With `leaveAt` past the map's hour: the next hour's timetable file, which holds the
+       * With `leaveAt` past the map's hour: the clock hour's timetable file, which holds the
        * trips leaving then all the way (the map's own file stops two hours after its hour).
        */
       window?: Window;
-      /** Seconds added to that file's times: a day for the next day's 0 Uhr after 23 Uhr. */
+      /** Seconds added to that file's times: a day for the next day's hours after 23 Uhr. */
       shift?: number;
       span?: { leave: number; arrive: number };
     }
