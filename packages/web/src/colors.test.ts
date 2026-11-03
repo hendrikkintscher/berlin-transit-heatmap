@@ -169,3 +169,33 @@ describe('"Bis N Min." shading', () => {
     expect(Math.min(lut[0], lut[1], lut[2])).toBeGreaterThan(190);
   });
 });
+
+describe('colour thresholds (S034)', () => {
+  // OKLab hue in degrees.
+  const hue = (seconds: number) => {
+    const [, a, b] = oklab(BAND_COLORS[bandOf(seconds)]);
+    return ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+  };
+  const min = (m: number) => m * 60;
+  const isGreen = (h: number) => h > 115 && h < 160;
+  const isYellowOrange = (h: number) => h > 45 && h < 110;
+  const isRed = (h: number) => h > 0 && h < 30;
+  const isPurple = (h: number) => h > 300 && h < 345;
+  const isBlue = (h: number) => h > 240 && h < 280;
+
+  it('stays green below 25 min and turns yellow at 25', () => {
+    expect(isGreen(hue(min(24.9)))).toBe(true);
+    expect(isYellowOrange(hue(min(25)))).toBe(true);
+    expect(hue(min(25))).toBeGreaterThan(95);
+  });
+
+  it('has no red before 45 min, red from 45 to 60', () => {
+    for (let m = 25; m < 45; m += 0.5) expect(isYellowOrange(hue(min(m)))).toBe(true);
+    for (let m = 45; m < 60; m += 0.5) expect(isRed(hue(min(m)))).toBe(true);
+  });
+
+  it('is purple from 60 and blue from 90 min', () => {
+    for (let m = 60; m < 90; m += 1) expect(isPurple(hue(min(m)))).toBe(true);
+    for (let m = 90; m < 120; m += 1) expect(isBlue(hue(min(m)))).toBe(true);
+  });
+});
