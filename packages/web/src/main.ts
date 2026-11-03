@@ -129,7 +129,8 @@ const legendBands = BAND_COLORS.map((c, b) => {
   return s;
 });
 $('legend-bar').append(...legendBands);
-const legendTicks = [0, 10, 20, 30, 40, 50, 60, 120].map((m) => {
+// Ticks at the colour changes: yellow 25, red 45, purple 60, blue 90, grey 120.
+const legendTicks = [0, 10, 25, 35, 45, 60, 90, 120].map((m) => {
   const tick = document.createElement('span');
   const i = BAND_EDGES_MIN.indexOf(m);
   tick.style.top = `${(100 * i) / BAND_COLORS.length}%`;

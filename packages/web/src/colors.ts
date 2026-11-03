@@ -1,7 +1,7 @@
 // Travel-time colour scale. Bands are 5 minutes up to 20, 2.5 minutes from 20 to 50
 // (where most of the city sits, so that range gets the most colour depth), then
-// widen again. Hues run green (fast, up to 25 min) -> yellow (from 25) -> red -> purple
-// -> navy (slow).
+// widen again. Hues (Hendrik, S034): green up to 25 min, yellow to orange from 25,
+// red from 45, purple from 60, blue from 90, grey from 120.
 
 /** Lower band edges in minutes; the last band is open-ended. */
 /** The app's ink, for map lines and strong map labels (style.css --ink). */
@@ -10,16 +10,19 @@ export const INK = '#1d1530';
 export const MAP_TEXT = '#4a3d63';
 
 export const BAND_EDGES_MIN = [
-  0, 5, 10, 15, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5, 40, 42.5, 45, 47.5, 50, 55, 60, 75, 90, 120,
+  0, 5, 10, 15, 20, 22.5, 25, 27.5, 30, 32.5, 35, 37.5, 40, 42.5, 45, 47.5, 50, 55, 60, 70, 80, 90,
+  105, 120,
 ];
 export const BAND_COUNT = BAND_EDGES_MIN.length;
 export const MAX_BAND = BAND_COUNT - 1;
 
-// Anchor colours: 0–25 greens (6 steps, 0–5 the darkest), 25–50 yellow→purple (10 steps),
-// 50+ blues to navy, 120+ grey. 20 minutes is still green; yellow starts at 25 (Hendrik).
+// Anchor colours: 0–25 greens (6 bands, 0–5 the darkest), 25–45 yellow→burnt orange (8),
+// 45–60 red→dark red (4), 60–90 purples (3), 90–120 blues (2), 120+ grey.
 const LOW_ANCHORS = ['#0f7a52', '#38a35a', '#7cc248', '#c8e48a'];
-const MID_ANCHORS = ['#ffe83d', '#fbb02d', '#f2702e', '#d93a4a', '#a92070', '#702088'];
-const HIGH = ['#4b3a9f', '#2f58ad', '#264a85', '#1d315c', '#151c36', '#5b5d6b'];
+const YELLOW_ANCHORS = ['#ffe83d', '#fcb52f', '#f0802a', '#b85212'];
+const RED_ANCHORS = ['#e0263c', '#b0173f', '#7f1238'];
+const PURPLE_ANCHORS = ['#a040b4', '#7a2590', '#561c78'];
+const HIGH = ['#2f58ad', '#22427f', '#5b5d6b'];
 
 type Lab = [number, number, number];
 
@@ -73,7 +76,13 @@ function ramp(anchors: string[], n: number): string[] {
   });
 }
 
-export const BAND_COLORS: string[] = [...ramp(LOW_ANCHORS, 6), ...ramp(MID_ANCHORS, 10), ...HIGH];
+export const BAND_COLORS: string[] = [
+  ...ramp(LOW_ANCHORS, 6),
+  ...ramp(YELLOW_ANCHORS, 8),
+  ...ramp(RED_ANCHORS, 4),
+  ...ramp(PURPLE_ANCHORS, 3),
+  ...HIGH,
+];
 
 /** Band index for a travel time in seconds (Infinity -> -1). */
 export function bandOf(seconds: number): number {
