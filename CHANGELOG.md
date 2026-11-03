@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.15.4] — 2026-11-03
+
+- S030: A Lieblingsorte button (a star) next to Ebenen opens the menu at the list of favourite places, as the menu entry does. To keep the row on one line at 360 px, Zeit and Bahn lose their clock and arrows (an open chip is still tinted): Mo–Fr, Bahn, Ebenen and Lieblingsorte now fit beside Mehr in German (English scrolled before and still does, by the same amount). The help text points to the star. The smoke test opens the list from the star in both languages. HTML, CSS and a click handler; nothing on the map or tap path changed. At 360×740 with GPU compositing and the real basemap (8 visits) first map 1067 → 912 ms, tap to trip 60 → 64 ms, ⇅ 715 → 786 ms, rings 454 → 418 ms; 4× CPU first map 1576 → 1518 ms, tap 82 → 78 ms, ⇅ 929 → 937 ms, rings 630 → 662 ms: within noise.
+
 ## [0.15.3] — 2026-11-03
 
 - S029: A tidier time panel and smaller buttons in the panels and the menu. Time panel, before: Jetzt/+15/+30/+60; Losfahren|Ankommen + time; Tag; Reisezeit + a four-line note; Stunde; the hour note; a five-line note on the days. After: the hour moved up under its day (Reisezeit after it), the Nächste note shortened to three lines, the hour note to one, and the note on the days folded under "Mehr zu den Tagen". The exact-time box no longer runs past the panel's edge on 12-hour phones and is as tall as Losfahren|Ankommen (was 50 px against 44). Buttons in the chip panels and the menu are 40 px high (`--tap-menu`, was 44) with less padding; headings and gaps a little tighter. At 360×740 the time panel's content is 719 → 555 px (nearly all of it shows without scrolling), the menu 543 → 511 px; nothing wraps. The smoke test checks the 40 px heights and the panel's edge in both languages. CSS and HTML only. At 360×740 with GPU compositing (8 visits) first map 1107 → 1044 ms, tap to trip 40 → 35 ms, ⇅ 778 → 821 ms, rings 498 → 461 ms; 4× CPU (two rounds) first map 1964/2027 → 1734/1759 ms, tap 58/60 → 48/57 ms, ⇅ 824/893 → 910/846 ms, rings 554/536 → 619/534 ms: within noise.

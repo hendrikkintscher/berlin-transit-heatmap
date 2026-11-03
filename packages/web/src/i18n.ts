@@ -132,7 +132,7 @@ const de = {
   favImported: '{n} Orte importiert, {missing} nicht gefunden.',
   favImportFailed: 'Die Datei konnte nicht gelesen werden.',
   aboutCompare:
-    '<b>Treffpunkt:</b> Tippe nach dem Startpunkt auf einen weiteren Ort und wähle „2. Startpunkt“, für Gruppen bis zu fünf Startpunkte. Die Farben zeigen dann die längste der Fahrten, also wo ihr alle in N Minuten sein könnt. <b>Lieblingsorte</b> (im Menü) zeigen für den Startpunkt die Fahrzeit zu jedem Ort und einen nach Wichtigkeit gewichteten Schnitt; nicht erreichbare Orte zählen mit 120 Min. Die Liste bleibt in deinem Browser.',
+    '<b>Treffpunkt:</b> Tippe nach dem Startpunkt auf einen weiteren Ort und wähle „2. Startpunkt“, für Gruppen bis zu fünf Startpunkte. Die Farben zeigen dann die längste der Fahrten, also wo ihr alle in N Minuten sein könnt. <b>Lieblingsorte</b> (Stern oben neben Ebenen) zeigen für den Startpunkt die Fahrzeit zu jedem Ort und einen nach Wichtigkeit gewichteten Schnitt; nicht erreichbare Orte zählen mit 120 Min. Die Liste bleibt in deinem Browser.',
   whenOpen: 'Zeit wählen',
   whenTitle: 'Wann?',
   whenDay: 'Tag',
@@ -445,7 +445,7 @@ const en: Record<Key, string> = {
   favImported: '{n} places imported, {missing} not found.',
   favImportFailed: 'The file could not be read.',
   aboutCompare:
-    '<b>Meeting point:</b> after setting a starting point, tap another place and choose "Starting point 2"; groups can add up to five starting points. Colours then show the longest of the trips, so where you can all be in N minutes. <b>Favourite places</b> (in the menu) show the trip time from the starting point to each place and an average weighted by importance; unreachable places count as 120 min. The list stays in your browser.',
+    '<b>Meeting point:</b> after setting a starting point, tap another place and choose "Starting point 2"; groups can add up to five starting points. Colours then show the longest of the trips, so where you can all be in N minutes. <b>Favourite places</b> (the star beside Layers) show the trip time from the starting point to each place and an average weighted by importance; unreachable places count as 120 min. The list stays in your browser.',
   whenOpen: 'Choose the time',
   whenTitle: 'When?',
   whenDay: 'Day',

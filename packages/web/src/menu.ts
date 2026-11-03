@@ -76,6 +76,12 @@ export function initMenu(deps: MenuDeps) {
     menuBtn.setAttribute('aria-expanded', 'true');
   });
   menuDialog.addEventListener('close', () => menuBtn.setAttribute('aria-expanded', 'false'));
+  // Lieblingsorte (S030): the star chip beside Ebenen opens the menu at the list.
+  $('fav-chip').addEventListener('click', () => {
+    deps.closeSearch();
+    openMenu();
+    $('fav-title').scrollIntoView({ block: 'start' });
+  });
   $('menu-close').addEventListener('click', () => menuDialog.close());
   $('about-btn').addEventListener('click', () => {
     menuDialog.close();

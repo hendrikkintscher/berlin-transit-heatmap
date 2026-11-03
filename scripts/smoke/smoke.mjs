@@ -176,6 +176,17 @@ try {
     await p.locator('#menu-btn').click();
     for (const bad of await sizes('#menu')) failures.push(`${lang}: menu: ${bad}`);
     await p.locator('#menu-close').click();
+    // The star chip beside Ebenen opens the menu at Lieblingsorte (S030).
+    await p.locator('#fav-chip').click();
+    const fav = await p.evaluate(() => {
+      const menu = document.getElementById('menu');
+      const box = menu.getBoundingClientRect();
+      const title = document.getElementById('fav-title').getBoundingClientRect();
+      return { open: menu.open, shown: title.top >= box.top && title.bottom <= box.bottom };
+    });
+    if (!fav.open) failures.push(`${lang}: the Lieblingsorte chip did not open the menu`);
+    else if (!fav.shown) failures.push(`${lang}: the Lieblingsorte chip left the list out of view`);
+    await p.locator('#menu-close').click();
     // A tap a little north-east of the start: the trip card gives its minutes.
     const box = await p.locator('.origin-marker').first().boundingBox();
     if (!box) failures.push(`${lang}: no start marker`);
