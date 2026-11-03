@@ -151,6 +151,31 @@ try {
       if (l !== 12 || (s !== '.chip-scroll > :first-child' && r !== 12))
         failures.push(`${lang}: ${s} sits ${l} / ${r} px from the edges, not 12`);
     if (edges.mehr !== 12) failures.push(`${lang}: Mehr sits ${edges.mehr} px from the edge`);
+    // The time panel and the menu (S029): buttons 40 px high (at most 43, so a label on two
+    // lines shows), and nothing past the panel's right edge (the day row scrolls inside it).
+    const sizes = (root) =>
+      p.evaluate((root) => {
+        const panel = document.querySelector(root);
+        const edge = panel.getBoundingClientRect().right;
+        const bad = [];
+        for (const b of panel.querySelectorAll('button, .when-time, .day-row')) {
+          if (!b.getClientRects().length || b.id === 'menu-close') continue;
+          const r = b.getBoundingClientRect();
+          const name = b.textContent.trim() || b.className || b.tagName;
+          // Half a pixel either way: on the CI machine some 40 px buttons measure 39.x px.
+          if (b.tagName === 'BUTTON' && (r.height < 39.5 || r.height > 43.5))
+            bad.push(`${name} is ${r.height.toFixed(1)} px high`);
+          if (!b.closest('.day-row') && r.right > edge + 0.5)
+            bad.push(`${name} ends ${Math.round(r.right - edge)} px past the edge`);
+        }
+        return bad;
+      }, root);
+    await p.locator('#when-btn').click();
+    for (const bad of await sizes('#pop-when')) failures.push(`${lang}: time panel: ${bad}`);
+    await p.locator('#when-btn').click();
+    await p.locator('#menu-btn').click();
+    for (const bad of await sizes('#menu')) failures.push(`${lang}: menu: ${bad}`);
+    await p.locator('#menu-close').click();
     // A tap a little north-east of the start: the trip card gives its minutes.
     const box = await p.locator('.origin-marker').first().boundingBox();
     if (!box) failures.push(`${lang}: no start marker`);
