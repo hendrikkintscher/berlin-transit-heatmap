@@ -6,7 +6,7 @@ kind: research
 priority: P2
 size: M
 needs: -
-status: waiting
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -43,6 +43,8 @@ Hendrik picks a look for the meeting map that shows both total time and fairness
   place everyone can reach about equally stays bright while an unfair one washes out; the
   time lines and the three suggestion pins stay readable. Look 5 is the fallback if the
   fairness should be readable in exact minutes.
+- Decided 2026-11-03 (Hendrik): look 3, legend "unfair", own scale yellow at +5 and red at +15
+  (decision 0010; built in S017).
 
 ## Notes
 - Planned as 0.15.6 (design list D9). Hendrik (2026-10-13): "Treffpunkt does not need to be there as a button on the home screen, … we need our own color coding for the Treffpunkt mode, ideally including both dimensions: total time and fairness. There should be 5 suggestions to decide from, before it gets build".
