@@ -127,6 +127,28 @@ try {
     const shown = await p.evaluate(() => window.__smoke);
     if (!shown.outlines) failures.push(`${lang}: the map has no outlines`);
     if (!shown.coloured) failures.push(`${lang}: the map has no colours`);
+    // The controls keep the one side gap (--edge, 12 px since S010) from both edges, and in
+    // German the chips fit beside Mehr without scrolling.
+    const edges = await p.evaluate(() => {
+      const gap = (s) => {
+        const r = document.querySelector(s).getBoundingClientRect();
+        return [s, Math.round(r.left), Math.round(window.innerWidth - r.right)];
+      };
+      const row = document.querySelector('.chip-scroll');
+      return {
+        gaps: [gap('.search'), gap('.bottom-row'), gap('.chip-scroll > :first-child')],
+        mehr: Math.round(
+          window.innerWidth - document.getElementById('menu-btn').getBoundingClientRect().right,
+        ),
+        over: row.scrollWidth - row.clientWidth,
+      };
+    });
+    for (const [s, l, r] of edges.gaps)
+      if (l !== 12 || (s !== '.chip-scroll > :first-child' && r !== 12))
+        failures.push(`${lang}: ${s} sits ${l} / ${r} px from the edges, not 12`);
+    if (edges.mehr !== 12) failures.push(`${lang}: Mehr sits ${edges.mehr} px from the edge`);
+    if (lang === 'de' && edges.over > 0)
+      failures.push(`${lang}: the chip row scrolls by ${edges.over} px at 360 px`);
     // A tap a little north-east of the start: the trip card gives its minutes.
     const box = await p.locator('.origin-marker').first().boundingBox();
     if (!box) failures.push(`${lang}: no start marker`);
