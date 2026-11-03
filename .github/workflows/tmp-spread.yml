@@ -7,7 +7,7 @@ permissions:
 jobs:
   spread:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -23,6 +23,7 @@ jobs:
           cd packages/routing
           D=$GITHUB_WORKSPACE/work/speed
           for i in $(seq 1 30); do
-            echo "OLD $(node_modules/.bin/tsx bench/_raw.ts $PWD/src $D $PWD/../web/src | tail -1)"
-            echo "NEW $(node_modules/.bin/tsx bench/_raw2.ts $PWD/src $D $PWD/../web/src | tail -1)"
+            node_modules/.bin/tsx bench/_raw.ts $PWD/src $D $PWD/../web/src | tail -1 >> old.jsonl
+            node_modules/.bin/tsx bench/_raw2.ts $PWD/src $D $PWD/../web/src | tail -1 >> new.jsonl
           done
+          python3 bench/_an.py
