@@ -4,6 +4,7 @@ import {
   NO_DEPARTURE,
   reverseTimetable,
   travelTimes,
+  latestLeaving,
   tripBetween,
   walksToStops,
   type Journey,
@@ -17,6 +18,9 @@ const bothWays = (raw: Timetable) => ({
   fwd: loadTimetable(raw),
   back: loadTimetable(reverseTimetable(raw, raw.windowEnd, raw.windowEnd + 3600)),
 });
+/** A map to `to` leaving: its profile search from there on the reversed timetable. */
+const profileTo = (back: PreparedTimetable, to: { lat: number; lon: number }) =>
+  travelTimes(back, to, { profile: { from: -(H10 + 7200), to: -(H10 - 3600) } }).profile!;
 const rides = (tt: PreparedTimetable, j: Journey) =>
   j.legs.map((l) =>
     l.type === 'ride' ? `${l.name} ${tt.stops[l.from].name}-${tt.stops[l.to].name}` : 'walk',
@@ -88,6 +92,16 @@ describe('tripBetween', () => {
       ).toEqual(x);
   });
 
+  it("comes out the same with the latest leaving read off a map's profile", () => {
+    const toProfile = profileTo(back, near(H));
+    for (const t of [H10 - 600, H10 + 30, H10 + 400, H10 + 1500]) {
+      const x = tripBetween(fwd, back, near(A), near(H), { leave: t });
+      expect(tripBetween(fwd, back, near(A), near(H), { leave: t }, { toProfile })).toEqual(x);
+    }
+    const x = tripBetween(fwd, back, near(A), near(H), { leave: H10 + 30 })!;
+    expect(latestLeaving(toProfile, walksToStops(fwd, near(A)), x.arrive)).toBe(x.leave);
+  });
+
   it('a search with its walks given is the same as one walking them', () => {
     const o = { leaveAt: H10 + 30, trackLegs: true };
     const given = travelTimes(fwd, near(A), { ...o, accessSeconds: walksToStops(fwd, near(A)) });
@@ -134,6 +148,14 @@ describe('tripBetween with a change or none', () => {
     expect(x.leave).toBe(H10 + 600);
     expect(tripBetween(fwd, back, p, z, { leave: x.leave, arrive: x.arrive })).toEqual(x);
     expect(tripBetween(fwd, back, p, z, { leave: x.leave })).toEqual(x);
+  });
+  it("leaving, keeps the fewest rides when a map's profile leaves later with more", () => {
+    const toProfile = profileTo(back, z);
+    // With the change one leaves at 10:10 and arrives as early as on the 100 at 10:00.
+    expect(latestLeaving(toProfile, walksToStops(fwd, p), H10 + 2400)).toBe(H10 + 600);
+    const x = tripBetween(fwd, back, p, z, { leave: H10 - 60 }, { toProfile })!;
+    expect(rides(fwd, x.journey)).toEqual(['100 P-Z']);
+    expect(x).toEqual(tripBetween(fwd, back, p, z, { leave: H10 - 60 }));
   });
 });
 
