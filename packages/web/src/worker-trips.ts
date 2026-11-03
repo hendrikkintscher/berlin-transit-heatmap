@@ -814,18 +814,19 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: Nex
   return tripMessage(journeys);
 }
 
-/** The next hour's timetable, both ways round, for a connection that rolled on past the map's hour. */
+/** The clock hour's timetable, both ways round, for a connection that rolled on past the map's hour. */
 export interface NextHour {
   tt: PreparedTimetable;
   other: PreparedTimetable | null;
 }
 
 /**
- * Loads the next hour's file (`window`) the way the last map runs, and the other way round,
- * for a trip leaving after the map's hour (`shift`: see protocol.ts): the map's own file holds the trips starting up to
- * two hours after its hour, so trips over an hour, asked for late in the next hour, would
- * come out worse or not at all. The app preloads that hour after each map, so this is
- * usually there already; null when it cannot be had (the map's own file is used then).
+ * Loads the clock hour's file (`window`, see rolledWindow) the way the last map runs, and
+ * the other way round, for a trip leaving after the map's hour (`shift`: see protocol.ts):
+ * an hour's file holds the trips starting up to two hours after its hour, so trips over an
+ * hour, asked for late in a later hour, would come out worse or not at all. The app
+ * preloads the next hour after each map; the one after that loads here, once, while the
+ * card stays open. Null when it cannot be had (the map's own file is used then).
  */
 export async function nextHour(window: string, shift = 0): Promise<NextHour | null> {
   const last = lastTrip;

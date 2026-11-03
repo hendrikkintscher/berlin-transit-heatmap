@@ -393,7 +393,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       await nextTask();
       if (msg.id !== latestTrip) return;
       await tripsReady();
-      // A connection rolled on past the map's hour: the next hour's file has its trips.
+      // A connection rolled on past the map's hour: the clock hour's file has its trips.
       const next =
         msg.window && msg.leaveAt !== undefined ? await nextHour(msg.window, msg.shift) : null;
       if (msg.id !== latestTrip) return;
