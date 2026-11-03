@@ -38,6 +38,7 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 - S010 · build · fix · P1 · S · A little more room at the screen edges
 - S011 · build · fix · P2 · S · Status lines keep the map clear
+- S028 · decision · research · P2 · S · Stop names and symbols on the map
 - S012 · build · feature · P3 · XS · Ring widths show their order
 - S013 · build · feature · P3 · XS · Colour fill on for first-time visitors
 - S014 · build · feature · P3 · M · Example map on the first screen
