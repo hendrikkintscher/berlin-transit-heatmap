@@ -189,6 +189,26 @@ body {
   background: var(--accent);
   color: #fff;
 }
+/* The question entries (S015): quieter than the two buttons, two rows at phone width so the
+   example map's start stays in view above the card. */
+.hint-asks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 8px;
+  margin-top: 6px;
+}
+.hint-asks button {
+  min-height: 34px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
 #hint small {
   display: block;
   margin-top: 8px;

@@ -262,6 +262,15 @@ export function initMenu(deps: MenuDeps) {
   return {
     applyLang,
     open: openMenu,
+    /**
+     * "Bis N Min." on with these minutes for the map about to be computed (S015): the
+     * switch, its buttons and the link follow, but no image is asked for the map shown now.
+     */
+    presetLimit: (minutes: number) => {
+      state.limit = limitMinutes = minutes;
+      renderLimit();
+      deps.writeUrl();
+    },
     close: () => menuDialog.close(),
   };
 }

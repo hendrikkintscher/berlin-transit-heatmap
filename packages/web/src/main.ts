@@ -61,6 +61,7 @@ import {
   seen,
   type Result,
 } from './state';
+import { firstStep, questionOf, REACH_MINUTES } from './questions';
 import { initTap } from './tap';
 import { LongPress, listenLongPress } from './long-press';
 import { addTripArrows } from './trip-arrows';
@@ -1325,6 +1326,15 @@ document.addEventListener('visibilitychange', () => {
 // The first-open card's buttons: the locate button's action, and the search.
 $('hint-locate').addEventListener('click', () => locateBtn.click());
 $('hint-search').addEventListener('click', () => search.open());
+// The card's questions (S015): a search for what each needs, or the where-to-live map.
+for (const b of document.querySelectorAll<HTMLButtonElement>('[data-ask]'))
+  b.addEventListener('click', () => {
+    const q = questionOf(b.dataset.ask);
+    if (!q) return;
+    const step = firstStep(q, favPlaces.list().length);
+    if ('show' in step) special.show({ kind: step.show });
+    else search.open(step.search);
+  });
 locateBtn.addEventListener('click', () => {
   if (!('geolocation' in navigator)) {
     setStatus(() => t('locateFailed'), true);
@@ -1423,6 +1433,11 @@ const search = initSearch({
     favPlaces.add([p]);
     menu.open();
   },
+  addLivingPlace: (p) => {
+    favPlaces.add([p]);
+    special.show({ kind: 'living' });
+  },
+  setReach: () => menu.presetLimit(REACH_MINUTES),
   frameView,
   tapAt: (...a) => tap.tapAt(...a),
 });
