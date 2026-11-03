@@ -1155,14 +1155,19 @@ function syncImage() {
 let tripOpen = link.to !== null;
 
 /**
- * A tap opened (or closed) a place's card: the colour fill steps aside so the trip's lines read
- * clearly, and comes back when the card closes (S013). Only the fill's visibility and the
- * legend change, not the outlines' look: restyling them on the tap held back its trip (about
- * 15 ms at 360×740; measure-S013).
+ * A tap opened (or closed) a place's card: the colour fill and the time lines step aside so
+ * the trip's lines read clearly, and come back when the card closes (S013, Hendrik
+ * 2026-11-03). Only visibility and the legend change, not the outlines' look: restyling them
+ * on the tap held back its trip (about 15 ms at 360×740; measure-S013). The comparison,
+ * where-to-live and home maps keep theirs (their colours are the point).
  */
 function hideHeatForTrip() {
   const r = state.result;
-  if (!r || r.compare || r.living || r.home || state.limit || !state.heat) return;
+  if (!r || r.compare || r.living || r.home) return;
+  if (state.mapReady && map.getLayer(OUTLINE_LAYERS[0]))
+    for (const id of OUTLINE_LAYERS)
+      map.setLayoutProperty(id, 'visibility', state.iso && !tripOpen ? 'visible' : 'none');
+  if (state.limit || !state.heat) return;
   document.body.classList.toggle('no-legend', tripOpen);
   if (state.mapReady && map.getLayer(HEAT_LAYER))
     map.setLayoutProperty(HEAT_LAYER, 'visibility', tripOpen ? 'none' : 'visible');
@@ -1523,6 +1528,8 @@ const menu = initMenu({
     if (!state.mapReady) return;
     for (const id of layers === 'routes' ? ROUTE_LAYERS : OUTLINE_LAYERS)
       map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    // (The time lines stay away while a trip is open.)
+    if (layers === 'outlines' && tripOpen) hideHeatForTrip();
   },
   heatChanged: () => {
     // Computed with the switch off: the colours are drawn now, from the same grid.

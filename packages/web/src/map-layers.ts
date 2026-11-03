@@ -244,15 +244,7 @@ export function addMapLayers(
         'line-color': INK,
         'line-opacity': ['match', ['get', 'min'], 15, 0.85, 30, 0.75, 45, 0.65, 0.4],
         // 15 min boldest, then 30 and 45; the other 5-minute steps are hairlines.
-        'line-width': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          9,
-          ['match', ['get', 'min'], 15, 2, 30, 1.5, 45, 1.1, 0.5],
-          14,
-          ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
-        ],
+        'line-width': FILL_OUTLINE_WIDTH,
       },
     },
     ROUTE_LAYERS[0],
@@ -669,6 +661,21 @@ export function outlineLabel(kind: OutlineKind, unit: string): maplibregl.Expres
 }
 
 /**
+ * The time lines over the colour fill: 15 min boldest, then 30 and 45, the other 5-minute
+ * steps hairlines. Thinner since S013 (2, 1.5, 1.1, 0.5 → 3.2, 2.4, 1.8, 1 px before): the
+ * fill carries the minutes, the lines only mark them.
+ */
+export const FILL_OUTLINE_WIDTH: maplibregl.ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  9,
+  ['match', ['get', 'min'], 15, 1.3, 30, 1, 45, 0.75, 0.35],
+  14,
+  ['match', ['get', 'min'], 15, 2.1, 30, 1.6, 45, 1.2, 0.6],
+];
+
+/**
  * Outline look for the kind of map and whether the colour fill is on. Without the fill,
  * crisp labelled rings at 15, 30, 45 and 60 min (styleRings). With it, thin dark lines
  * labelled at 15, 30 and 45 min; the home map's few outlines take its legend colours.
@@ -699,15 +706,7 @@ export function styleOutlines(
     'outlines-line',
     'line-width',
     heat
-      ? [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          9,
-          ['match', ['get', 'min'], 15, 2, 30, 1.5, 45, 1.1, 0.5],
-          14,
-          ['match', ['get', 'min'], 15, 3.2, 30, 2.4, 45, 1.8, 1],
-        ]
+      ? FILL_OUTLINE_WIDTH
       : [
           'interpolate',
           ['linear'],

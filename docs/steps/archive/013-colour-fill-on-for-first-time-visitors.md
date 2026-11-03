@@ -21,6 +21,8 @@ First-time visitors see the colour fill by default.
 - [x] The colour fill hides when a tap on the map opens a trip, and comes back when that trip
       window is closed (Hendrik, 2026-11-03)
 
+- [x] Thinner time lines over the colours; no time lines while a trip is open (Hendrik, 2026-11-03)
+
 ## Notes
 - Planned as 0.15.3 (design list D2), a trial.
 - Hiding the fill on a tap must not slow the tap to trip; it is a paint switch, no new routing.
