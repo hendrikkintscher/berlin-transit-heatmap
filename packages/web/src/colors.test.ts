@@ -21,6 +21,7 @@ import {
   LAND,
   RING_COLORS,
   RING_MINUTES,
+  RING_WIDTHS,
   WATER,
 } from './colors';
 
@@ -133,6 +134,15 @@ describe('time rings', () => {
     expect(RING_COLORS).toHaveLength(RING_MINUTES.length);
     const light = RING_COLORS.map((c) => oklab(c)[0]);
     for (let i = 1; i < light.length; i++) expect(light[i]).toBeGreaterThan(light[i - 1]);
+  });
+
+  it('gives each ring its own width, widest first, a quarter or more apart', () => {
+    for (const z of [9, 14] as const) {
+      const w = RING_WIDTHS[z];
+      expect(w).toHaveLength(RING_MINUTES.length);
+      for (let i = 1; i < w.length; i++)
+        expect(w[i - 1] / w[i], `z${z} ring ${i}`).toBeGreaterThanOrEqual(1.25);
+    }
   });
 
   it('keeps every ring at 3 : 1 or better on land and water', () => {

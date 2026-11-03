@@ -36,7 +36,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · D. Clear and welcoming looks (0.15)
 
-- S012 · build · feature · P3 · XS · Ring widths show their order
 - S013 · build · feature · P3 · S · Colour fill on for first-time visitors
 - S014 · build · feature · P3 · M · Example map on the first screen
 - S015 · build · feature · P3 · S · Question entries on the start screen

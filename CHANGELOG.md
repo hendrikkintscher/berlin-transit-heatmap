@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.15.6] — 2026-11-03
+
+- S012: Without the colour fill, each time ring has its own line width, widest first: 15 min 4.2 → 6.4 px (zoom 9 → 14), 30 min 3.1 → 4.8, 45 min 2.3 → 3.6, 60 min 1.7 → 2.7 (before, all four 2.6 → 4), with the white edge following. The look-alike pairs (15/30 near-black, 45/60 mid-purple) now differ by about a third in width, so the order shows without the labels, as the colour fill's outlines already do. A test checks each ring is at least a quarter wider than the next. Paint properties only, set in the same call as before; no extra routing. At 360×740 with GPU compositing (7 visits) first map 1073 → 1168 ms, tap to trip 125 → 114 ms, ⇅ 967 → 1023 ms, rings 586 → 622 ms; 4× CPU first map 1527 → 1454 ms, tap 242 → 198 ms, ⇅ 1333 → 1226 ms, rings 942 → 820 ms: within noise.
+
 ## [0.15.5] — 2026-11-03
 
 - S031: The trip card shows where the map is computed in the dots before Start and Ziel. Before, each row ended in a rings symbol: purple rings at the map's place and a grey rings button at the other. Now the map's place has the rings in place of its dot (purple for the Start, orange for the Ziel, as on the map) and the other row's plain dot is the button that moves the rings there (a 30 px tap area round the dot); nothing follows the name, so long names have more room. ⇅ and a long press still swap or move the anchor and the rings follow. The help text says so. A test checks which row leads with the rings, leaving and arriving. CSS and the card's markup; nothing on the map or tap path changed. At 360×740 with GPU compositing (7 visits) first map 771 → 796 ms, tap to trip 70 → 62 ms, ⇅ 623 → 622 ms, dot/rings 397 → 350 ms; 4× CPU first map 1252 → 1326 ms, tap 191 → 125 ms, ⇅ 880 → 831 ms, dot/rings 540 → 459 ms: within noise.
