@@ -32,7 +32,7 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Now · A. Trip and map agree (0.13)
 
-- S004 · decision · research · P3 · S · Long walk on the trip card over the 30-minute walk rule
+- S025 · decision · research · P3 · S · A long walk to the train instead of a short ride to it
 
 ### Now · B. Fast and steady loading and measuring (0.13)
 
