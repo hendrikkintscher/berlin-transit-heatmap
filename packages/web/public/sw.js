@@ -1,10 +1,12 @@
 // Service worker: offline app shell, cached timetable files and the basemap.
 // Bump VERSION to drop old caches after a breaking change.
 const VERSION = 'v2';
-// Hourly timetables: keep the 12 most recently used ones (a few hours of a few days). The
-// other data files, such as the stop list every hour needs (stoplist.bin, 0.25 MB gzipped),
-// are few and always kept.
-const MAX_TIMETABLES = 12;
+// Hourly timetables: keep the 48 most recently stored ones (two days of every hour, or the
+// usual hours of several days; 50-65 KB gzipped each, about 2.8 MB for 48), oldest out
+// first. Only files a map asked for are stored, nothing is fetched ahead. The other data
+// files, such as the stop list every hour needs (stoplist.bin, 0.25 MB gzipped), are few
+// and always kept.
+const MAX_TIMETABLES = 48;
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 // The basemap from OpenFreeMap (free, no usage limits, CORS): style, sprites and fonts,

@@ -25,7 +25,7 @@ function load() {
 }
 
 describe('offline timetable cache', () => {
-  it('drops past days first, then keeps the 12 most recently used timetables and every other file', async () => {
+  it('drops past days first, then keeps the 48 most recently stored timetables and every other file', async () => {
     const sw = load();
     const today = sw.today();
     const names = [
@@ -34,7 +34,7 @@ describe('offline timetable cache', () => {
       'lines.bin',
       `timetable-${addDays(today, -1)}-10.bin`,
       ...Array.from(
-        { length: 13 },
+        { length: 49 },
         (_, h) => `timetable-weekday-${String(h).padStart(2, '0')}.bin`,
       ),
       `timetable-${today}-10.bin`,
@@ -52,7 +52,7 @@ describe('offline timetable cache', () => {
       'stoplist.bin',
       'lines.bin',
       ...Array.from(
-        { length: 11 },
+        { length: 47 },
         (_, h) => `timetable-weekday-${String(h + 2).padStart(2, '0')}.bin`,
       ),
       `timetable-${today}-10.bin`,
