@@ -104,7 +104,7 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
     set(
       'layers-chip',
       t('layersChip'),
-      state.heat ||
+      !state.heat ||
         !!state.limit ||
         state.freq ||
         state.desert ||

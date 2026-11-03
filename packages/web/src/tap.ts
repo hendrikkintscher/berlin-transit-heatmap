@@ -60,6 +60,8 @@ export interface TapDeps {
   toggleFavourite: (at: Point) => void;
   /** The link changed (the place is part of it). */
   writeUrl: () => void;
+  /** A tapped place came or went (its card and trip open, or closed): the fill follows it. */
+  onSpot: (open: boolean) => void;
   /** A card opened: the "tap the map" hint has done its job. */
   onCard: () => void;
   /** The favourites' names, in list order, for the where-to-live card. */
@@ -417,7 +419,9 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   function setSpot(p: Spot | null) {
     readout.classList.remove('stale');
     const same = p === spot || (p && spot && p.lat === spot.lat && p.lon === spot.lon);
+    const opened = !spot !== !p;
     spot = p;
+    if (opened) deps.onSpot(!!p);
     if (p) spotMarker.setLngLat([p.lon, p.lat]).addTo(map);
     else spotMarker.remove();
     if (!same) deps.writeUrl();

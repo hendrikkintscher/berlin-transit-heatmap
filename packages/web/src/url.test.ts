@@ -20,7 +20,7 @@ const BASE: LinkState = {
   freq: false,
   desert: false,
   iso: true,
-  heat: false,
+  heat: true,
   limit: 0,
 };
 
@@ -65,13 +65,13 @@ describe('links', () => {
       freq: true,
       desert: true,
       iso: false,
-      heat: true,
+      heat: false,
       limit: 45,
     };
     const q = linkQuery(full, NOW, 'en');
     expect(q).toBe(
       'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&names=Anna%7C%7CCem&to=52.43915%2C13.47215&trip=37419-41203&t=weekend-02' +
-        '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=heat%2Cfreq%2Cdesert%2Cnoiso&bis=45&lang=en',
+        '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=noheat%2Cfreq%2Cdesert%2Cnoiso&bis=45&lang=en',
     );
     expect(readLink(`?${q}`, BASE)).toEqual(full);
   });
@@ -93,6 +93,16 @@ describe('links', () => {
     // Rounded outwards, so the trip still fits; left out without a place.
     expect(linkQuery({ ...s, to: { lat: 52.51, lon: 13.41 } }, NOW)).toContain('trip=37419-41203');
     expect(linkQuery(s, NOW)).not.toContain('trip=');
+  });
+
+  it("keeps the device's colour fill unless the link turns it off or on", () => {
+    const off = { ...BASE, heat: false };
+    expect(readLink('?from=52.5,13.4', BASE).heat).toBe(true);
+    expect(readLink('?from=52.5,13.4', off).heat).toBe(false);
+    expect(readLink('?layers=noheat', BASE).heat).toBe(false);
+    // Older links named the fill when it was on (off was the default then).
+    expect(readLink('?layers=heat,freq', off).heat).toBe(true);
+    expect(linkQuery(off, NOW)).toBe('layers=noheat');
   });
 
   it('takes only the offered minutes for "Bis N Min."', () => {

@@ -102,10 +102,13 @@ try {
         super(...a);
         this.addEventListener('message', (e) => {
           const m = e.data;
-          if (m?.type !== 'result') return;
+          if (m?.type !== 'result' && m?.type !== 'image') return;
           let coloured = 0;
           for (let i = 3; i < m.image.rgba.length; i += 4) if (m.image.rgba[i]) coloured++;
-          window.__smoke = { outlines: m.outlines.features.length, coloured };
+          // The first map comes with its outlines; its colours follow in an 'image' (S013).
+          if (m.type === 'result')
+            window.__smoke = { outlines: m.outlines.features.length, coloured };
+          else if (window.__smoke) window.__smoke.coloured ||= coloured;
         });
       }
     };
@@ -118,8 +121,10 @@ try {
         errors.push(`${lang}: ${m.text()}`);
     });
     const t0 = Date.now();
-    await p.goto(`${base}?from=52.52000,13.40000&t=weekday-10&layers=heat&lang=${lang}`);
-    await p.waitForFunction(() => window.__smoke, null, { timeout: 20000 });
+    await p.goto(`${base}?from=52.52000,13.40000&t=weekday-10&lang=${lang}`);
+    await p
+      .waitForFunction(() => window.__smoke?.coloured, null, { timeout: 20000 })
+      .catch(() => {});
     await p.waitForFunction(() => document.getElementById('loadbar').hidden, null, {
       timeout: 20000,
     });
@@ -199,6 +204,18 @@ try {
     const card = await p.evaluate(() => document.getElementById('readout-text').innerText);
     if (!/\d+\s*min/i.test(card))
       failures.push(`${lang}: the trip card shows no minutes: "${card}"`);
+    // The colour fill (on by default, S013) steps aside while the trip card is open, and comes
+    // back when it closes; its legend goes and comes with it.
+    const legendOff = () => p.evaluate(() => document.body.classList.contains('no-legend'));
+    if (!(await legendOff())) failures.push(`${lang}: the colour fill stayed with a trip open`);
+    await p.locator('#readout-close').click();
+    if (await legendOff()) failures.push(`${lang}: the colour fill did not come back`);
+    if (box) {
+      await p.mouse.click(box.x + box.width / 2 + 60, box.y + box.height / 2 - 60);
+      await p
+        .waitForFunction(() => /\d+\s*min/i.test(document.getElementById('readout-text').innerText))
+        .catch(() => {});
+    }
     // A long press (de: a held finger, en: a right-click) south-west of the start moves the
     // start there (S009): the link's start changes, the tapped place keeps its card and
     // "Rückgängig" shows.

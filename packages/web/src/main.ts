@@ -549,6 +549,9 @@ function preloadNextHour() {
 /** The minute (since 1970) the start's map was last computed in. */
 let computedMinute = 0;
 
+/** The map whose colours the worker sends without a 'paint' (its first, S013). */
+let paintComing = 0;
+
 function compute() {
   clearTimeout(preloadTimer);
   // Arriving, the set place is where trips end: its marker becomes the Ziel (style.css).
@@ -564,7 +567,13 @@ function compute() {
   loadbar.hidden = false;
   loadbar.classList.add('indeterminate');
   setStatus(() => '');
-  send({ type: 'compute', id: state.requestId, ...computeRequest({ ...state, origin }) });
+  const first = !state.result;
+  paintComing = first && state.heat && !state.limit ? state.requestId : 0;
+  send({
+    type: 'compute',
+    id: state.requestId,
+    ...computeRequest({ ...state, origin }, new Date(), first),
+  });
 }
 
 function writeUrl() {
@@ -1136,8 +1145,27 @@ function syncImage() {
   if (!r || r.compare || r.living || r.home) return;
   const want = state.limit || (state.heat ? 0 : -1);
   const have = r.unpainted ? -1 : (r.limit ?? 0);
+  // The first map's colours come by themselves (paintNext).
+  if (want === 0 && r.id === paintComing) return;
   if (want >= 0 && want !== have)
     send({ type: 'paint', id: r.id, ...(want ? { limit: want } : {}) });
+}
+
+/** A tapped place's card is open (its trip on it); the link's place opens with it. */
+let tripOpen = link.to !== null;
+
+/**
+ * A tap opened (or closed) a place's card: the colour fill steps aside so the trip's lines read
+ * clearly, and comes back when the card closes (S013). Only the fill's visibility and the
+ * legend change, not the outlines' look: restyling them on the tap held back its trip (about
+ * 15 ms at 360×740; measure-S013).
+ */
+function hideHeatForTrip() {
+  const r = state.result;
+  if (!r || r.compare || r.living || r.home || state.limit || !state.heat) return;
+  document.body.classList.toggle('no-legend', tripOpen);
+  if (state.mapReady && map.getLayer(HEAT_LAYER))
+    map.setLayoutProperty(HEAT_LAYER, 'visibility', tripOpen ? 'none' : 'visible');
 }
 
 /**
@@ -1154,12 +1182,17 @@ function showHeat() {
   // map's clock colours); "Bis N Min." has its own key in the layer legend.
   document.body.classList.toggle('no-legend', (!heat && !r?.home) || limit);
   renderLayerLegend();
-  if (!state.mapReady) return;
+  if (!state.mapReady) {
+    if (tripOpen) hideHeatForTrip();
+    return;
+  }
   if (map.getLayer(HEAT_LAYER)) {
     map.setLayoutProperty(HEAT_LAYER, 'visibility', r && heat ? 'visible' : 'none');
     // The veil goes with the "Bis N Min." image, not before it arrives.
     map.setLayoutProperty(VEIL_LAYER, 'visibility', limit && r?.limit ? 'visible' : 'none');
   }
+  // (A new image or language while a trip is open keeps the fill out of the way.)
+  if (tripOpen) hideHeatForTrip();
   styleOutlines(
     map,
     r?.home ? 'home' : r?.living ? 'living' : r?.extraBase !== undefined ? 'extra' : 'time',
@@ -1418,6 +1451,10 @@ const tap = initTap(
     isFavourite: favPlaces.isAt,
     toggleFavourite: favPlaces.toggle,
     writeUrl,
+    onSpot: (open) => {
+      tripOpen = open;
+      hideHeatForTrip();
+    },
     onCard: () => {
       lastCardAt = performance.now();
       if (tipKey === 'tap') hideTip();

@@ -3,7 +3,7 @@ import type { Travel } from './protocol';
 import { computeWindow, whenAt, whenFromParams, type Direction } from './when';
 
 /** The device settings the app's state starts from (createState in state.ts reads them). */
-export const STATE_KEYS = ['heat-opacity', 'walk-kmh', 'step-free', 'travel'];
+export const STATE_KEYS = ['heat', 'heat-opacity', 'walk-kmh', 'step-free', 'travel'];
 
 /** Ways of getting around, in menu order (stored by index on the device). */
 export const TRAVELS: Travel[] = ['walk', 'bike', 'bikeonly'];

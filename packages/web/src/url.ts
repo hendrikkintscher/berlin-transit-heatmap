@@ -1,5 +1,5 @@
 // What a link carries: ?from=lat,lon&with=…[&with=…]&to=…&trip=…&t=weekend-02&dir=arr&m=best&cmp=…
-// &walk=5&sf=1&go=bike&routes=0&layers=heat,freq,desert,noiso&bis=30&lang=en. Reading a link only
+// &walk=5&sf=1&go=bike&routes=0&layers=noheat,freq,desert,noiso&bis=30&lang=en. Reading a link only
 // changes what it names; the rest keeps the device's own settings. An exact time adds its
 // minutes to t (t=20261014-0835).
 
@@ -118,7 +118,10 @@ export function readLink(search: string, base: LinkState): LinkState {
   s.freq = layers.includes('freq');
   s.desert = layers.includes('desert');
   s.iso = !layers.includes('noiso');
-  s.heat = layers.includes('heat');
+  // The colour fill is on unless switched off (S013): "noheat" says off, "heat" (older
+  // links) on; a link without either keeps this device's choice.
+  if (layers.includes('noheat')) s.heat = false;
+  else if (layers.includes('heat')) s.heat = true;
   const limit = Number(p.get('bis'));
   s.limit = LIMIT_MINUTES.includes(limit) ? limit : 0;
   s.origin = parsePoint(p.get('from'));
@@ -169,7 +172,7 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
   if (s.stepFree) p.set('sf', '1');
   if (s.travel !== 'walk') p.set('go', s.travel);
   if (!s.routes) p.set('routes', '0');
-  const layers = [s.heat && 'heat', s.freq && 'freq', s.desert && 'desert', !s.iso && 'noiso']
+  const layers = [!s.heat && 'noheat', s.freq && 'freq', s.desert && 'desert', !s.iso && 'noiso']
     .filter(Boolean)
     .join(',');
   if (layers) p.set('layers', layers);

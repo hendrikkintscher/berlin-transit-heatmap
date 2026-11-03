@@ -83,13 +83,22 @@ function mapAhead(boot: Extract<ToWorker, { type: 'boot' }>): typeof firstMap {
   const at = new Date(boot.at);
   const { state } = linkState(boot.search, readFrom(boot.stored), whenAt(at));
   if (!state.origin) return null;
-  const request = computeRequest({ ...state, origin: state.origin }, at);
+  const request = computeRequest({ ...state, origin: state.origin }, at, true);
   const ahead = { request, made: Promise.resolve<Made | null>(null), wanted: true };
   // (Should it fail, the app's own request tries again.)
   ahead.made = makeMap({ type: 'compute', id: 0, ...request }, () => ahead.wanted).catch(
     () => null,
   );
   return ahead;
+}
+
+/** The colour image of the last map, if it is still map `id`. */
+function paintLast(id: number, limit?: number) {
+  if (lastShown?.id !== id) return;
+  const image = paintShown(lastShown, limit);
+  ctx.postMessage({ type: 'image', id, image, ...(limit ? { limit } : {}) } satisfies FromWorker, [
+    image.rgba.buffer,
+  ]);
 }
 
 /** `f`, run once on first use. */
@@ -363,6 +372,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       const made = (ahead && (await ahead.made)) || (await makeMap(msg, fresh));
       if (!made || !fresh()) return;
       sendMap(msg, made, t0);
+      // The first map's colours, before the work below (it would hold them back ~0.5 s).
+      if (msg.paintNext) paintLast(msg.id);
       // The first tap's trip needs a pass from now: made ahead, one start at a time, unless
       // a newer map or a tap (which makes its own) is asked for meanwhile.
       const tapped = latestTrip;
@@ -375,17 +386,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       await nextTask();
       if (msg.id === latestCompute && latestTrip === tapped) warmGoalWalks();
     } else if (msg.type === 'paint') {
-      if (lastShown?.id !== msg.id) return;
-      const image = paintShown(lastShown, msg.limit);
-      ctx.postMessage(
-        {
-          type: 'image',
-          id: msg.id,
-          image,
-          ...(msg.limit ? { limit: msg.limit } : {}),
-        } satisfies FromWorker,
-        [image.rgba.buffer],
-      );
+      paintLast(msg.id, msg.limit);
     } else if (msg.type === 'living') {
       await living(msg);
     } else if (msg.type === 'home') {

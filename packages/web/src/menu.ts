@@ -174,6 +174,7 @@ export function initMenu(deps: MenuDeps) {
   renderIsoHint();
   heatToggle.addEventListener('change', () => {
     state.heat = heatToggle.checked;
+    remember('heat', state.heat ? '1' : '0');
     opacityInput.disabled = !state.heat && !state.limit;
     renderIsoHint();
     deps.heatChanged();

@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.15.7] — 2026-11-03
+
+- S013: The colour fill is on for first-time visitors; switching it off (or on) in Ebenen is remembered on the device, and a link turns it off with `layers=noheat` (older links' `layers=heat` still turn it on; a link naming neither keeps the device's choice). While a tapped place's trip card is open the fill and its legend step aside so the trip's lines read clearly, and they come back when the card closes; only the fill's visibility changes, the outlines keep their look. The first map comes without its colours and the worker paints them straight after, before its warm-up work, so the fill does not hold back the first map. The Ebenen chip is highlighted when the fill is off. New step S033 (prerendered colour map on a fresh start). At 360×740 with GPU compositing (8 visits) first map 792 → 786 ms with colours at 1128 ms, tap to trip 69 → 85 ms, ⇅ 623 → 724 ms (the colours are painted on each new map, as with the fill switched on before: 723 ms); 4× CPU (16 visits) first map 1354 → 1242 ms with colours at about 1700 ms, tap 150–178 → 199–229 ms, ⇅ 823–835 → 952–1039 ms.
+
 ## [0.15.6] — 2026-11-03
 
 - S012: Without the colour fill, each time ring has its own line width, widest first: 15 min 4.2 → 6.4 px (zoom 9 → 14), 30 min 3.1 → 4.8, 45 min 2.3 → 3.6, 60 min 1.7 → 2.7 (before, all four 2.6 → 4), with the white edge following. The look-alike pairs (15/30 near-black, 45/60 mid-purple) now differ by about a third in width, so the order shows without the labels, as the colour fill's outlines already do. A test checks each ring is at least a quarter wider than the next. Paint properties only, set in the same call as before; no extra routing. At 360×740 with GPU compositing (7 visits) first map 1073 → 1168 ms, tap to trip 125 → 114 ms, ⇅ 967 → 1023 ms, rings 586 → 622 ms; 4× CPU first map 1527 → 1454 ms, tap 242 → 198 ms, ⇅ 1333 → 1226 ms, rings 942 → 820 ms: within noise.

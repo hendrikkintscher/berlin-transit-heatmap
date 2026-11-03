@@ -82,7 +82,10 @@ export interface State {
   desert: boolean;
   /** Isochrone outlines every 5 min; on by default, so the minutes read without colours. */
   iso: boolean;
-  /** The coloured travel-time fill; off by default (the outlines carry the minutes). */
+  /**
+   * The coloured travel-time fill; on for first-time visitors (S013), the switch is
+   * remembered on this device. Hidden while a tapped place's trip is open (main.ts).
+   */
   heat: boolean;
   /** "Bis N Min.": shade what is reachable within this many minutes in one colour; 0 = off. */
   limit: number;
@@ -123,7 +126,7 @@ export function createState(read = readNumber, when = NOW_WHEN): State {
     freq: false,
     desert: false,
     iso: true,
-    heat: false,
+    heat: read('heat', 1) > 0,
     limit: 0,
     opacity: read('heat-opacity', DEFAULT_OPACITY),
     walkKmh: walkSpeed(read('walk-kmh', DEFAULT_WALK_KMH)),
@@ -179,8 +182,16 @@ export const mapDirection = (s: Pick<State, 'direction' | 'toGoal'>): Direction 
 
 export type ComputeRequest = Omit<Extract<ToWorker, { type: 'compute' }>, 'type' | 'id'>;
 
-/** What the worker needs for the map of `s`'s start(s), leaving `now` on Nächste. */
-export function computeRequest(s: State & { origin: Point }, now = new Date()): ComputeRequest {
+/**
+ * What the worker needs for the map of `s`'s start(s), leaving `now` on Nächste. The first
+ * map comes without its colours (`firstMap`): the outlines show first and a 'paint' follows
+ * at once, so the colour fill does not hold back the first map (S013).
+ */
+export function computeRequest(
+  s: State & { origin: Point },
+  now = new Date(),
+  firstMap = false,
+): ComputeRequest {
   return {
     window: computeWindow(s.when, s.direction),
     direction: s.direction,
@@ -194,7 +205,8 @@ export function computeRequest(s: State & { origin: Point }, now = new Date()): 
     ...(s.compare ? { compare: computeWindow(s.compare, s.direction) } : {}),
     ...s.origin,
     ...(s.others.length ? { others: s.others } : {}),
-    ...(s.heat || s.limit ? {} : { noImage: true as const }),
+    ...((s.heat && !firstMap) || s.limit ? {} : { noImage: true as const }),
+    ...(s.heat && firstMap && !s.limit ? { paintNext: true as const } : {}),
     ...(s.limit ? { limit: s.limit } : {}),
   };
 }
