@@ -1,0 +1,28 @@
+name: tmp speed spread (0.13.16 measurement, removed before the PR)
+on:
+  push:
+    branches: [claude/project-thread-3oq4se]
+permissions:
+  contents: read
+jobs:
+  spread:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          scripts/publish/download.sh timetable-latest work/speed timetable-weekday-10.bin walk.bin stoplist.bin
+      - name: 30 runs each, in turns
+        run: |
+          cd packages/routing
+          D=$GITHUB_WORKSPACE/work/speed
+          for i in $(seq 1 30); do
+            echo "OLD $(node_modules/.bin/tsx bench/_raw.ts $PWD/src $D $PWD/../web/src | tail -1)"
+            echo "NEW $(node_modules/.bin/tsx bench/_raw2.ts $PWD/src $D $PWD/../web/src | tail -1)"
+          done
