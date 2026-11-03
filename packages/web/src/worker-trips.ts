@@ -64,6 +64,23 @@ export function setLastTrip(last: LastTrip) {
   lastTrip = last;
 }
 
+/**
+ * Finds the Ziel's walks to its stops ahead of the first tap on a map to the Ziel leaving
+ * (S027): every trip on tap ends there, and on the footpaths those walks take 40–70 ms,
+ * which the first tap would wait for (decision 0008). Run once the map, its lines and the
+ * timetable the other way round are done; the walks are kept for the taps (originWalks).
+ * Only the first start's: a tap finds them per start, and only one set is kept.
+ */
+export function warmGoalWalks(): void {
+  const last = lastTrip;
+  if (!last || last.leaving === undefined || last.travel === 'bikeonly') return;
+  const origin = last.runs[0]?.result.origin;
+  // To the Ziel leaving the map runs on the reversed timetable; trips on the forward one.
+  const fwd = last.direction === 'depart' ? last.tt : last.otherTt;
+  if (!origin || !fwd) return;
+  originWalks(fwd, origin, last.travel, travelOptions(last.travel));
+}
+
 /** Makes ready what trips on tap of the last map need (the timetable the other way round). */
 export async function tripsReady(): Promise<void> {
   const last = lastTrip;
