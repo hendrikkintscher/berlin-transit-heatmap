@@ -137,7 +137,8 @@ const de = {
   whenTitle: 'Wann?',
   whenDay: 'Tag',
   whenHour: 'Stunde',
-  whenHourNote: 'Grau: schon vorbei. Lila hinterlegt: 0–4 Uhr, das Nachtnetz.',
+  whenHourNote: 'Grau: schon vorbei. Lila: Nachtnetz, 0–4 Uhr.',
+  whenMore: 'Mehr zu den Tagen',
   typicalWeekday: 'Typisch Mo–Fr',
   typicalWeekend: 'Typisch Sa+So',
   details: 'Details',
@@ -241,7 +242,7 @@ const de = {
     'Durchschnitt über die Stunde: wie früh du los musst, um rechtzeitig da zu sein.',
   measureNoteBest: 'Die schnellste Fahrt in der Stunde, wenn du genau passend losgehst.',
   measureNoteNext:
-    'Die nächste Verbindung, wenn du jetzt losgehst, Warten eingerechnet. Zu einer anderen Zeit: Abfahrt zur vollen Stunde oder zur gewählten Uhrzeit.',
+    'Die nächste Verbindung ab jetzt, zur vollen Stunde oder zur gewählten Uhrzeit, Warten eingerechnet.',
   measureNoteNextArr:
     'Die letzte Verbindung, mit der du zur vollen Stunde oder zur gewählten Uhrzeit ankommst.',
   layersView: 'Ansicht',
@@ -449,7 +450,8 @@ const en: Record<Key, string> = {
   whenTitle: 'When?',
   whenDay: 'Day',
   whenHour: 'Hour',
-  whenHourNote: 'Grey: already over. Tinted: 0–4, the night service.',
+  whenHourNote: 'Grey: already over. Tinted: night service, 0–4.',
+  whenMore: 'More on the days',
   typicalWeekday: 'Typical Mon–Fri',
   typicalWeekend: 'Typical Sat+Sun',
   details: 'Details',
@@ -552,7 +554,7 @@ const en: Record<Key, string> = {
   measureNoteTypicalArr: 'Average over the hour: how early you need to leave to get there in time.',
   measureNoteBest: 'The fastest trip in the hour, if you time your departure exactly.',
   measureNoteNext:
-    'The next connection if you leave now, waiting included. For another time: leaving on the hour or at the time you set.',
+    'The next connection from now, on the hour or at the time you set, waiting included.',
   measureNoteNextArr: 'The last connection that gets you there on the hour or by the time you set.',
   layersView: 'View',
   compareTitle: 'Compare with',

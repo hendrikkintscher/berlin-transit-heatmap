@@ -153,6 +153,10 @@
             Typisch Sa+So
           </button>
         </div>
+        <!-- The hour right under the day (S029): picking one closes the panel. -->
+        <h3 id="when-hour">Stunde</h3>
+        <div id="hour-grid" class="hour-grid"></div>
+        <p class="menu-note" data-t="whenHourNote"></p>
         <h3 data-t="measureTitle">Reisezeit</h3>
         <div
           class="seg seg-wide"
@@ -171,10 +175,11 @@
           </button>
         </div>
         <p class="menu-note" id="measure-note"></p>
-        <h3 id="when-hour">Stunde</h3>
-        <div id="hour-grid" class="hour-grid"></div>
-        <p class="menu-note" data-t="whenHourNote"></p>
-        <p class="menu-note" data-t="whenNote"></p>
+        <!-- The longer word on the days, folded away (S029). -->
+        <details class="menu-more">
+          <summary data-t="whenMore">Mehr zu den Tagen</summary>
+          <p class="menu-note" data-t="whenNote"></p>
+        </details>
       </section>
       <section
         id="pop-travel"
