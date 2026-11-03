@@ -60,6 +60,7 @@ import {
   type Result,
 } from './state';
 import { initTap } from './tap';
+import { LongPress, listenLongPress } from './long-press';
 import { addTripArrows } from './trip-arrows';
 import { cleanName, linkQuery, MAX_STARTS, type Point } from './url';
 import {
@@ -618,7 +619,8 @@ function startMarker(i: number): maplibregl.Marker {
   });
   el.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (Date.now() - draggedAt < 400) return;
+    // The click a long press leaves when the marker it moved now sits under the finger.
+    if (longPress.swallow() || Date.now() - draggedAt < 400) return;
     tap.showStartCard(i);
   });
   return (startMarkers[i] = m);
@@ -1176,6 +1178,7 @@ window.addEventListener(
   true,
 );
 map.on('click', (e: MapMouseEvent) => {
+  if (longPress.swallow()) return;
   if (ignoreClick) {
     ignoreClick = false;
     return;
@@ -1183,6 +1186,18 @@ map.on('click', (e: MapMouseEvent) => {
   performance.mark('tap');
   tap.tapAt(e.lngLat.lat, e.lngLat.lng, e.point);
 });
+
+// A long press (or a right-click) moves the map's place there, keeping its role (Start or
+// Ziel); the tapped place and its card stay and show the trip from the new place. In a
+// Treffpunkt it moves the first start. Before any start it sets the first one.
+const longPress = new LongPress((x, y) => {
+  if (search.isOpen() || chips.isOpen()) return;
+  const { lat, lng } = map.unproject([x, y]);
+  navigator.vibrate?.(15);
+  if (!state.origin) return setOrigin({ lat, lon: lng });
+  moveStart(0, { lat, lon: lng });
+});
+listenLongPress(map.getCanvas(), map.getContainer(), longPress);
 
 // The map's (i) attribution sits just above the bottom panel, which changes height.
 const bottomPanel = document.querySelector<HTMLElement>('.bottom')!;

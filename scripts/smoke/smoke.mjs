@@ -139,8 +139,53 @@ try {
     const card = await p.evaluate(() => document.getElementById('readout-text').innerText);
     if (!/\d+\s*min/i.test(card))
       failures.push(`${lang}: the trip card shows no minutes: "${card}"`);
+    // A long press (de: a held finger, en: a right-click) south-west of the start moves the
+    // start there (S009): the link's start changes, the tapped place keeps its card and
+    // "Rückgängig" shows.
+    let pressed = '';
+    if (box) {
+      const from = () => new URL(p.url()).searchParams.get('from');
+      const before = from();
+      const x = box.x + box.width / 2 - 20;
+      const y = box.y + box.height / 2 + 15;
+      if (lang === 'de') {
+        const cdp = await ctx.newCDPSession(p);
+        const touch = (type, points) =>
+          cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+        await touch('touchStart', [{ x, y }]);
+        await p.waitForTimeout(800);
+        await touch('touchEnd', []);
+      } else await p.mouse.click(x, y, { button: 'right' });
+      await p
+        .waitForFunction(
+          (b) => new URL(window.location.href).searchParams.get('from') !== b,
+          before,
+          {
+            timeout: 5000,
+          },
+        )
+        .catch(() => {});
+      const undo = await p.evaluate(() => !document.getElementById('undo').hidden);
+      await p
+        .waitForFunction(
+          () =>
+            /\d+\s*min/i.test(document.getElementById('readout-text').innerText) &&
+            !document.getElementById('readout').classList.contains('stale'),
+          null,
+          { timeout: 10000 },
+        )
+        .catch(() => {});
+      const after = from();
+      const moved = await p.evaluate(() => document.getElementById('readout-text').innerText);
+      if (after === before)
+        failures.push(`${lang}: a long press did not move the start (${before})`);
+      if (!undo) failures.push(`${lang}: no "Rückgängig" after a long press`);
+      if (!/\d+\s*min/i.test(moved))
+        failures.push(`${lang}: no trip card after a long press: "${moved}"`);
+      pressed = `; long press: start ${before} -> ${after}`;
+    }
     console.log(
-      `${lang}: map in ${mapMs} ms, ${shown.outlines} outlines, ${shown.coloured} coloured pixels; card: ${card.replace(/\s+/g, ' ').slice(0, 80)}`,
+      `${lang}: map in ${mapMs} ms, ${shown.outlines} outlines, ${shown.coloured} coloured pixels; card: ${card.replace(/\s+/g, ' ').slice(0, 80)}${pressed}`,
     );
     if (args.shots) {
       mkdirSync(args.shots, { recursive: true });

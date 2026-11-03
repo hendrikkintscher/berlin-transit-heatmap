@@ -34,8 +34,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · C. Map handling (0.14)
 
-- S009 · build · feature · P2 · M · Long press moves the anchor
-
 ### Next · D. Clear and welcoming looks (0.15)
 
 - S010 · build · fix · P1 · S · A little more room at the screen edges
