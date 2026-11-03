@@ -32,7 +32,7 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Now · B. Fast and steady loading and measuring (0.13)
 
-- S008 · decision · research · P3 · S · Footpaths sooner on a slow line
+- S026 · decision · research · P2 · S · Where a tap's time goes in the browser
 
 ### Next · C. Map handling (0.14)
 
@@ -64,4 +64,3 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 - S022 · build · chore · P1 · S · needs S021 · New screenshots and sharepics
 - S023 · build · feature · P3 · S · needs S022 · Sharepic per use case
 - S024 · build · chore · P1 · S · needs S021, S022 · Release 1.0.0
-- S026 · decision · research · P2 · S · Where a tap's time goes in the browser
