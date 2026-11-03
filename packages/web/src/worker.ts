@@ -48,6 +48,7 @@ import {
   tripsReady,
   tapTrip,
   tripMessage,
+  warmGoalWalks,
   warmNextTrip,
 } from './worker-trips';
 
@@ -367,6 +368,10 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       while (msg.id === latestCompute && latestTrip === tapped && warmNextTrip());
       // And the timetable the other way round, which trips on tap need too.
       if (msg.id === latestCompute) await tripsReady();
+      // To the Ziel leaving, the Ziel's walks to its stops, so the first tap need not find
+      // them (S027); after the messages queued meanwhile, unless a tap or a newer map came.
+      await nextTask();
+      if (msg.id === latestCompute && latestTrip === tapped) warmGoalWalks();
     } else if (msg.type === 'paint') {
       if (lastShown?.id !== msg.id) return;
       const image = paintShown(lastShown, msg.limit);

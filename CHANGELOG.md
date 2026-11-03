@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.13.24] — 2026-11-03
+
+- S027: On a map to a Ziel leaving, the worker finds the Ziel's walks to its stops right after the map (and again after its footpaths map) instead of on the first tap, unless a tap or a newer map is already waiting. Same trips. At 360×740 with GPU compositing (Typisch to Alexanderplatz, 8 visits) first tap 130 → 54 ms, later taps 49 → 54 ms, first map 1038 → 941 ms, lines in 1136 → 1055 ms, footpaths map in 2350 → 2191 ms (within noise); 4× CPU (two rounds, 8 + 10 visits) first tap 120/120 → 84/88 ms, later taps 73/72 → 69/70 ms, first map 1628/1588 → 1512/1637 ms. The cost accepted in decision 0008: a ring move asked in the moment the footpaths map comes in waits 225 → 246 ms (4×: 229/231 → 333/289 ms); a ring move later 30 → 31 ms.
+
 ## [0.13.23] — 2026-11-03
 
 - S007: The live status's VBB station numbers ride in `stoplist.bin` (stop list version 2; version 1 still reads, without them), so `stop-ids.json` is gone: one download fewer when the card asks for the first vehicle's delay, and the worker hands the number on with the trip. Stop list 253.8 → 258.2 KB gzipped (+4.4 KB, against the 11.2 KB `stop-ids.json` it replaces; decoding unchanged, 4–7 ms in Node). At 360×740 (Nächste, two rounds of 7 visits) first map 534/621 → 556/576 ms, tap to trip 68.5/70.8 → 69.3/71.9 ms; 4× CPU first map 1052/1144 → 1023/1069 ms, tap 103.5/105.4 → 102.1/104.7 ms: within noise. Bundle 334.95 → 334.89 KB gzipped.
