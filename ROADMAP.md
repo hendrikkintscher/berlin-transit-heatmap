@@ -30,10 +30,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
      Themes (### headings) group the steps in Now / Next / Later order; a new step lands at the end,
      moving its line into its theme is fine. -->
 
-### Now · A. Trip and map agree (0.13)
-
-- S025 · decision · research · P3 · S · A long walk to the train instead of a short ride to it
-
 ### Now · B. Fast and steady loading and measuring (0.13)
 
 - S005 · decision · research · P3 · S · Quicker tap on the map to a Ziel leaving
