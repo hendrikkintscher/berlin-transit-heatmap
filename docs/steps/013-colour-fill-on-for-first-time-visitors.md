@@ -4,7 +4,7 @@ title: Colour fill on for first-time visitors
 type: build
 kind: feature
 priority: P3
-size: XS
+size: S
 needs: -
 status: open
 ---
@@ -18,6 +18,9 @@ First-time visitors see the colour fill by default.
 ## Acceptance criteria
 - [ ] The colour fill is on by default for first-time visitors (same repaint path, no extra routing)
 - [ ] Returning visitors keep their choice
+- [ ] The colour fill hides when a tap on the map opens a trip, and comes back when that trip
+      window is closed (Hendrik, 2026-11-03)
 
 ## Notes
 - Planned as 0.15.3 (design list D2), a trial.
+- Hiding the fill on a tap must not slow the tap to trip; it is a paint switch, no new routing.
