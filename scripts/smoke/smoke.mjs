@@ -309,6 +309,20 @@ try {
     .then(() => true)
     .catch(() => false);
   if (!example) failures.push('first screen: no example map under the start card');
+  // Its questions (S015) open the search for what each needs; ✕ brings the card back.
+  for (const [ask, want] of [
+    ['reach', 'Was erreiche ich in 30 Min.?'],
+    ['meet', 'Wo treffen wir uns?'],
+    ['living', 'Wo soll ich wohnen?'],
+  ]) {
+    if (!example) break;
+    await f.click(`[data-ask="${ask}"]`);
+    const title = await f.locator('#search-title').textContent();
+    if (title !== want) failures.push(`start card: "${ask}" opened the search with "${title}"`);
+    await f.click('#search-close');
+    if (await f.locator('#hint').isHidden())
+      failures.push(`start card: gone after closing the "${ask}" search`);
+  }
   await f.evaluate(async () => {
     await navigator.serviceWorker.ready;
     await caches.open('data-v2');

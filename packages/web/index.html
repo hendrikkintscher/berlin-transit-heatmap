@@ -429,13 +429,21 @@
       </button>
     </div>
 
-    <!-- First open: what the map shows, and the two quickest ways to a start. -->
+    <!-- First open: what the map shows, the two quickest ways to a start, and three questions. -->
     <div id="hint" class="chip" hidden>
       <small class="hint-example" data-t="hintExample">Beispiel: die Karte ab Alexanderplatz</small>
       <p data-t="hint">Sieh, wie weit du in 10, 20 und 30 Min. mit Bus und Bahn kommst.</p>
       <div class="hint-actions">
         <button id="hint-locate" type="button" data-t="hintLocate">📍 Von meinem Standort</button>
         <button id="hint-search" type="button" data-t="hintSearch">Adresse suchen</button>
+      </div>
+      <!-- Question entries (S015): each leads into its mode (questions.ts). -->
+      <div class="hint-asks">
+        <button type="button" data-ask="reach" data-t="askReach">
+          Was erreiche ich in 30 Min.?
+        </button>
+        <button type="button" data-ask="meet" data-t="askMeet">Wo treffen wir uns?</button>
+        <button type="button" data-ask="living" data-t="askLiving">Wo soll ich wohnen?</button>
       </div>
       <small data-t="hintTap">Oder tippe irgendwo auf die Karte.</small>
     </div>

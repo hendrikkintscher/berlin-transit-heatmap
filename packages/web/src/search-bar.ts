@@ -25,8 +25,13 @@ import {
 import { $, chosenStart, type State } from './state';
 import type { Point } from './url';
 
-/** What a picked search result does: set the start, add a favourite place or one more start. */
-export type SearchPurpose = 'start' | 'favourite' | 'another';
+/**
+ * What a picked search result does: set the start, add a favourite place or one more start;
+ * or answer a start card question (S015, questions.ts): the first start of a meeting point
+ * (then the search for the second), a start with "Bis 30 Min." on, a favourite place for
+ * the where-to-live map.
+ */
+export type SearchPurpose = 'start' | 'favourite' | 'another' | 'meet' | 'reach' | 'living';
 
 export interface SearchDeps {
   map: maplibregl.Map;
@@ -38,6 +43,10 @@ export interface SearchDeps {
   addStart: (p: Point) => void;
   /** Adds a favourite place and shows the list. */
   addFavourite: (p: { label: string; lat: number; lon: number }) => void;
+  /** Adds a favourite place and shows the where-to-live map ("Wo soll ich wohnen?"). */
+  addLivingPlace: (p: { label: string; lat: number; lon: number }) => void;
+  /** Turns "Bis 30 Min." on for the map about to be computed ("Was erreiche ich …?"). */
+  setReach: () => void;
   frameView: (points: Point[], card: boolean) => void;
   tapAt: (lat: number, lon: number, id: undefined, title: string, searched: boolean) => void;
 }
@@ -81,20 +90,20 @@ export function initSearch(deps: SearchDeps) {
   /** The search's title and placeholder for what it is for (C6): a start, a favourite, another start. */
   function labelSearch(purpose = searchFor) {
     const title = $('search-title');
-    title.hidden = purpose === 'start';
-    title.textContent =
-      purpose === 'favourite'
-        ? t('searchFavTitle')
-        : purpose === 'another'
-          ? t('searchAnotherTitle', { n: deps.starts().length + 1 })
-          : '';
-    searchInput.placeholder = t(
-      purpose === 'favourite'
-        ? 'searchFavPlaceholder'
-        : purpose === 'another'
-          ? 'searchAnotherPlaceholder'
-          : 'searchPlaceholder',
-    );
+    const [head, placeholder] = {
+      start: ['', 'searchPlaceholder'],
+      favourite: [t('searchFavTitle'), 'searchFavPlaceholder'],
+      another: [
+        t('searchAnotherTitle', { n: deps.starts().length + 1 }),
+        'searchAnotherPlaceholder',
+      ],
+      meet: [t('askMeet'), 'askMeetPlaceholder'],
+      reach: [t('askReach'), 'askReachPlaceholder'],
+      living: [t('askLiving'), 'askLivingPlaceholder'],
+    }[purpose] as [string, Parameters<typeof t>[0]];
+    title.hidden = !head;
+    title.textContent = head;
+    searchInput.placeholder = t(placeholder);
   }
 
   function openSearch() {
@@ -333,6 +342,16 @@ export function initSearch(deps: SearchDeps) {
       deps.addStart({ lat: p.lat, lon: p.lon });
       return;
     }
+    if (searchFor === 'living') {
+      searchFor = 'start';
+      searchInput.value = '';
+      deps.addLivingPlace({ label: p.label, lat: p.lat, lon: p.lon });
+      return;
+    }
+    const asked = searchFor;
+    searchFor = 'start';
+    // Before the start's map is asked for, so it comes painted with the limit at once.
+    if (asked === 'reach') deps.setReach();
     // The bar empties again: the place shows on the map and in its card.
     searchInput.value = '';
     // With a start set, the place may be a new start, a destination or another start:
@@ -344,6 +363,11 @@ export function initSearch(deps: SearchDeps) {
       // Far enough out for about the 45-minute ring around the new start (C8).
       map.flyTo({ center: [p.lon, p.lat], zoom: reachZoom(p.lat) });
       deps.setOrigin(p);
+    }
+    // "Wo treffen wir uns?": then the second person's start (C6's "2. Startpunkt").
+    if (asked === 'meet') {
+      searchFor = 'another';
+      openSearch();
     }
   }
 

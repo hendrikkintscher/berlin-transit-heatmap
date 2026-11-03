@@ -51,7 +51,10 @@ export function initSpecialMaps(deps: SpecialDeps) {
     if (!s) return;
     $('special-text').textContent =
       s.kind === 'living'
-        ? t('living', { count: deps.favourites().length, when: whenText(state.when, 'arrive') })
+        ? t(deps.favourites().length === 1 ? 'living1' : 'living', {
+            count: deps.favourites().length,
+            when: whenText(state.when, 'arrive'),
+          })
         : t('home', {
             name: s.name,
             night: nightText(state.when.day),
