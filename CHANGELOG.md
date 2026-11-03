@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.15.5] — 2026-11-03
+
+- S031: The trip card shows where the map is computed in the dots before Start and Ziel. Before, each row ended in a rings symbol: purple rings at the map's place and a grey rings button at the other. Now the map's place has the rings in place of its dot (purple for the Start, orange for the Ziel, as on the map) and the other row's plain dot is the button that moves the rings there (a 30 px tap area round the dot); nothing follows the name, so long names have more room. ⇅ and a long press still swap or move the anchor and the rings follow. The help text says so. A test checks which row leads with the rings, leaving and arriving. CSS and the card's markup; nothing on the map or tap path changed. At 360×740 with GPU compositing (7 visits) first map 771 → 796 ms, tap to trip 70 → 62 ms, ⇅ 623 → 622 ms, dot/rings 397 → 350 ms; 4× CPU first map 1252 → 1326 ms, tap 191 → 125 ms, ⇅ 880 → 831 ms, dot/rings 540 → 459 ms: within noise.
+
 ## [0.15.4] — 2026-11-03
 
 - S030: A Lieblingsorte button (a star) next to Ebenen opens the menu at the list of favourite places, as the menu entry does. To keep the row on one line at 360 px, Zeit and Bahn lose their clock and arrows (an open chip is still tinted): Mo–Fr, Bahn, Ebenen and Lieblingsorte now fit beside Mehr in German (English scrolled before and still does, by the same amount). The help text points to the star. The smoke test opens the list from the star in both languages. HTML, CSS and a click handler; nothing on the map or tap path changed. At 360×740 with GPU compositing and the real basemap (8 visits) first map 1067 → 912 ms, tap to trip 60 → 64 ms, ⇅ 715 → 786 ms, rings 454 → 418 ms; 4× CPU first map 1576 → 1518 ms, tap 82 → 78 ms, ⇅ 929 → 937 ms, rings 630 → 662 ms: within noise.

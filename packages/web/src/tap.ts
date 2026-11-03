@@ -108,7 +108,8 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   dirBtn.innerHTML = icon('swap', 22);
   dirBtn.setAttribute('aria-label', t('dirSwap'));
   dirBtn.title = t('dirSwap');
-  anchorBtn.innerHTML = icon('rings', 22);
+  // The rings in the side column; in a trip row, the row's own dot (style.css).
+  anchorBtn.innerHTML = `${icon('rings', 22)}<i class="dot"></i>`;
   /** What the next card highlights: the roles after ⇅, the rings after they moved. */
   let flash: 'roles' | 'rings' | null = null;
   const removeBtn = $<HTMLButtonElement>('readout-remove');
@@ -698,7 +699,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     renderMore();
   });
 
-  /** The rings button sits in the other place's row of the trip; without rows, in the side column. */
+  /** The rings button is the other place's dot in the trip rows; without rows, in the side column. */
   function placeAnchor() {
     if (anchorBtn.hidden) return;
     const slot = readoutText.querySelector('.anchor-slot');

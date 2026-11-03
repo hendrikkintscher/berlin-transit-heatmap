@@ -25,8 +25,8 @@ export interface TripContext {
   names?: readonly string[];
   /**
    * One start: the ends as two rows, Start and Ziel, the map's own place (the one it is
-   * computed from or to) marked with the rings; the other row holds the slot for the
-   * button that moves the map there.
+   * computed from or to) with the rings for its dot; the other row's dot is the slot for
+   * the button that moves the map there.
    */
   rows?: { anchorTitle: string };
 }
@@ -179,15 +179,17 @@ export function longWalkHtml(legs: Legs): string {
 
 /**
  * The trip's ends as two rows. Departing, the map's place is the Start; arriving, the Ziel.
- * That row shows the rings; the other has the `.anchor-slot` for the button moving them.
+ * Each row leads with its dot in the map marker's colour: the map's place has the rings in
+ * place of its dot, the other row's dot sits in the `.anchor-slot`, where the button moving
+ * the rings there takes its place (tap.ts).
  */
 function endRows(start: string, end: string, direction: Direction, anchorTitle: string): string {
   const row = (role: 'start' | 'end', name: string) => {
     const anchor = (direction === 'depart') === (role === 'start');
-    const mark = anchor
-      ? `<i class="rings" title="${escapeHtml(anchorTitle)}">${icon('rings', 22)}</i>`
-      : '<span class="anchor-slot"></span>';
-    return `<span class="trip-row ${role}${anchor ? ' anchor' : ''}"><i class="dot"></i><small class="role">${t(role === 'start' ? 'dirThere' : 'dirBack')}</small><span class="name">${escapeHtml(name)}</span>${mark}</span>`;
+    const pin = anchor
+      ? `<i class="rings" role="img" aria-label="${escapeHtml(anchorTitle)}" title="${escapeHtml(anchorTitle)}">${icon('rings', 22)}</i>`
+      : '<span class="anchor-slot"><i class="dot"></i></span>';
+    return `<span class="trip-row ${role}${anchor ? ' anchor' : ''}">${pin}<small class="role">${t(role === 'start' ? 'dirThere' : 'dirBack')}</small><span class="name">${escapeHtml(name)}</span></span>`;
   };
   return `<span class="trip-rows">${row('start', start)}${row('end', end)}</span>`;
 }
