@@ -12,7 +12,9 @@ import {
   MAP_TEXT,
   MODE_COLORS,
   RING_COLORS,
+  RING_EDGE,
   RING_MINUTES,
+  RING_WIDTHS,
   STOP_MODES,
   WATER,
 } from './colors';
@@ -747,30 +749,25 @@ function styleRings(map: maplibregl.Map, kind: OutlineKind, unit: string): void 
   ] as never);
   map.setPaintProperty('outlines-line', 'line-opacity', 1);
   map.setPaintProperty('outlines-line', 'line-blur', 0);
-  map.setPaintProperty('outlines-line', 'line-width', [
-    'interpolate',
-    ['linear'],
-    ['zoom'],
-    9,
-    2.6,
-    14,
-    4,
-  ]);
+  map.setPaintProperty('outlines-line', 'line-width', ringWidth(0));
   map.setPaintProperty('outlines-casing', 'line-opacity', 0.9);
-  map.setPaintProperty('outlines-casing', 'line-width', [
-    'interpolate',
-    ['linear'],
-    ['zoom'],
-    9,
-    5,
-    14,
-    7,
-  ]);
+  map.setPaintProperty('outlines-casing', 'line-width', ringWidth(1));
   map.setFilter('outlines-line', rings);
   map.setFilter('outlines-casing', rings);
   map.setFilter('outlines-label', rings);
   map.setLayoutProperty('outlines-label', 'text-field', outlineLabel(kind, unit));
   map.setLayoutProperty('outlines-label', 'symbol-spacing', 260);
+}
+
+/** Each ring's own width, widest first (S012), plus `edge` times the white edge for the casing. */
+function ringWidth(edge: 0 | 1): maplibregl.ExpressionSpecification {
+  const at = (z: 9 | 14) => [
+    'match',
+    ['get', 'min'],
+    ...RING_MINUTES.slice(0, -1).flatMap((m, i) => [m, RING_WIDTHS[z][i] + edge * RING_EDGE[z]]),
+    RING_WIDTHS[z][RING_MINUTES.length - 1] + edge * RING_EDGE[z],
+  ];
+  return ['interpolate', ['linear'], ['zoom'], 9, at(9), 14, at(14)] as never;
 }
 
 /** Each home map outline in the colour of the band just inside it, as the legend shows it. */

@@ -250,6 +250,17 @@ export const WATER = '#a9c7dc';
  */
 export const RING_MINUTES = [15, 30, 45, 60];
 export const RING_COLORS = ['#1a0848', '#3b1d86', '#6440b4', '#7553c0'];
+/**
+ * Each ring's line width in px at zoom 9 and 14, widest first (S012): the look-alike pairs
+ * (15/30 near-black, 45/60 mid-purple) differ by a third or so, so the order shows
+ * without the labels, as the colour fill's outlines already do. The white edge is drawn
+ * RING_EDGE px wider on each zoom.
+ */
+export const RING_WIDTHS: Record<9 | 14, number[]> = {
+  9: [4.2, 3.1, 2.3, 1.7],
+  14: [6.4, 4.8, 3.6, 2.7],
+};
+export const RING_EDGE: Record<9 | 14, number> = { 9: 2.4, 14: 3 };
 
 /** Line colours, roughly following the usual Berlin map conventions. */
 /**
