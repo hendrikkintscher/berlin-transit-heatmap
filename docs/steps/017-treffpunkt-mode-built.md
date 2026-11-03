@@ -21,4 +21,10 @@ The look Hendrik picks in S016 becomes the meeting map.
 - [ ] There is still a direct way to start a meeting with someone new (today the floating button brings back the closed person until all starts are cleared)
 
 ## Notes
+- Decided in S016 (decision 0010): look 3. Colour = Ø minutes over the best place in the meeting
+  map's own scale (green +0, yellow +5, red +15, purple +25, dark blue +40); places fade to
+  grey from an 8 to a 20 min gap between slowest and quickest; legend says "unfair (15+ Min.
+  Unterschied)". Prototype: local branch `proto-s016`, `packages/web/src/meet-look.ts` (look 3);
+  screens in `/mnt/project-files/measure-S016/` (`look-3-new.png`). Blur the gap at half
+  resolution to halve the +215 ms worker cost.
 - Planned as 0.15.7 (design list D10). Side note from 0.12.0 (2026-10-14) on the floating button.
