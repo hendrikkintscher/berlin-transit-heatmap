@@ -17,20 +17,37 @@ describe('the first map, as the worker makes it ahead', () => {
       travel: 'bike',
       lat: 52.5219,
       lon: 13.4132,
-      noImage: true,
     });
+  });
+
+  it('has the colour fill on for a first visit, and keeps it off once switched off', () => {
+    const first = linkState(search, readFrom({})).state;
+    expect(first.heat).toBe(true);
+    const req = computeRequest({ ...first, origin: first.origin! }, at);
+    expect(req.noImage).toBeUndefined();
+    // The first map comes without its colours, which the worker paints right after it.
+    expect(computeRequest({ ...first, origin: first.origin! }, at, true)).toMatchObject({
+      noImage: true,
+      paintNext: true,
+    });
+    const off = linkState(search, readFrom({ heat: '0' })).state;
+    expect(off.heat).toBe(false);
+    const offReq = computeRequest({ ...off, origin: off.origin! }, at, true);
+    expect(offReq).toMatchObject({ noImage: true });
+    expect(offReq.paintNext).toBeUndefined();
   });
 
   it('is the map the app asks for, leaving up to a minute later', () => {
     const { state } = linkState(search, readFrom({}));
     const s = { ...state, origin: state.origin! };
-    const made = { ...computeRequest(s, at), leaveOffset: 600 };
-    const asked = { type: 'compute', id: 1, ...computeRequest(s, at), leaveOffset: 630 };
+    const made = { ...computeRequest(s, at, true), leaveOffset: 600 };
+    const asked = { type: 'compute', id: 1, ...computeRequest(s, at, true), leaveOffset: 630 };
     expect(sameRequest(made, asked)).toBe(true);
     expect(sameRequest(made, { ...asked, leaveOffset: 700 })).toBe(false);
     expect(sameRequest(made, { ...asked, leaveOffset: 590 })).toBe(false);
     expect(sameRequest(made, { ...asked, walkKmh: 6 })).toBe(false);
     expect(sameRequest(made, { ...asked, noImage: undefined })).toBe(false);
+    expect(sameRequest(made, { ...asked, paintNext: undefined })).toBe(false);
   });
 
   it('drops starts outside the area', () => {

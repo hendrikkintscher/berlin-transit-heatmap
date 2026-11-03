@@ -96,6 +96,11 @@ export type ToWorker =
        * so the outlines arrive sooner; a 'paint' draws it once the switch goes on.
        */
       noImage?: true;
+      /**
+       * With `noImage`: the colours are wanted all the same, right after the map (the first
+       * map, S013): the worker paints them before its other work and sends an 'image'.
+       */
+      paintNext?: true;
       /** "Bis N Min.": the image shades what is reachable within this many minutes instead. */
       limit?: number;
     }

@@ -36,7 +36,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · D. Clear and welcoming looks (0.15)
 
-- S013 · build · feature · P3 · S · Colour fill on for first-time visitors
 - S014 · build · feature · P3 · M · Example map on the first screen
 - S015 · build · feature · P3 · S · Question entries on the start screen
 
@@ -57,3 +56,4 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 - S022 · build · chore · P1 · S · needs S021 · New screenshots and sharepics
 - S023 · build · feature · P3 · S · needs S022 · Sharepic per use case
 - S024 · build · chore · P1 · S · needs S021, S022 · Release 1.0.0
+- S033 · decision · research · P3 · S · Prerendered colour map on a fresh start (a default place such as Alexanderplatz)

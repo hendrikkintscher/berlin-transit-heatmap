@@ -3,6 +3,7 @@ import { STATE_KEYS } from './early';
 import { appUrl, countPersonal, isAppCache, keysToRemove, SETTING_KEYS } from './fresh';
 
 const KEYS = [
+  'heat',
   'heat-opacity',
   'walk-kmh',
   'step-free',
@@ -25,8 +26,8 @@ describe('fresh start', () => {
   });
 
   it("removes only the app's keys, favourites and recent searches too when asked", () => {
-    expect(keysToRemove(KEYS, 'berlin', false)).toEqual(KEYS.slice(0, 11));
-    expect(keysToRemove(KEYS, 'berlin', true)).toEqual(KEYS.slice(0, 7));
+    expect(keysToRemove(KEYS, 'berlin', false)).toEqual(KEYS.slice(0, 12));
+    expect(keysToRemove(KEYS, 'berlin', true)).toEqual(KEYS.slice(0, 8));
   });
 
   it("removes only the service worker's caches", () => {

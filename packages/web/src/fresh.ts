@@ -7,7 +7,7 @@
 declare const __REGION_ID__: string;
 
 /** Settings the app keeps on the device (STATE_KEYS in early.ts, plus the language). */
-export const SETTING_KEYS = ['heat-opacity', 'walk-kmh', 'step-free', 'travel', 'lang'];
+export const SETTING_KEYS = ['heat', 'heat-opacity', 'walk-kmh', 'step-free', 'travel', 'lang'];
 /** Lists only this device has; regionKey() prefixes them, older copies are unprefixed. */
 export const PERSONAL = ['favourites', 'recentPlaces'];
 /** The service worker's caches (sw.js: shell-vN, data-vN, map-vN). */
