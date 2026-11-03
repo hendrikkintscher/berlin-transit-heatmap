@@ -113,6 +113,7 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
           : `<small class="trip-ends">${escapeHtml(ends[0])} → ${escapeHtml(ends[1]!)}</small>`
         : '';
     const timeline = timelineHtml(j.legs);
+    const long = rides.length ? longWalkHtml(j.legs) : '';
     // Stops where you get on, change and get off (the timeline has them with times).
     const stops = rides.length
       ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
@@ -141,11 +142,39 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
           ? `<span class="stops">${sum.length ? ' · ' : ''}${stops.join(' → ')}</span>`
           : ''
       }</small>` +
+      long +
       [...notes].map(([n, l]) => changeNoteHtml(n, l)).join('') +
       '</span>' +
       timeline
     );
   });
+}
+
+/** A walk at an end of the trip longer than this many minutes is called long. */
+export const LONG_WALK_MIN = 15;
+
+/**
+ * "langer Fußweg am Ende (22 Min.)" under the summary when the walk to the first vehicle or
+ * from the last one is over 15 minutes (on foot, walks up to 30 count when that is faster,
+ * roadmap 0.13.9): the minutes alone do not say the walk is long. Both ends: "lange
+ * Fußwege: 18 + 22 Min.", short enough for one line at 360 px. Empty otherwise.
+ */
+export function longWalkHtml(legs: Legs): string {
+  const first = legs.findIndex((l) => l.type === 'ride');
+  if (first < 0) return '';
+  const after = legs.length - 1 - [...legs].reverse().findIndex((l) => l.type === 'ride');
+  const walked = (ls: Legs) =>
+    ls.reduce((a, l) => a + (l.type === 'walk' && !l.bike ? l.minutes : 0), 0);
+  const a = walked(legs.slice(0, first));
+  const z = walked(legs.slice(after + 1));
+  const longA = a > LONG_WALK_MIN;
+  const longZ = z > LONG_WALK_MIN;
+  if (!longA && !longZ) return '';
+  const text =
+    longA && longZ
+      ? t('tripLongWalkBoth', { a, b: z })
+      : t(longA ? 'tripLongWalkStart' : 'tripLongWalkEnd', { n: longA ? a : z });
+  return `<small class="trip-long-walk">${text}</small>`;
 }
 
 /**

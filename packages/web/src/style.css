@@ -1801,6 +1801,16 @@ body.special .legend {
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
+/* A walk over 15 minutes at either end (roadmap 0.13.17), so a long walk shows at a glance. */
+#readout .trip-long-walk {
+  display: block;
+  margin-top: 2px;
+  color: #b4530a;
+  font-weight: 600;
+}
+#readout .trip-long-walk::before {
+  content: '🚶 ';
+}
 .trip-sep {
   color: var(--muted);
 }

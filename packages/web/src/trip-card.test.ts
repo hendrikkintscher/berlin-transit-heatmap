@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leaveText, tripHtml, type Trip, type TripContext } from './trip-card';
+import { leaveText, longWalkHtml, tripHtml, type Trip, type TripContext } from './trip-card';
 
 const ctx: TripContext = {
   direction: 'depart',
@@ -229,5 +229,20 @@ describe('trip card', () => {
     expect(leaveText(36000, 30000)).toBe('los um 10:00 Uhr');
     // An hour earlier today: gone, so no "jetzt los".
     expect(leaveText(30000, 36000)).toBe('los um 08:20 Uhr');
+  });
+
+  it('says so when a walk at either end is over 15 minutes', () => {
+    const walk = (minutes: number, bike?: true) => ({ type: 'walk', minutes, bike }) as const;
+    const r = ride('M10', 'tram', 'A', 'B');
+    expect(longWalkHtml([walk(15), r, walk(3)])).toBe('');
+    expect(longWalkHtml([walk(16), r, walk(3)])).toContain('langer Fußweg am Anfang (16 Min.)');
+    expect(longWalkHtml([walk(2), r, walk(22)])).toContain('langer Fußweg am Ende (22 Min.)');
+    expect(longWalkHtml([walk(18), r, walk(22)])).toContain('lange Fußwege: 18 + 22 Min.');
+    // A long walk at a change is not at an end; cycling and walking all the way neither.
+    expect(longWalkHtml([walk(2), r, walk(20), r, walk(2)])).toBe('');
+    expect(longWalkHtml([walk(25, true), r])).toBe('');
+    expect(longWalkHtml([walk(25)])).toBe('');
+    const html = tripHtml({ journeys: [{ transfers: 0, legs: [walk(2), r, walk(24)] }] }, ctx);
+    expect(html).toContain('<small class="trip-long-walk">langer Fußweg am Ende (24 Min.)</small>');
   });
 });

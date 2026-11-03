@@ -1,6 +1,6 @@
-# Roadmap V2.5
+# Roadmap V2.6
 
-Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.16**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
+Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13.17**. Two companion docs: [CHANGELOG.md](CHANGELOG.md) (project copy plan/changelog.md) records everything built and every roadmap version; [LATER.md](LATER.md) (plan/later.md) holds what is planned for much later and not scheduled yet, plus what is set aside or not planned. Older write-ups are archived in archive/plan/ (project files).
 
 ## North star
 
@@ -10,7 +10,7 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 
 | When  | Theme (outcome)                                 | Steps                                    |
 | ----- | ----------------------------------------------- | ---------------------------------------- |
-| Now   | A. Trip and map agree (0.13)                    | 0.13.17–18, 0.13.20, 0.13.23             |
+| Now   | A. Trip and map agree (0.13)                    | 0.13.18, 0.13.20, 0.13.23                |
 | Now   | B. Fast and steady loading and measuring (0.13) | 0.13.19, 0.13.21–22, 0.13.24             |
 | Next  | C. Map handling (0.14)                          | 0.14.0                                   |
 | Next  | D. Clear and welcoming looks (0.15)             | 0.15.0–0.15.5, 0.15.11                   |
@@ -41,13 +41,6 @@ Live at https://hendrikkintscher.github.io/berlin-transit-heatmap/ as app **0.13
 ## Now: A. Trip and map agree
 
 Outcome: the trip on tap and the map's minutes match, in every mode and at every hour.
-
-- **0.13.17 Long walks shown on the card** · should · build
-  - Why: note from 0.13.9 (2026-10-16): trips on tap may now walk up to 30 minutes at an end when that is faster (58 of 390 checked trips, 11 minutes earlier in the median; `bench/walkrule.ts`, #333); the card shows the walk's minutes but says nothing about it being long.
-  - Done when: a long walk is visible at a glance, with tap timings unchanged.
-  - a. A short hint on the card ("langer Fußweg") when a walk at either end is longer than 15 minutes.
-  - b. Optionally the slower trip with less walking in the drawer, if it comes from the same search; otherwise report the cost and leave it out.
-  - c. Check at 360×740 that the hint fits without wrapping, in German and English.
 
 - **0.13.18 Ankommen under Bestfall: closer to the map?** · could · decision
   - Why: note from 0.13.11 (2026-10-16): under Bestfall with Ankommen the trip on tap (the last connection of the hour) is 3 or more minutes off the map in 53 % of places (Typisch differs by design: the map counts waiting). Evidence: `bench/arrivehour.ts`, #335.
@@ -172,4 +165,4 @@ Outcome: the pictures show the finished app, and the Berlin app is called done. 
 
 ## Inbox
 
-Empty.
+- 2026-11-03 (from 0.13.17): a walk at an end of the trip on tap can come out over the 30 minutes of the walk rule: Alexanderplatz to a place in the Grunewald (52.489, 13.229) walks 33 minutes from S Grunewald; worth a look at where the extra minutes come from (the cell against the tapped point, or the fallback walk).
