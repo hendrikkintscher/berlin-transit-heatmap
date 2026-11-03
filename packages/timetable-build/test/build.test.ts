@@ -178,10 +178,9 @@ describe('writeOutputs', () => {
       stops: day.stops.map((s) => ({ ...s, id: '' })),
       transfers: [...day.transfers].sort((a, b) => a.from - b.from || a.to - b.to),
     });
-    expect(read('stop-ids.json')).toMatchObject({ version: 1, feedVersion: 'test-feed' });
-    expect(read('stop-ids.json').ids).toHaveLength(day.stops.length);
+    // The fixture's stop ids are not VBB ones: no station numbers, and no stop-ids.json (S007).
+    expect(list.stops.some((s) => s.station !== undefined)).toBe(false);
     expect(Object.keys(info.files).sort()).toEqual([
-      'stop-ids.json',
       'stoplist.bin',
       'stops.json',
       'timetable-day.bin',
@@ -192,6 +191,28 @@ describe('writeOutputs', () => {
     expect(night.window).toBe('night');
     expect(night.stops).toBe(bin.stops);
     expect(() => decodeTimetable(readFileSync(join(dir, 'timetable-night.bin')))).toThrow();
+  });
+
+  it("writes the stops' VBB station numbers into the stop list", () => {
+    // VBB's ids name the station's 9-digit number: de:11000:900100003 (the station),
+    // de:11000:900100003:2:53 (a platform of it).
+    const ids = ['de:11000:900100003', 'de:11000:900100003:2:53', 'de:12063:900203512::1'];
+    const stops = day.stops.map((s, i) => ({ ...s, id: ids[i] ?? s.id }));
+    const timetables = Object.fromEntries(
+      Object.entries(result.timetables).map(([name, tt]) => [name, { ...tt, stops }]),
+    );
+    const out = join(dir, 'vbb');
+    writeOutputs({ ...result, timetables }, out);
+    const list = decodeStopList(readFileSync(join(out, 'stoplist.bin')));
+    expect(list.stops.map((s) => s.station)).toEqual([
+      900100003,
+      900100003,
+      900203512,
+      ...stops.slice(3).map(() => undefined),
+    ]);
+    // An hour read with it hands the numbers on with its stops (the live status's board).
+    const hour = decodeTimetable(readFileSync(join(out, 'timetable-day.bin')), list);
+    expect(hour.stops[2]!.station).toBe(900203512);
   });
 });
 

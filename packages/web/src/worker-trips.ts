@@ -180,7 +180,7 @@ export function trip(
   leave?: number;
   arrive?: number;
   /** Departing: the first vehicle, for its live status. */
-  board?: { stop: number; line: string; at: number };
+  board?: { station: number; line: string; at: number };
   /** Per leg: a ride's real times (null for walks). */
   clocks: (RideClock | null)[];
   /** The journey on the timetable's own clock and order (arriving: reversed), for more. */
@@ -201,7 +201,7 @@ export function trip(
   // reversed timetable (its times are the real ones negated), from the destination back.
   const total = seconds ?? cellSeconds(r.best, at);
   let leave = last.from;
-  let board: { stop: number; line: string; at: number } | undefined;
+  let board: { station: number; line: string; at: number } | undefined;
   const first = j.legs.findIndex((l) => l.type === 'ride');
   const ride = j.legs[first];
   if (ride?.type === 'ride') {
@@ -211,7 +211,8 @@ export function trip(
     const dep = departureAt(last.tt, ride.route, ride.fromPos, last.from + walkTo);
     if (dep !== null) {
       leave = Math.max(last.from, dep - walkTo);
-      board = { stop: ride.from, line: ride.name, at: dep };
+      const station = last.tt.stops[ride.from]?.station;
+      if (station) board = { station, line: ride.name, at: dep };
     }
   }
   const clocks = rideClocks(last.tt, j, last.from, last.direction === 'arrive');
@@ -412,7 +413,7 @@ function bothWays(
   );
   if (!f) return null;
   const j = f.journey;
-  let board: { stop: number; line: string; at: number } | undefined;
+  let board: { station: number; line: string; at: number } | undefined;
   const first = j.legs.findIndex((l) => l.type === 'ride');
   const ride = j.legs[first];
   if (depart && ride?.type === 'ride') {
@@ -420,7 +421,8 @@ function bothWays(
       .slice(0, first)
       .reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
     const dep = departureAt(fwd, ride.route, ride.fromPos, f.leave + walkTo);
-    if (dep !== null) board = { stop: ride.from, line: ride.name, at: dep };
+    const station = fwd.stops[ride.from]?.station;
+    if (dep !== null && station) board = { station, line: ride.name, at: dep };
   }
   // On the map's own timetable for the drawer's next connections: arriving, the reversed
   // one, the journey turned round onto its routes. (To the Ziel leaving, the drawer runs on

@@ -22,9 +22,9 @@ export interface BuildInfo {
 }
 
 /**
- * Writes stoplist.bin and timetable-<window>.bin (Contract 4, what the app loads) for every
- * window, stops.json, stop-ids.json, lines.bin, changes.json (with real dates) and
- * build-info.json.
+ * Writes stoplist.bin (with the stops' VBB station numbers) and timetable-<window>.bin
+ * (Contract 4, what the app loads) for every window, stops.json, lines.bin, changes.json
+ * (with real dates) and build-info.json.
  * (The JSON timetables are gone: the app reads only the binary ones.)
  */
 export function writeOutputs(result: BuildResult, outDir: string, extra: object = {}): BuildInfo {
@@ -40,23 +40,19 @@ export function writeOutputs(result: BuildResult, outDir: string, extra: object 
   const windows = Object.entries(result.timetables);
   if (windows.length) {
     const first = windows[0]![1];
-    const list = encodeStopList(first);
+    // The binary files carry no GTFS ids; the app's live status (web live.ts) asks for a
+    // stop's departures by its VBB station number: 900100003 for Alexanderplatz, 0 if none.
+    const stations = first.stops.map((s) => Number(/^de:\d+:(\d{9})/.exec(s.id)?.[1] ?? 0));
+    const list = encodeStopList(first, stations);
     for (const [name, tt] of windows) {
       const same = tt.stops === first.stops && tt.transfers === first.transfers;
-      if (!same && encodeStopList(tt).id !== list.id)
+      if (!same && encodeStopList(tt, stations).id !== list.id)
         throw new Error(`Window ${name} has stops or footpaths of its own`);
     }
     save('stoplist.bin', list.data);
     for (const [name, tt] of windows) save(`timetable-${name}.bin`, encodeTimetable(tt, list.id));
   }
   write('stops.json', result.stopsFile);
-  // The binary timetables carry no GTFS ids; the app's live status (web live.ts) looks up
-  // a stop's VBB station number here, by stop index: 900100003 for Alexanderplatz, 0 if none.
-  write('stop-ids.json', {
-    version: 1,
-    feedVersion: result.stats.feedVersion,
-    ids: result.stopsFile.stops.map((s) => Number(/^de:\d+:(\d{9})/.exec(s.id)?.[1] ?? 0)),
-  });
   // The hops' courses along tracks and roads (linesbin.ts), loaded by the app after the map.
   if (result.lines) {
     const stops = result.stopsFile.stops;

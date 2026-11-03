@@ -344,8 +344,8 @@ export type FromWorker =
         /** When to leave the start and when it arrives, seconds of the service day. */
         leave?: number;
         arrive?: number;
-        /** Departing: the first vehicle (stop index, line, planned departure in seconds of the day). */
-        board?: { stop: number; line: string; at: number };
+        /** Departing: the first vehicle (its stop's station number, line, planned departure in seconds of the day). */
+        board?: { station: number; line: string; at: number };
         /** The stops nearest the journey's start and end, to name them. */
         ends?: [string | null, string | null];
       } | null)[];

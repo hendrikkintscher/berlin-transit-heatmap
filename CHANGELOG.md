@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.13.23] — 2026-11-03
+
+- S007: The live status's VBB station numbers ride in `stoplist.bin` (stop list version 2; version 1 still reads, without them), so `stop-ids.json` is gone: one download fewer when the card asks for the first vehicle's delay, and the worker hands the number on with the trip. Stop list 253.8 → 258.2 KB gzipped (+4.4 KB, against the 11.2 KB `stop-ids.json` it replaces; decoding unchanged, 4–7 ms in Node). At 360×740 (Nächste, two rounds of 7 visits) first map 534/621 → 556/576 ms, tap to trip 68.5/70.8 → 69.3/71.9 ms; 4× CPU first map 1052/1144 → 1023/1069 ms, tap 103.5/105.4 → 102.1/104.7 ms: within noise. Bundle 334.95 → 334.89 KB gzipped.
+
 ## [0.13.22] — 2026-11-03
 
 - S006: The service worker keeps the 48 most recently stored hourly timetables instead of 12, oldest out first, nothing fetched ahead: two days of every hour (or the usual hours of several days) come from the phone instead of the network. Asking for 48 hours twice: second round 0/48 → 48/48 from the cache. Stored on the phone (unzipped, as the Cache API keeps it) 3.8 → 14.5 MB, about 0.3 MB per hour; the download for those 48 hours is 2.8 MB gzipped, once. At 360×740 first map 926 → 897 ms, tap to trip 87 → 84 ms; 4× CPU first map 1613 → 1393 ms (bimodal), tap 131 → 130 ms: within noise, the first visit and taps take the same path.
