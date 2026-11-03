@@ -202,8 +202,29 @@ try {
         failures.push(`${lang}: no trip card after a long press: "${moved}"`);
       pressed = `; long press: start ${before} -> ${after}`;
     }
+    // A location that never comes: "Finding your location…" goes after about 5 s (S011),
+    // the busy button stays.
+    let located = '';
+    if (lang === 'en') {
+      await p.evaluate(() => {
+        navigator.geolocation.getCurrentPosition = () => {};
+        document.getElementById('locate-btn').click();
+      });
+      const status = () =>
+        p.evaluate(() => [
+          document.getElementById('status').textContent,
+          document.getElementById('locate-btn').classList.contains('busy'),
+        ]);
+      const [first] = await status();
+      await p.waitForTimeout(6000);
+      const [later, busy] = await status();
+      if (!/location/i.test(first)) failures.push(`en: no locating line: "${first}"`);
+      if (later) failures.push(`en: the locating line is still up after 6 s: "${later}"`);
+      if (!busy) failures.push('en: the locate button stopped looking');
+      located = `; locating line "${first}" gone after 6 s`;
+    }
     console.log(
-      `${lang}: map in ${mapMs} ms, ${shown.outlines} outlines, ${shown.coloured} coloured pixels; card: ${card.replace(/\s+/g, ' ').slice(0, 80)}${pressed}`,
+      `${lang}: map in ${mapMs} ms, ${shown.outlines} outlines, ${shown.coloured} coloured pixels; card: ${card.replace(/\s+/g, ' ').slice(0, 80)}${pressed}${located}`,
     );
     if (args.shots) {
       mkdirSync(args.shots, { recursive: true });

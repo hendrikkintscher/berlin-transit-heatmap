@@ -79,6 +79,7 @@ import { initWhenSheet } from './when-sheet';
 import { initBack, replaceUrl } from './back';
 import type { FromWorker } from './protocol';
 import { dataBase, region } from './region';
+import { cappedLine, STATUS_FADE_MS, STATUS_SHOW_MS } from './status-lines';
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 
@@ -227,13 +228,10 @@ function showHint(on: boolean) {
   else if (statusEl.parentElement === hint) $('undo').before(statusEl);
 }
 let statusTimer = 0;
-/** How long the status line fades out (style.css .status). */
-const STATUS_FADE_MS = 600;
-/** How long a fading status line stays before it fades. */
-const STATUS_SHOW_MS = 5000;
 /**
- * Sets the status line; `fade` hides it again after a few seconds (or after `fade` ms) and
- * then clears it, so it leaves the layout and screen readers do not find it again.
+ * Sets the status line; `fade` hides it again after STATUS_SHOW_MS (or after `fade` ms) and
+ * then clears it, so it leaves the layout and screen readers do not find it again. Which
+ * line stays how long: status-lines.ts.
  */
 function setStatus(render: () => string, fade: boolean | number = false) {
   state.status = render;
@@ -293,19 +291,16 @@ let walkLoading = false;
 /** The footpaths are in: walks follow them. */
 let footpathsIn = false;
 /**
- * When the footpath line first went up (0: not yet). It shows for WALK_LINE_MS at most:
- * the map works without footpaths, so on a slow download the line gives way and only the
- * thin bar keeps going; a short note says when they arrive and the map is redone.
+ * The footpath line shows for STATUS_SHOW_MS at most from when it first went up: the map
+ * works without footpaths, so on a slow download the line gives way and only the thin bar
+ * keeps going; a short note says when they arrive and the map is redone.
  */
-let walkLineAt = 0;
-const WALK_LINE_MS = STATUS_SHOW_MS;
+const walkCap = cappedLine();
 /** The footpaths arrived after their line gave way: the map redone with them says so. */
 let walkNoteDue = false;
-const walkLineLeft = () => WALK_LINE_MS - (performance.now() - walkLineAt);
 /** Shows the footpath line for what is left of its time, or clears the status line. */
 function walkLine() {
-  walkLineAt ||= performance.now();
-  const left = walkLineLeft();
+  const left = walkCap.start();
   setStatus(left > 0 ? () => t('walkLoading') : () => '', left > 0 && left);
 }
 function askWalk() {
@@ -374,12 +369,12 @@ listen((ev: MessageEvent<FromWorker>) => {
     (loadbar.firstElementChild as HTMLElement).style.width = m.total
       ? `${Math.min(100, (100 * m.loaded) / m.total)}%`
       : '';
-    if (!state.status() && (!walkLineAt || walkLineLeft() > 0)) walkLine();
+    if (!state.status() && walkCap.left() > 0) walkLine();
   } else if (m.type === 'walk' || m.type === 'walkFailed') {
     walkLoading = false;
     if (!loadbar.classList.contains('indeterminate')) loadbar.hidden = true;
     if (state.status() === t('walkLoading')) setStatus(() => '');
-    walkNoteDue = m.type === 'walk' && walkLineAt > 0 && walkLineLeft() <= 0;
+    walkNoteDue = m.type === 'walk' && walkCap.started() && walkCap.left() <= 0;
     // Footpaths arrived: redo what was computed with straight-line walks.
     if (m.type === 'walk') {
       performance.mark('footpaths');
@@ -447,7 +442,8 @@ listen((ev: MessageEvent<FromWorker>) => {
   } else if (m.type === 'error') {
     refining = false;
     loadbar.hidden = true;
-    setStatus(() => t('failed', { message: m.message }));
+    // Over a map it fades like the others; on an empty screen it is all there is to read.
+    setStatus(() => t('failed', { message: m.message }), !!state.result);
   }
 });
 
@@ -1278,7 +1274,8 @@ locateBtn.addEventListener('click', () => {
   }
   search.close();
   locateBtn.classList.add('busy');
-  setStatus(() => t('locating'));
+  // The busy button goes on saying it is looking after the line has faded.
+  setStatus(() => t('locating'), true);
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => {
       locateBtn.classList.remove('busy');

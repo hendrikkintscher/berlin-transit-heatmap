@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.15.1] — 2026-11-03
+
+- S011: No status line stays over the map for long. Every line above the bottom buttons was listed (status-lines.ts): the footpath line, the note when they arrive, the link and location notes, "Link kopiert" and "Rückgängig" already went after 5 s. Three could stay: "Standort wird gesucht…" (up to 15 s) now fades after 5 s while the locate button keeps spinning; the where-to-live and home maps' "Ort i von n…" shows for 5 s from the run's start, then only the bar goes on; "Etwas ist schiefgelaufen" fades after 5 s over a map and stays only when no map is on screen. The smoke test checks the locating line goes. At 360×740 with GPU compositing (7–8 visits) first map 698 → 643 ms, tap to trip 55 → 57 ms; 4× CPU first map 1244/1226 → 1163/1276 ms, tap 85/101 → 101/71 ms (two rounds): within noise, nothing on the map or tap path changed.
+
 ## [0.15.0] — 2026-11-03
 
 - S010: A little more room at the screen edges: one shared side gap (`--edge`, 12 px plus the safe area; was 10 px, Mehr 8 px) for the search bar, the chip row's ends and Mehr, the chip panels, the menu, the bottom row (locate, Treffpunkt, tip), the colour legend, the small Treffpunkt banner and the map's (i); the trip card stays an edge-to-edge sheet, its text 12 → 14 px from the edge. The arrow chips end 3 px closer to their arrow, so Mo–Fr, Bahn and Ebenen still fit beside Mehr at 360 px (English scrolled before and still does). The smoke test checks the gaps. CSS only: bundle JS unchanged, CSS 16.90 → 16.99 KB gzipped. At 360×740 with GPU compositing (7 visits, tap after the footpaths) first map 1001 → 1085 ms, tap to trip 61 → 73 ms; 4× CPU first map 1966 → 2095 ms, tap 155 → 111 ms; tap right at the first map, 4× CPU, 16 visits each: first map 2048 → 2023 ms, tap 254 → 283 ms: all within noise.

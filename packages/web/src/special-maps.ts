@@ -10,6 +10,7 @@ import type { Favourite } from './favourites';
 import { nightText, whenText } from './format';
 import { t } from './i18n';
 import type { ToWorker } from './protocol';
+import { cappedLine } from './status-lines';
 import { $, type Result, type Special, type State } from './state';
 import { computeWindow, eveningWindow } from './when';
 
@@ -21,7 +22,7 @@ export interface SpecialDeps {
   send: (m: ToWorker) => void;
   favourites: () => readonly Favourite[];
   isSearchOpen: () => boolean;
-  setStatus: (render: () => string) => void;
+  setStatus: (render: () => string, fade?: boolean | number) => void;
   showResult: (r: Result) => void;
   /** The start's map again. */
   compute: () => void;
@@ -88,10 +89,13 @@ export function initSpecialMaps(deps: SpecialDeps) {
     return null;
   }
 
+  /** The run's progress line shows for STATUS_SHOW_MS at most, then only the bar (S011). */
+  const progressLine = cappedLine();
   function progress(done: number, total: number) {
     const i = Math.min(done + 1, total);
     const key = state.special?.kind === 'home' ? 'homeProgress' : 'livingProgress';
-    deps.setStatus(() => t(key, { i, n: total }));
+    const left = progressLine.start();
+    if (left > 0) deps.setStatus(() => t(key, { i, n: total }), left);
   }
 
   function run() {
@@ -111,6 +115,7 @@ export function initSpecialMaps(deps: SpecialDeps) {
     loadbar.hidden = false;
     loadbar.classList.remove('indeterminate');
     (loadbar.firstElementChild as HTMLElement).style.width = '0%';
+    progressLine.reset();
     progress(0, req.type === 'home' ? req.windows.length : req.places.length);
     deps.send({ ...req, id: state.requestId });
   }
