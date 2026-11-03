@@ -37,6 +37,9 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 ### Next · D. Clear and welcoming looks (0.15)
 
 - S028 · decision · research · P2 · S · Stop names and symbols on the map
+- S029 · build · fix · P2 · S · Tidier time menu and smaller menu buttons
+- S030 · build · feature · P2 · XS · Lieblingsorte button next to Ebenen
+- S031 · build · fix · P2 · S · Start or Ziel anchor shown in the trip card's dots
 - S012 · build · feature · P3 · XS · Ring widths show their order
 - S013 · build · feature · P3 · S · Colour fill on for first-time visitors
 - S014 · build · feature · P3 · M · Example map on the first screen
