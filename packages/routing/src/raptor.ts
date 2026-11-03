@@ -17,6 +17,9 @@ export const LEG_NONE = -3;
 export const LEG_ORIGIN = -2;
 export const LEG_WALK = -1;
 const DEFAULT_MAX_ROUNDS = 6;
+/** bestDeparture where a stop has no journey over the window (walked to, or not reached). */
+export const NO_DEPARTURE = -0x7fffffff;
+
 /** With `typical`, departures this long after the window are scanned too, so leaving late in the window still finds a next trip. */
 const DEFAULT_TYPICAL_HORIZON_S = 2700;
 
@@ -122,6 +125,10 @@ export function travelTimes(
       ? departureTimes(tt, accessStops, accessWalk, horizon)
       : Int32Array.of(Math.round(leaveAt));
   const events = profile ? new ProfileEvents(opts.trackLegs === true) : null;
+  // Best case over a window: the departure of each stop's quickest journey (trips on tap
+  // under Ankommen + Bestfall ask for the one arriving then).
+  const bestDeparture =
+    leaveAt === undefined && !profile && !typical ? new Int32Array(S).fill(NO_DEPARTURE) : null;
   const ws = tt.windowStart;
   const we = tt.windowEnd;
 
@@ -440,6 +447,7 @@ export function travelTimes(
         // Leaving at a set time counts past the window too: the file holds the next trips.
         if ((leaveAt !== undefined || dep <= we) && t < best[s]) {
           best[s] = t;
+          if (bestDeparture) bestDeparture[s] = dep;
           if (track) {
             legKind[s] = starKind[s];
             legFrom[s] = starFrom[s];
@@ -467,6 +475,7 @@ export function travelTimes(
   return {
     stopSeconds: best,
     ...(typicalSeconds ? { typicalSeconds } : {}),
+    ...(bestDeparture ? { bestDeparture } : {}),
     ...(events ? { profile: events.finish(S) } : {}),
     computedInMs: now() - t0,
     origin: { lat: origin.lat, lon: origin.lon },

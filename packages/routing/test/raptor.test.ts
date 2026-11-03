@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loadTimetable, travelTimes } from '../src';
+import { loadTimetable, NO_DEPARTURE, travelTimes } from '../src';
 import {
   A,
   B,
@@ -175,6 +175,42 @@ describe('travelTimes matches a brute-force reference', () => {
       }
     });
   }
+});
+
+describe("bestDeparture: when each stop's quickest journey leaves", () => {
+  it('leaving then takes the best-case time, on random networks', () => {
+    for (const seed of [1, 2, 3, 4]) {
+      const raw = randomTimetable(seed);
+      const tt = loadTimetable(raw);
+      const origin = raw.stops[seed];
+      const r = travelTimes(tt, origin, { maxRounds: 50 });
+      let checked = 0;
+      for (let s = 0; s < raw.stops.length; s++) {
+        const dep = r.bestDeparture![s];
+        if (dep === NO_DEPARTURE) continue;
+        expect(dep).toBeGreaterThanOrEqual(raw.windowStart);
+        expect(dep).toBeLessThanOrEqual(raw.windowEnd);
+        const at = travelTimes(tt, origin, { maxRounds: 50, leaveAt: dep });
+        expect(
+          Math.abs(at.stopSeconds[s] - r.stopSeconds[s]),
+          `seed ${seed} stop ${s}`,
+        ).toBeLessThanOrEqual(1);
+        checked++;
+      }
+      expect(checked).toBeGreaterThan(5);
+    }
+  });
+
+  it('has none where the stop is walked to, and only for the best case over a window', () => {
+    const day = loadTimetable(miniTimetable('day'));
+    const r = travelTimes(day, STOP_POS[A]);
+    expect(r.bestDeparture![A]).toBe(NO_DEPARTURE);
+    expect(r.bestDeparture![E]).not.toBe(NO_DEPARTURE);
+    expect(travelTimes(day, STOP_POS[A], { typical: true }).bestDeparture).toBeUndefined();
+    expect(
+      travelTimes(day, STOP_POS[A], { leaveAt: day.windowStart }).bestDeparture,
+    ).toBeUndefined();
+  });
 });
 
 describe('typical travel time', () => {

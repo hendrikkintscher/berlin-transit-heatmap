@@ -36,7 +36,7 @@ export {
   type GridShape,
 } from './grid';
 export { distanceM, WALK_SPEED_MPS } from './geo';
-export { LEG_NONE, LEG_ORIGIN, LEG_WALK } from './raptor';
+export { LEG_NONE, LEG_ORIGIN, LEG_WALK, NO_DEPARTURE } from './raptor';
 export type { RouteUsageOptions, UsedSegment } from './usage';
 export { goalUsage, routeUsage } from './usage';
 export type { Journey, JourneyLeg } from './journey';

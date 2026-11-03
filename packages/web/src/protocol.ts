@@ -338,7 +338,7 @@ export type FromWorker =
         transfers: number;
         /**
          * Under Typisch and Bestfall: the minutes of this connection, which leaves now
-         * (arriving: arrives by the end of the hour). Under Nächste the map's own minutes.
+         * (arriving: by the end of the hour; Bestfall: the hour's quickest). Under Nächste the map's own minutes.
          */
         minutes?: number;
         /** When to leave the start and when it arrives, seconds of the service day. */

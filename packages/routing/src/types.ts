@@ -188,6 +188,12 @@ export interface TravelTimeResult {
   typicalSeconds?: Float32Array;
   /** Present when computed with `profile`. */
   profile?: StopProfile;
+  /**
+   * Best case over a window (no `leaveAt`, `profile` or `typical`): per stop, the origin
+   * departure (seconds of the day) of its quickest journey, the one stopSeconds counts;
+   * NO_DEPARTURE where there is none (walked to from the origin, or not reached).
+   */
+  bestDeparture?: Int32Array;
 }
 
 /**
