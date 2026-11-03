@@ -36,7 +36,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · D. Clear and welcoming looks (0.15)
 
-- S032 · build · feature · P2 · S · Stops with symbols and names on the map
 - S029 · build · fix · P2 · S · Tidier time menu and smaller menu buttons
 - S030 · build · feature · P2 · XS · Lieblingsorte button next to Ebenen
 - S031 · build · fix · P2 · S · Start or Ziel anchor shown in the trip card's dots

@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.15.2] — 2026-11-03
+
+- S032: Stops on the map with a dot in their mode's colour and their name where there is room (decision 0009, option C): S-, U-Bahn and regional stations from the city view, with a bold S or U from zoom 13; tram, bus and ferry stops as dots from zoom 13, named from zoom 14. S, U and regional names win where labels collide; the time rings' minute labels keep their place and the trip draws on top. Names are the trip card's, upright in the map's regular font. The worker builds the ~5,200 stations (platforms merged as in the Departures layer) from the timetable it already has, right after the first map (7 ms in Node, 690 KB of GeoJSON handed over, no download); they appear about 0.2 s after the first map (4×: 0.5 s). Bundle 335.73 → 336.15 KB gzipped. At 360×740 with GPU compositing and the real basemap (8 visits) first map 887 → 795 ms, tap to trip 57 → 54 ms, ⇅ to trip 611 → 606 ms, rings to trip 371 → 359 ms; 4× CPU (two rounds) first map 1341/1334 → 1417/1227 ms, tap 92/86 → 93/90 ms, ⇅ 776/831 → 736/780 ms, rings 511/599 → 613/481 ms: within noise.
+
 ## [0.15.1] — 2026-11-03
 
 - S011: No status line stays over the map for long. Every line above the bottom buttons was listed (status-lines.ts): the footpath line, the note when they arrive, the link and location notes, "Link kopiert" and "Rückgängig" already went after 5 s. Three could stay: "Standort wird gesucht…" (up to 15 s) now fades after 5 s while the locate button keeps spinning; the where-to-live and home maps' "Ort i von n…" shows for 5 s from the run's start, then only the bar goes on; "Etwas ist schiefgelaufen" fades after 5 s over a map and stays only when no map is on screen. The smoke test checks the locating line goes. At 360×740 with GPU compositing (7–8 visits) first map 698 → 643 ms, tap to trip 55 → 57 ms; 4× CPU first map 1244/1226 → 1163/1276 ms, tap 85/101 → 101/71 ms (two rounds): within noise, nothing on the map or tap path changed.

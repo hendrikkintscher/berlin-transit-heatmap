@@ -127,6 +127,12 @@ try {
     const shown = await p.evaluate(() => window.__smoke);
     if (!shown.outlines) failures.push(`${lang}: the map has no outlines`);
     if (!shown.coloured) failures.push(`${lang}: the map has no colours`);
+    // The stops come from the worker right after the first map (S032).
+    await p
+      .waitForFunction(() => performance.getEntriesByName('stops').length > 0, null, {
+        timeout: 5000,
+      })
+      .catch(() => failures.push(`${lang}: no stops on the map after the first map`));
     // The controls keep the one side gap (--edge, 12 px since S010) from both edges. (Whether
     // the chips fit beside Mehr depends on the machine's fonts, so it is not checked here.)
     const edges = await p.evaluate(() => {

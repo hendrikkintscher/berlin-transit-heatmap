@@ -8,10 +8,12 @@ import {
   homeBandOf,
   INK,
   LIMIT_VEIL_ALPHA,
+  MAJOR_STOP_RANK,
   MAP_TEXT,
   MODE_COLORS,
   RING_COLORS,
   RING_MINUTES,
+  STOP_MODES,
   WATER,
 } from './colors';
 import { bezirke, landmarks, ringLine } from './orientation';
@@ -47,11 +49,15 @@ export const ROUTES_OPACITY = 0.55;
 export const ROUTES_CASING_OPACITY = 0.4;
 const AREA_SOURCE = 'area';
 export const TRIP_SOURCE = 'trip';
+/** Every stop with its name (S032), filled by the worker once the first map is shown. */
+export const STOPS_SOURCE = 'stops';
 export const TRIP_STOPS_SOURCE = 'trip-stops';
 /** "What's different today": the stretch of a line that does not run, from changes.json. */
 export const CHANGES_SOURCE = 'changes';
 const CHANGE_COLOR = '#d6336c';
 const BOLD_FONT = ['Noto Sans Bold'];
+/** Upright, unlike the basemap's first label font (italic water names). */
+const REGULAR_FONT = ['Noto Sans Regular'];
 
 const modeColor = [
   'match',
@@ -344,6 +350,7 @@ export function addMapLayers(
     },
     'routes-label',
   );
+  addStops(map, empty);
   // The connection to a tapped spot: rides in their line colours without a border, walks
   // dashed, rides by bike as a thin solid line.
   map.addSource(TRIP_SOURCE, { type: 'geojson', data: empty });
@@ -509,6 +516,93 @@ export function addMapLayers(
     layout: { 'text-field': ['get', 'housenumber'], 'text-font': font, 'text-size': 11 },
     paint: { 'text-color': MAP_TEXT, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 },
   });
+}
+
+/**
+ * Stops with a dot in their mode's colour and their name where there is room, over the
+ * colours and time rings and under the trip (S032, decision 0009). S-, U-Bahn and regional
+ * stations from the city view, with a bold S or U from zoom 13; tram, bus and ferry stops as
+ * dots from zoom 13 and named from zoom 14. Labels of stronger modes win where they collide.
+ */
+function addStops(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
+  map.addSource(STOPS_SOURCE, { type: 'geojson', data: empty });
+  // Under the time rings' minute labels, so those keep their place.
+  const add = (l: maplibregl.LayerSpecification) => map.addLayer(l, 'outlines-label');
+  const major = ['<=', ['get', 'k'], MAJOR_STOP_RANK] as maplibregl.FilterSpecification;
+  const minor = ['>', ['get', 'k'], MAJOR_STOP_RANK] as maplibregl.FilterSpecification;
+  const color = [
+    'match',
+    ['get', 'k'],
+    ...STOP_MODES.flatMap((m, k) => [k, MODE_COLORS[m]]),
+    MODE_COLORS.bus,
+  ] as unknown as maplibregl.ExpressionSpecification;
+  add({
+    id: 'stops-minor',
+    type: 'circle',
+    source: STOPS_SOURCE,
+    filter: minor,
+    minzoom: 13,
+    paint: {
+      'circle-color': color,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 2.5, 14, 3.5, 17, 5],
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': 1,
+    },
+  });
+  add({
+    id: 'stops-major',
+    type: 'circle',
+    source: STOPS_SOURCE,
+    filter: major,
+    paint: {
+      'circle-color': color,
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2.5, 13, 5, 16, 8],
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 10, 0.6, 14, 1.5],
+    },
+  });
+  add({
+    id: 'stops-letter',
+    type: 'symbol',
+    source: STOPS_SOURCE,
+    filter: ['<', ['get', 'k'], 2],
+    minzoom: 13,
+    layout: {
+      'text-field': ['match', ['get', 'k'], 0, 'S', 'U'],
+      'text-font': BOLD_FONT,
+      'text-size': ['interpolate', ['linear'], ['zoom'], 13, 7, 16, 11],
+      'text-allow-overlap': true,
+      'text-ignore-placement': true,
+    },
+    paint: { 'text-color': '#ffffff' },
+  });
+  const names = (
+    id: string,
+    filter: maplibregl.FilterSpecification,
+    minzoom: number,
+    size: number,
+  ) =>
+    add({
+      id,
+      type: 'symbol',
+      source: STOPS_SOURCE,
+      filter,
+      minzoom,
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': REGULAR_FONT,
+        'text-size': size,
+        'text-anchor': 'left',
+        'text-offset': [0.7, 0],
+        'text-max-width': 8,
+        'text-optional': true,
+        'symbol-sort-key': ['get', 'k'],
+      },
+      paint: { 'text-color': MAP_TEXT, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 },
+    });
+  // The upper layer's labels are placed first: S, U and regional names win over the rest.
+  names('stops-minor-name', minor, 14, 10);
+  names('stops-major-name', major, 0, 11);
 }
 
 /** A font the basemap's glyph server has, taken from its own labels. */
