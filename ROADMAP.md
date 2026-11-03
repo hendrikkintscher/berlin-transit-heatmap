@@ -32,7 +32,7 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Now · B. Fast and steady loading and measuring (0.13)
 
-- S026 · decision · research · P2 · S · Where a tap's time goes in the browser
+- S027 · build · feature · P2 · S · First tap finds the Ziel's walks ahead
 
 ### Next · C. Map handling (0.14)
 

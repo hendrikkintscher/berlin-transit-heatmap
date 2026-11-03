@@ -37,8 +37,11 @@ Nothing may slow taps or the first map. Report timings before/after at phone siz
 also with the page CPU slowed 4× (CDP `Emulation.setCPUThrottlingRate`; Chrome cannot slow
 the worker). A useful setup: build `packages/web/dist` for main and for the branch, serve each
 locally with `/data/berlin/*` fetched from the live site (cached), block other hosts and give
-MapLibre a blank style, and time a fresh visit: first map (worker 'result' message), tap to
-trip on the card, ⇅, moving the rings. Medians of 6–8 visits; 4× first-map times are bimodal.
+MapLibre a blank style, launch Chromium with `--ignore-gpu-blocklist --enable-gpu-compositing
+--use-angle=swiftshader --enable-unsafe-swiftshader` (plain headless copies the map back each
+frame, ~75 ms that delays every worker answer; decision 0008), and time a fresh visit: first
+map (worker 'result' message), tap to trip on the card, ⇅, moving the rings. Medians of 6–8
+visits; 4× first-map times are bimodal.
 The CI speed job checks bundle sizes (`scripts/speed/budget.json`) and Node map timings;
 raising a budget is a deliberate edit with the reason in the PR.
 
