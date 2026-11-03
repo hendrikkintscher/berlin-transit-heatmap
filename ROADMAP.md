@@ -38,7 +38,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · E. Treffpunkt that shows fairness (0.15)
 
-
 ### Next · F. New questions to ask (0.15)
 
 - S019 · build · feature · P3 · M · Places layer
