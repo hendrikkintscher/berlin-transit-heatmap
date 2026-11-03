@@ -1,27 +1,35 @@
-# Working on this repo
+# Berlin transit heatmap
 
-Berlin transit heatmap, live at https://hendrikkintscher.github.io/berlin-transit-heatmap/.
-Start with [README.md](README.md), then [ROADMAP.md](ROADMAP.md): its "How to use this roadmap"
-section is the working agreement with Hendrik. Since V2.0 the roadmap has a north star, outcome
-themes in Now / Next / Later order, and one node per step with labels (must/should/could;
-build/decision/check); the structure follows roadmap.sh's product-manager roadmap.
+How long it takes to get anywhere in Berlin by public transport, as a travel-time map for phones;
+live at https://hendrikkintscher.github.io/berlin-transit-heatmap/. Background in [README.md](README.md).
 How to write each language here (TypeScript, JS, shell, Actions YAML, HTML/CSS): [BEST_PRACTICES.md](BEST_PRACTICES.md).
 
-## How a step goes
+## How we work
 
-- Hendrik picks one roadmap step; build only that one, never the next.
-- One PR per step: bump the version in both `package.json` and `packages/web/package.json`
-  (the merge is tagged `vX.Y.Z` automatically), remove the step from ROADMAP.md (and from the Now/Next/Later
-  table) and bump its `V2.x`, add the app-version row and the roadmap-version line to CHANGELOG.md, run
-  `npx prettier --write` on the changed docs.
-- Steps labelled "decision" (or "Hendrik gets the numbers"): measure, report a short table and a
-  recommendation, and wait for his yes before building.
-- Things noticed on the way go under "## Inbox" in ROADMAP.md, one dated line each
-  ("2026-10-15 (from 0.13.6): …"), and end the PR description as a "For the roadmap Inbox" list.
-  A roadmap edit turns each Inbox line into a step node in its theme (new ids continue the
-  theme's milestone, e.g. 0.13.19; existing ids are never renumbered just to tidy up).
-- Get CI green (`check`, `smoke`, `speed`), merge (squash; merging deploys to Pages), then check
-  the live site.
+The coordinator is the main session (not a subagent). The procedure for every case is in the
+`/step` skill — use it whenever you create, start or finish a step.
+
+- **One thread per roadmap step.** Work only on the step named for this thread, never the next one.
+  Before starting another step, ask and wait for an explicit yes.
+- **Decision steps:** measure first (or compare concrete facts where measuring is impossible),
+  send a short table + one-line recommendation, then stop. Build nothing until Hendrik says yes.
+- **Build steps (after a yes):** one PR per step, with tests, timings (see "Speed comes first"), a
+  CHANGELOG entry, a version bump (`scripts/steps.sh bump`: patch, `minor` for a new milestone; it
+  sets VERSION and both package.json files) and the step removed from ROADMAP.md. Hooks enforce the
+  bookkeeping and that checks pass. Get CI green (`check`, `smoke`, `speed`), squash-merge (merging
+  deploys to Pages and tags `vX.Y.Z`), then check the live site.
+- **Tags** on every step: kind, priority (P1–P3), size (XS/S/M; L must be split first), needs.
+  Point out a P1 sitting below lower priorities, or a step listed before one it needs.
+- **Size:** if the diff is clearly bigger than the size tag, stop and ask: split, or accept.
+- **Batch approval** ("yes S004–S006") only for build steps sized XS or S. A batch of only XS
+  steps is one PR with one patch bump; otherwise one PR per step. No questions in between,
+  stop at the first problem. Decision and M steps always need their own yes.
+- **New ideas** mentioned along the way become their own later step (`/step new`), never part
+  of the current one. Say in one line that you added it, with its tags.
+- **"continue"** means the next step you just proposed — never reopening finished work.
+  If no specific step was proposed, or it's unclear, ask.
+- **When a step or batch is finished:** short summary (what changed, PR link, version), then ask
+  "Next: S00N — <title> (tags)?" from `scripts/steps.sh next`. Don't start until Hendrik says yes.
 
 ## Speed comes first
 
@@ -34,10 +42,27 @@ trip on the card, ⇅, moving the rings. Medians of 6–8 visits; 4× first-map 
 The CI speed job checks bundle sizes (`scripts/speed/budget.json`) and Node map timings;
 raising a budget is a deliberate edit with the reason in the PR.
 
+## Where things live
+
+| What                                                            | Where                                             |
+| --------------------------------------------------------------- | ------------------------------------------------- |
+| Vision + ordered steps in Now / Next / Later themes (≤80 lines) | `ROADMAP.md`                                      |
+| One file per step — change only via `scripts/steps.sh`          | `docs/steps/NNN-slug.md`                          |
+| Finished steps (don't read unless asked)                        | `docs/steps/archive/`                             |
+| Decision records (after Hendrik's yes)                          | `docs/decisions/NNNN-slug.md`                     |
+| Specs for steps too big for their step file; later wishes       | `docs/specs/` (`later.md`)                        |
+| App version / changelog                                         | `VERSION` (+ both `package.json`), `CHANGELOG.md` |
+| Session handoff (overwritten, not committed)                    | `docs/handoff.md`                                 |
+| Speed budget                                                    | `scripts/speed/budget.json`                       |
+
+Find work with `scripts/steps.sh next | list [tag] | show NNN` — don't open step files one by one.
+Implementation details go in commit messages and code comments, not planning files.
+Don't create other planning or notes files; if something doesn't fit, ask.
+
 ## Commands
 
 ```sh
-pnpm check                                   # lint, format, typecheck, all tests
+pnpm check                                   # lint, format, typecheck, all tests (= bash scripts/check.sh)
 pnpm --dir packages/web build                # -> packages/web/dist
 node scripts/smoke/smoke.mjs                 # browser smoke test (as CI)
 node scripts/speed/check.mjs --data packages/routing/.data [--base <main checkout>]
@@ -51,12 +76,12 @@ against the map's hour; `rollon.ts`: a missed connection rolling on, on the hour
 without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest` (`GTFS.zip`);
 `node packages/timetable-build/bin/build-timetable.js --gtfs data/gtfs --out <dir>` builds all hourly files in about 30 s.
 
-The cloud session hook (`.claude/hooks/session-start.sh`) installs the packages and fetches
-the bench data.
+The cloud session hook (`.claude/hooks/session-install.sh`) installs the packages and fetches
+the bench data; `.claude/hooks/session-start.sh` prints where the roadmap stands.
 
-## Handover notes
+## Gotchas
 
-- Several chats may share one container and the branch `claude/focused-johnson-10stwf`:
+- Several chats may share one container and one branch:
   check `git log origin/main..HEAD` and `git status` before starting, and build on (or ask
   about) commits you did not make instead of overwriting them.
 - When a step's PR is merged, reset the branch to `origin/main` before the next step.
@@ -66,3 +91,14 @@ the bench data.
 - The working walk rule since 0.13.9: on foot, walks up to 30 minutes count at both ends
   (`FASTEST_WALK` in `packages/web/src/worker-runs.ts`); the Node benches in
   `packages/routing/bench` pass their own options.
+- PRs here are usually opened with the GitHub tools, not `gh pr create`, so the pr-guard hook does
+  not see them: check the bookkeeping (VERSION, CHANGELOG.md, ROADMAP.md) yourself.
+- `docs/steps/` is left out of Prettier (`steps.sh` writes it); run `npx prettier --write` on the
+  other docs you change.
+
+## Definition of done
+
+- `bash scripts/check.sh` passes — show its output.
+- Acceptance criteria in the step file are ticked.
+- Timings before/after reported in the PR (build steps).
+- No stray debug output; TODOs only with a step id: `TODO(S012): ...`.

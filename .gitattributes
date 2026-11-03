@@ -1,0 +1,5 @@
+# Normalize line endings; bash scripts must stay LF or hooks break on Windows.
+* text=auto
+*.sh text eol=lf
+*.md text eol=lf
+*.json text eol=lf
