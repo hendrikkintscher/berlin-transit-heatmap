@@ -1,8 +1,13 @@
 # Changelog
 
-What changed in the app and in the roadmap, newest first. The roadmap (ROADMAP.md, project copy plan/roadmap.md) holds only what is still to do; every roadmap edit adds its line here. This file is kept identical in the repo (CHANGELOG.md) and in the project files (plan/changelog.md).
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Write new entries under `[Unreleased]`; `scripts/steps.sh bump` turns them into the new version's section
+and sets the version in VERSION and both package.json files (the merge is tagged `vX.Y.Z` automatically).
+Each entry names the step (S0NN), the PR and the timings before/after.
 
-## App versions
+## [Unreleased]
+
+## App versions up to 0.13.17
 
 Each step ships as one PR and one version, tagged `vX.Y.Z` on merge. Versions up to 0.7 were assigned afterwards from the PR history.
 
@@ -51,7 +56,11 @@ Each step ships as one PR and one version, tagged `vX.Y.Z` on merge. Versions up
 | 0.2     | 10-11 | Menu, German UI, meeting point, favourites, trip on tap, footpaths, bike modes                                  | #15–#47   |
 | 0.1     | 10-11 | Alpha: web app, timetable build, routing, Pages, search                                                         | #1–#10    |
 
-## Roadmap versions
+## Roadmap versions up to V3.0
+
+Until 2026-11-03 the roadmap had its own version, V2.x. Since the reorganisation (V3.0) git history versions ROADMAP.md.
+
+- **V3.0** (2026-11-03): repo reorganised to the Claude Code project template (decision record [0001](docs/decisions/0001-adopt-the-project-template.md)). The 20 open steps and the Inbox note became step files S001–S024 in `docs/steps/` (S001 0.13.18, S002 0.13.20, S003 0.13.23, S004 Inbox note from 0.13.17, S005 0.13.19, S006 0.13.21, S007 0.13.22, S008 0.13.24, S009 0.14.0, S010–S015 0.15.0–0.15.5, S016–S018 0.15.6–0.15.8, S019–S020 0.15.9–0.15.10, S021 0.15.11, S022–S023 0.16.0–0.16.1, S024 1.0.0); ROADMAP.md is an index; LATER.md went into ROADMAP.md (out of scope) and docs/specs/later.md. App unchanged at 0.13.17.
 
 - **V2.6** (2026-11-03): 0.13.17 Long walks shown on the card done (#343). a: under the summary the card says "langer Fußweg am Anfang (22 Min.)" / "am Ende" (English "long walk at the start / at the end (22 min)") when the walk to the first vehicle or from the last one is over 15 minutes; both ends "lange Fußwege: 18 + 22 Min." ("long walks at both ends (18 + 22 min)"). Walks at a change, cycling and walking all the way get no hint. b: measured and left out: the trip with less walking does not come from the same search (each stop keeps only its fastest way there), so it would take a second search per tap with the old 15-minute rule. Over 390 random places from Alexanderplatz, Spandau and Köpenick at 10 Uhr (Node), 192 trips walk over 15 minutes at an end (166 at the end, 8 at the start, 18 at both; median longest walk 21 min, mostly woods and outskirts); for 135 of them the 15-minute rule finds the same trip or one arriving no later, for 45 a trip with less walking arrives a median 17 min later (90th percentile 68 min) and walks 10 min less, and the other 12 find none or one that is later without walking less; the second search takes 10.9 ms in Node, as long as the tap's own (10.8 ms). c: at 360×740 every hint fits on one line in German and English (the longer German wording for both ends wrapped, so it is the short one). Browser at 360×740, fresh visits with the real data served locally, medians of 8 visits in three rounds, main → branch: first map 818 / 873 / 898 → 833 / 887 / 829 ms, tap to trip 131 / 126 / 207 → 146 / 213 / 141 ms (bimodal either side); with the page CPU slowed 4×: first map 1484 / 1615 / 1513 → 1516 / 1508 / 1511 ms, tap to trip 220 / 234 / 247 → 221 / 255 / 219 ms; unchanged within noise (the hint is a few string operations on the card). One note in the Inbox. Next in order: 0.13.18 Ankommen under Bestfall: closer to the map?
 - **V2.5** (2026-11-03): 0.13.16 Steadier Node map timings in the speed check done (#342). a: the probe (`bench/speed.ts`) first draws one warm-up map from every origin, then takes the fastest of five maps per origin (was one warm-up and the fastest of three per origin), and the check (`scripts/speed/check.mjs`) reports the median of five runs per side instead of the fastest of three. Measured with 30 runs each of the old and the new probe in turns on the same code, as A/A pairs of jobs (90 % of differences within, worst seen in brackets). GitHub runner: Alexanderplatz ±9.8 % (17) → ±3.7 % (8), Spandau ±4.2 (10) → ±1.1 (2), Köpenick ±4.2 (7) → ±1.3 (3), Zehlendorf ±1.8 (4) → ±1.1 (2), all maps ±3.3 (6) → ±1.4 % (3); this container (4 cores, noisier): Alexanderplatz ±10.5 (28) → ±5.7 (11), all maps ±3.4 (8) → ±2.6 % (5). Most of the gain is the warm-up pass: the first origin no longer pays for the code warming up. The speed job's routing part takes about 40 s longer (39 → 78 s locally). Tried and left out: a garbage collection before each map (slower and noisier), the median within a run (noisier than its fastest). b: since the medians hold within a few per cent, the maps get their own, tighter limits against main in `scripts/speed/budget.json` (`mapTolerance`): each map 8 % + 5 ms, all maps 5 % + 10 ms (was 15 % + 30 ms, about +40 % on a 110 ms map); loading, snapping and drawing keep 15 % + 30 ms. The Inbox note placed: from 0.13.15 as 0.13.24 Footpaths sooner on a slow line (a decision). The Inbox is empty. Next in order: 0.13.17 Long walks shown on the card.
@@ -171,11 +180,11 @@ Done: chip row (#92), chip bar rounds (#108, #111, #114), edge-to-edge top bar (
 
 Done: Potsdam and the commuter belt (C6, #69), region-ready code with Berlin as one entry in `packages/routing/src/regions.ts` (#126).
 
-Other regions are held: see LATER.md.
+Other regions are held: see docs/specs/later.md.
 
 ### 14. Android app and beta readiness
 
-Not planned (Hendrik, 2026-10-13); items 1 (name under the icon), 6 (smoke test, #241) and 7 (basemap offline, #169) of the beta list were done anyway. See LATER.md.
+Not planned (Hendrik, 2026-10-13); items 1 (name under the icon), 6 (smoke test, #241) and 7 (basemap offline, #169) of the beta list were done anyway. See docs/specs/later.md.
 
 ### 15. Third suggestions list
 
@@ -185,7 +194,7 @@ Done as well: C9 default view, Rings (#254).
 
 ### 16. App stores and showcase
 
-- **Android and iOS app store deployment**: not started, see LATER.md.
+- **Android and iOS app store deployment**: not started, see docs/specs/later.md.
 - **Showcase material**: Done (2026-10-13): 10 live screenshots in showcase/screens/, a German comparison with existing maps in showcase/vergleich-de.md, and both German sharepics re-rendered.
 
 ### 17. Review track
