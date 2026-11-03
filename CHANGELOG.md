@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.13.19] — 2026-11-03
+
+- S002: Typisch lines on a map to a Ziel leaving follow the trips people take: each stop's places shared over its trips by how much of the hour each serves, instead of one pass arriving 40 minutes on. Tap trips' line parts on the drawn lines 57 → 67 %, drawn lines ridden by a tap trip 81 → 93 %, slightly fewer lines. That map +10 ms in Node; at 360×740 first map 1159 → 1146 ms, taps 114 → 110 ms; 4× CPU first map bimodal (medians 1943 → 2043 ms over 18 visits, the worker's own time ~850 → ~875 ms, within noise). Other maps unchanged. Decision 0003.
+
 ## [0.13.18] — 2026-11-03
 
 - S001: Ankommen under Bestfall, the trip on tap is the quickest trip of the hour the map counts for that place, not the last one by the hour's end: card and map agree within a minute for about 90 % of places (before 45 %). Tap at 360×740 +4–9 ms (4× CPU +4 ms), first tap +7–13 ms, first map unchanged. Decision 0002.

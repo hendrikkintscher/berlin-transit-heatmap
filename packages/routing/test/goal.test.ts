@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   goalArrival,
   goalCells,
+  goalShares,
   goalUsage,
   goalWindow,
   heatGrid,
@@ -122,5 +123,43 @@ describe('lines of a map to a destination (goalUsage)', () => {
 
   it('needs a profile with legs', () => {
     expect(() => goalUsage(back, profileTo(D), cells, grid)).toThrow();
+  });
+});
+
+describe('Typisch lines of a map to a destination (goalShares)', () => {
+  const found = travelTimes(back, STOP_POS[D], {
+    profile: { from: -(H10 + 3000), to: -H10 },
+    arriveBy: -H10,
+    trackLegs: true,
+  });
+  const p = found.profile!;
+  const stopSeconds = goalWindow(p, H10, H10 + 600, true);
+  const grid = heatGrid(back, { ...found, stopSeconds }, { cellSizeM: 100, trackStops: true });
+  const cells = goalShares(p, grid, H10, H10 + 600);
+
+  it('spreads every cell over the events of its stop, in shares of the window', () => {
+    let taken = 0;
+    for (let k = 0; k < grid.seconds.length; k++)
+      if (grid.stop![k] >= 0 && grid.seconds[k] < Infinity) taken++;
+    expect(cells.reduce((a, b) => a + b, 0)).toBeCloseTo(taken, 6);
+  });
+
+  it('gives an event the share of the window in which it is the one to take', () => {
+    // At A the U1 leaves every 10 minutes: a 10-minute window is one vehicle's whole
+    // interval, split between the two whose service covers it.
+    const own = cells.subarray(p.offset[A], p.offset[A + 1]);
+    const atA = grid.stop!.filter((s) => s === A).length;
+    expect(own.reduce((a, b) => a + b, 0)).toBeCloseTo(atA, 6);
+    expect(own.filter((x) => x > 0).length).toBeLessThanOrEqual(2);
+  });
+
+  it('rides the line the cells take to the destination', () => {
+    const used = goalUsage(back, p, cells, grid, { minShare: 0 });
+    const ab = used.find((u) => u.a === Math.min(A, B) && u.b === Math.max(A, B))!;
+    expect(ab.names).toEqual(['U1']);
+  });
+
+  it('needs a grid made with trackStops', () => {
+    expect(() => goalShares(p, { ...grid, stop: undefined }, H10, H10 + 600)).toThrow();
   });
 });
