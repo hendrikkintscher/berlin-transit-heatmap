@@ -161,7 +161,8 @@ const browser = await engine.launch(
           '--enable-unsafe-swiftshader',
         ],
       }
-    : {},
+    : // Headless Firefox on a runner without a GPU turns WebGL off: ask for its software one.
+      { firefoxUserPrefs: { 'webgl.force-enabled': true, 'webgl.disabled': false } },
 );
 mkdirSync(opt.out, { recursive: true });
 const report = {};
@@ -239,7 +240,7 @@ for (const size of opt.sizes.split(',')) {
         // (Blocked hosts, such as the live status, show up as failed loads: left out.)
         (m) =>
           (m.type() === 'error' || m.type() === 'warning') &&
-          !m.text().startsWith('Failed to load resource') &&
+          !/^Failed to load resource|^Service Worker registration blocked/.test(m.text()) &&
           errors.push(`console: ${m.text()}`.slice(0, 300)),
       );
       p.on('requestfailed', (r) => {
@@ -247,42 +248,44 @@ for (const size of opt.sizes.split(',')) {
       });
       const q = [sc.query, `lang=${lang}`].filter(Boolean).join('&');
       await p.goto(`${base}?${q}`);
-      try {
-        if (sc.query) await p.waitForFunction(() => window.__results > 0, null, { timeout: 60000 });
-        await p.waitForTimeout(sc.query ? 2500 : 1500);
-        if (sc.tap) {
-          const box = await p.locator('.origin-marker').first().boundingBox();
-          await p.mouse.click(
-            box.x + box.width / 2 + width * 0.18,
-            box.y + box.height / 2 - height * 0.12,
-          );
-          await p.waitForSelector('#trip .trip-leave', { timeout: 30000 });
-          await p.waitForTimeout(1200);
-        }
-        if (sc.drawer) {
-          await p.click('#readout-grip');
-          await p.waitForTimeout(2500);
-        }
-        if (sc.click) {
-          await p.click(sc.click);
-          await p.waitForTimeout(800);
-        }
-        if (sc.type) {
-          await p.keyboard.type(sc.type, { delay: 40 });
-          await p.waitForTimeout(2500);
-        }
-      } catch (e) {
-        errors.push(`flow: ${String(e).split('\n')[0]}`);
-      }
-      const file = `${chrome ? '' : opt.browser + '-'}${size}-${lang}-${key}${opt.safe ? '-safe' : ''}.png`;
-      await p.screenshot({ path: join(opt.out, file) });
-      const f = await p.evaluate(findings);
-      // What the browser offers the map: without WebGL 2 MapLibre cannot draw at all.
+      // Without WebGL 2 MapLibre cannot draw and the app does not start: no flows to wait for.
       const gl = await p.evaluate(() => {
         const c = document.createElement('canvas');
         return c.getContext('webgl2') ? 'webgl2' : c.getContext('webgl') ? 'webgl1' : 'none';
       });
       if (gl !== 'webgl2') errors.push(`gl: ${gl}`);
+      if (gl === 'webgl2')
+        try {
+          if (sc.query)
+            await p.waitForFunction(() => window.__results > 0, null, { timeout: 60000 });
+          await p.waitForTimeout(sc.query ? 2500 : 1500);
+          if (sc.tap) {
+            const box = await p.locator('.origin-marker').first().boundingBox();
+            await p.mouse.click(
+              box.x + box.width / 2 + width * 0.18,
+              box.y + box.height / 2 - height * 0.12,
+            );
+            await p.waitForSelector('#trip .trip-leave', { timeout: 30000 });
+            await p.waitForTimeout(1200);
+          }
+          if (sc.drawer) {
+            await p.click('#readout-grip');
+            await p.waitForTimeout(2500);
+          }
+          if (sc.click) {
+            await p.click(sc.click);
+            await p.waitForTimeout(800);
+          }
+          if (sc.type) {
+            await p.keyboard.type(sc.type, { delay: 40 });
+            await p.waitForTimeout(2500);
+          }
+        } catch (e) {
+          errors.push(`flow: ${String(e).split('\n')[0]}`);
+        }
+      const file = `${chrome ? '' : opt.browser + '-'}${size}-${lang}-${key}${opt.safe ? '-safe' : ''}.png`;
+      await p.screenshot({ path: join(opt.out, file) });
+      const f = await p.evaluate(findings);
       report[file] = { findings: f, errors };
       const tally =
         f.length || errors.length
