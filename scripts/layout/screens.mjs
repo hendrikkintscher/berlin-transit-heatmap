@@ -3,12 +3,13 @@
 //
 //   node scripts/layout/screens.mjs --dist packages/web/dist --out <dir> \
 //     [--data <cache dir for /data/berlin/*>] [--sizes 360x740,390x844] [--langs de,en] [--blank]
+//     [--screens map,trip] [--safe 47,34]
 //
 // Serves the dist on localhost; /data/<region>/* comes from --data, filled from the live site on
 // a miss. The real basemap is used unless --blank (then MapLibre gets a blank style). Writes
 // <out>/<size>-<lang>-<screen>.png and <out>/report.json; prints the findings.
-// Only Chromium is installed in the cloud container: Safari and Firefox are approximated by their
-// user agents and touch settings, and their CSS support is checked separately (see the PR of S021).
+// --browser webkit|firefox needs those Playwright browsers; the cloud container has only Chromium,
+// so the workflow layout.yml runs them on GitHub's runners.
 /* global window, document, getComputedStyle */
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
@@ -17,17 +18,21 @@ import { join, extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright-core');
+const playwright = require('playwright-core');
 
 const { values: opt } = parseArgs({
   options: {
     dist: { type: 'string', default: 'packages/web/dist' },
     data: { type: 'string', default: 'packages/routing/.data/live' },
-    out: { type: 'string', default: 'layout-shots' },
+    out: { type: 'string', default: 'work/layout' },
     sizes: { type: 'string', default: '360x740,390x844,430x932,820x1180,1280x800' },
     langs: { type: 'string', default: 'de,en' },
     screens: { type: 'string', default: '' },
     blank: { type: 'boolean', default: false },
+    // An iPhone's notch and home bar: safe areas top,bottom in px (e.g. 47,34).
+    safe: { type: 'string', default: '' },
+    // chromium (default), webkit (Safari's engine) or firefox, as installed by Playwright.
+    browser: { type: 'string', default: 'chromium' },
   },
 });
 const LIVE = 'https://hendrikkintscher.github.io/berlin-transit-heatmap/data/berlin/';
@@ -140,18 +145,24 @@ function findings() {
 
 const server = await serve(resolve(opt.dist), resolve(opt.data));
 const base = `http://127.0.0.1:${server.address().port}/`;
+const engine = playwright[opt.browser];
+const chrome = opt.browser === 'chromium';
 const exe =
   process.env.CHROMIUM ??
   (existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
-const browser = await chromium.launch({
-  executablePath: exe,
-  args: [
-    '--ignore-gpu-blocklist',
-    '--enable-gpu-compositing',
-    '--use-angle=swiftshader',
-    '--enable-unsafe-swiftshader',
-  ],
-});
+const browser = await engine.launch(
+  chrome
+    ? {
+        executablePath: exe,
+        args: [
+          '--ignore-gpu-blocklist',
+          '--enable-gpu-compositing',
+          '--use-angle=swiftshader',
+          '--enable-unsafe-swiftshader',
+        ],
+      }
+    : {},
+);
 mkdirSync(opt.out, { recursive: true });
 const report = {};
 const only = opt.screens ? opt.screens.split(',') : Object.keys(SCREENS);
@@ -164,7 +175,8 @@ for (const size of opt.sizes.split(',')) {
       const ctx = await browser.newContext({
         viewport: { width, height },
         deviceScaleFactor: 2,
-        isMobile: phone,
+        // Firefox has no mobile mode: its pictures are a narrow desktop window.
+        isMobile: phone && opt.browser !== 'firefox',
         hasTouch: width < 1000,
         serviceWorkers: 'block',
         locale: lang === 'de' ? 'de-DE' : 'en-GB',
@@ -202,6 +214,17 @@ for (const size of opt.sizes.split(',')) {
           }
         };
       });
+      if (opt.safe) {
+        const [top, bottom] = opt.safe.split(',').map(Number);
+        await ctx.addInitScript(
+          ([t, b]) =>
+            document.addEventListener(
+              'DOMContentLoaded',
+              () => (document.documentElement.style.cssText += `--st:${t}px;--sb:${b}px;`),
+            ),
+          [top, bottom],
+        );
+      }
       const p = await ctx.newPage();
       const errors = [];
       p.on('pageerror', (e) => errors.push(String(e)));
@@ -234,7 +257,7 @@ for (const size of opt.sizes.split(',')) {
       } catch (e) {
         errors.push(`flow: ${String(e).split('\n')[0]}`);
       }
-      const file = `${size}-${lang}-${key}.png`;
+      const file = `${chrome ? '' : opt.browser + '-'}${size}-${lang}-${key}${opt.safe ? '-safe' : ''}.png`;
       await p.screenshot({ path: join(opt.out, file) });
       const f = await p.evaluate(findings);
       report[file] = { findings: f, errors };
