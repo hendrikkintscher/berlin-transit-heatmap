@@ -36,6 +36,11 @@ export const LABELS_SOURCE = 'route-labels';
 export const ROUTE_LAYERS = ['routes-casing', 'routes-line', 'routes-label'];
 export const STATIONS_SOURCE = 'stations';
 export const STATIONS_LAYER = 'stations-dot';
+/** Places to go (S019): a dot per place and its name with the minutes. */
+export const PLACES_SOURCE = 'places';
+export const PLACES_LAYERS = ['places-dot', 'places-label'];
+/** Bathing blue, lakes light blue, parks green, viewpoints purple. */
+const PLACE_COLORS = { bathe: '#1971c2', lake: '#4dabf7', park: '#2f9e44', view: '#7048e8' };
 export const DESERT_SOURCE = 'desert';
 export const DESERT_LAYER = 'desert-raster';
 /** Departures-per-hour steps for the stop-frequency dots, and their colours. */
@@ -345,6 +350,52 @@ export function addMapLayers(
     'routes-label',
   );
   addStops(map, empty);
+  // Places to go above the stops, so their names and minutes stay on top (S019).
+  map.addSource(PLACES_SOURCE, { type: 'geojson', data: empty });
+  map.addLayer({
+    id: PLACES_LAYERS[0]!,
+    type: 'circle',
+    source: PLACES_SOURCE,
+    layout: { visibility: 'none' },
+    // A ring in the place's colour, so it does not read as one of the stops' filled dots.
+    paint: {
+      'circle-color': '#ffffff',
+      'circle-stroke-width': 3,
+      'circle-stroke-color': [
+        'match',
+        ['get', 'kind'],
+        'bathe',
+        PLACE_COLORS.bathe,
+        'lake',
+        PLACE_COLORS.lake,
+        'park',
+        PLACE_COLORS.park,
+        PLACE_COLORS.view,
+      ],
+      'circle-radius': 5,
+    },
+  });
+  map.addLayer({
+    id: PLACES_LAYERS[1]!,
+    type: 'symbol',
+    source: PLACES_SOURCE,
+    layout: {
+      visibility: 'none',
+      'text-field': ['get', 'label'],
+      'text-font': BOLD_FONT,
+      'text-size': 12,
+      'text-anchor': 'top',
+      'text-offset': [0, 0.6],
+      'text-max-width': 9,
+      // Bathing spots and lakes win when labels collide (pickPlaces sorts them first).
+      'symbol-sort-key': ['index-of', ['get', 'kind'], ['literal', 'bathe,lake,park,view']],
+    },
+    paint: {
+      'text-color': '#1d1530',
+      'text-halo-color': '#ffffff',
+      'text-halo-width': 1.6,
+    },
+  });
   // The connection to a tapped spot: rides in their line colours without a border, walks
   // dashed, rides by bike as a thin solid line.
   map.addSource(TRIP_SOURCE, { type: 'geojson', data: empty });

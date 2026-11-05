@@ -76,6 +76,9 @@ const de = {
   desert: 'ÖPNV-Wüsten',
   desertHint: 'Wo Fußweg zur Haltestelle plus Wartezeit über 10 Min. liegt (0 bis 5 Uhr: 20 Min.)',
   freqLegend: 'Abfahrten/h',
+  places: 'Ausflugsziele',
+  placesHint:
+    'Seen, Badestellen, Parks und Aussichtspunkte mit ihren Minuten; näher ranzoomen zeigt mehr',
   desertLegend: 'Fußweg + Warten',
   min: 'Min.',
   stationFreq: '<b>{name}</b> · {n} Abfahrten/h',
@@ -395,6 +398,8 @@ const en: Record<Key, string> = {
   desert: 'Transit deserts',
   desertHint: 'Where the walk to a stop plus the wait is over 10 min (20 min from 00:00 to 05:00)',
   freqLegend: 'Departures/h',
+  places: 'Places to go',
+  placesHint: 'Lakes, bathing spots, parks and viewpoints with their minutes; zoom in to see more',
   desertLegend: 'Walk + wait',
   min: 'min',
   stationFreq: '<b>{name}</b> · {n} departures/h',

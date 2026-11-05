@@ -18,7 +18,17 @@ import {
   MEET_TICKS,
   bandLabel,
 } from './colors';
-import { formatDate, shortStop, escapeHtml } from './format';
+import { formatDate, gridSeconds, shortStop, escapeHtml } from './format';
+import {
+  PLACE_CLASSES,
+  PLACE_SOURCE,
+  PLACE_TILE_LAYERS,
+  labelPoint,
+  pickPlaces,
+  placeOf,
+  placesCollection,
+  type Place,
+} from './places';
 import { stopName } from './stop-name';
 import { initSearch } from './search-bar';
 import { initFavouritePlaces } from './fav-places';
@@ -36,6 +46,8 @@ import {
   LABELS_SOURCE,
   OUTLINE_LAYERS,
   OUTLINES_SOURCE,
+  PLACES_LAYERS,
+  PLACES_SOURCE,
   styleOutlines,
   ROUTE_LAYERS,
   ROUTES_SOURCE,
@@ -926,10 +938,44 @@ map.once('style.load', () => {
   showLayers();
 });
 
+// ---------- places to go (S019) ----------
+// Lakes, bathing spots, parks and viewpoints from the base map's loaded tiles, with their
+// minutes from the shown map's grid: redone once the map is idle after a move or a new map.
+let placesDirty = true;
+function showPlaces() {
+  if (!state.mapReady) return;
+  const r = state.result;
+  // Only on maps whose grid holds minutes to the place (not comparisons or "home by").
+  const on = state.places && !!r && !r.compare && !r.home;
+  for (const id of PLACES_LAYERS) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+  if (!on) return;
+  const found: Place[] = [];
+  for (const layer of PLACE_TILE_LAYERS) {
+    const features = map.querySourceFeatures(PLACE_SOURCE, {
+      sourceLayer: layer,
+      filter: ['in', ['get', 'class'], ['literal', PLACE_CLASSES[layer]]],
+    });
+    for (const f of features) {
+      const at = labelPoint(f.geometry);
+      const p = at && placeOf(layer, f.properties, at[0], at[1]);
+      if (p) found.push(p);
+    }
+  }
+  const list = pickPlaces(found, (lat, lon) => gridSeconds(r, lat, lon));
+  (map.getSource(PLACES_SOURCE) as GeoJSONSource).setData(placesCollection(list, t('min')));
+}
+map.on('moveend', () => (placesDirty = true));
+map.on('idle', () => {
+  if (!placesDirty || !state.places) return;
+  placesDirty = false;
+  showPlaces();
+});
+
 /** Shows or hides the stop-frequency and desert layers, asking the worker for data once. */
 function showLayers() {
   renderLayerLegend();
   if (!state.mapReady) return;
+  showPlaces();
   const data = state.layers[state.window];
   if ((state.freq || state.desert) && !data && !layersRequested.has(state.window)) {
     layersRequested.add(state.window);
@@ -1077,6 +1123,7 @@ function showResult(r: Result, rings = true) {
   drawHeat(r);
   if (rings) showLines(r);
   showHeat();
+  placesDirty = true;
   map.triggerRepaint();
   // For timing the first load (roadmap 0.13.0): the first map is on its way to the screen.
   if (!firstMapShown) {

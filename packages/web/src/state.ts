@@ -91,6 +91,8 @@ export interface State {
   /** Stop-frequency dots and transit-desert shading. */
   freq: boolean;
   desert: boolean;
+  /** Lakes, bathing spots, parks and viewpoints with their minutes (S019). */
+  places: boolean;
   /** Isochrone outlines every 5 min; on by default, so the minutes read without colours. */
   iso: boolean;
   /**
@@ -138,6 +140,7 @@ export function createState(read = readNumber, when = NOW_WHEN): State {
     routes: true,
     freq: false,
     desert: false,
+    places: false,
     iso: true,
     heat: read('heat', 1) > 0,
     limit: 0,
