@@ -5,7 +5,7 @@ type: decision
 kind: research
 priority: P2
 size: S
-needs: S036
+needs: S040
 status: open
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).

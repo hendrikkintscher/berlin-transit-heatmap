@@ -36,4 +36,5 @@ All steps to 1.0.0 are done (2026-11-05); what shipped is in [CHANGELOG.md](CHAN
 
 - S037 · build · fix · P1 · S · Trip card times match the minutes (Ring trip change, overtaking trips)
 - S038 · build · fix · P1 · S · needs S036 · Stay on instead of walking to the same next vehicle
-- S039 · decision · research · P2 · S · needs S036 · A bus instead of a long walk to the same train
+- S040 · build · chore · P1 · M · needs S036 · Route quality suite: feasibility, reference optimality, all modes
+- S039 · decision · research · P2 · S · needs S040 · A bus instead of a long walk to the same train
