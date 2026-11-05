@@ -47,3 +47,4 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 - S022 · build · chore · P1 · S · needs S021 · New screenshots and sharepics
 - S023 · build · feature · P3 · S · needs S022 · Sharepic per use case
 - S024 · build · chore · P1 · S · needs S021, S022 · Release 1.0.0
+- S035 · build · fix · P2 · XS · A clear message when the browser cannot draw the map
