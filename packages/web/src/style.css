@@ -2381,3 +2381,9 @@ body.special .legend {
 body:has(.pop:not([hidden]), dialog[open]) #tip {
   visibility: hidden;
 }
+/* The browser cannot draw the map (S035): only the start card with the message stays. */
+body.no-map #chips,
+body.no-map #search,
+body.no-map .bottom {
+  display: none;
+}
