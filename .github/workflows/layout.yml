@@ -43,6 +43,7 @@ jobs:
       - run: pnpm exec playwright-core install --with-deps ${{ matrix.browser }}
       - name: Screenshots
         run: |
+          mkdir -p work
           node scripts/layout/screens.mjs --browser ${{ matrix.browser }} --out work/layout \
             --data work/data --sizes 360x740,390x844 --langs de,en | tee work/layout.txt
       - name: Findings
