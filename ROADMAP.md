@@ -40,7 +40,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · F. New questions to ask (0.15)
 
-
 ### Later · G. Showcase and release (0.16, 1.0)
 
 - S022 · build · chore · P1 · S · needs S019, S035 · New screenshots and sharepics
