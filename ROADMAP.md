@@ -19,7 +19,7 @@ agreement between the trip on tap and the map's minutes. A step that slows any t
 
 Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/specs/later.md).
 
-- Desktop browser layout · personal heatmap colours · other regions (Oldenburg first, after 1.0) ·
+- Desktop browser layout · personal heatmap colours · two start points side by side · other regions (Oldenburg first, after 1.0) ·
   own web address · app store release (iOS)
 
 ## Steps
@@ -41,11 +41,9 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 ### Next · F. New questions to ask (0.15)
 
 - S019 · build · feature · P3 · M · Places layer
-- S020 · build · feature · P3 · M · Two start points side by side
 
 ### Later · G. Showcase and release (0.16, 1.0)
 
 - S022 · build · chore · P1 · S · needs S021 · New screenshots and sharepics
 - S023 · build · feature · P3 · S · needs S022 · Sharepic per use case
 - S024 · build · chore · P1 · S · needs S021, S022 · Release 1.0.0
-- S033 · decision · research · P3 · S · Prerendered colour map on a fresh start (a default place such as Alexanderplatz)
