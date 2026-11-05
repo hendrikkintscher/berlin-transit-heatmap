@@ -3,6 +3,7 @@
 //
 //   node scripts/speed/browser.mjs --dist packages/web/dist --data packages/routing/.data \
 //     [--base <other dist, e.g. main's>] [--visits 7] [--cpu 4] [--query "bis=30"]
+//   node scripts/speed/browser.mjs --url https://hendrikkintscher.github.io/berlin-transit-heatmap/
 //
 // Serves each dist on localhost with /data/<region>/* from --data (a file missing there is
 // fetched from the live site and kept, unless --no-fetch), blocks every other host and
@@ -29,6 +30,8 @@ const { values: opt } = parseArgs({
     cpu: { type: 'string', default: '1' },
     query: { type: 'string', default: '' },
     'no-fetch': { type: 'boolean', default: false },
+    // Time a deployed site instead of a local dist, e.g. the live one (S024): network included.
+    url: { type: 'string' },
   },
 });
 const LIVE = 'https://hendrikkintscher.github.io/berlin-transit-heatmap/data/berlin/';
@@ -138,15 +141,17 @@ const median = (a) => {
 
 const cpu = Number(opt.cpu);
 const visits = Number(opt.visits);
-const runs = [...(opt.base ? [['base', opt.base]] : []), ['dist', opt.dist]];
+const runs = opt.url
+  ? [['url', opt.url]]
+  : [...(opt.base ? [['base', opt.base]] : []), ['dist', opt.dist]];
 const browser = await chromium.launch(launchOptions());
 for (const [name, dist] of runs) {
-  const server = await serve(resolve(dist), resolve(opt.data));
+  const server = opt.url ? null : await serve(resolve(dist), resolve(opt.data));
   const q = `from=52.52190,13.41320&t=weekday-10&lang=de${opt.query ? `&${opt.query}` : ''}`;
-  const url = `http://127.0.0.1:${server.address().port}/?${q}`;
+  const url = server ? `http://127.0.0.1:${server.address().port}/?${q}` : `${opt.url}?${q}`;
   const rows = [];
   for (let v = 0; v < visits; v++) rows.push(await visit(browser, url, cpu));
-  server.close();
+  server?.close();
   const r = (x) => Math.round(x);
   console.log(
     `${name} (${dist}), cpu ${cpu}x, ${visits} visits: first map ${r(median(rows.map((x) => x.firstMap)))} ms` +
