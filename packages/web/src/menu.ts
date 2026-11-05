@@ -47,6 +47,7 @@ export function initMenu(deps: MenuDeps) {
   const walkButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-walk]')];
   const routesToggle = $<HTMLInputElement>('routes-toggle');
   const freqToggle = $<HTMLInputElement>('freq-toggle');
+  const placesToggle = $<HTMLInputElement>('places-toggle');
   const desertToggle = $<HTMLInputElement>('desert-toggle');
   const isoToggle = $<HTMLInputElement>('iso-toggle');
   const heatToggle = $<HTMLInputElement>('heat-toggle');
@@ -148,6 +149,7 @@ export function initMenu(deps: MenuDeps) {
   for (const [toggle, name] of [
     [freqToggle, 'freq'],
     [desertToggle, 'desert'],
+    [placesToggle, 'places'],
   ] as const) {
     toggle.checked = state[name];
     toggle.addEventListener('change', () => {

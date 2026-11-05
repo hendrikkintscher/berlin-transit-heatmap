@@ -19,6 +19,7 @@ const BASE: LinkState = {
   routes: true,
   freq: false,
   desert: false,
+  places: false,
   iso: true,
   heat: true,
   limit: 0,
@@ -64,6 +65,7 @@ describe('links', () => {
       routes: false,
       freq: true,
       desert: true,
+      places: true,
       iso: false,
       heat: false,
       limit: 45,
@@ -71,7 +73,7 @@ describe('links', () => {
     const q = linkQuery(full, NOW, 'en');
     expect(q).toBe(
       'from=52.50370%2C13.41080&with=52.52000%2C13.36940&with=52.48000%2C13.43000&names=Anna%7C%7CCem&to=52.43915%2C13.47215&trip=37419-41203&t=weekend-02' +
-        '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=noheat%2Cfreq%2Cdesert%2Cnoiso&bis=45&lang=en',
+        '&dir=arr&m=best&cmp=weekday-10&walk=4&sf=1&go=bike&routes=0&layers=noheat%2Cfreq%2Cdesert%2Cplaces%2Cnoiso&bis=45&lang=en',
     );
     expect(readLink(`?${q}`, BASE)).toEqual(full);
   });

@@ -6,7 +6,7 @@ kind: feature
 priority: P3
 size: M
 needs: -
-status: open
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -16,8 +16,11 @@ status: open
 The map answers "Wohin jetzt?": lakes, pools, parks and similar places shown with their minutes.
 
 ## Acceptance criteria
-- [ ] A places layer shows such places with their minutes from the start
-- [ ] Timings at 360×740 (also with the page CPU slowed 4×) unchanged against main, reported in the PR
+- [x] A places layer shows such places with their minutes from the start
+- [x] Timings at 360×740 (also with the page CPU slowed 4×) unchanged against main, reported in the PR
 
 ## Notes
 - Planned as 0.15.9 (design list D4).
+- Built from the base map's own tiles (OpenFreeMap / OpenMapTiles: water_name, poi, park), not a new
+  OSM extract: Ebenen > Ausflugsziele; minutes from the shown map's grid. Bathing spots and small lakes
+  come with the tiles at zoom 14, lakes and forests already in the city view.

@@ -80,6 +80,12 @@ const SCREENS = {
   search: { query: '', click: '#hint-search', type: 'Alexanderpl' },
   menu: { query: START, click: '#menu-btn' },
   treffpunkt: { query: `${START}&with=52.50700,13.33200` },
+  // (The places' labels wait for their font's glyphs: a little longer before the picture.)
+  places: { query: `${START}&layers=places`, wheel: [0.5, 0.5, 0] },
+  // Zoomed in towards the south-west (Grunewald, the lakes).
+  'places-zoom': { query: `${START}&layers=places`, wheel: [0.25, 0.72, 5] },
+  // From S Wannsee, zoomed in on the lakes and bathing spots there.
+  'places-wannsee': { query: 'from=52.42090,13.17950&layers=places', wheel: [0.5, 0.45, 4] },
 };
 
 /** What looks broken on the page: outside the screen, cut-off text, small targets, overlaps. */
@@ -259,6 +265,15 @@ for (const size of opt.sizes.split(',')) {
           if (sc.query)
             await p.waitForFunction(() => window.__results > 0, null, { timeout: 60000 });
           await p.waitForTimeout(sc.query ? 2500 : 1500);
+          if (sc.wheel) {
+            const [fx, fy, steps] = sc.wheel;
+            await p.mouse.move(width * fx, height * fy);
+            for (let i = 0; i < steps; i++) {
+              await p.mouse.wheel(0, -500);
+              await p.waitForTimeout(600);
+            }
+            await p.waitForTimeout(5000);
+          }
           if (sc.tap) {
             const box = await p.locator('.origin-marker').first().boundingBox();
             await p.mouse.click(
