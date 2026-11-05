@@ -10,6 +10,7 @@ import type { FromWorker, ToWorker } from './protocol';
 import { dataBase } from './region';
 import { earlyLoad, linkHasStart } from './early';
 import { pageDataVersions, setDataVersions } from './data-url';
+import { isNoMapError, noMapLang, showNoMap } from './nomap';
 
 declare global {
   interface Window {
@@ -65,7 +66,17 @@ import('./main').then(
     }
     if (!withStart) loadFirst();
   },
-  () => {
+  (err: unknown) => {
+    // The browser cannot draw the map (no WebGL, S035): say so instead of an empty page.
+    if (isNoMapError(err)) {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem('lang');
+      } catch {
+        // Storage blocked: the link's language or German.
+      }
+      return showNoMap(document, noMapLang(location.search, stored));
+    }
     // The app's code did not load (offline with a pruned cache, or a deploy in between):
     // reload once to get the current files, rather than staying on a page without a map.
     try {
