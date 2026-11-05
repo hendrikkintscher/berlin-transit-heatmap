@@ -68,11 +68,12 @@ Set `GTFS_TAG=gtfs-2026-10-02` (for example) to fetch a specific snapshot instea
 ```
 .github/workflows/         CI, data refreshes, timetable build, Pages deploy, version tags
 .claude/                   Claude Code hooks, skills (/step /spec /handoff /groom), reviewer agent
-scripts/                   check.sh, steps.sh (roadmap steps), gtfs/, publish/, smoke/, speed/
+scripts/                   check.sh, steps.sh (roadmap steps), gtfs/, layout/, publish/, showcase/, smoke/, speed/
 packages/timetable-build/  GTFS -> compact timetable files
 packages/routing/          RAPTOR engine and heatmap grid
 packages/web/              web app
 docs/                      steps/ (one file per roadmap step), decisions/, specs/
+showcase/                  screenshots (screens/) and sharepics (sharepics/), made by scripts/showcase/build.mjs
 ```
 
 How the work is planned and built (roadmap steps, decisions, versions) is in [CLAUDE.md](CLAUDE.md),

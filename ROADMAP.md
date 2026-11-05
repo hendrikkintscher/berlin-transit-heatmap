@@ -42,6 +42,5 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Later · G. Showcase and release (0.16, 1.0)
 
-- S022 · build · chore · P1 · S · needs S019, S035 · New screenshots and sharepics
 - S023 · build · feature · P3 · S · needs S022 · Sharepic per use case
 - S024 · build · chore · P1 · S · needs S022, S035 · Release 1.0.0
