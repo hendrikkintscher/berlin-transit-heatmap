@@ -2365,3 +2365,13 @@ body.special .legend {
   -webkit-user-select: none;
   user-select: none;
 }
+/* iOS Safari zooms the page into a form field under 16 px when it gets focus (S021): the time
+   field, the compare choices and the favourites' list choice keep 16 px there. Only iOS
+   matches this test, so the other browsers keep their sizes. */
+@supports (-webkit-touch-callout: none) {
+  .when-time input,
+  .compare-row select,
+  .fav-list select {
+    font-size: 16px;
+  }
+}

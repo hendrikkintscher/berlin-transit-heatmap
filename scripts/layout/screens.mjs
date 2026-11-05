@@ -118,9 +118,9 @@ function findings() {
       s.textOverflow !== 'ellipsis'
     )
       out.push({ kind: 'cut', el: name(el), text: el.textContent.trim().slice(0, 40) });
-    // Touch targets under 44 px.
+    // Touch targets under 40 px (the panels' and menu's 40 px buttons are deliberate, S029).
     if (el.matches('button, a[href], [role="button"], input, select, summary') && r.top < H) {
-      if (r.width < 44 || r.height < 44)
+      if (r.width < 40 || r.height < 40)
         out.push({ kind: 'small', el: name(el), w: Math.round(r.width), h: Math.round(r.height) });
     }
   }
