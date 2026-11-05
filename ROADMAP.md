@@ -30,16 +30,4 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
      Themes (### headings) group the steps in Now / Next / Later order; a new step lands at the end,
      moving its line into its theme is fine. -->
 
-### Now · B. Fast and steady loading and measuring (0.13)
-
-### Next · C. Map handling (0.14)
-
-### Next · D. Clear and welcoming looks (0.15)
-
-### Next · E. Treffpunkt that shows fairness (0.15)
-
-### Next · F. New questions to ask (0.15)
-
-### Later · G. Showcase and release (0.16, 1.0)
-
-- S024 · build · chore · P1 · S · needs S022, S035 · Release 1.0.0
+All steps to 1.0.0 are done (2026-11-05); what shipped is in [CHANGELOG.md](CHANGELOG.md).

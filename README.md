@@ -4,6 +4,19 @@ How long does it take to get from one point in Berlin to everywhere else by publ
 
 Times are for leaving now or at a chosen hour of today, the coming week or a typical weekday or weekend, or for arriving by an hour. Travel times include walking to the first stop and from the last stop along real streets and paths. Everything runs in the browser, with no server to maintain.
 
+## What's in 1.0
+
+- **The map:** pick a start (tap, search, or where you are) and see the travel time to every spot in Berlin as time lines, with colours under Ebenen; on foot to and from stops along real streets and paths.
+- **A tap for the trip:** the minutes and the connection to any place (lines, changes, walks, when to leave); ⇅ swaps start and end; press and hold to move the start.
+- **Zeit:** now, a chosen hour of today or the coming week, a typical weekday or weekend; leave at or arrive by; next connection, typical (wait included) or best case; compare two times.
+- **Unterwegs:** transit, bike + train or bike only; walking speed; step-free trips.
+- **Questions on the start card:** "Was erreiche ich in 30 Min.?" (Bis N Min.), "Wo treffen wir uns?" (Treffpunkt for up to five people, with fair suggestions), "Wo soll ich wohnen?" (Wohnlage from your favourite places).
+- **Layers:** lines the fastest trips use, departures per hour, transit deserts, places to go (lakes, bathing spots, parks, forests, viewpoints with their minutes).
+- **Timetable changes** for the chosen day, from the VBB timetable, refreshed every night.
+- **Everyday use:** favourite places, links that open the same map, German and English, installable as an app that works offline; the first map in about a second on a phone-sized screen.
+
+Screenshots and sharepics are in [showcase/](showcase/).
+
 ## Packages
 
 - [`packages/timetable-build`](packages/timetable-build/README.md): turns the GTFS feed and OpenStreetMap footpaths into the binary hourly timetables and the walking network.

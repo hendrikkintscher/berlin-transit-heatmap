@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-11-05
+
+- S024: Release 1.0.0. Every P1 and P2 step of the roadmap is live; README.md has a short "What's in 1.0" list and links the showcase. Final check on the live site (0.16.1, same code as 1.0.0) at 360×740 with the real base map: first screen, map, tap to trip (with the live delay) and the places layer, no page errors. `scripts/speed/browser.mjs --url <site>` times a deployed site, network included. Live timings, medians of 7 fresh visits: first map 1343 ms, tap to trip 117 ms; 4× CPU 1657 ms and 111 ms. The app code is unchanged from 0.16.1.
+
 ## [0.16.1] — 2026-11-05
 
 - S023: Sharepic per use case. One picture per question of the start card, each with the screen that answers it: `showcase/sharepics/de-reach.jpg` "Was erreiche ich in 30 Min.?" (the map with Bis 30 Min.), `de-meet.jpg` "Wo treffen wir uns?" (Treffpunkt), `de-living.jpg` "Wo soll ich wohnen?" (Wohnlage with three favourite places), and `de-places.jpg` "Wohin jetzt?" (the places layer at Wannsee). The sharepics' screenshots are taken without the bottom tip (`scripts/layout/screens.mjs --notip`, also used for `de-app.jpg` now); screens.mjs has two new screens, `reach` and `living` (with saved favourites), and both are in `showcase/screens/`. The app itself is unchanged. Timings at 360×740, medians of 7, main → branch (same app code, so noise): first map 1114 → 1230 ms, tap to trip 276 → 295 ms; 4× CPU 1690 → 1332 ms and 133 → 187 ms.
