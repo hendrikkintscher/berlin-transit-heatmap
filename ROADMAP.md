@@ -40,7 +40,6 @@ Becomes a step only when Hendrik says so. Details in [docs/specs/later.md](docs/
 
 ### Next · F. New questions to ask (0.15)
 
-- S019 · build · feature · P3 · M · Places layer
 
 ### Later · G. Showcase and release (0.16, 1.0)
 
