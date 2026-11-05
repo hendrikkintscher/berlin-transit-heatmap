@@ -228,6 +228,14 @@ for (const size of opt.sizes.split(',')) {
       const p = await ctx.newPage();
       const errors = [];
       p.on('pageerror', (e) => errors.push(String(e)));
+      // Console errors and failed requests too: a browser that cannot run the app says why here.
+      p.on(
+        'console',
+        (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`.slice(0, 300)),
+      );
+      p.on('requestfailed', (r) => {
+        if (r.url().startsWith(base)) errors.push(`request: ${r.url()} ${r.failure()?.errorText}`);
+      });
       const q = [sc.query, `lang=${lang}`].filter(Boolean).join('&');
       await p.goto(`${base}?${q}`);
       try {
