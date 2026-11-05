@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-11-06
+
+- S036: Route quality check against VBB and Transitous (`packages/routing/bench/providers.ts`, pieces with tests in `bench/quality.ts`). Random places near stops, 2–25 km apart, at random minutes on the coming six days; the app's trip on tap as the worker makes it (one pass leaving at that minute, the cells around the place, laterStart, 5 km/h, walks up to 30 min) against VBB's own planner (HAFAS, v6.vbb.transport.rest) and Transitous (MOTIS), all on planned times; answers cached, `--start` and `--seed` repeat a run. 300 trips (seed 36, from 2026-11-06): against VBB the app arrives 0.5 min earlier in the median, 3+ min later in 9 % and 3+ min earlier in 22 % (it allows walks up to 30 min); against Transitous 1.0 min earlier, 3+ min later in 19 % (Transitous also uses other feeds, e.g. an RB10 VBB does not offer). Walks agree: for the same first or last stop the app's walk is 0.4–0.5 min shorter in the median. Found: the trip card's ride times are wrong in 8 trips (3 %: a Ring ride across its trip change, and the next vehicle of the ride's own route instead of the one the search rode) → S037; the trip gets off a stop early to walk to the same next vehicle in 4 %, and off the last vehicle early in 1 % → S038 (what Hendrik saw); with the same arrival as VBB it walks 3+ min more at the start or end in 10 % (a long walk instead of a feeder bus to the same train) → S039. The app itself is unchanged.
+
 ## [1.0.0] — 2026-11-05
 
 - S024: Release 1.0.0. Every P1 and P2 step of the roadmap is live; README.md has a short "What's in 1.0" list and links the showcase. Final check on the live site (0.16.1, same code as 1.0.0) at 360×740 with the real base map: first screen, map, tap to trip (with the live delay) and the places layer, no page errors. `scripts/speed/browser.mjs --url <site>` times a deployed site, network included. Live timings, medians of 7 fresh visits: first map 1343 ms, tap to trip 117 ms; 4× CPU 1657 ms and 111 ms. The app code is unchanged from 0.16.1.
