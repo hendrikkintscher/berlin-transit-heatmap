@@ -7,6 +7,10 @@ Each entry names the step (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [0.16.1] — 2026-11-05
+
+- S023: Sharepic per use case. One picture per question of the start card, each with the screen that answers it: `showcase/sharepics/de-reach.jpg` "Was erreiche ich in 30 Min.?" (the map with Bis 30 Min.), `de-meet.jpg` "Wo treffen wir uns?" (Treffpunkt), `de-living.jpg` "Wo soll ich wohnen?" (Wohnlage with three favourite places), and `de-places.jpg` "Wohin jetzt?" (the places layer at Wannsee). The sharepics' screenshots are taken without the bottom tip (`scripts/layout/screens.mjs --notip`, also used for `de-app.jpg` now); screens.mjs has two new screens, `reach` and `living` (with saved favourites), and both are in `showcase/screens/`. The app itself is unchanged. Timings at 360×740, medians of 7, main → branch (same app code, so noise): first map 1114 → 1230 ms, tap to trip 276 → 295 ms; 4× CPU 1690 → 1332 ms and 133 → 187 ms.
+
 ## [0.16.0] — 2026-11-05
 
 - S022: New screenshots and sharepics. `showcase/screens/` holds the eleven main screens of the current app at 390×844 in German, with the real base map: first screen, map, trip, drawer, Zeit, search, menu, Treffpunkt and the places layer (city, zoomed in, from Wannsee); as WebP, about 150 KB each. `showcase/sharepics/de-app.jpg` is the new German sharepic (1080×1080: "Wie lange brauchst du mit Bus und Bahn überallhin?" beside a phone with the map). Both come from `scripts/showcase/build.mjs`, which takes the screenshots of `scripts/layout/screens.mjs` (English ones with `--langs en`). The app itself is unchanged; Prettier now skips `packages/routing/.data/` (the screenshots' data cache, already ignored by git). Timings at 360×740, medians of 7, main → branch (same app code, so noise): first map 998 → 903 ms, tap to trip 365 → 256 ms; 4× CPU 1289 → 1320 ms and 129 → 149 ms.

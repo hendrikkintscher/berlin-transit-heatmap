@@ -3,7 +3,7 @@
 //
 //   node scripts/layout/screens.mjs --dist packages/web/dist --out <dir> \
 //     [--data <cache dir for /data/berlin/*>] [--sizes 360x740,390x844] [--langs de,en] [--blank]
-//     [--screens map,trip] [--safe 47,34]
+//     [--screens map,trip] [--safe 47,34] [--notip]
 //
 // Serves the dist on localhost; /data/<region>/* comes from --data, filled from the live site on
 // a miss. The real basemap is used unless --blank (then MapLibre gets a blank style). Writes
@@ -31,6 +31,8 @@ const { values: opt } = parseArgs({
     blank: { type: 'boolean', default: false },
     // An iPhone's notch and home bar: safe areas top,bottom in px (e.g. 47,34).
     safe: { type: 'string', default: '' },
+    // Close the bottom tip before each picture (for the sharepics, S023).
+    notip: { type: 'boolean', default: false },
     // chromium (default), webkit (Safari's engine) or firefox, as installed by Playwright.
     browser: { type: 'string', default: 'chromium' },
   },
@@ -70,6 +72,12 @@ function serve(dist, data) {
 }
 
 const START = 'from=52.52190,13.41320';
+/** Favourite places for the where-to-live map: work, a friend, the climbing hall. */
+const FAVOURITES = [
+  { id: 'f1', label: 'Arbeit', lat: 52.5096, lon: 13.376, weight: 3 },
+  { id: 'f2', label: 'Freunde', lat: 52.4991, lon: 13.418, weight: 2 },
+  { id: 'f3', label: 'Uni', lat: 52.4527, lon: 13.29, weight: 1 },
+];
 /** Each screen: the link to open and what to do before the picture. */
 const SCREENS = {
   first: { query: '' },
@@ -80,6 +88,10 @@ const SCREENS = {
   search: { query: '', click: '#hint-search', type: 'Alexanderpl' },
   menu: { query: START, click: '#menu-btn' },
   treffpunkt: { query: `${START}&with=52.50700,13.33200` },
+  // The start card's questions (S023): "Was erreiche ich in 30 Min.?" and "Wo soll ich wohnen?"
+  // (the latter with three favourite places already saved, as after its first search).
+  reach: { query: `${START}&bis=30` },
+  living: { query: '', favourites: true, click: '[data-ask="living"]', wait: 5000 },
   // (The places' labels wait for their font's glyphs: a little longer before the picture.)
   places: { query: `${START}&layers=places`, wheel: [0.5, 0.5, 0] },
   // Zoomed in towards the south-west (Grunewald, the lakes).
@@ -226,6 +238,11 @@ for (const size of opt.sizes.split(',')) {
         Counted.prototype = W.prototype;
         window.Worker = Counted;
       });
+      if (sc.favourites)
+        await ctx.addInitScript(
+          (list) => localStorage.setItem('berlin:favourites', JSON.stringify(list)),
+          FAVOURITES,
+        );
       if (opt.safe) {
         const [top, bottom] = opt.safe.split(',').map(Number);
         await ctx.addInitScript(
@@ -289,11 +306,15 @@ for (const size of opt.sizes.split(',')) {
           }
           if (sc.click) {
             await p.click(sc.click);
-            await p.waitForTimeout(800);
+            await p.waitForTimeout(sc.wait ?? 800);
           }
           if (sc.type) {
             await p.keyboard.type(sc.type, { delay: 40 });
             await p.waitForTimeout(2500);
+          }
+          if (opt.notip && (await p.locator('#tip-close').isVisible())) {
+            await p.click('#tip-close');
+            await p.waitForTimeout(600);
           }
         } catch (e) {
           errors.push(`flow: ${String(e).split('\n')[0]}`);

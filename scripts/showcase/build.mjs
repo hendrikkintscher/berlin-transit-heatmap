@@ -1,7 +1,9 @@
 // Showcase pictures (S022): the app's screenshots as small WebP files and sharepics made from them.
 //
 //   LANG=de_DE.UTF-8 node scripts/layout/screens.mjs --out work/shots --sizes 390x844 --langs de
-//   node scripts/showcase/build.mjs --shots work/shots --out showcase [--langs de] [--size 390x844]
+//   LANG=de_DE.UTF-8 node scripts/layout/screens.mjs --out work/pics --sizes 390x844 --langs de \
+//     --screens map,reach,treffpunkt,living,places-wannsee --notip
+//   node scripts/showcase/build.mjs --shots work/shots --pics work/pics --out showcase [--langs de]
 //
 // (LANG: headless Chromium writes the time field in its own locale, else "04:54 PM" in German.)
 // Reads <shots>/<size>-<lang>-<screen>.png (as screens.mjs writes them, real basemap) and writes
@@ -21,6 +23,8 @@ const playwright = require('playwright-core');
 const { values: opt } = parseArgs({
   options: {
     shots: { type: 'string', default: 'work/shots' },
+    // The sharepics' screenshots, taken with screens.mjs --notip (default: --shots).
+    pics: { type: 'string', default: '' },
     out: { type: 'string', default: 'showcase' },
     langs: { type: 'string', default: 'de' },
     size: { type: 'string', default: '390x844' },
@@ -42,6 +46,8 @@ const SCREENS = [
   'places',
   'places-zoom',
   'places-wannsee',
+  'reach',
+  'living',
 ];
 
 /** Each sharepic: the screenshot it shows and its words per language. */
@@ -55,6 +61,51 @@ const PICS = {
     en: {
       title: 'How long does it take to get anywhere by bus and train?',
       sub: 'Tap the map of Berlin and see the minutes.',
+    },
+  },
+  // One picture per question of the start card (S023), and "Wohin jetzt?" for the places.
+  reach: {
+    shot: 'reach',
+    de: {
+      title: 'Was erreiche ich in 30 Min.?',
+      sub: 'Was du in einer halben Stunde mit Bus und Bahn schaffst, bleibt klar. Der Rest wird blass.',
+    },
+    en: {
+      title: 'What can I reach in 30 min?',
+      sub: 'What you reach by bus and train in half an hour stays clear. The rest fades.',
+    },
+  },
+  meet: {
+    shot: 'treffpunkt',
+    de: {
+      title: 'Wo treffen wir uns?',
+      sub: 'Zwei Startpunkte, eine Karte: Vorschläge, die für alle gleich gut liegen.',
+    },
+    en: {
+      title: 'Where do we meet?',
+      sub: 'Two starts, one map: suggestions that suit everyone alike.',
+    },
+  },
+  living: {
+    shot: 'living',
+    de: {
+      title: 'Wo soll ich wohnen?',
+      sub: 'Arbeit, Freunde, Uni: die Karte zeigt, wo du im Schnitt am schnellsten überall bist.',
+    },
+    en: {
+      title: 'Where should I live?',
+      sub: 'Work, friends, uni: the map shows where you reach them all quickest on average.',
+    },
+  },
+  places: {
+    shot: 'places-wannsee',
+    de: {
+      title: 'Wohin jetzt?',
+      sub: 'Seen, Badestellen, Parks und Wälder, jeweils mit den Minuten ab deinem Start.',
+    },
+    en: {
+      title: 'Where to now?',
+      sub: 'Lakes, bathing spots, parks and forests, each with the minutes from your start.',
     },
   },
 };
@@ -91,7 +142,7 @@ const browser = await playwright.chromium.launch({ executablePath: exe });
 const page = await browser.newPage({ viewport: { width: 1080, height: 1080 } });
 mkdirSync(join(opt.out, 'screens'), { recursive: true });
 mkdirSync(join(opt.out, 'sharepics'), { recursive: true });
-const png = (lang, screen) => join(opt.shots, `${opt.size}-${lang}-${screen}.png`);
+const png = (lang, screen, dir = opt.shots) => join(dir, `${opt.size}-${lang}-${screen}.png`);
 
 for (const lang of opt.langs.split(',')) {
   for (const screen of SCREENS) {
@@ -119,7 +170,7 @@ for (const lang of opt.langs.split(',')) {
     console.log(out);
   }
   for (const [name, pic] of Object.entries(PICS)) {
-    const file = png(lang, pic.shot);
+    const file = png(lang, pic.shot, opt.pics || opt.shots);
     if (!existsSync(file) || !pic[lang]) continue;
     await page.setContent(sharepic(pic[lang], readFileSync(file)));
     await page.evaluate(() => Promise.all([...document.images].map((i) => i.decode())));
