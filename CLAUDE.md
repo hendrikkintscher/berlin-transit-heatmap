@@ -26,6 +26,8 @@ The coordinator is the main session (not a subagent). The procedure for every ca
   stop at the first problem. Decision and M steps always need their own yes.
 - **New ideas** mentioned along the way become their own later step (`/step new`), never part
   of the current one. Say in one line that you added it, with its tags.
+- **Pause (Hendrik, 2026-11-03):** after S018 the work stops. Start no step, not even the one
+  `scripts/steps.sh next` shows, until Hendrik names it. Bug fixes he reports are fine.
 - **"continue"** means the next step you just proposed — never reopening finished work.
   If no specific step was proposed, or it's unclear, ask.
 - **When a step or batch is finished:** short summary (what changed, PR link, version), then ask
@@ -41,7 +43,8 @@ MapLibre a blank style, launch Chromium with `--ignore-gpu-blocklist --enable-gp
 --use-angle=swiftshader --enable-unsafe-swiftshader` (plain headless copies the map back each
 frame, ~75 ms that delays every worker answer; decision 0008), and time a fresh visit: first
 map (worker 'result' message), tap to trip on the card, ⇅, moving the rings. Medians of 6–8
-visits; 4× first-map times are bimodal.
+visits; 4× first-map times are bimodal. `scripts/speed/browser.mjs` does all of this for the first
+map and tap to trip (`--base` times main's dist in the same run); add flows to it as steps need them.
 The CI speed job checks bundle sizes (`scripts/speed/budget.json`) and Node map timings;
 raising a budget is a deliberate edit with the reason in the PR.
 
@@ -69,6 +72,7 @@ pnpm check                                   # lint, format, typecheck, all test
 pnpm --dir packages/web build                # -> packages/web/dist
 node scripts/smoke/smoke.mjs                 # browser smoke test (as CI)
 node scripts/speed/check.mjs --data packages/routing/.data [--base <main checkout>]
+node scripts/speed/browser.mjs --data packages/routing/.data [--base <main dist>] [--cpu 4]
 pnpm --dir packages/routing fetch-data       # real timetable + walk.bin into packages/routing/.data
 ```
 
@@ -82,6 +86,11 @@ without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest` (`
 The cloud session hook (`.claude/hooks/session-install.sh`) installs the packages and fetches
 the bench data; `.claude/hooks/session-start.sh` prints where the roadmap stands.
 
+On Hendrik's Windows PC (local Claude Code) the install hook does nothing: run `pnpm install` and
+`pnpm --dir packages/routing fetch-data` once yourself. The hooks are bash scripts and need Git Bash
+on the PATH. `browser.mjs` uses the installed Chrome there (or `CHROMIUM=<path>`); timings on a
+desktop are not comparable with the cloud container's, so time main and the branch on the same machine.
+
 ## Gotchas
 
 - Several chats may share one container and one branch:
@@ -94,6 +103,11 @@ the bench data; `.claude/hooks/session-start.sh` prints where the roadmap stands
 - The working walk rule since 0.13.9: on foot, walks up to 30 minutes count at both ends
   (`FASTEST_WALK` in `packages/web/src/worker-runs.ts`); the Node benches in
   `packages/routing/bench` pass their own options.
+- 0.15.13 fixed an empty app after a deploy on a slow network (`packages/web/public/sw.js`,
+  `shellReady()`). It is not confirmed that this was the "Navigation lädt nicht" Hendrik saw; if he
+  reports it again, the cause is elsewhere.
+- Measurement scripts of finished steps (S001–S034) were kept outside the repo; their numbers are in
+  CHANGELOG.md and the PRs. Don't look for them; rebuild from `scripts/speed/browser.mjs`.
 - PRs here are usually opened with the GitHub tools, not `gh pr create`, so the pr-guard hook does
   not see them: check the bookkeeping (VERSION, CHANGELOG.md, ROADMAP.md) yourself.
 - `docs/steps/` is left out of Prettier (`steps.sh` writes it); run `npx prettier --write` on the
