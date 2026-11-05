@@ -6,7 +6,7 @@ kind: research
 priority: P3
 size: S
 needs: -
-status: open
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -21,7 +21,10 @@ the worker: a default place and view whose colour map ships ready-made (Hendrik,
   prerendered fill worth it, and how is it kept true to the day and hour?
 - Measure: image size per hour file (48) and per day type, download added to a fresh start,
   time to colours on screen at 360×740 and 4× CPU against the computed map (S013 timings).
-- Results: (to come)
+- Results: not measured further: since S014 a fresh visit opens on the computed example map
+  (colours at 1.3–1.5 s, 4×: 1.6–1.9 s), so a prerendered fill could gain about 1 s on first visits
+  only, against a nightly paint of ~240 hour files and a competing download. Decided: no
+  prerendered fill (docs/decisions/0011).
 
 ## Notes
 - Came up during S013 (fill on by default). Needs a build-time paint (pipeline) and a default

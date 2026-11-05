@@ -1,6 +1,6 @@
 # Berlin transit heatmap
 
-How long does it take to get from one point in Berlin to everywhere else by public transport? Pick a start point and the map shows the travel time to every spot, with time lines and optional colour bands, and a tap anywhere gives the minutes and the connection there. The app is live as "Wohin jetzt? · Öffis mit einem Tap" at https://hendrikkintscher.github.io/berlin-transit-heatmap/.
+How long does it take to get from one point in Berlin to everywhere else by public transport? Pick a start point and the map shows the travel time to every spot, with coloured travel times and time rings, and a tap anywhere gives the minutes and the connection there. The app is live as "Wohin jetzt? · Öffis mit einem Tap" at https://hendrikkintscher.github.io/berlin-transit-heatmap/.
 
 Times are for leaving now or at a chosen hour of today, the coming week or a typical weekday or weekend, or for arriving by an hour. Travel times include walking to the first stop and from the last stop along real streets and paths. Everything runs in the browser, with no server to maintain.
 
@@ -34,9 +34,9 @@ Locally: `node scripts/speed/check.mjs --data <dir with timetable-weekday-10.bin
 
 The timetable is the public [VBB GTFS feed](https://www.vbb.de/vbb-services/api-open-data/datensaetze/), which covers all public transport in Berlin and Brandenburg (U-Bahn, S-Bahn, tram, bus, regional trains and ferries). It is published by Verkehrsverbund Berlin-Brandenburg under CC BY 4.0.
 
-### Monthly refresh
+### Nightly refresh
 
-[`.github/workflows/gtfs-refresh.yml`](.github/workflows/gtfs-refresh.yml) runs on the 2nd of every month and can also be started by hand from the Actions tab ("Run workflow"). It:
+[`.github/workflows/gtfs-refresh.yml`](.github/workflows/gtfs-refresh.yml) runs every night and can also be started by hand from the Actions tab ("Run workflow"). It:
 
 1. Downloads the current feed from `https://www.vbb.de/vbbgtfs`.
 2. Skips publishing if the file is identical to the last published one (unless started with "force").
@@ -81,3 +81,4 @@ the plan itself in [ROADMAP.md](ROADMAP.md), and what shipped in [CHANGELOG.md](
 ## Licence
 
 Timetable data © VBB Verkehrsverbund Berlin-Brandenburg GmbH, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Footpaths and street names © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, [ODbL](https://opendatacommons.org/licenses/odbl/); base map by [OpenFreeMap](https://openfreemap.org) from OpenStreetMap data.
