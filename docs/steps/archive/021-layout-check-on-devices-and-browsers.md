@@ -26,7 +26,11 @@ The finished looks are consistent on different devices and browsers.
 ## Results
 - `scripts/layout/screens.mjs`: 8 screens (first, map, trip, drawer, zeit, search, menu, treffpunkt) × 5 sizes
   (360×740, 390×844, 430×932, 820×1180, 1280×800) × de/en in Chromium, plus an iPhone notch and home bar
-  (`--safe 47,34`); WebKit and Firefox at 360/390 px in the workflow `layout.yml` (the container has only Chromium).
+  (`--safe 47,34`); WebKit at 360/390 px in the workflow `layout.yml` (the container has only Chromium).
+- WebKit on the runner draws the app's controls, cards and panels as in Chromium (same findings), but not
+  MapLibre's tiles, stops and trip line (no errors; a limit of headless WebKit there): the base map on a
+  real iPhone stays for Hendrik to look at. Firefox on the runner has no WebGL at all, so the app cannot
+  start there; that showed an empty page with blank chips, now step S035 (a clear message).
 - Fixed: the welcome card over the example map overlapped the locate button with a home bar; the bottom tip
   showed below the Zeit panel and the menu; iOS zoomed into the time field and the selects (under 16 px).
 - Kept as they are (deliberate): 40 px panel and menu buttons (S029), 30 px rings dot on the card's rows (S031),

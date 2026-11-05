@@ -1,7 +1,6 @@
 name: Layout
 
-# The layout check of S021 in Safari's engine (WebKit) and Firefox, which the cloud container
-# cannot install: screenshots of the main screens at phone sizes in both languages, and the list
+# The layout check of S021 in Safari's engine (WebKit), which the cloud container cannot install: screenshots of the main screens at phone sizes in both languages, and the list
 # of what is cut off, outside the screen, overlapping or too small to tap (job summary).
 on:
   workflow_dispatch:
@@ -30,7 +29,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: [webkit, firefox]
+        # Firefox has no WebGL on GitHub's runners (not even its software one), so the app cannot
+        # start there; WebKit draws the app's own controls, though not MapLibre's tiles and layers.
+        browser: [webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
