@@ -238,7 +238,7 @@ for (const size of opt.sizes.split(',')) {
         'console',
         // (Blocked hosts, such as the live status, show up as failed loads: left out.)
         (m) =>
-          m.type() === 'error' &&
+          (m.type() === 'error' || m.type() === 'warning') &&
           !m.text().startsWith('Failed to load resource') &&
           errors.push(`console: ${m.text()}`.slice(0, 300)),
       );
@@ -277,6 +277,12 @@ for (const size of opt.sizes.split(',')) {
       const file = `${chrome ? '' : opt.browser + '-'}${size}-${lang}-${key}${opt.safe ? '-safe' : ''}.png`;
       await p.screenshot({ path: join(opt.out, file) });
       const f = await p.evaluate(findings);
+      // What the browser offers the map: without WebGL 2 MapLibre cannot draw at all.
+      const gl = await p.evaluate(() => {
+        const c = document.createElement('canvas');
+        return c.getContext('webgl2') ? 'webgl2' : c.getContext('webgl') ? 'webgl1' : 'none';
+      });
+      if (gl !== 'webgl2') errors.push(`gl: ${gl}`);
       report[file] = { findings: f, errors };
       const tally =
         f.length || errors.length
