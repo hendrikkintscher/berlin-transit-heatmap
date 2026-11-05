@@ -1,0 +1,75 @@
+name: Layout
+
+# The layout check of S021 in Safari's engine (WebKit), which the cloud container cannot install: screenshots of the main screens at phone sizes in both languages, and the list
+# of what is cut off, outside the screen, overlapping or too small to tap (job summary).
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/layout/**
+      - packages/web/index.html
+      - packages/web/src/style.css
+      - .github/workflows/layout.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: layout-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Firefox has no WebGL on GitHub's runners (not even its software one), so the app cannot
+        # start there; WebKit draws the app's own controls, though not MapLibre's tiles and layers.
+        browser: [webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir packages/web build
+      - run: pnpm exec playwright-core install --with-deps ${{ matrix.browser }}
+      - name: Screenshots
+        run: |
+          mkdir -p work
+          node scripts/layout/screens.mjs --browser ${{ matrix.browser }} --out work/layout \
+            --data work/data --sizes 360x740,390x844 --langs de,en | tee work/layout.txt
+      - name: Findings
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.browser }}"
+            echo '```'
+            cat work/layout.txt
+            node -e '
+              const r = require("./work/layout/report.json");
+              const seen = new Map();
+              for (const [file, v] of Object.entries(r))
+                for (const f of v.findings) {
+                  if (f.kind === "small" && f.w >= 40 && f.h >= 40) continue;
+                  const k = JSON.stringify(f);
+                  seen.set(k, (seen.get(k) ?? 0) + 1);
+                }
+              for (const [k, n] of seen) console.log(n, k);
+            '
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: layout-${{ matrix.browser }}
+          path: work/layout
+          if-no-files-found: ignore

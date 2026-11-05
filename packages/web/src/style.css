@@ -220,9 +220,10 @@ body {
   display: none;
   margin: 0 0 6px;
 }
+/* Above the bottom buttons, past the home bar too (S021: it overlapped the locate button). */
 body.example #hint {
   top: auto;
-  bottom: calc(var(--bottom-h, 0px) + 12px);
+  bottom: calc(var(--sb) + var(--bottom-h, 0px) + 12px);
 }
 body.example #hint .hint-example {
   display: block;
@@ -2364,4 +2365,19 @@ body.special .legend {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
+}
+/* iOS Safari zooms the page into a form field under 16 px when it gets focus (S021): the time
+   field, the compare choices and the favourites' list choice keep 16 px there. Only iOS
+   matches this test, so the other browsers keep their sizes. */
+@supports (-webkit-touch-callout: none) {
+  .when-time input,
+  .compare-row select,
+  .fav-list select {
+    font-size: 16px;
+  }
+}
+/* A tip at the bottom stays out of sight while a panel or the menu is open over it (S021: its
+   last line showed below the Zeit panel and the menu on a phone). */
+body:has(.pop:not([hidden]), dialog[open]) #tip {
+  visibility: hidden;
 }

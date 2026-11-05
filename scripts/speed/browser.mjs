@@ -4,7 +4,8 @@
 //   node scripts/speed/browser.mjs --dist packages/web/dist --data packages/routing/.data \
 //     [--base <other dist, e.g. main's>] [--visits 7] [--cpu 4] [--query "bis=30"]
 //
-// Serves each dist on localhost with /data/<region>/* from --data, blocks every other host and
+// Serves each dist on localhost with /data/<region>/* from --data (a file missing there is
+// fetched from the live site and kept, unless --no-fetch), blocks every other host and
 // gives MapLibre a blank style, so only the app's own work is timed. --cpu slows the page
 // (Chrome cannot slow the worker). Chromium: $CHROMIUM, else the cloud container's
 // /opt/pw-browsers/chromium, else the installed Chrome (Windows/macOS). The GPU flags avoid the
@@ -12,7 +13,7 @@
 /* global window */
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -27,8 +28,10 @@ const { values: opt } = parseArgs({
     visits: { type: 'string', default: '7' },
     cpu: { type: 'string', default: '1' },
     query: { type: 'string', default: '' },
+    'no-fetch': { type: 'boolean', default: false },
   },
 });
+const LIVE = 'https://hendrikkintscher.github.io/berlin-transit-heatmap/data/berlin/';
 
 const TYPES = {
   '.html': 'text/html',
@@ -41,12 +44,17 @@ const TYPES = {
 };
 
 function serve(dist, data) {
-  const server = createServer((req, res) => {
+  const server = createServer(async (req, res) => {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (path.endsWith('/')) path += 'index.html';
     if (path.startsWith('/tiles/')) return res.writeHead(200).end();
-    const m = /^\/data\/[\w-]+\/(.+)$/.exec(path);
+    const m = /^\/data\/[\w-]+\/([\w.-]+)$/.exec(path);
     const file = m ? join(data, m[1]) : join(dist, path);
+    // A data file not in --data yet (today's hours): fetched once from the live site and kept.
+    if (m && !opt['no-fetch'] && !existsSync(file)) {
+      const r = await fetch(LIVE + m[1]).catch(() => null);
+      if (r?.ok) writeFileSync(file, Buffer.from(await r.arrayBuffer()));
+    }
     let body;
     try {
       body = readFileSync(file);
