@@ -202,17 +202,22 @@ for (const size of opt.sizes.split(',')) {
           (u) => !u.href.startsWith(base) && !/openfreemap|photon\.komoot/.test(u.host),
           (r) => r.abort(),
         );
+      // Counts the app's maps. A plain function that hands back the browser's own Worker (not a
+      // subclass, which broke MapLibre's workers in WebKit and the app in Firefox), and only for
+      // the app's worker: MapLibre's come from blob: URLs.
       await ctx.addInitScript(() => {
         const W = window.Worker;
         window.__results = 0;
-        window.Worker = class extends W {
-          constructor(...a) {
-            super(...a);
-            this.addEventListener('message', (e) => {
+        function Counted(url, options) {
+          const w = new W(url, options);
+          if (!String(url).startsWith('blob:'))
+            w.addEventListener('message', (e) => {
               if (e.data?.type === 'result') window.__results++;
             });
-          }
-        };
+          return w;
+        }
+        Counted.prototype = W.prototype;
+        window.Worker = Counted;
       });
       if (opt.safe) {
         const [top, bottom] = opt.safe.split(',').map(Number);
@@ -231,7 +236,11 @@ for (const size of opt.sizes.split(',')) {
       // Console errors and failed requests too: a browser that cannot run the app says why here.
       p.on(
         'console',
-        (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`.slice(0, 300)),
+        // (Blocked hosts, such as the live status, show up as failed loads: left out.)
+        (m) =>
+          m.type() === 'error' &&
+          !m.text().startsWith('Failed to load resource') &&
+          errors.push(`console: ${m.text()}`.slice(0, 300)),
       );
       p.on('requestfailed', (r) => {
         if (r.url().startsWith(base)) errors.push(`request: ${r.url()} ${r.failure()?.errorText}`);
