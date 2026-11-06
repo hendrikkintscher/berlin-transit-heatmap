@@ -365,9 +365,6 @@ const targets: {
     value: (cs) => count(cs, checks.refQuicker),
     max: 0,
     ci: true,
-    // TODO(S041): reported only until walkFrom is fixed (the sample of the nightly file found
-    // 1 of 40 on 2026-11-06, a stop reached later but nearer blocked by an earlier one).
-    ciMax: Infinity,
   },
   {
     name: 'Reference 1+ min quicker with 7+ rides (the app searches up to 6)',

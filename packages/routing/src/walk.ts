@@ -540,6 +540,236 @@ export function walkFrom(
   return out;
 }
 
+/**
+ * Labels of a multi-source walk that keeps, per node, every (time, walk) pair no other
+ * beats on both. With one label per node a stop reached earlier but farther away would
+ * block a nearer one reached later: its walk hits the cap first, and the places behind
+ * would get a detour (S041). Node v's earliest label is time/walk/source[v] (time
+ * Infinity: not reached); the later ones, each with a shorter walk, are xtime/xwalk/
+ * xsource[l] for l from more[v] along xnext (-1 ends). Most places need only the
+ * earliest: the later ones count where its walk is too long.
+ */
+export interface WalkFront {
+  time: Float64Array;
+  walk: Float32Array;
+  source: Int32Array;
+  more: Int32Array;
+  xnext: Int32Array;
+  xtime: Float64Array;
+  xwalk: Float32Array;
+  xsource: Int32Array;
+  /** Later labels in use (the x arrays may be longer). */
+  extra: number;
+}
+
+/** A label is dropped when another is no later and walks at most this much further (metres). */
+const SAME_WALK_M = 0.01;
+
+interface FrontState {
+  front: WalkFront;
+  /** Bucket heads, entries' next, node, time, walk and source. */
+  bucket: Int32Array;
+  qnext: Int32Array;
+  qnode: Int32Array;
+  qtime: Float64Array;
+  qwalk: Float32Array;
+  qsrc: Int32Array;
+  /** The last label pushed to each node (time Infinity: none this walk). */
+  pendTime: Float64Array;
+  pendWalk: Float32Array;
+}
+
+const fronts = new WeakMap<WalkNetwork, FrontState>();
+
+function grown<T extends Int32Array | Float32Array | Float64Array>(a: T, n: number): T {
+  const b = new (a.constructor as new (n: number) => T)(n);
+  b.set(a);
+  return b;
+}
+
+/**
+ * walkFrom with a Pareto front of (time, walk) labels per node, so the cap holds exactly for
+ * every source: a label is dropped only when another at its node is no later and walks no
+ * further. Labels are settled in time order (Dial's buckets per second), so a later one
+ * survives only with a shorter walk. A new label is checked against the node's earliest and
+ * newest labels and the last one pushed there; that may keep a few labels another would
+ * beat, but never drops one that counts. The arrays are kept per network and overwritten
+ * by the next walk.
+ */
+export function walkFront(
+  net: WalkNetwork,
+  nodes: ArrayLike<number>,
+  times: ArrayLike<number>,
+  walked: ArrayLike<number>,
+  tags: ArrayLike<number>,
+  maxWalkMetres: number,
+  pace: number,
+): WalkFront {
+  const n = net.nodeCount;
+  let st = fronts.get(net);
+  if (!st) {
+    const size = 2 * n + 1024;
+    st = {
+      front: {
+        time: new Float64Array(n),
+        walk: new Float32Array(n),
+        source: new Int32Array(n),
+        more: new Int32Array(n),
+        xnext: new Int32Array(size),
+        xtime: new Float64Array(size),
+        xwalk: new Float32Array(size),
+        xsource: new Int32Array(size),
+        extra: 0,
+      },
+      bucket: new Int32Array(0),
+      qnext: new Int32Array(2 * size),
+      qnode: new Int32Array(2 * size),
+      qtime: new Float64Array(2 * size),
+      qwalk: new Float32Array(2 * size),
+      qsrc: new Int32Array(2 * size),
+      pendTime: new Float64Array(n),
+      pendWalk: new Float32Array(n),
+    };
+    fronts.set(net, st);
+  }
+  const out = st.front;
+  const { time, walk, source, more } = out;
+  time.fill(Infinity);
+  more.fill(-1);
+  const pendTime = st.pendTime;
+  const pendWalk = st.pendWalk;
+  pendTime.fill(Infinity);
+  let xnext = out.xnext;
+  let xtime = out.xtime;
+  let xwalk = out.xwalk;
+  let xsrc = out.xsource;
+  let extra = 0;
+
+  let maxEnd = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const t = times[i];
+    if (nodes[i] < 0 || !(t < Infinity) || walked[i] > maxWalkMetres) continue;
+    const end = t + (maxWalkMetres - walked[i]) * pace;
+    if (end > maxEnd) maxEnd = end;
+  }
+  const bucketCount = Math.floor(maxEnd) + 2;
+  if (st.bucket.length < bucketCount) st.bucket = new Int32Array(bucketCount);
+  const head = st.bucket;
+  head.fill(-1, 0, bucketCount);
+  let qnext = st.qnext;
+  let qnode = st.qnode;
+  let qtime = st.qtime;
+  let qwalk = st.qwalk;
+  let qsrc = st.qsrc;
+  if (qnext.length < nodes.length) {
+    const size = nodes.length + qnext.length;
+    qnext = st.qnext = grown(qnext, size);
+    qnode = st.qnode = grown(qnode, size);
+    qtime = st.qtime = grown(qtime, size);
+    qwalk = st.qwalk = grown(qwalk, size);
+    qsrc = st.qsrc = grown(qsrc, size);
+  }
+  let used = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const v = nodes[i];
+    const t = times[i];
+    const w = walked[i];
+    if (v < 0 || !(t < Infinity) || w > maxWalkMetres) continue;
+    if (pendTime[v] <= t && pendWalk[v] <= w + SAME_WALK_M) continue;
+    pendTime[v] = t;
+    pendWalk[v] = w;
+    const bk = Math.floor(t);
+    qnode[used] = v;
+    qtime[used] = t;
+    qwalk[used] = w;
+    qsrc[used] = tags[i];
+    qnext[used] = head[bk];
+    head[bk] = used++;
+  }
+  const { offset, target, metres } = net;
+  for (let b = 0; b < bucketCount; b++) {
+    for (let e = head[b]; e !== -1; e = head[b]) {
+      head[b] = qnext[e];
+      const v = qnode[e];
+      const t = qtime[e];
+      const w = qwalk[e];
+      const src = qsrc[e];
+      const t0 = time[v];
+      if (t0 === Infinity) {
+        time[v] = t;
+        walk[v] = w;
+        source[v] = src;
+      } else {
+        if (t0 <= t && walk[v] <= w + SAME_WALK_M) continue;
+        const x = more[v];
+        if (x !== -1 && xtime[x] <= t && xwalk[x] <= w + SAME_WALK_M) continue;
+        if (extra === xnext.length) {
+          const size = 2 * extra;
+          xnext = out.xnext = grown(xnext, size);
+          xtime = out.xtime = grown(xtime, size);
+          xwalk = out.xwalk = grown(xwalk, size);
+          xsrc = out.xsource = grown(xsrc, size);
+        }
+        if (t < t0) {
+          // Earlier within the same second: it becomes the earliest label. The one it
+          // replaces stays as a later label unless the new one also walks no further.
+          if (w > walk[v] + SAME_WALK_M) {
+            xtime[extra] = t0;
+            xwalk[extra] = walk[v];
+            xsrc[extra] = source[v];
+            xnext[extra] = x;
+            more[v] = extra++;
+          }
+          time[v] = t;
+          walk[v] = w;
+          source[v] = src;
+        } else {
+          xtime[extra] = t;
+          xwalk[extra] = w;
+          xsrc[extra] = src;
+          xnext[extra] = x;
+          more[v] = extra++;
+        }
+      }
+      const k0 = offset[v];
+      const k1 = offset[v + 1];
+      // Room for a push along every arc (entries are not reused).
+      if (used + k1 - k0 > qnext.length) {
+        const size = 2 * qnext.length;
+        qnext = st.qnext = grown(qnext, size);
+        qnode = st.qnode = grown(qnode, size);
+        qtime = st.qtime = grown(qtime, size);
+        qwalk = st.qwalk = grown(qwalk, size);
+        qsrc = st.qsrc = grown(qsrc, size);
+      }
+      for (let k = k0; k < k1; k++) {
+        const nw = w + metres[k];
+        if (nw > maxWalkMetres) continue;
+        const u = target[k];
+        const nt = t + metres[k] * pace;
+        // Beaten by the last label pushed to u (it is settled, or beaten by one that is),
+        // or by u's newest settled label (the shortest walk so far).
+        if (pendTime[u] <= nt && pendWalk[u] <= nw + SAME_WALK_M) continue;
+        const xu = more[u];
+        if (xu !== -1) {
+          if (xtime[xu] <= nt && xwalk[xu] <= nw + SAME_WALK_M) continue;
+        } else if (time[u] <= nt && walk[u] <= nw + SAME_WALK_M) continue;
+        pendTime[u] = nt;
+        pendWalk[u] = nw;
+        const nb = Math.floor(nt);
+        qnode[used] = u;
+        qtime[used] = nt;
+        qwalk[used] = nw;
+        qsrc[used] = src;
+        qnext[used] = head[nb];
+        head[nb] = used++;
+      }
+    }
+  }
+  out.extra = extra;
+  return out;
+}
+
 const cellSnaps = new WeakMap<WalkNetwork, Map<string, CellSnaps>>();
 
 /** Edges scattered between pauses when snapping in steps (about a millisecond's work). */

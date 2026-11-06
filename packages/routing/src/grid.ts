@@ -4,9 +4,8 @@ import {
   sameEdgeCellMetres,
   snapCells,
   snapOrigin,
-  sharedLabels,
   snapStops,
-  walkFrom,
+  walkFront,
   walkSpeeds,
   WalkSources,
 } from './walk';
@@ -115,11 +114,47 @@ export function heatGrid(
     const maxM = maxWalk * speeds.network;
     const fallbackM = fallbackWalk * speeds.network;
     const sources = new WalkSources(pace);
+    const cells = snapCells(
+      net,
+      [minLon, maxLat - rows * dLat, minLon + cols * dLon, maxLat],
+      cols,
+      rows,
+    );
+    // A window walks only from sources that can reach it: a walk is never shorter than
+    // the straight line, so one further than fallbackM from every end of its cells' edges
+    // cannot (the whole map walks from all).
+    let near = (_lat: number, _lon: number, _extraM: number) => true;
+    if (win) {
+      let x0 = Infinity;
+      let x1 = -Infinity;
+      let y0 = Infinity;
+      let y1 = -Infinity;
+      for (let r = wr0; r < wr1; r++)
+        for (let c = wc0; c < wc1; c++) {
+          const k = r * cols + c;
+          if (cells.a[k] < 0) continue;
+          for (const v of [cells.a[k], cells.b[k]]) {
+            x0 = Math.min(x0, net.x[v]);
+            x1 = Math.max(x1, net.x[v]);
+            y0 = Math.min(y0, net.y[v]);
+            y1 = Math.max(y1, net.y[v]);
+          }
+        }
+      near = (lat, lon, extraM) => {
+        const px = (lon - net.lon0) * net.mPerLon;
+        const py = (lat - net.lat0) * M_PER_DEG_LAT;
+        const dx = Math.max(0, x0 - px, px - x1);
+        const dy = Math.max(0, y0 - py, py - y1);
+        // A metre to spare for the network's float32 positions.
+        return dx * dx + dy * dy <= (fallbackM + extraM + 1) ** 2;
+      };
+    }
     // Stops sitting on each edge, so cells on the same edge can walk straight to them.
     const edgeStop = new Map<number, number[]>();
     for (let s = 0; s < tt.stopCount; s++) {
       const t = stopSeconds[s];
       if (t === Infinity || t !== t || stopSnap.edge[s] < 0) continue;
+      if (!near(tt.stopLat[s], tt.stopLon[s], 0)) continue;
       sources.add(net, stopSnap, s, t + egress, 0, s);
       const list = edgeStop.get(stopSnap.edge[s]);
       if (list) list.push(s);
@@ -128,8 +163,12 @@ export function heatGrid(
     const originEdge = originSnap ? originSnap.edge[0] : -1;
     // The origin may go further than the stops: it starts with that much "less walked".
     const originExtraM = Math.max(0, (opts.maxOriginSeconds ?? 0) * speeds.network - fallbackM);
-    if (originSnap && originEdge >= 0) sources.add(net, originSnap, 0, 0, -originExtraM, -1);
-    const labels = walkFrom(
+    // Going further than the stops, the origin's own walk (riding all the way) counts as
+    // one within maxM all the way: it is not held back by a later stop's shorter walk.
+    const originM = originExtraM > 0 ? fallbackM : maxM;
+    if (originSnap && originEdge >= 0 && near(result.origin!.lat, result.origin!.lon, originExtraM))
+      sources.add(net, originSnap, 0, 0, -originExtraM, -1);
+    const front = walkFront(
       net,
       sources.nodes,
       sources.times,
@@ -137,16 +176,9 @@ export function heatGrid(
       sources.tags,
       fallbackM,
       pace,
-      sharedLabels(net),
-    );
-    const cells = snapCells(
-      net,
-      [minLon, maxLat - rows * dLat, minLon + cols * dLon, maxLat],
-      cols,
-      rows,
     );
     const { a: cellA, b: cellB, da: cellDa, db: cellDb } = cells;
-    const { time, walk, source } = labels;
+    const { time, walk, source, more, xnext, xtime, xwalk, xsource } = front;
     const cellEdge = cells.edge;
     // Edges with a stop on them, so the map lookup below runs only where it can find one.
     const hasStop = new Uint8Array(net.edgeCount);
@@ -161,33 +193,44 @@ export function heatGrid(
       const db = cellDb[k];
       const b = cellB[k];
       // Walks within maxM win; longer ones up to fallbackM count only where none is.
+      // The earliest label at each end, and where its walk is too long the later ones,
+      // which walk less (walkFront keeps them all).
       let v = Infinity;
       let from = -1;
       let fv = Infinity;
       let ffrom = -1;
       let w: number;
       let t: number;
-      w = walk[a] + da;
-      t = time[a] + da * pace;
-      if (w <= maxM) {
-        if (t < v) {
-          v = t;
-          from = source[a];
+      for (let end = 0; end < 2; end++) {
+        const n0 = end === 0 ? a : b;
+        const d = end === 0 ? da : db;
+        w = walk[n0] + d;
+        t = time[n0] + d * pace;
+        if (w <= (source[n0] === -1 ? originM : maxM)) {
+          // No later label is earlier.
+          if (t < v) {
+            v = t;
+            from = source[n0];
+          }
+          continue;
         }
-      } else if (w <= fallbackM && t < fv) {
-        fv = t;
-        ffrom = source[a];
-      }
-      w = walk[b] + db;
-      t = time[b] + db * pace;
-      if (w <= maxM) {
-        if (t < v) {
-          v = t;
-          from = source[b];
+        if (w <= fallbackM && t < fv) {
+          fv = t;
+          ffrom = source[n0];
         }
-      } else if (w <= fallbackM && t < fv) {
-        fv = t;
-        ffrom = source[b];
+        for (let l = more[n0]; l !== -1; l = xnext[l]) {
+          w = xwalk[l] + d;
+          t = xtime[l] + d * pace;
+          if (w <= (xsource[l] === -1 ? originM : maxM)) {
+            if (t < v) {
+              v = t;
+              from = xsource[l];
+            }
+          } else if (w <= fallbackM && t < fv) {
+            fv = t;
+            ffrom = xsource[l];
+          }
+        }
       }
       // Sources on the cell's own edge walk straight along it.
       const here = hasStop[e] ? edgeStop.get(e) : undefined;
