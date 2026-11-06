@@ -517,13 +517,13 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   /** The journey to the tapped spot arrived from the worker. */
   function onTrip(m: Trip) {
     if (m.id !== tripId || readout.hidden) return;
+    alt = null;
+    altShown = false;
     if (deferred?.id === m.id) {
       clearTimeout(deferred.timer);
       deferred.render();
     }
     if (!document.getElementById('trip')) return;
-    alt = null;
-    altShown = false;
     // The same vehicles again (the map was redone with the footpaths, the place tapped
     // again): the drawer keeps its list, fitted to the new walks, and the picked row; a
     // whole list quietly looks for the other lines again (their walks may be other ones),
@@ -746,12 +746,12 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   }
 
   readoutText.addEventListener('click', (e) => {
-    if ((e.target as Element).closest('.trip-alt')) return swapAlt();
+    if ((e.target as Element).closest('.trip-alt')) return justPulled() ? undefined : swapAlt();
     const row = (e.target as Element).closest<HTMLButtonElement>('.more-row');
     if (!row) return;
     const k = Number(row.dataset.k);
     const c = connections[k];
-    if (!c || k === shownConnection) return;
+    if (!c || (k === shownConnection && !altShown)) return;
     shownConnection = k;
     altShown = false;
     showTrip(c);
@@ -967,6 +967,10 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   });
   readoutText.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
+    if ((e.target as Element).matches('.trip-alt')) {
+      e.preventDefault();
+      return swapAlt();
+    }
     const ride = noteRide(e.target);
     if (ride) {
       e.preventDefault();

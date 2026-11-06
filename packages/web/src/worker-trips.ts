@@ -898,7 +898,16 @@ export function tapAlternative(): {
 } | null {
   const f = lastFound;
   const on = lastFoundOn;
-  if (!f || !on || on.runs.length !== 1 || on.travel !== 'walk' || !on.otherTt) return null;
+  // (A newer map since the tap: the card has moved on, and the stops would be its own.)
+  if (
+    !f ||
+    !on ||
+    on.runs !== lastTrip?.runs ||
+    on.runs.length !== 1 ||
+    on.travel !== 'walk' ||
+    !on.otherTt
+  )
+    return null;
   if (f.leave === undefined || f.arrive === undefined || !wantsFeeder(f.journey)) return null;
   const at = lastFoundAt;
   if (!at) return null;
@@ -918,16 +927,16 @@ export function tapAlternative(): {
   if (!alt || alt.leave === undefined || alt.arrive === undefined) return null;
   const saving = feederSaving(f.journey, f.arrive, alt.journey, alt.arrive);
   if (!saving) return null;
-  const rides = alt.journey.legs.filter((l) => l.type === 'ride');
+  // The stop's name from the message's own leg, so it is the timetable the trip was found on.
+  const message = tripMessage([alt]);
+  const rides = (message.journeys[0]?.legs ?? []).filter((l) => l.type === 'ride');
   const ride = saving.where === 'start' ? rides[0] : rides.at(-1);
-  const tt = lastTrip?.tt;
-  if (!ride || !tt) return null;
-  const stop = tt.stops[saving.where === 'start' ? ride.from : ride.to]!.name;
+  if (!ride) return null;
   return {
-    trip: tripMessage([alt]),
+    trip: message,
     where: saving.where,
     line: ride.name,
-    stop: stopName(stop),
+    stop: stopName(saving.where === 'start' ? ride.from : ride.to),
     saved: Math.round(saving.saved / 60),
   };
 }
