@@ -443,6 +443,8 @@ listen((ev: MessageEvent<FromWorker>) => {
   } else if (m.type === 'trip') {
     tap.onTrip(m);
     performance.mark('trip');
+  } else if (m.type === 'tripAlt') {
+    tap.onTripAlt(m);
   } else if (m.type === 'routes') {
     const r = state.result;
     if (!r || r.id !== m.id) return;

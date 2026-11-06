@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import * as routing from '@berlin-transit-heatmap/routing';
 import { loadTimetable, reverseTimetable } from '@berlin-transit-heatmap/routing';
-import { A, D, KM_LAT, miniTimetable, STOP_POS } from '../../routing/test/fixture';
+import { A, D, KM_LAT, KM_LON, miniTimetable, STOP_POS } from '../../routing/test/fixture';
 
 // Counts the worker's searches for the map's place's walks to its stops (the part S027 moves
 // off the tap; the tapped place's own walks are found inside tripBetween, not counted).
@@ -89,5 +89,73 @@ describe('warmGoalWalks (S027)', () => {
     const before = walkSearches();
     trips.warmGoalWalks();
     expect(walkSearches()).toBe(before);
+  });
+});
+
+describe('tapAlternative (S045)', () => {
+  /** The mini network with a bus 200 from C to a stop J near the tapped place; `hop` seconds long. */
+  const feederMap = (hop: number) => {
+    const day = miniTimetable('day');
+    day.stops.push({
+      id: 'j',
+      name: 'J',
+      lat: STOP_POS[A]!.lat + 2.7 * KM_LAT,
+      lon: STOP_POS[A]!.lon + 2.3 * KM_LON,
+    });
+    day.routes.push({
+      name: '200',
+      mode: 'bus',
+      stops: [2, day.stops.length - 1],
+      trips: Array.from({ length: 12 }, (_, i) => [
+        H10 + 300 + i * 1200,
+        H10 + 300 + i * 1200 + hop,
+      ]),
+    });
+    const f = loadTimetable(day);
+    const b = loadTimetable(reverseTimetable(day, day.windowEnd, day.windowEnd + 3600));
+    const origin = { lat: STOP_POS[A]!.lat, lon: STOP_POS[A]!.lon };
+    return {
+      tt: f,
+      runs: [runs.run(f, origin, true, 'walk', true, H10)],
+      direction: 'depart' as const,
+      travel: 'walk' as const,
+      leaveAt: null,
+      from: H10,
+      otherTt: b,
+    };
+  };
+  /** 12 minutes' walk from F, a minute from J. */
+  const far = { lat: STOP_POS[A]!.lat + 2.8 * KM_LAT, lon: STOP_POS[A]!.lon + 2.3 * KM_LON };
+  const legs = (m: ReturnType<typeof trips.tapTrip>) =>
+    m.journeys[0]?.legs.map((l) => (l.type === 'ride' ? l.name : 'walk'));
+
+  it('finds the ride that arrives at the same second with a short walk', () => {
+    trips.setLastTrip(feederMap(989));
+    const shown = trips.tapTrip({ ...tap, ...far });
+    expect(legs(shown)).toEqual(['U1', '100', 'walk']);
+    const alt = trips.tapAlternative();
+    expect(alt).toMatchObject({ where: 'end', line: '200', stop: 'J' });
+    expect(alt!.saved).toBeGreaterThanOrEqual(9);
+    expect(legs(alt!.trip)).toEqual(['U1', '200', 'walk']);
+    expect(alt!.trip.journeys[0]!.arrive).toBe(shown.journeys[0]!.arrive);
+  });
+
+  it('finds nothing when the other ride arrives later', () => {
+    trips.setLastTrip(feederMap(1000));
+    trips.tapTrip({ ...tap, ...far });
+    expect(trips.tapAlternative()).toBeNull();
+  });
+
+  it('is not searched for when the walks are short', () => {
+    trips.setLastTrip(feederMap(989));
+    const shown = trips.tapTrip({ ...tap, ...near(5) });
+    expect(shown.journeys[0]).not.toBeNull();
+    expect(trips.tapAlternative()).toBeNull();
+  });
+
+  it('finds nothing on a bike map', () => {
+    trips.setLastTrip({ ...feederMap(989), travel: 'bike' as const });
+    trips.tapTrip({ ...tap, ...far });
+    expect(trips.tapAlternative()).toBeNull();
   });
 });

@@ -37,4 +37,3 @@ All steps to 1.0.0 are done (2026-11-05); what shipped is in [CHANGELOG.md](CHAN
 - S042 · decision · research · P2 · S · needs S040 · Where VBB's trips are better: walking speed, change times, step-free rules
 - S043 · build · refactor · P2 · M · needs S041 · Speed: the walk front only where the cap can bite
 - S044 · build · refactor · P2 · M · needs S041 · Speed: walk on a street graph without shape nodes
-- S045 · build · feature · P2 · M · needs S039 · Trip card: the feeder ride next to a long walk, same arrival
