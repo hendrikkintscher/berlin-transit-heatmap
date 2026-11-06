@@ -252,8 +252,8 @@ export interface StayOnTransfer {
 /**
  * Staying on at a transfer: for two rides in a row, a later stop of the first vehicle that is
  * next to (within `nearM` of) a stop of the second vehicle (where the app boards it, or
- * later), reached early enough to change there (a walk at `walkMps` over 1.3× the straight
- * line, plus `changeS`). The same
+ * later), reached early enough to change there (the timetable's footpath where it has one,
+ * else a walk at `walkMps` over 1.3× the straight line; plus `changeS`). The same
  * second vehicle is taken, so the trip arrives as before; returns the first such change that
  * walks at least `minLessWalk` seconds less than the app's, else null.
  */
@@ -303,7 +303,11 @@ export function stayOnTransfer(
         const sB = tt.routeStops[offB + q];
         const d = dist(sA, sB);
         if (d > nearM) continue;
-        const walkThere = sA === sB ? 0 : (1.3 * d) / walkMps;
+        // The timetable's own footpath where it has one (as the app walks), else an estimate.
+        let fp: number | null = null;
+        for (let e = tt.transferOffset[sA]; e < tt.transferOffset[sA + 1]; e++)
+          if (tt.transferTo[e] === sB) fp = tt.transferSeconds[e];
+        const walkThere = sA === sB ? 0 : (fp ?? (1.3 * d) / walkMps);
         if (tt.arrivals[vA + p] + walkThere + changeS > tt.times[vB + q]) continue;
         if (walkThere <= walk - minLessWalk)
           return {
