@@ -82,3 +82,7 @@ jobs:
           git worktree add work/base FETCH_HEAD
       - name: Check speed budget
         run: node scripts/speed/check.mjs --data work/speed ${{ github.event_name == 'pull_request' && '--base work/base' || '' }}
+      # Route quality (S040): 40 trips on the real file, offline: the card's clock, walks, the
+      # reference search and early changes. bench/suite.ts runs the full suite by hand.
+      - name: Route quality sample
+        run: pnpm --dir packages/routing exec tsx bench/suite.ts --ci --data ../../work/speed --out ../../work/suite

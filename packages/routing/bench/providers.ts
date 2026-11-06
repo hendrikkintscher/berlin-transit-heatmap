@@ -12,39 +12,18 @@
 // journey to its cell and the later start of laterStart; on foot at 5 km/h, every walk up to
 // 30 min (FASTEST_WALK). Data: the live site's hourly files for those dates, its stop list and
 // footpaths, kept in <data>/live/ (as scripts/layout/screens.mjs keeps them).
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import {
-  cellAt,
-  cellColRow,
-  decodeStopList,
-  decodeTimetable,
-  distanceM,
-  gridLayout,
-  heatGrid,
-  journeyTo,
-  laterChange,
-  laterStart,
-  loadTimetable,
-  loadWalkNetwork,
-  needsStopList,
-  travelTimes,
-  walksToStops,
-  type Origin,
-  type PreparedTimetable,
-  type Timetable,
-} from '../src';
+import { distanceM, walksToStops, type Origin } from '../src';
 import { REGION } from '../src/regions';
-import { DATA_DIR } from './data';
+import { appJourney, dateOf, dayStartMs, liveData, modeOptions } from './live';
+import { transitous, vbb } from './planners';
 import {
   appTrip,
   bestOf,
-  motisTrips,
   stayOn,
   stayOnTransfer,
-  vbbTrips,
   walkTotal,
   why,
   type TripSummary,
@@ -63,175 +42,13 @@ const { values: opt } = parseArgs({
     start: { type: 'string', default: '' },
   },
 });
-const LIVE = 'https://hendrikkintscher.github.io/berlin-transit-heatmap/data/berlin/';
-const LIVE_DIR = join(DATA_DIR, 'live');
-const CACHE_DIR = join(DATA_DIR, 'providers');
-const WALK_MPS = 5 / 3.6;
-const FASTEST_WALK = {
-  maxInitialWalkSeconds: 1800,
-  maxFallbackWalkSeconds: 1800,
-  maxFinalWalkSeconds: 1800,
-};
-/** As the worker's trip on tap: 50 m cells, two each way around the destination. */
-const CELL_M = 50;
-const NEAR_CELLS = 2;
 
 let seed = Number(opt.seed);
 const rnd = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
 const range = (s: string) => s.split('-').map(Number) as [number, number];
-
-async function liveFile(name: string): Promise<Buffer | null> {
-  const file = join(LIVE_DIR, name);
-  if (!existsSync(file)) {
-    const r = await fetch(LIVE + name).catch(() => null);
-    if (!r?.ok) return null;
-    mkdirSync(LIVE_DIR, { recursive: true });
-    writeFileSync(file, Buffer.from(await r.arrayBuffer()));
-  }
-  return readFileSync(file);
-}
-
-/** Local midnight in Berlin of a date (YYYYMMDD), as epoch ms. */
-function dayStartMs(date: string): number {
-  const iso = `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T00:00:00Z`;
-  const utc = Date.parse(iso);
-  const name = new Intl.DateTimeFormat('en', {
-    timeZone: 'Europe/Berlin',
-    timeZoneName: 'shortOffset',
-  })
-    .formatToParts(new Date(utc + 12 * 3600e3))
-    .find((p) => p.type === 'timeZoneName')!.value; // "GMT+1"
-  const hours = Number(name.replace('GMT', '') || 0);
-  return utc - hours * 3600e3;
-}
-
-const dateOf = (offsetDays: number) => {
-  const base = opt.start ? dayStartMs(opt.start) + 12 * 3600e3 : Date.now();
-  const d = new Date(base + offsetDays * 86400e3);
-  const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(d);
-  return p.replace(/-/g, '');
-};
-
-// ---------- data ----------
-const stopListBin = await liveFile('stoplist.bin');
-const walkBin = await liveFile('walk.bin');
-if (!walkBin) throw new Error('walk.bin could not be fetched from the live site');
-const walk = loadWalkNetwork(new Uint8Array(walkBin));
-const stopList = stopListBin ? decodeStopList(stopListBin) : undefined;
-const timetables = new Map<string, PreparedTimetable | null>();
-async function timetable(date: string, hour: number) {
-  const name = `timetable-${date}-${String(hour).padStart(2, '0')}.bin`;
-  if (!timetables.has(name)) {
-    const bin = await liveFile(name);
-    timetables.set(
-      name,
-      bin
-        ? loadTimetable(
-            (needsStopList(bin) && stopList
-              ? decodeTimetable(bin, stopList)
-              : decodeTimetable(bin)) as Timetable,
-          )
-        : null,
-    );
-  }
-  return timetables.get(name)!;
-}
-
-// ---------- the app's trip on tap ----------
-const w = { walk, walkSpeedMps: WALK_MPS, ...FASTEST_WALK };
-function appJourney(tt: PreparedTimetable, from: Origin, to: Origin, leaveAt: number) {
-  const result = travelTimes(tt, from, { trackLegs: true, leaveAt, ...w });
-  // nearRun (worker-trips.ts): only stops within the longest walk can be the last one, and
-  // only the cells around the destination are worked out.
-  const reachM = 2 * 900 * WALK_MPS + 100;
-  const stopSeconds = Float32Array.from(result.stopSeconds);
-  for (let s = 0; s < stopSeconds.length; s++)
-    if (distanceM(to.lat, to.lon, tt.stops[s].lat, tt.stops[s].lon) > reachM)
-      stopSeconds[s] = Infinity;
-  const [col, row] = cellColRow(gridLayout({ cellSizeM: CELL_M }), to.lat, to.lon);
-  const window = {
-    c0: col - NEAR_CELLS,
-    r0: row - NEAR_CELLS,
-    cols: 2 * NEAR_CELLS + 1,
-    rows: 2 * NEAR_CELLS + 1,
-  };
-  const best = heatGrid(
-    tt,
-    { ...result, stopSeconds },
-    { cellSizeM: CELL_M, trackStops: true, window, ...w },
-  );
-  const k = cellAt(best, to.lat, to.lon);
-  const seconds = k < 0 ? Infinity : best.seconds[k];
-  const found = journeyTo(tt, result, best, to.lat, to.lon);
-  if (!found) return null;
-  const access = result.legs?.rounds?.access;
-  const j = laterChange(tt, access ? laterStart(tt, found, access, leaveAt) : found, leaveAt);
-  return { j, seconds };
-}
-
-// ---------- the other planners ----------
-let lastAsk = 0;
-async function ask(provider: string, url: string, gapMs: number): Promise<unknown> {
-  const key = createHash('sha1').update(url).digest('hex').slice(0, 16);
-  const file = join(CACHE_DIR, `${provider}-${key}.json`);
-  if (existsSync(file)) return JSON.parse(readFileSync(file, 'utf8'));
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const wait = lastAsk + gapMs - Date.now();
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    lastAsk = Date.now();
-    const r = await fetch(url, {
-      headers: { 'user-agent': 'berlin-transit-heatmap quality check' },
-    })
-      .then(async (x) => ({ status: x.status, body: await x.text() }))
-      .catch((e: unknown) => ({ status: 0, body: String(e) }));
-    if (r.status === 200) {
-      mkdirSync(CACHE_DIR, { recursive: true });
-      writeFileSync(file, r.body);
-      return JSON.parse(r.body);
-    }
-    // A planner that finds nothing answers 4xx: kept as "nothing", not asked again.
-    if (r.status >= 400 && r.status < 500 && r.status !== 429) {
-      mkdirSync(CACHE_DIR, { recursive: true });
-      writeFileSync(file, JSON.stringify({ error: r.status, body: r.body.slice(0, 300) }));
-      return null;
-    }
-    await new Promise((res) => setTimeout(res, 2000 * 2 ** attempt));
-  }
-  return null;
-}
-
-const iso = (ms: number) => new Date(ms).toISOString().replace('.000Z', 'Z');
-
-async function vbb(from: Origin, to: Origin, leaveMs: number, day0: number) {
-  const q = new URLSearchParams({
-    'from.latitude': from.lat.toFixed(5),
-    'from.longitude': from.lon.toFixed(5),
-    'from.address': 'Start',
-    'to.latitude': to.lat.toFixed(5),
-    'to.longitude': to.lon.toFixed(5),
-    'to.address': 'Ziel',
-    departure: iso(leaveMs),
-    results: '4',
-    stopovers: 'false',
-    remarks: 'false',
-    polylines: 'false',
-  });
-  const json = await ask('vbb', `https://v6.vbb.transport.rest/journeys?${q}`, 800);
-  return json ? vbbTrips(json as Parameters<typeof vbbTrips>[0], day0) : [];
-}
-
-async function transitous(from: Origin, to: Origin, leaveMs: number, day0: number) {
-  const q = new URLSearchParams({
-    fromPlace: `${from.lat.toFixed(5)},${from.lon.toFixed(5)}`,
-    toPlace: `${to.lat.toFixed(5)},${to.lon.toFixed(5)}`,
-    time: iso(leaveMs),
-    numItineraries: '4',
-    maxPreTransitTime: '1800',
-    maxPostTransitTime: '1800',
-  });
-  const json = await ask('transitous', `https://api.transitous.org/api/v4/plan?${q}`, 1100);
-  return json ? motisTrips(json as Parameters<typeof motisTrips>[0], day0) : [];
-}
+const { walk, timetable: timetableFor } = await liveData();
+const timetable = (date: string, hour: number) => timetableFor(date, hour, 'depart');
+const w = modeOptions('depart', walk);
 
 // ---------- the run ----------
 const N = Number(opt.n);
@@ -260,7 +77,7 @@ const hhmm = (s: number) =>
   `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 
 for (let i = 0; i < N; i++) {
-  const date = dateOf(d0 + Math.floor(rnd() * (d1 - d0 + 1)));
+  const date = dateOf(opt.start, d0 + Math.floor(rnd() * (d1 - d0 + 1)));
   const hour = h0 + Math.floor(rnd() * (h1 - h0 + 1));
   const leave = hour * 3600 + Math.floor(rnd() * 60) * 60;
   const tt = await timetable(date, hour);
@@ -292,7 +109,7 @@ for (let i = 0; i < N; i++) {
   }
   const km = distanceM(from.lat, from.lon, to.lat, to.lon) / 1000;
   const day0 = dayStartMs(date);
-  const a = appJourney(tt, from, to, leave);
+  const a = appJourney(tt, from, to, leave, w, true);
   const app = a ? appTrip(tt, a.j, leave) : null;
   // The trip card's ride clocks (each ride on the next vehicle of its own route, as
   // rideClocks does for the card) against the map's minutes, which the card's arrival shows.

@@ -22,4 +22,9 @@ same train (same arrival), and from how many minutes of walking.
 - Results: <table goes here once measured; recommendation in one line>
 
 ## Notes
+- Suite (seed 40, 2026-11-06): same arrival as VBB with 3+ min more walking at the start or end in 12.1 % on foot,
+  6.6 % arriving, 11.4 % step-free; of the trips where the app is 3+ min earlier than VBB, 79 of 223 walk 15+ min at an end.
+- Possible design: on tap, the journey for each number of rides is in RAPTOR's rounds (rounds.arrivals; tripBetween's
+  fewestRides uses them). Among rounds arriving as early, take one more ride when it saves N+ min of walking; the map
+  stays. Measure N = 3/5/8 with bench/suite.ts --vbb (target < 3 %).
 - The arrival and the map stay the same; only which way the card shows changes.
