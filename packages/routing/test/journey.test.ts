@@ -3,6 +3,7 @@ import {
   departureAt,
   heatGrid,
   journeyTo,
+  laterChange,
   laterStart,
   loadTimetable,
   rideTimes,
@@ -202,5 +203,79 @@ describe('laterStart', () => {
     const grid = heatGrid(tt, r, { cellSizeM: 50, trackStops: true });
     const j = journeyTo(tt, r, grid, pos[4].lat, pos[4].lon)!;
     expect(laterStart(tt, j, r.legs!.rounds!.access, H10)).toBe(j);
+  });
+});
+
+describe('laterChange (S038)', () => {
+  // Tram M4 P–X–Y; bus 255 Q–Y–Z, Q a 5 min footpath from X. Off the tram at X (10:05) the
+  // walk gets to Q for the bus at 10:10; the tram itself is at Y at 10:09, and the same bus
+  // passes Y at 10:12. RAPTOR boards the bus at Q, its first stop where it can be caught.
+  const H10 = 10 * 3600;
+  const at = (east: number, north = 0) => ({
+    lat: STOP_POS[A].lat + north * KM_LAT,
+    lon: STOP_POS[A].lon + east * KM_LON,
+  });
+  const pos = [at(0), at(2), at(2.3), at(3), at(5)];
+  const tt = loadTimetable({
+    version: 1,
+    window: 'day',
+    serviceDate: '2026-10-14',
+    windowStart: H10,
+    windowEnd: H10 + 7200,
+    feedVersion: 'fixture',
+    stops: ['P', 'X', 'Q', 'Y', 'Z'].map((name, i) => ({ id: name, name, ...pos[i] })),
+    routes: [
+      { name: 'M4', mode: 'tram', stops: [0, 1, 3], trips: [[H10, H10 + 300, H10 + 540]] },
+      { name: '255', mode: 'bus', stops: [2, 3, 4], trips: [[H10 + 600, H10 + 720, H10 + 1200]] },
+    ],
+    transfers: [
+      { from: 1, to: 2, seconds: 300 },
+      { from: 2, to: 1, seconds: 300 },
+    ],
+  });
+  const r = travelTimes(tt, pos[0], { trackLegs: true, leaveAt: H10 });
+  const grid = heatGrid(tt, r, { cellSizeM: 50, trackStops: true });
+  const shape = (j: {
+    legs: ({ type: 'walk'; seconds: number } | { type: 'ride'; name: string; stops: number[] })[];
+  }) =>
+    j.legs.map((l) => (l.type === 'walk' ? `walk ${l.seconds}` : `${l.name} ${l.stops.join('')}`));
+
+  it('stays on the tram to where it meets the same bus', () => {
+    const found = journeyTo(tt, r, grid, pos[4].lat, pos[4].lon)!;
+    // (The last walk is to the middle of the place's 50 m cell.)
+    expect(shape(found)).toEqual(['M4 01', 'walk 300', '255 234', 'walk 17']);
+    const j = laterChange(tt, found, H10);
+    expect(shape(j)).toEqual(['M4 013', '255 34', 'walk 17']);
+    expect(j.transfers).toBe(found.transfers);
+    // The same bus, so the same arrival.
+    const ride = j.legs[1];
+    expect(ride.type === 'ride' && rideTimes(tt, ride, H10 + 540)!.arr.at(-1)).toBe(H10 + 1200);
+  });
+
+  it('keeps the walk when staying on misses the bus', () => {
+    const late = loadTimetable({
+      ...{
+        version: 1,
+        window: 'day',
+        serviceDate: '2026-10-14',
+        windowStart: H10,
+        windowEnd: H10 + 7200,
+        feedVersion: 'fixture',
+        stops: ['P', 'X', 'Q', 'Y', 'Z'].map((name, i) => ({ id: name, name, ...pos[i] })),
+      },
+      routes: [
+        // The tram is at Y only at 10:13, after the bus has left it.
+        { name: 'M4', mode: 'tram', stops: [0, 1, 3], trips: [[H10, H10 + 300, H10 + 780]] },
+        { name: '255', mode: 'bus', stops: [2, 3, 4], trips: [[H10 + 600, H10 + 720, H10 + 1200]] },
+      ],
+      transfers: [
+        { from: 1, to: 2, seconds: 300 },
+        { from: 2, to: 1, seconds: 300 },
+      ],
+    });
+    const rl = travelTimes(late, pos[0], { trackLegs: true, leaveAt: H10 });
+    const g = heatGrid(late, rl, { cellSizeM: 50, trackStops: true });
+    const found = journeyTo(late, rl, g, pos[4].lat, pos[4].lon)!;
+    expect(laterChange(late, found, H10)).toBe(found);
   });
 });

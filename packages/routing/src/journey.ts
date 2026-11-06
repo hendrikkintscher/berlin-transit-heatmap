@@ -367,6 +367,91 @@ export function laterStart(
   return { legs, transfers: Math.max(0, rides - 1) };
 }
 
+/**
+ * The journey with each change made where it walks least (Hendrik, 2026-11-05: "getting off
+ * one stop before the ideal one and suggesting a foot path instead"). RAPTOR boards a route
+ * at the first stop where its trip can be caught; reaching that stop on foot ties with
+ * staying on the vehicle before, and the tie goes to the walk. For two rides in a row this
+ * looks along the first vehicle's later stops for one the next vehicle also passes (the same
+ * stop, or one footpath of the timetable away) early enough to change there, and takes the
+ * one with the shortest walk if it saves at least `minSaving` seconds. The same vehicles are
+ * ridden, so the journey arrives as before. Times the rides from `leaveAt` as rideTimes does;
+ * rides over several trips (`parts`) are left as they are.
+ */
+export function laterChange(
+  tt: PreparedTimetable,
+  j: Journey,
+  leaveAt: number,
+  minSaving = 60,
+): Journey {
+  const legs = [...j.legs];
+  let t = leaveAt;
+  let changed = false;
+  for (let i = 0; i < legs.length; i++) {
+    const a = legs[i];
+    if (a.type === 'walk') {
+      t += a.seconds;
+      continue;
+    }
+    const ta = rideTimes(tt, a, t);
+    if (!ta) return j;
+    t = ta.arr[ta.arr.length - 1];
+    // The walks up to the next ride.
+    let k = i + 1;
+    let walk = 0;
+    for (let l = legs[k]; l?.type === 'walk'; l = legs[++k]) walk += l.seconds;
+    const b = legs[k];
+    if (b?.type !== 'ride' || a.parts || b.parts || walk < minSaving) continue;
+    const tb = rideTimes(tt, b, t + walk);
+    if (!tb) return j;
+    const rowA = vehicleRow(tt, a.route, a.fromPos, ta.dep[0]);
+    const rowB = vehicleRow(tt, b.route, b.fromPos, tb.dep[0]);
+    if (rowA < 0 || rowB < 0) continue;
+    const offA = tt.routeStopOffset[a.route];
+    const offB = tt.routeStopOffset[b.route];
+    const outA = a.fromPos + a.stops.length - 1;
+    const endB = b.fromPos + b.stops.length - 1;
+    let best: { p: number; q: number; w: number; to: number } | null = null;
+    for (let p = outA + 1; p < routeLength(tt, a.route); p++) {
+      const sA = tt.routeStops[offA + p];
+      for (let q = b.fromPos; q < endB; q++) {
+        const sB = tt.routeStops[offB + q];
+        const w = sA === sB ? 0 : footpath(tt, sA, sB);
+        if (w === null || w > walk - minSaving || (best && w >= best.w)) continue;
+        if (tt.arrivals[rowA + p] + w > tt.times[rowB + q]) continue;
+        best = { p, q, w, to: sB };
+      }
+    }
+    if (!best) continue;
+    const change: JourneyLeg[] = [
+      rideLeg(tt, a.route, a.fromPos, best.p),
+      ...(best.w > 0 ? [{ type: 'walk' as const, seconds: best.w, to: best.to }] : []),
+      rideLeg(tt, b.route, best.q, endB),
+    ];
+    legs.splice(i, k - i + 1, ...change);
+    changed = true;
+    // Times go on from the new end of the first ride (the new walk, if any, comes next).
+    t = tt.arrivals[rowA + best.p];
+  }
+  return changed ? { legs, transfers: j.transfers } : j;
+}
+
+/** The row (index of its first stop's time) of the vehicle on `route` leaving `pos` at `dep`. */
+function vehicleRow(tt: PreparedTimetable, route: number, pos: number, dep: number): number {
+  const n = routeLength(tt, route);
+  const base = tt.routeTimeOffset[route];
+  for (let trip = 0; trip < tt.routeTripCount[route]; trip++)
+    if (tt.times[base + trip * n + pos] === dep) return base + trip * n;
+  return -1;
+}
+
+/** The timetable's footpath from one stop to another in seconds, or null if there is none. */
+function footpath(tt: PreparedTimetable, from: number, to: number): number | null {
+  for (let e = tt.transferOffset[from]; e < tt.transferOffset[from + 1]; e++)
+    if (tt.transferTo[e] === to) return tt.transferSeconds[e];
+  return null;
+}
+
 const routeLength = (tt: PreparedTimetable, route: number) =>
   tt.routeStopOffset[route + 1] - tt.routeStopOffset[route];
 

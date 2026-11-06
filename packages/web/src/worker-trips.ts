@@ -7,6 +7,7 @@ import {
   gridLayout,
   heatGrid,
   journeyTo,
+  laterChange,
   laterStart,
   NETWORK_WALK_SPEED_MPS,
   rideParts,
@@ -207,10 +208,14 @@ export function trip(
 } | null {
   const found = journeyTo(last.tt, r.result, r.best, at.lat, at.lon);
   if (!found) return null;
-  // Leaving, of two ways to the same onward connection the one leaving later or walking less.
   const access = r.result.legs?.rounds?.access;
-  const j =
-    last.direction === 'depart' && access ? laterStart(last.tt, found, access, last.from) : found;
+  // Leaving, of two ways to the same onward connection the one leaving later or walking less;
+  // either way each change where it walks least (laterChange).
+  const j = laterChange(
+    last.tt,
+    last.direction === 'depart' && access ? laterStart(last.tt, found, access, last.from) : found,
+    last.from,
+  );
   const seconds = r.seconds;
   const o = r.result.origin!;
   const here: [number, number] = [at.lon, at.lat];

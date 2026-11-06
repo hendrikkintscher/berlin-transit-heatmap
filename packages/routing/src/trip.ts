@@ -1,5 +1,5 @@
 import { distanceM } from './geo';
-import { journeyVia, laterStart, type Journey } from './journey';
+import { type Journey, journeyVia, laterChange, laterStart } from './journey';
 import { UNREACHED, type PreparedTimetable } from './prepare';
 import { travelTimes } from './raptor';
 import type { Origin, StopProfile, TravelTimeOptions, TravelTimeResult } from './types';
@@ -213,7 +213,7 @@ export function tripBetween(
   const found = journeyVia(fwd, r, last, seconds);
   if (!found) return null;
   return {
-    journey: laterStart(fwd, found, rounds.access, leave),
+    journey: laterChange(fwd, laterStart(fwd, found, rounds.access, leave), leave),
     leave,
     arrive: leave + seconds,
   };

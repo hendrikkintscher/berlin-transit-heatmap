@@ -25,6 +25,7 @@ import {
   gridLayout,
   heatGrid,
   journeyTo,
+  laterChange,
   laterStart,
   loadTimetable,
   loadWalkNetwork,
@@ -164,7 +165,7 @@ function appJourney(tt: PreparedTimetable, from: Origin, to: Origin, leaveAt: nu
   const found = journeyTo(tt, result, best, to.lat, to.lon);
   if (!found) return null;
   const access = result.legs?.rounds?.access;
-  const j = access ? laterStart(tt, found, access, leaveAt) : found;
+  const j = laterChange(tt, access ? laterStart(tt, found, access, leaveAt) : found, leaveAt);
   return { j, seconds };
 }
 
