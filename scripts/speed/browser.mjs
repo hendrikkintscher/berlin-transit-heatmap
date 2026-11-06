@@ -1,5 +1,6 @@
 // Browser timings at phone size, as CLAUDE.md "Speed comes first" asks for: fresh visits at
-// 360x740, first map (the worker's first 'result') and tap to trip on the card, medians.
+// 360x740, first map (the worker's first 'result'), tap to trip on the card and the map redone
+// once the footpaths are in (from the worker's 'walk' to its next 'result'), medians.
 //
 //   node scripts/speed/browser.mjs --dist packages/web/dist --data packages/routing/.data \
 //     [--base <other dist, e.g. main's>] [--visits 7] [--cpu 4] [--query "bis=30"]
@@ -101,12 +102,15 @@ async function visit(browser, url, cpu) {
   );
   await ctx.addInitScript(() => {
     window.__results = [];
+    window.__walk = 0;
     const W = window.Worker;
     window.Worker = class extends W {
       constructor(...a) {
         super(...a);
         this.addEventListener('message', (e) => {
           if (e.data?.type === 'result') window.__results.push(performance.now());
+          // The footpaths are in (the map is redone with them next, S041).
+          if (e.data?.type === 'walk') window.__walk = performance.now();
         });
       }
     };
@@ -124,11 +128,18 @@ async function visit(browser, url, cpu) {
   await page.waitForFunction(() => performance.getEntriesByName('trip').length > 0, null, {
     timeout: 30000,
   });
+  // The map redone with the footpaths: from their arrival in the worker to its next 'result'.
+  await page.waitForFunction(
+    () => window.__walk > 0 && window.__results.some((x) => x > window.__walk),
+    null,
+    { timeout: 60000 },
+  );
   const t = await page.evaluate(() => ({
     firstMap: window.__results[0],
     tapTrip:
       performance.getEntriesByName('trip')[0].startTime -
       performance.getEntriesByName('tap')[0].startTime,
+    footMap: window.__results.find((x) => x > window.__walk) - window.__walk,
   }));
   await ctx.close();
   return t;
@@ -156,7 +167,8 @@ for (const [name, dist] of runs) {
   console.log(
     `${name} (${dist}), cpu ${cpu}x, ${visits} visits: first map ${r(median(rows.map((x) => x.firstMap)))} ms` +
       ` [${rows.map((x) => r(x.firstMap)).join(' ')}], tap to trip ${r(median(rows.map((x) => x.tapTrip)))} ms` +
-      ` [${rows.map((x) => r(x.tapTrip)).join(' ')}]`,
+      ` [${rows.map((x) => r(x.tapTrip)).join(' ')}], footpath map ${r(median(rows.map((x) => x.footMap)))} ms` +
+      ` [${rows.map((x) => r(x.footMap)).join(' ')}]`,
   );
 }
 await browser.close();

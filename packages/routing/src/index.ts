@@ -70,7 +70,7 @@ export { decodeWalkBin, decodeWalkBinInSteps, encodeWalkBin, type WalkData } fro
 export type { Hop, LineShapes } from './linesbin';
 export { decodeLines, encodeLines, hopCourse } from './linesbin';
 export { BIKE_ONLY_MAX_SECONDS, BIKE_SPEED_MPS, BIKE_STATION_SECONDS, bikeTimetable } from './bike';
-export type { CellSnaps, Snaps, WalkLabels, WalkNetwork } from './walk';
+export type { CellSnaps, Snaps, WalkFront, WalkLabels, WalkNetwork } from './walk';
 export {
   loadWalkNetwork,
   loadWalkNetworkInSteps,
@@ -85,6 +85,7 @@ export {
   snapStopsInSteps,
   timeAt,
   walkFrom,
+  walkFront,
   walkPath,
   walkSpeeds,
   WalkSources,

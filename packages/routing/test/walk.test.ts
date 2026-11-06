@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cellAt,
+  cellColRow,
+  gridLayout,
   gridValueAt,
   heatGrid,
   journeyTo,
@@ -15,6 +18,7 @@ import {
   snapPoint,
   travelTimes,
   walkFrom,
+  walkFront,
   walkPath,
   type Timetable,
 } from '../src';
@@ -389,5 +393,128 @@ describe('walk.bin version 2', () => {
     const back = decodeWalkBin(encodeWalkBin(g));
     expect([...back.edgeM]).toEqual([1, 20000, 5000, 1]);
     expect([...back.lat]).toEqual(lat);
+  });
+});
+
+// S041: one street, 100 m between nodes. A stop far down it is reached early (node 0 at 0 s),
+// a nearer one late (node 5 at 600 s): the early one's walks pass node 5 first, but end at
+// its cap, and the places behind must still get the later stop's walk.
+describe('a nearer stop reached later', () => {
+  const LAT = 52.5;
+  const lonStep = 100 / (111320 * Math.cos((LAT * Math.PI) / 180));
+  const line = loadWalkNetwork(
+    encode(
+      Array.from({ length: 31 }, (_, i): [number, number] => [LON0 + i * lonStep, LAT]),
+      Array.from({ length: 30 }, (_, i): [number, number, number] => [i, i + 1, 100]),
+    ),
+  );
+  const labelsAt = (f: ReturnType<typeof walkFront>, v: number) => {
+    const out: [number, number, number][] = [];
+    if (f.time[v] < Infinity) out.push([f.time[v], f.walk[v], f.source[v]]);
+    for (let l = f.more[v]; l !== -1; l = f.xnext[l])
+      out.push([f.xtime[l], f.xwalk[l], f.xsource[l]]);
+    return out.map(([t, w, s]) => [Math.round(t), Math.round(w), s]);
+  };
+
+  it('is not blocked by a farther stop reached earlier', () => {
+    // The old walk: the early stop takes every node and stops at its 1500 m cap.
+    const one = walkFrom(line, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1);
+    expect(one.time[15]).toBe(1500);
+    expect(one.time[16]).toBe(Infinity);
+    const f = walkFront(line, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1);
+    // Both walks at node 10: the early one first, the later one with less walking.
+    expect(labelsAt(f, 10)).toEqual([
+      [1000, 1000, 1],
+      [1100, 500, 2],
+    ]);
+    expect(labelsAt(f, 16)).toEqual([[1700, 1100, 2]]);
+    // The cap still holds for the later stop: 1500 m from node 5 ends at node 20.
+    expect(labelsAt(f, 20)).toEqual([[2100, 1500, 2]]);
+    expect(labelsAt(f, 21)).toEqual([]);
+  });
+
+  it('drops a walk that is no earlier and no shorter', () => {
+    const f = walkFront(line, [0, 5], [0, 400], [0, 0], [1, 2], 1500, 1);
+    // From node 5 on the later stop is earlier too (400 s < 500 s) and walks less: one
+    // label per node. Before it, both count: the far stop is earlier, the near one closer.
+    expect(labelsAt(f, 10)).toEqual([[900, 500, 2]]);
+    expect(labelsAt(f, 3)).toEqual([
+      [300, 300, 1],
+      [600, 200, 2],
+    ]);
+  });
+
+  const lineStops: Timetable = {
+    ...timetable,
+    stops: [
+      { id: 'far', name: 'Far', lat: LAT, lon: LON0 },
+      { id: 'near', name: 'Near', lat: LAT, lon: LON0 + 5 * lonStep },
+    ],
+  };
+  const ltt = loadTimetable(lineStops);
+  const at = (secs: [number, number], opts: object) =>
+    heatGrid(ltt, { stopSeconds: Float32Array.from(secs) } as Parameters<typeof heatGrid>[1], {
+      walk: line,
+      walkSpeedMps: 1,
+      cellSizeM: 50,
+      bbox: GRID_BBOX,
+      ...opts,
+    });
+
+  it('gives the map the later stop where the earlier one walks too far', () => {
+    const g = at([0, 600], { maxFinalWalkSeconds: 1500, maxFallbackWalkSeconds: 1500 });
+    // Node 16 (1.6 km from the far stop, 1.1 km from the near one): 1700 s, give or take
+    // the cell centre's 25 m.
+    expect(Math.abs(gridValueAt(g, LAT, LON0 + 16 * lonStep) - 1700)).toBeLessThan(40);
+    expect(gridValueAt(g, LAT, LON0 + 22 * lonStep)).toBe(Infinity);
+  });
+
+  it('prefers a walk within maxFinalWalk over an earlier longer one', () => {
+    // At node 13 the far stop's walk (1300 m, 1300 s) is over 1200 m but within the
+    // 1600 m fallback; the near stop's (800 m, 1400 s) is within 1200 m, so it wins.
+    const g = at([0, 600], { maxFinalWalkSeconds: 1200, maxFallbackWalkSeconds: 1600 });
+    expect(Math.abs(gridValueAt(g, LAT, LON0 + 13 * lonStep) - 1400)).toBeLessThan(40);
+    // A window of cells gives the same, from the stops within reach of it.
+    const [c, r] = cellColRow(
+      gridLayout({ cellSizeM: 50, bbox: GRID_BBOX }),
+      LAT,
+      LON0 + 13 * lonStep,
+    );
+    const w = at([0, 600], {
+      maxFinalWalkSeconds: 1200,
+      maxFallbackWalkSeconds: 1600,
+      window: { c0: c, r0: r, cols: 1, rows: 1 },
+    });
+    expect(w.seconds[0]).toBeCloseTo(gridValueAt(g, LAT, LON0 + 13 * lonStep), 3);
+  });
+
+  it('lets the origin ride all the way where it is quicker than a later stop', () => {
+    // Cycling from node 0 (maxOriginSeconds 2000 s at 1 m/s): node 18 at 1800 s, a ride
+    // over maxFinalWalk (300 s) but within the origin's reach. A stop at node 16 reached at
+    // 1700 s gets there at 1900 s within 300 s: the quicker ride all the way still wins.
+    const one = loadTimetable({
+      ...timetable,
+      stops: [{ id: 'mid', name: 'Mid', lat: LAT, lon: LON0 + 16 * lonStep }],
+    });
+    const g = heatGrid(
+      one,
+      {
+        stopSeconds: Float32Array.from([1700]),
+        origin: { lat: LAT, lon: LON0 },
+      } as Parameters<typeof heatGrid>[1],
+      {
+        walk: line,
+        walkSpeedMps: 1,
+        cellSizeM: 50,
+        bbox: GRID_BBOX,
+        maxFinalWalkSeconds: 300,
+        maxFallbackWalkSeconds: 600,
+        maxOriginSeconds: 2000,
+        trackStops: true,
+      },
+    );
+    const k = cellAt(g, LAT, LON0 + 18 * lonStep);
+    expect(Math.abs(g.seconds[k] - 1800)).toBeLessThan(40);
+    expect(g.stop![k]).toBe(-1);
   });
 });
