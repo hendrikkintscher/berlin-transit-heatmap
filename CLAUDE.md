@@ -81,8 +81,8 @@ both ends; `goal.ts`: map to a Ziel leaving at a time; `walkrule.ts`: map minute
 trip on tap; `kept.ts`: a trip kept before the footpaths; `arrivehour.ts`: Ankommen trips
 against the map's hour; `rollon.ts`: a missed connection rolling on, on the hourly files built below; `latest.ts`: the tap to a Ziel leaving with its latest leaving read off the map's profile;
 `providers.ts`: the trip on tap against VBB's planner and Transitous for random trips, answers cached;
-`suite.ts`: the route quality suite with its targets, `--gtfs` replays rides against the raw feed, `--vbb` asks VBB, `--ci` is the speed job's sample). The release downloads are public: if `fetch-data` gets a 401, run it
-without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest` (`GTFS.zip`);
+`suite.ts`: the route quality suite with its targets, `--gtfs` replays rides against the raw feed, `--vbb` asks VBB, `--ci` is the speed job's sample; `gridexact.ts`, `vbbwhy.ts`, `footpaths.ts`: the measurements behind S041 and S042). The release downloads are public: if `fetch-data` gets a 401, run it
+without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest` (`GTFS.zip`; `GITHUB_REPOSITORY=hendrikkintscher/berlin-transit-heatmap scripts/publish/download.sh gtfs-latest work/gtfs GTFS.zip`, unzip to `work/gtfs/feed` for `suite.ts --gtfs`);
 `node packages/timetable-build/bin/build-timetable.js --gtfs data/gtfs --out <dir>` builds all hourly files in about 30 s.
 
 The cloud session hook (`.claude/hooks/session-install.sh`) installs the packages and fetches

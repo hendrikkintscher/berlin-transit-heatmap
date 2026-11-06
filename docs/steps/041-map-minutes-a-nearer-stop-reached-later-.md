@@ -24,4 +24,14 @@ reference search is 10 min quicker to a place in Falkensee (weekday 10:26 from S
 - [ ] Tests cover the new behaviour
 
 ## Notes
-- A second label per node only where the walk is shorter (or relaxing a capped node again) keeps it exact; measure the cost on the first map before choosing.
+- Measured (bench/gridexact.ts, weekday-10, 8 starts × 150 cells): 0.8 % of reachable cells 1+ min
+  too late, 0.5 % 5+ min, up to 21 min, at every start; never too early. Suite: 2 of 943 trips on foot,
+  2 of 176 step-free, likely 3 of 191 by bike (recheck those after the fix).
+- Tried (2026-11-06, not kept): a second label per node, the least walk, checked by the cells too.
+  5+ min errors 0.5 → 0.3 %, but 1+ min ones 0.8 → 1.8 %: two labels are not enough (a front of
+  labels can be longer, and a label demoted to second is lost when a third arrives).
+- Options: (a) a full Pareto front (time, walk) per node, label-correcting in time order; exact,
+  cost unknown — measure the first map (heatGrid ~0.5 s in Node for a whole map, on the hot path);
+  (b) walk without the cap and apply it only at the cells: exact for the earliest label only, so not
+  enough alone; (c) run the cap per source band (stops grouped by time) — approximate.
+  Start with (a) on bench/gridexact.ts (target 0 %) and time it with scripts/speed/browser.mjs.
