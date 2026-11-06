@@ -158,4 +158,56 @@ describe('tapAlternative (S045)', () => {
     trips.tapTrip({ ...tap, ...far });
     expect(trips.tapAlternative()).toBeNull();
   });
+
+  it('is posted after the trip as its own message, and dropped when a newer tap came', async () => {
+    trips.setLastTrip(feederMap(989));
+    trips.tapTrip({ ...tap, ...far });
+    const posted: unknown[] = [];
+    let latest = 1;
+    await trips.postAlternative(
+      1,
+      () => latest,
+      async () => {},
+      (m) => posted.push(m),
+    );
+    expect(posted).toHaveLength(1);
+    expect(posted[0]).toMatchObject({ type: 'tripAlt', id: 1, line: '200', where: 'end' });
+    // A newer tap while the worker let queued messages go first: nothing is posted.
+    const dropped: unknown[] = [];
+    await trips.postAlternative(
+      1,
+      () => latest,
+      async () => {
+        latest = 2;
+      },
+      (m) => dropped.push(m),
+    );
+    expect(dropped).toEqual([]);
+  });
+
+  it('is not searched for after a new map replaced the one the trip was found on', () => {
+    trips.setLastTrip(feederMap(989));
+    trips.tapTrip({ ...tap, ...far });
+    trips.setLastTrip(feederMap(989));
+    expect(trips.tapAlternative()).toBeNull();
+  });
+
+  it('finds the ride on a map to the place, Ankommen (the reversed timetable)', () => {
+    // The map runs to the far place, arriving by 10:25; the tap is at the stop A.
+    const m = feederMap(989);
+    trips.setLastTrip({
+      ...m,
+      tt: m.otherTt,
+      otherTt: m.tt,
+      direction: 'arrive' as const,
+      runs: [runs.run(m.otherTt, far, true, 'walk', true, -(H10 + 1500))],
+      from: -(H10 + 1500),
+    });
+    const shown = trips.tapTrip({ ...tap, ...near(A) });
+    expect(legs(shown)).toEqual(['walk', 'U1', '100', 'walk']);
+    const alt = trips.tapAlternative();
+    expect(alt).toMatchObject({ where: 'end', line: '200', stop: 'J' });
+    expect(legs(alt!.trip)).toEqual(['walk', 'U1', '200', 'walk']);
+    expect(alt!.trip.journeys[0]!.arrive).toBe(shown.journeys[0]!.arrive);
+  });
 });

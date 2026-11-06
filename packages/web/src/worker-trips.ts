@@ -941,6 +941,23 @@ export function tapAlternative(): {
   };
 }
 
+/**
+ * After a trip's message went out: lets queued messages go first (`yieldTask`), then, if the
+ * tap `id` is still the latest (`latest`), looks for the feeder ride and posts it as a
+ * `tripAlt` message (S045). A newer tap or map meanwhile drops it.
+ */
+export async function postAlternative(
+  id: number,
+  latest: () => number,
+  yieldTask: () => Promise<void>,
+  post: (m: Extract<FromWorker, { type: 'tripAlt' }>) => void,
+): Promise<void> {
+  await yieldTask();
+  if (id !== latest()) return;
+  const alt = tapAlternative();
+  if (alt) post({ type: 'tripAlt', id, ...alt });
+}
+
 /** The clock hour's timetable, both ways round, for a connection that rolled on past the map's hour. */
 export interface NextHour {
   tt: PreparedTimetable;

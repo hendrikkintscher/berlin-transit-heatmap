@@ -46,7 +46,7 @@ import {
   nextHour,
   setLastTrip,
   tripsReady,
-  tapAlternative,
+  postAlternative,
   tapTrip,
   tripMessage,
   warmGoalWalks,
@@ -419,10 +419,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       post({ type: 'trip', id: msg.id, ...tapTrip(msg, next) });
       // The feeder ride next to a long walk (S045): after the trip is out, unless a newer tap
       // or map came; the card shows it when it arrives.
-      await nextTask();
-      if (msg.id !== latestTrip) return;
-      const alt = tapAlternative();
-      if (alt && msg.id === latestTrip) post({ type: 'tripAlt', id: msg.id, ...alt });
+      await postAlternative(msg.id, () => latestTrip, nextTask, post);
     } else msg satisfies never;
   } catch (err) {
     post({ type: 'error', message: err instanceof Error ? err.message : String(err) });

@@ -13,18 +13,11 @@ import {
   TRIP_SOURCE,
   TRIP_STOPS_SOURCE,
 } from './map-layers';
-import type { StationProps, ToWorker } from './protocol';
+import { altState } from './alt-state';
+import type { FromWorker, StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, chosenStart, mapDirection, mapToGoal, type State } from './state';
-import {
-  arrivedBy,
-  changeNoteHtml,
-  hhmm,
-  leaveText,
-  tripAltHtml,
-  tripHtml,
-  type Trip,
-} from './trip-card';
+import { arrivedBy, changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
 import { MODE_COLORS } from './colors';
 import { refitRows, ridesKey } from './more-rows';
 import { icon } from './icons';
@@ -517,8 +510,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   /** The journey to the tapped spot arrived from the worker. */
   function onTrip(m: Trip) {
     if (m.id !== tripId || readout.hidden) return;
-    alt = null;
-    altShown = false;
+    alt.reset();
     if (deferred?.id === m.id) {
       clearTimeout(deferred.timer);
       deferred.render();
@@ -595,17 +587,9 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   }
 
   /** The worker found a ride with a shorter walk for the shown trip. */
-  function onTripAlt(m: {
-    id: number;
-    trip: Omit<Trip, 'type' | 'id'>;
-    where: 'start' | 'end';
-    line: string;
-    stop: string;
-    saved: number;
-  }) {
+  function onTripAlt(m: Extract<FromWorker, { type: 'tripAlt' }>) {
     if (m.id !== tripId || readout.hidden || !connections.length) return;
-    alt = { ...m, m: { ...m.trip, type: 'trip', id: m.id } };
-    altShown = false;
+    alt.set(m);
     renderAlt();
   }
 
@@ -616,28 +600,21 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   function renderAlt() {
     const el = document.getElementById('trip');
     el?.querySelector('.trip-alt')?.remove();
-    if (!el || !alt || (!altShown && shownConnection !== 0)) return;
-    el.insertAdjacentHTML('beforeend', tripAltHtml(alt, altShown));
+    el?.insertAdjacentHTML('beforeend', alt.html(shownConnection));
   }
 
   /** The line under the trip swaps it for the other way (S045). */
   function swapAlt() {
-    if (!alt) return;
-    altShown = !altShown;
-    showTrip(altShown ? alt.m : (connections[shownConnection] ?? connections[0]!));
+    const m = alt.toggle(connections[shownConnection] ?? connections[0]!);
+    if (m) showTrip(m);
   }
 
   // The drawer (pulling the card up): the shown connection and the ones after it
   // (arriving: before it), asked for once the pull starts, so they come up with the card.
   let connections: Trip[] = [];
   let shownConnection = 0;
-  /**
-   * The ride arriving as early with a shorter walk, once the worker found it (S045), and
-   * whether the card shows it now (else the trip it is an alternative to).
-   */
-  let alt: { m: Trip; where: 'start' | 'end'; line: string; stop: string; saved: number } | null =
-    null;
-  let altShown = false;
+  /** The ride arriving as early with a shorter walk, once the worker found it (S045). */
+  const alt = altState();
   let moreAsked = false;
   let moreId = 0;
   /** The drawer's list: "loading" until the worker answers, then the connections. */
@@ -751,9 +728,9 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     if (!row) return;
     const k = Number(row.dataset.k);
     const c = connections[k];
-    if (!c || (k === shownConnection && !altShown)) return;
+    if (!c || (k === shownConnection && !alt.shown)) return;
     shownConnection = k;
-    altShown = false;
+    alt.back();
     showTrip(c);
     renderMore();
   });
