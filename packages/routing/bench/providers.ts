@@ -377,10 +377,11 @@ const off = appTrips.filter((c) => Math.abs(c.clockOff) > 60);
 lines.push(
   '',
   `**Trip card clock:** ${merged.length} of ${appTrips.length} trips have a ride that changes trips on the way ` +
-    '(the Ring at Beusselstr.), whose times on the card run past the end of its first trip. ' +
-    `Even with that change followed, the rides timed as the card times them (the next vehicle of each ride's ` +
-    `own route, no twins) arrive over 1 min away from the card's arrival (the map's minutes) in ${off.length}: ` +
-    off.map((c) => `#${c.i} (${Math.round(c.clockOff / 60)} min)`).join(', ') +
+    '(the Ring at Beusselstr.). Timed as the card times them, the rides arrive over 1 min away from the ' +
+    `card's arrival (the map's minutes) in ${off.length}` +
+    (off.length
+      ? `: ${off.map((c) => `#${c.i} (${Math.round(c.clockOff / 60)} min)`).join(', ')}`
+      : '') +
     ". Δ uses the card's arrival. Walks inside a station: VBB lists none (its change time is waiting), " +
     'so walks between rides are not compared.',
   '',

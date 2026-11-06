@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { departureAt, heatGrid, journeyTo, laterStart, loadTimetable, travelTimes } from '../src';
+import {
+  departureAt,
+  heatGrid,
+  journeyTo,
+  laterStart,
+  loadTimetable,
+  rideTimes,
+  travelTimes,
+} from '../src';
 import { A, C, G, H, I, KM_LAT, KM_LON, miniTimetable, STOP_POS } from './fixture';
 
 describe('journeyTo', () => {
@@ -91,6 +99,55 @@ describe('journeyTo leaving at one moment', () => {
     const ride = j.legs[1];
     expect(ride.type === 'ride' && [ride.name, ride.stops]).toEqual(['S1', [1, 2, 3]]);
     expect(j.transfers).toBe(0);
+  });
+
+  it("keeps that ride's two trips and times it across the change (S037)", () => {
+    const j = journeyTo(tt, r, grid, pos[3].lat, pos[3].lon)!;
+    const ride = j.legs[1];
+    if (ride.type !== 'ride') throw new Error('no ride');
+    expect(ride.parts?.map((p) => p.count)).toEqual([2, 2]);
+    // On the first trip from Q at 10:15, at Z 10:30; on the next from Z 10:31, at Y 10:40.
+    expect(rideTimes(tt, ride, H10)).toEqual({
+      dep: [H10 + 900, H10 + 1860, H10 + 2400],
+      arr: [H10 + 900, H10 + 1800, H10 + 2400],
+    });
+  });
+});
+
+describe('a change between two vehicles of one line (S037)', () => {
+  // Bus 893 P–X–W goes on to W; another 893 X–Z leaves X a minute after the first gets there.
+  const H10 = 10 * 3600;
+  const pos = [
+    STOP_POS[A],
+    { lat: STOP_POS[A].lat, lon: STOP_POS[A].lon + 2 * KM_LON },
+    { lat: STOP_POS[A].lat + 3 * KM_LAT, lon: STOP_POS[A].lon + 2 * KM_LON },
+    { lat: STOP_POS[A].lat, lon: STOP_POS[A].lon + 4 * KM_LON },
+  ];
+  const tt = loadTimetable({
+    version: 1,
+    window: 'day',
+    serviceDate: '2026-10-14',
+    windowStart: H10,
+    windowEnd: H10 + 7200,
+    feedVersion: 'fixture',
+    stops: ['P', 'X', 'W', 'Z'].map((name, i) => ({ id: name, name, ...pos[i] })),
+    routes: [
+      { name: '893', mode: 'bus', stops: [0, 1, 2], trips: [[H10, H10 + 300, H10 + 900]] },
+      { name: '893', mode: 'bus', stops: [1, 3], trips: [[H10 + 360, H10 + 600]] },
+    ],
+    transfers: [],
+  });
+  const r = travelTimes(tt, pos[0], { trackLegs: true, leaveAt: H10 });
+  const grid = heatGrid(tt, r, { cellSizeM: 50, trackStops: true });
+
+  it('stays two rides, so the card says to change', () => {
+    const j = journeyTo(tt, r, grid, pos[3].lat, pos[3].lon)!;
+    const rides = j.legs.filter((l) => l.type === 'ride');
+    expect(rides.map((l) => l.type === 'ride' && [l.name, l.stops, !!l.parts])).toEqual([
+      ['893', [0, 1], false],
+      ['893', [1, 3], false],
+    ]);
+    expect(j.transfers).toBe(1);
   });
 });
 

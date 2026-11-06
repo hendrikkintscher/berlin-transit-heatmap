@@ -39,8 +39,8 @@ export { distanceM, WALK_SPEED_MPS } from './geo';
 export { LEG_NONE, LEG_ORIGIN, LEG_WALK, NO_DEPARTURE } from './raptor';
 export type { RouteUsageOptions, UsedSegment } from './usage';
 export { goalUsage, routeUsage } from './usage';
-export type { Journey, JourneyLeg } from './journey';
-export { departureAt, journeyTo, journeyVia, laterStart } from './journey';
+export type { Journey, JourneyLeg, RidePart } from './journey';
+export { departureAt, journeyTo, journeyVia, laterStart, rideParts, rideTimes } from './journey';
 export {
   directSeconds,
   tripBetween,
