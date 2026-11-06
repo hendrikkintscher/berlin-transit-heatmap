@@ -33,19 +33,21 @@ const [minLon, minLat, maxLon, maxLat] = REGION.bbox;
 const CAPS = [5, 8, 10, 15];
 const LATER = [0, 60];
 
-const endWalks = (j: Journey) => {
+const endWalks = (j: Journey): [number, number] => {
   const first = j.legs[0];
   const last = j.legs[j.legs.length - 1];
-  return (
-    (first?.type === 'walk' ? first.seconds : 0) +
-    (last?.type === 'walk' && j.legs.length > 1 ? last.seconds : 0)
-  );
+  return [
+    first?.type === 'walk' ? first.seconds : 0,
+    last?.type === 'walk' && j.legs.length > 1 ? last.seconds : 0,
+  ];
 };
 const rides = (j: Journey) => j.legs.filter((l) => l.type === 'ride').length;
 
 interface Trip {
   arrive: number;
+  /** Walking before the first ride plus after the last, and the longer of the two. */
   walkEnds: number;
+  longEnd: number;
   rides: number;
 }
 interface Case {
@@ -89,7 +91,8 @@ while (cases.length < N && drawn < 4 * N) {
   if (!a || !(a.seconds < Infinity) || rides(a.j) === 0) continue;
   const trip = (x: { j: Journey; seconds: number }): Trip => ({
     arrive: at + x.seconds,
-    walkEnds: endWalks(x.j),
+    walkEnds: endWalks(x.j)[0] + endWalks(x.j)[1],
+    longEnd: Math.max(...endWalks(x.j)),
     rides: rides(x.j),
   });
   const capped = CAPS.map((cap) => {
@@ -124,34 +127,49 @@ while (cases.length < N && drawn < 4 * N) {
 
 const med = (a: number[]) => (a.length ? a.sort((x, y) => x - y)[a.length >> 1] : 0);
 const pct = (n: number, of: number) => (of ? `${((100 * n) / of).toFixed(1)} %` : '–');
-const chosen = (c: Case, cap: number, later: number): Trip => {
+/** The rule's trip: the capped one when it arrives in time and is another trip. */
+const chosen = (c: Case, cap: number, later: number, minSaved = 0): Trip => {
   const alt = c.capped[CAPS.indexOf(cap)];
-  return alt && alt.arrive <= c.best.arrive + later ? alt : c.best;
+  const same =
+    !alt ||
+    (alt.arrive === c.best.arrive &&
+      alt.walkEnds === c.best.walkEnds &&
+      alt.rides === c.best.rides);
+  return !same && alt.arrive <= c.best.arrive + later && c.best.walkEnds - alt.walkEnds >= minSaved
+    ? alt
+    : c.best;
 };
 const row = (name: string, pick: (c: Case) => Trip) => {
   const asked = cases.filter((c) => c.vbb);
   const changed = cases.filter((c) => pick(c) !== c.best);
   const saved = changed.map((c) => (c.best.walkEnds - pick(c).walkEnds) / 60);
   const moreRides = changed.filter((c) => pick(c).rides > c.best.rides).length;
+  const fewerRides = changed.filter((c) => pick(c).rides < c.best.rides).length;
   const later = changed.map((c) => pick(c).arrive - c.best.arrive);
   const vbbBetter = asked.filter((c) => pick(c).arrive - c.vbb!.arrive >= 180).length;
   const sameMore = asked.filter(
     (c) => Math.abs(pick(c).arrive - c.vbb!.arrive) <= 60 && pick(c).walkEnds >= c.vbb!.walk + 180,
   ).length;
-  const walk15 = cases.filter((c) => pick(c).walkEnds >= 900).length;
-  return `| ${name} | ${pct(changed.length, cases.length)} | ${med(saved).toFixed(1)} min | ${pct(moreRides, changed.length)} | ${later.length ? Math.round(Math.max(...later)) : 0} s | ${pct(walk15, cases.length)} | ${pct(vbbBetter, asked.length)} | ${pct(sameMore, asked.length)} |`;
+  const walk15 = cases.filter((c) => pick(c).longEnd >= 900).length;
+  return `| ${name} | ${pct(changed.length, cases.length)} | ${med(saved).toFixed(1)} min | ${pct(moreRides, changed.length)} / ${pct(fewerRides, changed.length)} | ${later.length ? Math.round(Math.max(...later)) : 0} s | ${pct(walk15, cases.length)} | ${pct(vbbBetter, asked.length)} | ${pct(sameMore, asked.length)} |`;
 };
 console.log(
   `# S039: feeder ride instead of a long walk — ${cases.length} trips on foot, seed ${opt.seed}, from ${opt.start}, days ${opt.days}; VBB asked for ${cases.filter((c) => c.vbb).length}\n`,
 );
 console.log(
-  '| Rule (end walks capped / may arrive later) | Trips changed | Walk saved (median) | of which +1 ride | Latest arrival vs best | Trips walking 15+ min at an end | VBB 3+ min better | Same arrival as VBB, 3+ min more walking |',
+  '| Rule (end walks capped / may arrive later) | Trips changed | Walk saved (median) | of which more / fewer rides | Latest arrival vs best | Trips with a 15+ min walk at an end | VBB 3+ min better | Same arrival as VBB, 3+ min more walking |',
 );
 console.log('| --- | --: | --: | --: | --: | --: | --: | --: |');
 console.log(row('as today (30 min walks, fewest rides)', (c) => c.best));
 for (const later of LATER)
   for (const cap of CAPS)
     console.log(row(`${cap} min / +${later} s`, (c) => chosen(c, cap, later)));
+for (const minSaved of [180, 300])
+  console.log(
+    row(`10 min / +0 s, only when it saves ${minSaved / 60}+ min`, (c) =>
+      chosen(c, 10, 0, minSaved),
+    ),
+  );
 console.log(
   `\nSecond pass per tap (appJourney with the caps): median ${med(passMs).toFixed(0)} ms in Node.`,
 );
