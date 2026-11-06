@@ -6,7 +6,7 @@ kind: fix
 priority: P1
 size: S
 needs: S040
-status: waiting
+status: done
 ---
 <!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
      kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
@@ -20,7 +20,7 @@ reference search is 10 min quicker to a place in Falkensee (weekday 10:26 from S
 ## Build steps only — acceptance criteria
 - [x] Cause fixed: walkFrom (routing/src/walk.ts) spreads all stops' walks at once with one label per street node and a 2.5 km walk cap. A stop reached earlier but farther away (Goldkäferweg, 11:20) labels the streets first; a nearer stop reached later (Falkensee, Humboldtallee, 11:25) cannot pass them, and once the first walk reaches the cap the places behind get a detour
 - [x] `bench/suite.ts`: reference 1+ min quicker 0 on its runs; the CI sample's allowance (TODO(S041) in suite.ts) back to 0
-- [ ] First map timings at 360×740 (also 4×) and the CI speed job no slower — NOT met: first map and tap as before, but the map redone with the footpaths and the CI job's Node maps are slower (Results)
+- [x] First map timings at 360×740 (also 4×) and the CI speed job no slower — first map and taps unchanged; the footpath map and the CI job's Node maps are slower, accepted by Hendrik (2026-11-06, option 1) with a one-time map allowance in budget.json and the follow-up steps S043, S044. Was: first map and tap as before, but the map redone with the footpaths and the CI job's Node maps are slower (Results)
 - [x] Tests cover the new behaviour
 
 ## Notes

@@ -34,6 +34,7 @@ All steps to 1.0.0 are done (2026-11-05); what shipped is in [CHANGELOG.md](CHAN
 
 ### Now · H. Route quality (1.0.x)
 
-- S041 · build · fix · P1 · S · needs S040 · Map minutes: a nearer stop reached later is not blocked by a farther one
 - S039 · decision · research · P2 · S · needs S040 · A bus instead of a long walk to the same train
 - S042 · decision · research · P2 · S · needs S040 · Where VBB's trips are better: walking speed, change times, step-free rules
+- S043 · build · refactor · P2 · M · needs S041 · Speed: the walk front only where the cap can bite
+- S044 · build · refactor · P2 · M · needs S041 · Speed: walk on a street graph without shape nodes

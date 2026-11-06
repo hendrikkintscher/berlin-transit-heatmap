@@ -22,7 +22,13 @@
     "index.js": 3267,
     "main.js": 337994,
     "timing.js": 944,
-    "worker.js": 35753,
+    "worker.js": 37700,
     "index.html": 7265
+  },
+  "mapAllowanceOnce": {
+    "version": "1.0.5",
+    "percent": 180,
+    "ms": 30,
+    "reason": "S041: the exact walk front keeps about 3 labels per street node, so the maps in Node take 2.5x; the next steps (S043, S044) win part of it back"
   }
 }

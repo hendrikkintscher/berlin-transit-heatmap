@@ -155,7 +155,14 @@ if (args.data) {
   };
   const limit = (b, t = tol) => (b === undefined ? 0 : b * (1 + t.percent / 100) + t.ms);
   // The maps themselves have tighter tolerances since their medians hold steady (0.13.16).
-  const maps = budget.mapTolerance ?? { each: tol, all: tol };
+  // One release may accept a slower map on purpose (budget.json mapAllowanceOnce, with the
+  // reason): it applies while VERSION is that release and lapses with the next bump.
+  const once = budget.mapAllowanceOnce;
+  const version = readFileSync(join(root, 'VERSION'), 'utf8').trim();
+  const maps =
+    once && once.version === version
+      ? { each: once, all: once }
+      : (budget.mapTolerance ?? { each: tol, all: tol });
   for (const o of Object.keys(pr.origins))
     row(`Map from ${o}`, pr.origins[o], main?.origins[o], ms, limit(main?.origins[o], maps.each));
   const tb = main && total(main);
