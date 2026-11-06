@@ -115,6 +115,13 @@ desktop are not comparable with the cloud container's, so time main and the bran
 - `docs/steps/` is left out of Prettier (`steps.sh` writes it); run `npx prettier --write` on the
   other docs you change.
 
+- Route quality (S036–S040, 2026-11-06): the open findings and options are in the step files S041, S039, S042
+  (start with S041). Not in git, so a new machine makes them again: the raw GTFS feed (recipe under Commands),
+  `work/suite-*` outputs (`bench/suite.ts`), and the planners' answers in `packages/routing/.data/providers/`
+  (asking VBB again takes about 15 min per 1,000 trips; Transitous and VBB need network access).
+- Pushes from the cloud container sometimes fail with "fatal error in commit_refs": retry, and check with
+  `git fetch` that the branch really moved before saying it is pushed.
+
 ## Definition of done
 
 - `bash scripts/check.sh` passes — show its output.

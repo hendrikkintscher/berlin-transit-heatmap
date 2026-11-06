@@ -24,6 +24,9 @@ reference search is 10 min quicker to a place in Falkensee (weekday 10:26 from S
 - [ ] Tests cover the new behaviour
 
 ## Notes
+- Start here (2026-11-06): ask Hendrik's yes, `scripts/steps.sh set 041 doing`; in packages/routing run
+  `tsx bench/gridexact.ts` (baseline 0.8 %) and `tsx bench/suite.ts --n 300`; change `walkFrom` (src/walk.ts)
+  and the cells' lookup (src/grid.ts); when fixed, set `ciMax: Infinity` (TODO(S041), bench/suite.ts) back to 0.
 - Measured (bench/gridexact.ts, weekday-10, 8 starts × 150 cells): 0.8 % of reachable cells 1+ min
   too late, 0.5 % 5+ min, up to 21 min, at every start; never too early. Suite: 2 of 943 trips on foot,
   2 of 176 step-free, likely 3 of 191 by bike (recheck those after the fix).
