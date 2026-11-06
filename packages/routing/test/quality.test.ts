@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { loadTimetable, type Journey, type PreparedTimetable, type Timetable } from '../src';
+import { loadTimetable, type Journey, type PreparedTimetable } from '../src';
 import {
   appTrip,
   bestOf,
   motisTrips,
-  rideTimes,
   stayOn,
   stayOnTransfer,
   vbbTrips,
@@ -56,29 +55,6 @@ describe('appTrip', () => {
     });
     expect(t.arrive).toBe(H10 + 1020);
     expect([t.walkStart, t.walkMid, t.walkEnd]).toEqual([60, 0, 300]);
-  });
-});
-
-describe('rideTimes', () => {
-  it('follows a line that changes trips on the way (the Ring at Beusselstr.)', () => {
-    // S41 runs A–B–C as one trip and goes on C–D as another, 1 min after it gets to C.
-    const base = miniTimetable('day');
-    const ring: Timetable = {
-      ...base,
-      routes: [
-        { name: 'S41', mode: 'sbahn', stops: [A, B, C], trips: [[H10, H10 + 120, H10 + 240]] },
-        { name: 'S41', mode: 'sbahn', stops: [C, D], trips: [[H10 + 300, H10 + 420]] },
-      ],
-      transfers: [],
-    };
-    const t = loadTimetable(ring);
-    const leg = { ...ride(route(t, A, B), [A, B, C, D], 'S41'), mode: 'sbahn' as const };
-    expect(rideTimes(t, leg, H10)).toEqual({ dep: H10, arr: H10 + 420, merged: true });
-    expect(rideTimes(t, { ...leg, stops: [A, B, C], to: C }, H10)).toEqual({
-      dep: H10,
-      arr: H10 + 240,
-      merged: false,
-    });
   });
 });
 

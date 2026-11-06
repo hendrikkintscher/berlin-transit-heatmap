@@ -9,6 +9,8 @@ import {
   journeyTo,
   laterStart,
   NETWORK_WALK_SPEED_MPS,
+  rideParts,
+  rideTimes,
   travelTimes,
   tripBetween,
   walkPath,
@@ -292,21 +294,13 @@ function rideClocks(
       out.push(null);
       continue;
     }
-    // The first vehicle after `t` on the ride's route (or any of its twins).
-    let o = -1;
-    for (const { route, pos } of twins?.[li] ?? [{ route: l.route, pos: l.fromPos }]) {
-      const n = tt.routeStopOffset[route + 1]! - tt.routeStopOffset[route]!;
-      const base = tt.routeTimeOffset[route]!;
-      for (let trip = 0; trip < tt.routeTripCount[route]!; trip++) {
-        const at = base + trip * n + pos;
-        const d = tt.times[at]!;
-        if (d >= t && (o < 0 || d < tt.times[o]!)) o = at;
-      }
-    }
-    if (o < 0) return j.legs.map(() => null);
+    // The first vehicle after `t` on the ride's route (or any of its twins); a ride that
+    // changes trips on the way goes on with the next trip from where the last one ends.
+    const r = rideTimes(tt, l, t, twins?.[li]);
+    if (!r) return j.legs.map(() => null);
     const k = l.stops.length;
-    const dep = (i: number) => tt.times[o + i]!;
-    const arr = (i: number) => tt.arrivals[o + i]!;
+    const dep = (i: number) => r.dep[i]!;
+    const arr = (i: number) => r.arr[i]!;
     t = arr(k - 1);
     // Reversed, a stop's departure is its real arrival negated and the other way round.
     out.push(
@@ -451,8 +445,28 @@ function bothWays(
         legs: [...j.legs].reverse().map((l) => {
           if (l.type !== 'ride') return l;
           const turned = { ...l, from: l.to, to: l.from, stops: [...l.stops].reverse() };
-          const [twin] = twinRoutes(back, turned);
-          return { ...turned, route: twin!.route, fromPos: twin!.pos };
+          if (!l.parts) {
+            const [twin] = twinRoutes(back, turned);
+            return { ...turned, route: twin!.route, fromPos: twin!.pos };
+          }
+          // A ride over several trips: each part turned onto the reversed timetable's routes,
+          // last part first.
+          let at = 0;
+          const pieces = rideParts(l).map((p) => {
+            const stops = l.stops.slice(at, at + p.count);
+            at += p.count - 1;
+            return stops.reverse();
+          });
+          const parts = pieces.reverse().map((stops) => {
+            const [twin] = twinRoutes(back, {
+              ...turned,
+              from: stops[0]!,
+              to: stops.at(-1)!,
+              stops,
+            });
+            return { route: twin!.route, fromPos: twin!.pos, count: stops.length };
+          });
+          return { ...turned, route: parts[0]!.route, fromPos: parts[0]!.fromPos, parts };
         }),
       };
   return {

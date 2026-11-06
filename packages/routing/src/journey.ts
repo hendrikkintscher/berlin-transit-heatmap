@@ -18,7 +18,21 @@ export type JourneyLeg =
       /** The prepared route ridden and the position on it where the ride starts. */
       route: number;
       fromPos: number;
+      /**
+       * A line that changes trips on the way (the Ring at Beusselstr.) is one ride over two or
+       * more routes: each part's route, its first position and its number of stops (the stop
+       * where one part ends starts the next). `route`/`fromPos` are the first part's. Absent
+       * for a ride on one route.
+       */
+      parts?: RidePart[];
     };
+
+/** One route of a ride that changes trips on the way (see `parts`). */
+export interface RidePart {
+  route: number;
+  fromPos: number;
+  count: number;
+}
 
 export interface Journey {
   legs: JourneyLeg[];
@@ -71,8 +85,10 @@ export function journeyVia(
     if (!followRounds(tt, legs.rounds, last, out)) return null;
   } else if (!followBest(tt, result, last, out)) return null;
   out.reverse();
-  // Merge back-to-back walks and drop empty ones. A line continuing from the stop its
-  // previous trip ended at (the Ring changes trips at Beusselstr.) is one ride.
+  // Merge back-to-back walks and drop empty ones. A line going on from the stop where its
+  // previous trip ends (the Ring changes trips at Beusselstr.) is one ride, with its parts
+  // kept for its times. Where the first trip goes on elsewhere, it is a change of vehicles
+  // of the same line and stays two rides.
   const merged: JourneyLeg[] = [];
   for (const leg of out) {
     const prev = merged[merged.length - 1];
@@ -81,8 +97,10 @@ export function journeyVia(
       leg.type === 'ride' &&
       prev?.type === 'ride' &&
       prev.name === leg.name &&
-      prev.to === leg.from
+      prev.to === leg.from &&
+      endsThere(tt, prev)
     ) {
+      prev.parts = [...rideParts(prev), ...rideParts(leg)];
       prev.stops.push(...leg.stops.slice(1));
       prev.to = leg.to;
     } else if (!(leg.type === 'walk' && leg.seconds === 0)) merged.push(leg);
@@ -189,6 +207,63 @@ function transferSeconds(tt: PreparedTimetable, from: number, to: number): numbe
   return 0;
 }
 
+type Ride = Extract<JourneyLeg, { type: 'ride' }>;
+
+/** A ride's routes: its parts, or its one route. */
+export function rideParts(l: Ride): RidePart[] {
+  return l.parts ?? [{ route: l.route, fromPos: l.fromPos, count: l.stops.length }];
+}
+
+/** Whether a ride's (last) trip ends where the ride does: at the last stop of its route. */
+function endsThere(tt: PreparedTimetable, l: Ride): boolean {
+  const p = rideParts(l).at(-1)!;
+  return p.fromPos + p.count === routeLength(tt, p.route);
+}
+
+/**
+ * A ride's times at each of its stops when it is ready to board at `ready`: on each route
+ * the first vehicle leaving then or later (as RAPTOR boards it), the next part on the first
+ * vehicle leaving its first stop once the last one got there. `dep[i]`/`arr[i]` are the
+ * departure from and the arrival at `l.stops[i]`. `twins` (a ride on one route only): other
+ * routes with the same stops whose vehicles count too, as positions where the ride starts.
+ * Null when a part has no vehicle.
+ */
+export function rideTimes(
+  tt: PreparedTimetable,
+  l: Ride,
+  ready: number,
+  twins?: readonly { route: number; pos: number }[],
+): { dep: number[]; arr: number[] } | null {
+  const dep: number[] = [];
+  const arr: number[] = [];
+  let t = ready;
+  for (const [n, p] of rideParts(l).entries()) {
+    const from =
+      n === 0 && !l.parts && twins?.length ? twins : [{ route: p.route, pos: p.fromPos }];
+    let row = -1;
+    for (const c of from) {
+      const len = routeLength(tt, c.route);
+      const base = tt.routeTimeOffset[c.route];
+      for (let trip = 0; trip < tt.routeTripCount[c.route]; trip++) {
+        const at = base + trip * len + c.pos;
+        if (tt.times[at] >= t && (row < 0 || tt.times[at] < tt.times[row])) row = at;
+      }
+    }
+    if (row < 0) return null;
+    // The stop where this part starts is where the last one ended: its arrival stays.
+    for (let i = 0; i < p.count; i++) {
+      if (n > 0 && i === 0) {
+        dep[dep.length - 1] = tt.times[row];
+        continue;
+      }
+      dep.push(tt.times[row + i]);
+      arr.push(tt.arrivals[row + i]);
+    }
+    t = arr[arr.length - 1];
+  }
+  return { dep, arr };
+}
+
 /**
  * When the first vehicle on `route` leaves its stop at position `pos` at or after `ready`
  * (seconds of the service day), as RAPTOR boards it; null if none does.
@@ -225,7 +300,8 @@ export function laterStart(
 ): Journey {
   const first = j.legs.findIndex((l) => l.type === 'ride');
   const ride = j.legs[first];
-  if (ride?.type !== 'ride') return j;
+  // (A first ride that changes trips on the way is kept as it is.)
+  if (ride?.type !== 'ride' || ride.parts) return j;
   let walk = 0;
   for (let i = 0; i < first; i++) {
     const l = j.legs[i];

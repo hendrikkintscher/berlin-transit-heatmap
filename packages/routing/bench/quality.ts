@@ -2,7 +2,7 @@
 // from the app or from another journey planner is read into one shape (seconds of the service
 // day, its rides and walks), compared, and the app's own trip is checked for a ride left too
 // early: would staying on the last vehicle to a later stop arrive as early with less walking?
-import { distanceM, type Journey, type PreparedTimetable } from '../src';
+import { distanceM, rideTimes, type Journey, type PreparedTimetable } from '../src';
 
 /** One trip, from any planner: times in seconds of the service day (local midnight). */
 export interface TripSummary {
@@ -141,55 +141,8 @@ export function vehicleAt(tt: PreparedTimetable, route: number, pos: number, t: 
 }
 
 /**
- * The times of a ride leg: the first vehicle on its route leaving its first stop at `t` or
- * later, and where the leg runs past the end of that route (a line that changes trips on the
- * way, as the Ring does at Beusselstr.: journeyVia makes that one leg), the same line's trip
- * going on from that stop. `dep` at the first stop, `arr` at the last; `merged` when it had to
- * go on. Null when no vehicle is found.
- */
-export function rideTimes(
-  tt: PreparedTimetable,
-  l: Extract<Journey['legs'][number], { type: 'ride' }>,
-  t: number,
-): { dep: number; arr: number; merged: boolean } | null {
-  let route = l.route;
-  let pos = l.fromPos;
-  let v = vehicleAt(tt, route, pos, t);
-  if (v < 0) return null;
-  const dep = tt.times[v + pos];
-  let i = 0;
-  let merged = false;
-  for (;;) {
-    const n = tt.routeStopOffset[route + 1] - tt.routeStopOffset[route];
-    const m = Math.min(n - 1 - pos, l.stops.length - 1 - i);
-    i += m;
-    const arr = tt.arrivals[v + pos + m];
-    if (i === l.stops.length - 1) return { dep, arr, merged };
-    // Goes on from l.stops[i] to l.stops[i + 1] on another route of the same line.
-    merged = true;
-    const next = nextRoute(tt, l.name, l.stops[i], l.stops[i + 1]);
-    if (!next) return null;
-    [route, pos] = next;
-    v = vehicleAt(tt, route, pos, arr);
-    if (v < 0) return null;
-  }
-}
-
-/** A route of line `name` with stop `a` right before `b`: [route, position of a]. */
-function nextRoute(tt: PreparedTimetable, name: string, a: number, b: number) {
-  for (let r = 0; r < tt.routeTripCount.length; r++) {
-    if (tt.routeNames[r] !== name) continue;
-    const o = tt.routeStopOffset[r];
-    const n = tt.routeStopOffset[r + 1] - o;
-    for (let q = 0; q < n - 1; q++)
-      if (tt.routeStops[o + q] === a && tt.routeStops[o + q + 1] === b) return [r, q] as const;
-  }
-  return null;
-}
-
-/**
  * The app's journey as a TripSummary, its rides timed from `leave` (as the trip card does).
- * `merged` counts rides that change trips on the way (see rideTimes).
+ * `merged` counts rides that change trips on the way (with `parts`).
  */
 export function appTrip(
   tt: PreparedTimetable,
@@ -206,18 +159,15 @@ export function appTrip(
       t += l.seconds;
       continue;
     }
+    // As the trip card times it (rideClocks: no twins on the card's own rides).
     const r = rideTimes(tt, l, t);
     if (!r) return null;
-    if (r.merged) merged++;
-    rides.push({
-      line: l.name,
-      from: tt.stops[l.from].name,
-      to: tt.stops[l.to].name,
-      dep: r.dep,
-      arr: r.arr,
-    });
-    legs.push({ ride: true, seconds: r.arr - t });
-    t = r.arr;
+    if (l.parts) merged++;
+    const dep = r.dep[0];
+    const arr = r.arr[r.arr.length - 1];
+    rides.push({ line: l.name, from: tt.stops[l.from].name, to: tt.stops[l.to].name, dep, arr });
+    legs.push({ ride: true, seconds: arr - t });
+    t = arr;
   }
   const w = walks(legs);
   const firstRide = rides[0];
@@ -262,13 +212,13 @@ export function stayOn(
   for (let i = 0; i < lastIdx; i++) {
     const l = j.legs[i];
     if (l.type === 'walk') t += l.seconds;
-    else t = rideTimes(tt, l, t)!.arr;
+    else t = rideTimes(tt, l, t)!.arr.at(-1)!;
   }
   const off = tt.routeStopOffset[last.route];
   const n = tt.routeStopOffset[last.route + 1] - off;
   const getOff = last.fromPos + last.stops.length - 1;
   // (A last ride that changes trips on the way is left as it is.)
-  if (getOff >= n) return null;
+  if (last.parts) return null;
   const v = vehicleAt(tt, last.route, last.fromPos, t);
   if (v < 0) return null;
   let found: StayOn | null = null;
@@ -326,8 +276,8 @@ export function stayOnTransfer(
     }
     const r = rideTimes(tt, l, t);
     if (!r) return null;
-    t = r.arr;
-    at.push({ v: r.merged ? -1 : vehicleAt(tt, l.route, l.fromPos, r.dep), arr: t });
+    t = r.arr.at(-1)!;
+    at.push({ v: l.parts ? -1 : vehicleAt(tt, l.route, l.fromPos, r.dep[0]), arr: t });
   }
   const dist = (a: number, b: number) =>
     distanceM(tt.stops[a].lat, tt.stops[a].lon, tt.stops[b].lat, tt.stops[b].lon);
