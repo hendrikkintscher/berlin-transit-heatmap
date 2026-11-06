@@ -72,3 +72,28 @@ raise the speed job's tolerance/budget in the PR, bump, merge; (2) keep main's w
 whole map and the exact one only for taps (map minutes stay up to 21 min late in ~1 % of cells,
 the trip on tap is exact) — needs a new small step; (3) look for a faster exact method first
 (e.g. the front only where the earliest walk nears the cap) — a research step, size M.
+
+## Speed research (2026-11-06, after the PR; nothing changed in the code)
+Where the time goes (Alexanderplatz, on foot): the front has 1.62 M labels for 546 k nodes
+(1.09 M beyond the earliest; only 8 k of those beaten by a middle label, so the front is real),
+1.9 M pops and pushes; per label the loop costs about what main's single-label loop costs. Only
+29 % of the labels are used (picked by a cell, or an ancestor of one); 4 % of cells take a
+non-earliest label. By bike the front is 3.6 M labels (walkFront 633 ms vs 44): the 3.75 km
+cap reaches 2.25× the area, not the 7.5 km fallback band (only 356 k labels lie beyond 3.75 km).
+Tried, measured, not kept (medians of 7, walkFront 250 ms, walkFrom 44 ms):
+- ordering by walk instead of time (one-comparison dominance): 300–335 ms — every source's ring
+  is active at once, worse locality; packing node/queue fields into one buffer: 370–390 ms
+  (V8 and mixed int/float views); Morton renumbering of nodes: −8 % (ids are already local:
+  median id gap between arc ends is 3); keeping the shortest pending walk instead of the last:
+  no change; capping the labels per node: no faster and not exact; a 1 m tolerance: same.
+- pruning labels that cannot reach a "fringe" (node whose earliest label does not fit a cell):
+  sound only with an uncapped first pass; keeps 43 % of the extra labels on foot, 54 % by bike,
+  and the distance-to-fringe pass costs as much as a walk (52 ms; a Euclidean distance
+  transform on a 200 m grid would be ~10 ms). Estimated whole: foot heatGrid ~240 ms (now 350,
+  main 110), bike ~420 (now 747, main 139). Not built: M-size, moderate gain.
+- degree-2 chain contraction: 24 % of nodes, 22 % of labels → ~20 % off every walk (main's
+  too). Changes snapping (cells/stops to chain ends, same-chain straight walks). Own step.
+- walk tolerance (labels kept only when shorter by SAME_WALK_M): 30 m → 196 ms (−20 %),
+  60 m → 182 ms (−27 %); not exact at the cap boundary.
+- a time horizon: none exists (the top colour band is open), so dropping late labels is not exact.
+Exact and fast would only be no end-walk cap at all (single label, 44 ms): a product change.
