@@ -178,6 +178,25 @@ export function longWalkHtml(legs: Legs): string {
 }
 
 /**
+ * The line under the trip that offers the other way (S045): the ride with a shorter walk
+ * ("oder 115 ab Teltower Damm · gleiche Ankunft, 14 Min. weniger zu Fuß"), or, while that
+ * ride is shown, the way back on foot. A tap on it swaps the card (tap.ts).
+ */
+export function tripAltHtml(
+  alt: { where: 'start' | 'end'; line: string; stop: string; saved: number },
+  back: boolean,
+): string {
+  const text = back
+    ? t('tripAltBack', { n: alt.saved })
+    : t(alt.where === 'start' ? 'tripAltStart' : 'tripAltEnd', {
+        line: alt.line,
+        stop: alt.stop,
+        n: alt.saved,
+      });
+  return `<small class="trip-alt" role="button" tabindex="0">${escapeHtml(text)}</small>`;
+}
+
+/**
  * The trip's ends as two rows. Departing, the map's place is the Start; arriving, the Ziel.
  * Each row leads with its dot in the map marker's colour: the map's place has the rings in
  * place of its dot, the other row's dot sits in the `.anchor-slot`, where the button moving

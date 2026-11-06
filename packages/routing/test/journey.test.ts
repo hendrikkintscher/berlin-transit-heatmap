@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   departureAt,
+  endWalks,
+  feederSaving,
   heatGrid,
   journeyTo,
   laterChange,
@@ -8,6 +10,9 @@ import {
   loadTimetable,
   rideTimes,
   travelTimes,
+  wantsFeeder,
+  type Journey,
+  type JourneyLeg,
 } from '../src';
 import { A, C, G, H, I, KM_LAT, KM_LON, miniTimetable, STOP_POS } from './fixture';
 
@@ -277,5 +282,47 @@ describe('laterChange (S038)', () => {
     const g = heatGrid(late, rl, { cellSizeM: 50, trackStops: true });
     const found = journeyTo(late, rl, g, pos[4].lat, pos[4].lon)!;
     expect(laterChange(late, found, H10)).toBe(found);
+  });
+});
+
+describe('feeder rides (S045)', () => {
+  const walk = (seconds: number) => ({ type: 'walk' as const, seconds });
+  const ride = (name: string): JourneyLeg => ({
+    type: 'ride',
+    name,
+    mode: 'bus',
+    from: 0,
+    to: 1,
+    stops: [0, 1],
+    route: 0,
+    fromPos: 0,
+  });
+  const journey = (...legs: Journey['legs']): Journey => ({ legs, transfers: 0 });
+
+  it('adds up the walks before the first ride and after the last', () => {
+    expect(endWalks(journey(walk(100), ride('A'), walk(300), ride('B'), walk(250)))).toEqual([
+      100, 250,
+    ]);
+    expect(endWalks(journey(walk(900)))).toEqual([0, 0]);
+  });
+
+  it('looks for a feeder only when an end walk is over ten minutes', () => {
+    expect(wantsFeeder(journey(ride('A'), walk(601)))).toBe(true);
+    expect(wantsFeeder(journey(walk(700), ride('A')))).toBe(true);
+    expect(wantsFeeder(journey(walk(300), ride('A'), walk(600)))).toBe(false);
+  });
+
+  it('keeps a ride that arrives no later and walks 180 s or more less', () => {
+    const shown = journey(ride('A'), walk(900));
+    expect(feederSaving(shown, 1000, journey(ride('A'), ride('B'), walk(720)), 1000)).toEqual({
+      where: 'end',
+      saved: 180,
+    });
+    expect(feederSaving(shown, 1000, journey(ride('A'), ride('B'), walk(721)), 1000)).toBeNull();
+    expect(feederSaving(shown, 1000, journey(ride('A'), walk(100)), 1001)).toBeNull();
+    expect(feederSaving(shown, 1000, journey(walk(100)), 1000)).toBeNull();
+    expect(
+      feederSaving(journey(walk(900), ride('A')), 1000, journey(walk(100), ride('B')), 1000),
+    ).toEqual({ where: 'start', saved: 800 });
   });
 });

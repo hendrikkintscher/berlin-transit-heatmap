@@ -1,9 +1,11 @@
 // Trips on tap: the connection to (or from) the tapped place, its rides' real times, the
 // next few connections for the drawer, and the message the trip card is drawn from.
 import {
+  ALT_WALK_CAP_S,
   cellColRow,
   departureAt,
   distanceM,
+  feederSaving,
   gridLayout,
   heatGrid,
   journeyTo,
@@ -14,6 +16,7 @@ import {
   rideTimes,
   travelTimes,
   tripBetween,
+  wantsFeeder,
   walkPath,
   type Journey,
   type PreparedTimetable,
@@ -370,6 +373,13 @@ function originWalks(
   return walks;
 }
 
+/** The walk caps of a feeder ride's search (S045): at the start, the end and where nothing is near. */
+const WALK_CAPS = {
+  maxInitialWalkSeconds: ALT_WALK_CAP_S,
+  maxFinalWalkSeconds: ALT_WALK_CAP_S,
+  maxFallbackWalkSeconds: ALT_WALK_CAP_S,
+} as const;
+
 /**
  * The trip to (arriving: from) the tapped place as both ends see it (tripBetween): the
  * same journey whether the map is made from this end or the other, so moving the map to
@@ -388,10 +398,13 @@ function bothWays(
   time?: TripTime,
   mapSeconds?: number,
   profile?: StopProfile,
+  capped = false,
 ) {
   const other = last.otherTt;
   if (!other || last.travel === 'bikeonly' || !origin) return null;
-  const w = travelOptions(last.travel);
+  // (S045: with `capped`, every walk at the ends is cut to ALT_WALK_CAP_S.)
+  const base = travelOptions(last.travel);
+  const w = capped ? ({ ...base, ...WALK_CAPS } as typeof base) : base;
   // The map runs from its place on the forward timetable, or to it on the reversed one.
   const mapFwd = last.direction === 'depart';
   // The card tells a trip that leaves at a time: from a start, or to the Ziel leaving.
@@ -407,7 +420,7 @@ function bothWays(
         ? { leave: last.from }
         : { arrive: -last.from };
   // The map's own place is the same on every tap: its walks to the stops are found once.
-  const ends = originWalks(fwd, o, last.travel, w);
+  const ends = capped ? walksToStops(fwd, o, w) : originWalks(fwd, o, last.travel, w);
   const f = tripBetween(
     fwd,
     back,
@@ -521,6 +534,8 @@ function twinRoutes(
 let lastFound: NonNullable<ReturnType<typeof trip>> | null = null;
 /** The map (or the next hour's file) that connection was found on. */
 let lastFoundOn: LastTrip | null = null;
+/** The place that connection goes to (or, arriving, comes from). */
+let lastFoundAt: { lat: number; lon: number } | null = null;
 
 /** A drawer row on the timetable's own clock: the start moves on, the end must improve. */
 interface MoreRow {
@@ -863,7 +878,84 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: Nex
   });
   lastFound = journeys.length === 1 ? journeys[0]! : null;
   lastFoundOn = later ?? last;
+  lastFoundAt = { lat: msg.lat, lon: msg.lon };
   return tripMessage(journeys);
+}
+
+/**
+ * The feeder ride next to a trip on tap that walks long at an end (S045, decision 0012): the
+ * same trip within the shown one's times with every walk at the ends capped at ten minutes,
+ * kept when it arrives no later and walks 3+ minutes less. Run after the trip's message went
+ * out (it costs a second search), on the connection tapTrip kept; null when there is none:
+ * a short walk, several starts, a bike, or no better way.
+ */
+export function tapAlternative(): {
+  trip: ReturnType<typeof tripMessage>;
+  where: 'start' | 'end';
+  line: string;
+  stop: string;
+  saved: number;
+} | null {
+  const f = lastFound;
+  const on = lastFoundOn;
+  // (A newer map since the tap: the card has moved on, and the stops would be its own.)
+  if (
+    !f ||
+    !on ||
+    on.runs !== lastTrip?.runs ||
+    on.runs.length !== 1 ||
+    on.travel !== 'walk' ||
+    !on.otherTt
+  )
+    return null;
+  if (f.leave === undefined || f.arrive === undefined || !wantsFeeder(f.journey)) return null;
+  const at = lastFoundAt;
+  if (!at) return null;
+  const alt = bothWays(
+    on,
+    on.runs[0]!.result.origin,
+    undefined,
+    at,
+    {
+      leave: f.leave,
+      arrive: f.arrive,
+    },
+    undefined,
+    undefined,
+    true,
+  );
+  if (!alt || alt.leave === undefined || alt.arrive === undefined) return null;
+  const saving = feederSaving(f.journey, f.arrive, alt.journey, alt.arrive);
+  if (!saving) return null;
+  // The stop's name from the message's own leg, so it is the timetable the trip was found on.
+  const message = tripMessage([alt]);
+  const rides = (message.journeys[0]?.legs ?? []).filter((l) => l.type === 'ride');
+  const ride = saving.where === 'start' ? rides[0] : rides.at(-1);
+  if (!ride) return null;
+  return {
+    trip: message,
+    where: saving.where,
+    line: ride.name,
+    stop: stopName(saving.where === 'start' ? ride.from : ride.to),
+    saved: Math.round(saving.saved / 60),
+  };
+}
+
+/**
+ * After a trip's message went out: lets queued messages go first (`yieldTask`), then, if the
+ * tap `id` is still the latest (`latest`), looks for the feeder ride and posts it as a
+ * `tripAlt` message (S045). A newer tap or map meanwhile drops it.
+ */
+export async function postAlternative(
+  id: number,
+  latest: () => number,
+  yieldTask: () => Promise<void>,
+  post: (m: Extract<FromWorker, { type: 'tripAlt' }>) => void,
+): Promise<void> {
+  await yieldTask();
+  if (id !== latest()) return;
+  const alt = tapAlternative();
+  if (alt) post({ type: 'tripAlt', id, ...alt });
 }
 
 /** The clock hour's timetable, both ways round, for a connection that rolled on past the map's hour. */

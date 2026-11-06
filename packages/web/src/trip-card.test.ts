@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { leaveText, longWalkHtml, tripHtml, type Trip, type TripContext } from './trip-card';
+import {
+  leaveText,
+  longWalkHtml,
+  tripAltHtml,
+  tripHtml,
+  type Trip,
+  type TripContext,
+} from './trip-card';
 
 const ctx: TripContext = {
   direction: 'depart',
@@ -289,5 +296,21 @@ describe('trip card', () => {
     expect(longWalkHtml([walk(25)])).toBe('');
     const html = tripHtml({ journeys: [{ transfers: 0, legs: [walk(2), r, walk(24)] }] }, ctx);
     expect(html).toContain('<small class="trip-long-walk">langer Fußweg am Ende (24 Min.)</small>');
+  });
+});
+
+describe('tripAltHtml (S045)', () => {
+  const alt = { where: 'start' as const, line: '115', stop: 'Teltower Damm', saved: 14 };
+  it('names the ride, its stop and the same arrival', () => {
+    const html = tripAltHtml(alt, false);
+    expect(html).toContain('class="trip-alt"');
+    expect(html).toContain('oder 115 ab Teltower Damm · gleiche Ankunft, 14 Min. weniger zu Fuß');
+  });
+  it('says "bis" for a shorter walk at the end, and offers the walk back on the ride', () => {
+    expect(tripAltHtml({ ...alt, where: 'end' }, false)).toContain('oder 115 bis Teltower Damm');
+    expect(tripAltHtml(alt, true)).toContain('oder zu Fuß · gleiche Ankunft, 14 Min. mehr zu Fuß');
+  });
+  it('escapes the stop name', () => {
+    expect(tripAltHtml({ ...alt, stop: '<b>' }, false)).not.toContain('<b>');
   });
 });

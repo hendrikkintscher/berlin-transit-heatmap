@@ -436,6 +436,51 @@ export function laterChange(
   return changed ? { legs, transfers: j.transfers } : j;
 }
 
+/** A walk at either end over this many seconds makes a feeder ride worth looking for (S045). */
+export const ALT_WALK_CAP_S = 600;
+/** A feeder ride is offered when it walks at least this many seconds less at the ends. */
+export const ALT_MIN_SAVING_S = 180;
+
+/**
+ * The walks at the two ends of a journey in seconds: before its first ride and after its
+ * last one. A journey without a ride has none (it is one walk, not an end).
+ */
+export function endWalks(j: Journey): [number, number] {
+  const first = j.legs.findIndex((l) => l.type === 'ride');
+  if (first < 0) return [0, 0];
+  const last = j.legs.length - 1 - [...j.legs].reverse().findIndex((l) => l.type === 'ride');
+  const sum = (ls: JourneyLeg[]) => ls.reduce((a, l) => a + (l.type === 'walk' ? l.seconds : 0), 0);
+  return [sum(j.legs.slice(0, first)), sum(j.legs.slice(last + 1))];
+}
+
+/**
+ * Whether a trip walks long enough at an end for a feeder ride to be looked for: the same
+ * trip with every walk capped at `ALT_WALK_CAP_S` (decision 0012).
+ */
+export function wantsFeeder(j: Journey): boolean {
+  const [a, z] = endWalks(j);
+  return Math.max(a, z) > ALT_WALK_CAP_S;
+}
+
+/**
+ * Whether `alt` is the feeder ride for `shown`: it rides, arrives no later than `shown` (both
+ * arrival times on one clock) and walks `ALT_MIN_SAVING_S` or more less at the ends. Says at
+ * which end the walk shrank most and by how many seconds in all.
+ */
+export function feederSaving(
+  shown: Journey,
+  shownArrive: number,
+  alt: Journey,
+  altArrive: number,
+): { where: 'start' | 'end'; saved: number } | null {
+  if (!alt.legs.some((l) => l.type === 'ride') || altArrive > shownArrive) return null;
+  const [a0, z0] = endWalks(shown);
+  const [a1, z1] = endWalks(alt);
+  const saved = a0 + z0 - (a1 + z1);
+  if (saved < ALT_MIN_SAVING_S) return null;
+  return { where: a0 - a1 >= z0 - z1 ? 'start' : 'end', saved };
+}
+
 /** The row (index of its first stop's time) of the vehicle on `route` leaving `pos` at `dep`. */
 function vehicleRow(tt: PreparedTimetable, route: number, pos: number, dep: number): number {
   const n = routeLength(tt, route);

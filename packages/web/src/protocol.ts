@@ -369,6 +369,21 @@ export type FromWorker =
       /** Where rides start and end; `end` marks getting on first and off last (not a change). */
       stops: FeatureCollection<Point, { name: string; mode: string; end: boolean }>;
     }
+  /**
+   * After a trip `id` that walks long at an end (S045): the ride arriving as early with a
+   * short walk instead, sent once the trip itself is out. `where`: the end whose walk shrank;
+   * `line` and `stop`: the ride's line and its boarding (`start`) or exit (`end`) stop;
+   * `saved`: minutes less on foot.
+   */
+  | {
+      type: 'tripAlt';
+      id: number;
+      trip: Omit<Extract<FromWorker, { type: 'trip' }>, 'type' | 'id'>;
+      where: 'start' | 'end';
+      line: string;
+      stop: string;
+      saved: number;
+    }
   | { type: 'downloads'; list: Download[] }
   | { type: 'error'; message: string };
 

@@ -1915,6 +1915,15 @@ body.special .legend {
 #readout .trip-long-walk::before {
   content: '🚶 ';
 }
+/* The ride with a shorter walk next to a long one (S045); a tap swaps it. */
+#readout .trip-alt {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .trip-sep {
   color: var(--muted);
 }

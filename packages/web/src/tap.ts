@@ -13,7 +13,8 @@ import {
   TRIP_SOURCE,
   TRIP_STOPS_SOURCE,
 } from './map-layers';
-import type { StationProps, ToWorker } from './protocol';
+import { altState } from './alt-state';
+import type { FromWorker, StationProps, ToWorker } from './protocol';
 import { reverseAddress, type Place } from './search';
 import { $, chosenStart, mapDirection, mapToGoal, type State } from './state';
 import { arrivedBy, changeNoteHtml, hhmm, leaveText, tripHtml, type Trip } from './trip-card';
@@ -509,6 +510,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   /** The journey to the tapped spot arrived from the worker. */
   function onTrip(m: Trip) {
     if (m.id !== tripId || readout.hidden) return;
+    alt.reset();
     if (deferred?.id === m.id) {
       clearTimeout(deferred.timer);
       deferred.render();
@@ -581,12 +583,38 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     setTrip(m);
     board = (m.journeys.length === 1 && m.journeys[0]?.board) || null;
     checkLive();
+    renderAlt();
+  }
+
+  /** The worker found a ride with a shorter walk for the shown trip. */
+  function onTripAlt(m: Extract<FromWorker, { type: 'tripAlt' }>) {
+    if (m.id !== tripId || readout.hidden || !connections.length) return;
+    alt.set(m);
+    renderAlt();
+  }
+
+  /**
+   * One line under the trip: "oder 115 ab Teltower Damm · gleiche Ankunft", and on the ride
+   * "oder zu Fuß" to go back; tapping it swaps the card. Only on the first connection.
+   */
+  function renderAlt() {
+    const el = document.getElementById('trip');
+    el?.querySelector('.trip-alt')?.remove();
+    el?.insertAdjacentHTML('beforeend', alt.html(shownConnection));
+  }
+
+  /** The line under the trip swaps it for the other way (S045). */
+  function swapAlt() {
+    const m = alt.toggle(connections[shownConnection] ?? connections[0]!);
+    if (m) showTrip(m);
   }
 
   // The drawer (pulling the card up): the shown connection and the ones after it
   // (arriving: before it), asked for once the pull starts, so they come up with the card.
   let connections: Trip[] = [];
   let shownConnection = 0;
+  /** The ride arriving as early with a shorter walk, once the worker found it (S045). */
+  const alt = altState();
   let moreAsked = false;
   let moreId = 0;
   /** The drawer's list: "loading" until the worker answers, then the connections. */
@@ -695,12 +723,14 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   }
 
   readoutText.addEventListener('click', (e) => {
+    if ((e.target as Element).closest('.trip-alt')) return justPulled() ? undefined : swapAlt();
     const row = (e.target as Element).closest<HTMLButtonElement>('.more-row');
     if (!row) return;
     const k = Number(row.dataset.k);
     const c = connections[k];
-    if (!c || k === shownConnection) return;
+    if (!c || (k === shownConnection && !alt.shown)) return;
     shownConnection = k;
+    alt.back();
     showTrip(c);
     renderMore();
   });
@@ -914,6 +944,10 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
   });
   readoutText.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
+    if ((e.target as Element).matches('.trip-alt')) {
+      e.preventDefault();
+      return swapAlt();
+    }
     const ride = noteRide(e.target);
     if (ride) {
       e.preventDefault();
@@ -1007,6 +1041,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     redrawSpot,
     onResult,
     onTrip,
+    onTripAlt,
     onLiving,
     addChangeNotes,
     /**

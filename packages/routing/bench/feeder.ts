@@ -6,7 +6,7 @@
 // 2–25 km, the coming days, as bench/suite.ts draws them.
 // Usage (in packages/routing): tsx bench/feeder.ts [--n 300] [--seed 36] [--start YYYYMMDD] [--days 1-6]
 import { parseArgs } from 'node:util';
-import { distanceM, type Journey, type Origin } from '../src';
+import { ALT_MIN_SAVING_S, ALT_WALK_CAP_S, distanceM, type Journey, type Origin } from '../src';
 import { REGION } from '../src/regions';
 import { appJourney, dateOf, dayStartMs, liveData, modeOptions } from './live';
 import { vbb } from './planners';
@@ -164,10 +164,11 @@ console.log(row('as today (30 min walks, fewest rides)', (c) => c.best));
 for (const later of LATER)
   for (const cap of CAPS)
     console.log(row(`${cap} min / +${later} s`, (c) => chosen(c, cap, later)));
-for (const minSaved of [180, 300])
+for (const minSaved of [ALT_MIN_SAVING_S, 300])
   console.log(
-    row(`10 min / +0 s, only when it saves ${minSaved / 60}+ min`, (c) =>
-      chosen(c, 10, 0, minSaved),
+    row(
+      `${ALT_WALK_CAP_S / 60} min / +0 s, only when it saves ${minSaved / 60}+ min${minSaved === ALT_MIN_SAVING_S ? ' = shown on the card (S045)' : ''}`,
+      (c) => chosen(c, ALT_WALK_CAP_S / 60, 0, minSaved),
     ),
   );
 console.log(
