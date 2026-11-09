@@ -1,5 +1,7 @@
 # Berlin transit heatmap
 
+**Kind: coding project.** We look for technical solutions: code, tests, automation, tooling. If a problem would be better solved without code (a process, a decision, a message, an existing service), say so in one line before building anything.
+
 How long it takes to get anywhere in Berlin by public transport, as a travel-time map for phones;
 live at https://hendrikkintscher.github.io/berlin-transit-heatmap/. Background in [README.md](README.md).
 How to write each language here (TypeScript, JS, shell, Actions YAML, HTML/CSS): [BEST_PRACTICES.md](BEST_PRACTICES.md).
@@ -62,7 +64,7 @@ One home per kind of info, no duplicates.
 | Details of a task too big for one line; later wishes               | `docs/specs/` (`later.md`)                                                                 |
 | Session log, newest first, last ~10 entries + 3-line summary       | `PROGRESS.md`                                                                              |
 | History: app version / changelog                                   | git + `CHANGELOG.md`, `VERSION` (+ both `package.json`)                                    |
-| Decisions                                                          | vault note `Projects/Transport in Berlin visualised.md`; until S046 also `docs/decisions/` |
+| Decisions                                                          | vault note `Projects/Own apps and tools/Transport in Berlin visualised.md`; until S046 also `docs/decisions/` |
 | Speed budget                                                       | `scripts/speed/budget.json`                                                                |
 | Finished step files (before 1.0.7)                                 | git history: `git show 012f587:docs/steps/archive/<file>`                                  |
 
