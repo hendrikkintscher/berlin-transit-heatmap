@@ -105,9 +105,6 @@ desktop are not comparable with the cloud container's, so time main and the bran
   check `git log origin/main..HEAD` and `git status` before starting, and build on (or ask
   about) commits you did not make instead of overwriting them.
 - When a task's PR is merged, reset the branch to `origin/main` before the next task.
-- Old branches (2026-10-16): every `claude/project-thread-*` branch was checked against main and
-  holds nothing unmerged (all squash-merged through their PRs). Deleting them from a session was
-  blocked; Hendrik can delete them on GitHub. Don't merge them: their diffs are stale copies.
 - The working walk rule since 0.13.9: on foot, walks up to 30 minutes count at both ends
   (`FASTEST_WALK` in `packages/web/src/worker-runs.ts`); the Node benches in
   `packages/routing/bench` pass their own options.

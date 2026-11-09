@@ -7,6 +7,8 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+- CLAUDE.md: dropped the note on old `claude/project-thread-*` branches (all deleted 2026-11-09; merged branches now delete themselves).
+
 ## [1.0.8] — 2026-11-09
 
 - CLAUDE.md states the project kind (coding project; claude-brain coding guidelines, S-016); vault note path updated to its category folder.
