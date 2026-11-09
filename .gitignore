@@ -8,7 +8,6 @@ coverage/
 # Claude Code: personal, never commit
 CLAUDE.local.md
 .claude/settings.local.json
-docs/handoff.md
 
 # Secrets
 .env

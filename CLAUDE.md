@@ -4,34 +4,38 @@ How long it takes to get anywhere in Berlin by public transport, as a travel-tim
 live at https://hendrikkintscher.github.io/berlin-transit-heatmap/. Background in [README.md](README.md).
 How to write each language here (TypeScript, JS, shell, Actions YAML, HTML/CSS): [BEST_PRACTICES.md](BEST_PRACTICES.md).
 
+**Vision:** a map you can trust, faster than you can ask the next question (the Berlin app finished at
+1.0.0). Every change is judged first by the timings at 360×740 (also with the page CPU slowed 4×), then
+by agreement between the trip on tap and the map's minutes. A change that slows any timing does not ship.
+
+**Out of scope:** Android app (native or TWA) and beta testing (Hendrik, 2026-10-13). Set aside
+2026-10-12, only if Hendrik asks again: fare zones on the map, sharing a picture of the map, population
+within N minutes, dark map and icon shortcuts. Planned for much later: `docs/specs/later.md`.
+
 ## How we work
 
 The coordinator is the main session (not a subagent). The procedure for every case is in the
-`/step` skill — use it whenever you create, start or finish a step.
+`/task` skill — use it whenever you add, start or finish a task.
 
-- **One thread per roadmap step.** Work only on the step named for this thread, never the next one.
-  Before starting another step, ask and wait for an explicit yes.
-- **Decision steps:** measure first (or compare concrete facts where measuring is impossible),
+- **One thread per task.** Work only on the task named for this thread. Before starting another
+  one, ask and wait for an explicit yes.
+- **Pause (Hendrik, 2026-11-03):** start no task until Hendrik names it. Bug fixes he reports are fine.
+- **Research tasks:** measure first (or compare concrete facts where measuring is impossible),
   send a short table + one-line recommendation, then stop. Build nothing until Hendrik says yes.
-- **Build steps (after a yes):** one PR per step, with tests, timings (see "Speed comes first"), a
-  CHANGELOG entry, a version bump (`scripts/steps.sh bump`: patch, `minor` for a new milestone; it
-  sets VERSION and both package.json files) and the step removed from ROADMAP.md. Hooks enforce the
-  bookkeeping and that checks pass. Get CI green (`check`, `smoke`, `speed`), squash-merge (merging
-  deploys to Pages and tags `vX.Y.Z`), then check the live site.
-- **Tags** on every step: kind, priority (P1–P3), size (XS/S/M; L must be split first), needs.
-  Point out a P1 sitting below lower priorities, or a step listed before one it needs.
-- **Size:** if the diff is clearly bigger than the size tag, stop and ask: split, or accept.
-- **Batch approval** ("yes S004–S006") only for build steps sized XS or S. A batch of only XS
-  steps is one PR with one patch bump; otherwise one PR per step. No questions in between,
-  stop at the first problem. Decision and M steps always need their own yes.
-- **New ideas** mentioned along the way become their own later step (`/step new`), never part
-  of the current one. Say in one line that you added it, with its tags.
-- **Pause (Hendrik, 2026-11-03):** after S018 the work stops. Start no step, not even the one
-  `scripts/steps.sh next` shows, until Hendrik names it. Bug fixes he reports are fine.
-- **"continue"** means the next step you just proposed — never reopening finished work.
-  If no specific step was proposed, or it's unclear, ask.
-- **When a step or batch is finished:** short summary (what changed, PR link, version), then ask
-  "Next: S00N — <title> (tags)?" from `scripts/steps.sh next`. Don't start until Hendrik says yes.
+- **Build tasks (after a yes):** one PR per task, with tests, timings (see "Speed comes first"), a
+  CHANGELOG entry and a version bump (`bash scripts/bump.sh`: patch, `minor` for a new milestone; it
+  sets VERSION and both package.json files). Get CI green (`check`, `smoke`, `speed`), squash-merge
+  (merging deploys to Pages and tags `vX.Y.Z`), then check the live site.
+- **Size:** S < half a day · M ~1 day / ~400 lines · L too big, split first. If the diff is clearly
+  bigger than the size, stop and ask: split, or accept.
+- **Batch approval** ("yes S047–S049") only for build tasks sized S. Research and M tasks always need
+  their own yes. No questions in between, stop at the first problem.
+- **New ideas** mentioned along the way become their own task (`/task add`), never part of the
+  current one. Say in one line that you added it.
+- **"continue"** means the next task you just proposed — never reopening finished work.
+  If no specific task was proposed, or it's unclear, ask.
+- **When a task or batch is finished:** short summary (what changed, PR link, version), then ask
+  "Next: S0NN — <title>?". Don't start until Hendrik says yes.
 
 ## Speed comes first
 
@@ -50,25 +54,25 @@ raising a budget is a deliberate edit with the reason in the PR.
 
 ## Where things live
 
-| What                                                            | Where                                             |
-| --------------------------------------------------------------- | ------------------------------------------------- |
-| Vision + ordered steps in Now / Next / Later themes (≤80 lines) | `ROADMAP.md`                                      |
-| One file per step — change only via `scripts/steps.sh`          | `docs/steps/NNN-slug.md`                          |
-| Finished steps (don't read unless asked)                        | `docs/steps/archive/`                             |
-| Decision records (after Hendrik's yes)                          | `docs/decisions/NNNN-slug.md`                     |
-| Specs for steps too big for their step file; later wishes       | `docs/specs/` (`later.md`)                        |
-| App version / changelog                                         | `VERSION` (+ both `package.json`), `CHANGELOG.md` |
-| Session handoff (overwritten, not committed)                    | `docs/handoff.md`                                 |
-| Speed budget                                                    | `scripts/speed/budget.json`                       |
+One home per kind of info, no duplicates.
 
-Find work with `scripts/steps.sh next | list [tag] | show NNN` — don't open step files one by one.
+| What                                                               | Where                                                                                      |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Tasks (id, title, kind, owner, priority, size, deps, test, passes) | `feature_list.json`                                                                        |
+| Details of a task too big for one line; later wishes               | `docs/specs/` (`later.md`)                                                                 |
+| Session log, newest first, last ~10 entries + 3-line summary       | `PROGRESS.md`                                                                              |
+| History: app version / changelog                                   | git + `CHANGELOG.md`, `VERSION` (+ both `package.json`)                                    |
+| Decisions                                                          | vault note `Projects/Transport in Berlin visualised.md`; until S046 also `docs/decisions/` |
+| Speed budget                                                       | `scripts/speed/budget.json`                                                                |
+| Finished step files (before 1.0.7)                                 | git history: `git show 012f587:docs/steps/archive/<file>`                                  |
+
 Implementation details go in commit messages and code comments, not planning files.
 Don't create other planning or notes files; if something doesn't fit, ask.
 
 ## Commands
 
 ```sh
-pnpm check                                   # lint, format, typecheck, all tests (= bash scripts/check.sh)
+pnpm check                                   # lint, format, typecheck, all tests (bash scripts/check.sh adds the bookkeeping)
 pnpm --dir packages/web build                # -> packages/web/dist
 node scripts/smoke/smoke.mjs                 # browser smoke test (as CI)
 node scripts/speed/check.mjs --data packages/routing/.data [--base <main checkout>]
@@ -86,7 +90,7 @@ without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest` (`
 `node packages/timetable-build/bin/build-timetable.js --gtfs data/gtfs --out <dir>` builds all hourly files in about 30 s.
 
 The cloud session hook (`.claude/hooks/session-install.sh`) installs the packages and fetches
-the bench data; `.claude/hooks/session-start.sh` prints where the roadmap stands.
+the bench data; `.claude/hooks/session-start.sh` prints the open tasks and the last session.
 
 On Hendrik's Windows PC (local Claude Code) the install hook does nothing: run `pnpm install` and
 `pnpm --dir packages/routing fetch-data` once yourself. The hooks are bash scripts and need Git Bash
@@ -98,7 +102,7 @@ desktop are not comparable with the cloud container's, so time main and the bran
 - Several chats may share one container and one branch:
   check `git log origin/main..HEAD` and `git status` before starting, and build on (or ask
   about) commits you did not make instead of overwriting them.
-- When a step's PR is merged, reset the branch to `origin/main` before the next step.
+- When a task's PR is merged, reset the branch to `origin/main` before the next task.
 - Old branches (2026-10-16): every `claude/project-thread-*` branch was checked against main and
   holds nothing unmerged (all squash-merged through their PRs). Deleting them from a session was
   blocked; Hendrik can delete them on GitHub. Don't merge them: their diffs are stale copies.
@@ -111,12 +115,12 @@ desktop are not comparable with the cloud container's, so time main and the bran
 - Measurement scripts of finished steps (S001–S034) were kept outside the repo; their numbers are in
   CHANGELOG.md and the PRs. Don't look for them; rebuild from `scripts/speed/browser.mjs`.
 - PRs here are usually opened with the GitHub tools, not `gh pr create`, so the pr-guard hook does
-  not see them: check the bookkeeping (VERSION, CHANGELOG.md, ROADMAP.md) yourself.
-- `docs/steps/` is left out of Prettier (`steps.sh` writes it); run `npx prettier --write` on the
-  other docs you change.
-
-- Route quality (S036–S040, 2026-11-06): the open findings and options are in the step files S041, S039, S042
-  (start with S041). Not in git, so a new machine makes them again: the raw GTFS feed (recipe under Commands),
+  not see them: check the bookkeeping (VERSION, both package.json, CHANGELOG.md, feature_list.json) yourself.
+- Prettier checks every Markdown and JSON file (`pnpm format:check` in CI); run `npx prettier --write`
+  on the docs you change.
+- Route quality (S036–S040, 2026-11-06): the open findings and options are in `docs/specs/s042-*.md` and
+  the finished step files S039 and S041 (`git show 012f587:docs/steps/archive/041-map-minutes-a-nearer-stop-reached-later-.md`).
+  Not in git, so a new machine makes them again: the raw GTFS feed (recipe under Commands),
   `work/suite-*` outputs (`bench/suite.ts`), and the planners' answers in `packages/routing/.data/providers/`
   (asking VBB again takes about 15 min per 1,000 trips; Transitous and VBB need network access).
 - Pushes from the cloud container sometimes fail with "fatal error in commit_refs": retry, and check with
@@ -124,7 +128,13 @@ desktop are not comparable with the cloud container's, so time main and the bran
 
 ## Definition of done
 
-- `bash scripts/check.sh` passes — show its output.
-- Acceptance criteria in the step file are ticked.
-- Timings before/after reported in the PR (build steps).
-- No stray debug output; TODOs only with a step id: `TODO(S012): ...`.
+- The task's `test` was actually run and passed — only then `passes: true`.
+- `bash scripts/check.sh` passes (bookkeeping, lint, format, typecheck, tests) — show its output.
+- Timings before/after reported in the PR (build tasks).
+- No stray debug output; TODOs only with a task id: `TODO(S043): ...`.
+
+## Files you create
+
+Write new files inside this folder. Files for other people (to send) go to `C:\Claude\_ZuVerschicken`.
+Files Hendrik has to handle himself (check, sign, upload, install, decide) go to `C:\Claude\_ZumVerarbeiten`,
+so they do not get lost in a project folder. Name both `YYYY-MM-DD_Title.ext`. Nothing goes directly into `C:\Claude`.

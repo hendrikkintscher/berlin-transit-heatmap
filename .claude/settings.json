@@ -1,8 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash scripts/steps.sh *)",
-      "Bash(scripts/steps.sh *)",
       "Bash(bash scripts/check.sh)",
       "Bash(scripts/check.sh)",
       "Bash(pnpm check)"
@@ -10,8 +8,7 @@
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
-      "Read(./secrets/**)",
-      "Read(./docs/steps/archive/**)"
+      "Read(./secrets/**)"
     ]
   },
   "hooks": {
@@ -50,17 +47,6 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/pr-guard.sh\""
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/planning-guard.sh\""
           }
         ]
       }

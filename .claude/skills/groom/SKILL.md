@@ -1,19 +1,16 @@
 ---
 name: groom
-description: Clean up the planning files — archive finished steps, check tags, priorities and dependencies, shorten bloated notes, check ROADMAP.md matches reality. Run occasionally.
+description: Tidy the bookkeeping — feature_list.json, PROGRESS.md, CHANGELOG/VERSION, stray notes files. Run occasionally.
 disable-model-invocation: true
 ---
 
-Tidy the planning system. Change only planning files, never code. Don't start any step.
+Tidy the bookkeeping. Change only bookkeeping files, never code. Don't start any task.
 
-1. `bash scripts/steps.sh list all` — any step with status done still in docs/steps/? Run `done <id>`.
-2. Steps in docs/steps/ missing from ROADMAP.md, or roadmap lines without a step file → report.
-3. Order vs tags: P1 below P2/P3 steps? A step listed before one it `needs`? Blocked steps whose
-   blocker is gone? Build steps tagged L (must be split)? Propose fixes — reorder or `tag` only after a yes.
-4. For each open step: still wanted? Size still right? Notes ≤10 lines and still true? Trim them.
-   Propose (don't silently do) deleting obsolete steps.
-5. ROADMAP.md: any prose, logs or notes that crept in → move into a step file or delete.
-6. CHANGELOG `[Unreleased]` should be empty on main, and VERSION should match the newest CHANGELOG section.
-   Open XS steps piling up → suggest approving them as one batch.
-7. Stray planning/notes files outside docs/ (`git ls-files '*.md'`) → propose where their content belongs.
-8. Report what you changed and what you propose in ≤12 lines.
+1. `feature_list.json`: tasks marked `passes: true` whose `test` no one ran → report. Size L tasks → propose a split.
+   High-priority tasks blocked by a dep that's gone or done? Unknown deps? Propose fixes; change only after a yes.
+2. For each open task: still wanted? Size, owner and `test` still right? Propose (don't silently do) deleting obsolete ones.
+3. `PROGRESS.md`: more than ~10 entries → roll the oldest into the 3-line `## Earlier (summary)`.
+4. VERSION should match the newest CHANGELOG section.
+5. Stale handovers, scratch notes, duplicate docs (`git ls-files '*.md'`) → list them with where their content belongs;
+   delete only after the user's OK. Decisions found in the repo → the project's vault note (cross-project ones → the brain).
+6. Run `bash scripts/check.sh`. Report what you changed and what you propose in ≤12 lines.

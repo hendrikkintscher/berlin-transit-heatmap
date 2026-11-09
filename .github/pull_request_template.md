@@ -1,16 +1,14 @@
-## Step
+## Task
 
-S0NN — <title> (kind · priority · size) <!-- batch: list each step -->
+S0NN — <title> (kind · priority · size) <!-- batch: one PR per task -->
 
 ## What changed
 
--
+## How it was checked
 
-## Checklist
-
-- [ ] `scripts/check.sh` passes (output in the PR or CI)
-- [ ] Acceptance criteria ticked in the step file
-- [ ] CHANGELOG.md entry, VERSION bumped (`scripts/steps.sh bump`)
-- [ ] Step removed from ROADMAP.md (`scripts/steps.sh done NNN`)
-- [ ] Diff fits the size tag — or the user accepted it
-- [ ] Nothing from other steps in here
+- [ ] `bash scripts/check.sh` passes
+- [ ] The task's `test` was run and passed → `passes: true` in feature_list.json
+- [ ] Timings before/after at 360×740 (also 4× CPU) for build tasks
+- [ ] CHANGELOG.md entry, VERSION bumped (`bash scripts/bump.sh`)
+- [ ] Diff fits the size — or Hendrik accepted it
+- [ ] Nothing from other tasks in here
