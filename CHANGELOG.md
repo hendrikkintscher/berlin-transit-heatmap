@@ -8,6 +8,7 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 ## [Unreleased]
 
 ## [1.0.8] — 2026-11-09
+
 - CLAUDE.md states the project kind (coding project; claude-brain coding guidelines, S-016); vault note path updated to its category folder.
 
 ## [1.0.7] — 2026-11-09

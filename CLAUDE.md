@@ -58,15 +58,15 @@ raising a budget is a deliberate edit with the reason in the PR.
 
 One home per kind of info, no duplicates.
 
-| What                                                               | Where                                                                                      |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Tasks (id, title, kind, owner, priority, size, deps, test, passes) | `feature_list.json`                                                                        |
-| Details of a task too big for one line; later wishes               | `docs/specs/` (`later.md`)                                                                 |
-| Session log, newest first, last ~10 entries + 3-line summary       | `PROGRESS.md`                                                                              |
-| History: app version / changelog                                   | git + `CHANGELOG.md`, `VERSION` (+ both `package.json`)                                    |
+| What                                                               | Where                                                                                                         |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Tasks (id, title, kind, owner, priority, size, deps, test, passes) | `feature_list.json`                                                                                           |
+| Details of a task too big for one line; later wishes               | `docs/specs/` (`later.md`)                                                                                    |
+| Session log, newest first, last ~10 entries + 3-line summary       | `PROGRESS.md`                                                                                                 |
+| History: app version / changelog                                   | git + `CHANGELOG.md`, `VERSION` (+ both `package.json`)                                                       |
 | Decisions                                                          | vault note `Projects/Own apps and tools/Transport in Berlin visualised.md`; until S046 also `docs/decisions/` |
-| Speed budget                                                       | `scripts/speed/budget.json`                                                                |
-| Finished step files (before 1.0.7)                                 | git history: `git show 012f587:docs/steps/archive/<file>`                                  |
+| Speed budget                                                       | `scripts/speed/budget.json`                                                                                   |
+| Finished step files (before 1.0.7)                                 | git history: `git show 012f587:docs/steps/archive/<file>`                                                     |
 
 Implementation details go in commit messages and code comments, not planning files.
 Don't create other planning or notes files; if something doesn't fit, ask.
