@@ -1,15 +1,7 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(bash scripts/check.sh)",
-      "Bash(scripts/check.sh)",
-      "Bash(pnpm check)"
-    ],
-    "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./secrets/**)"
-    ]
+    "allow": ["Bash(bash scripts/check.sh)", "Bash(scripts/check.sh)", "Bash(pnpm check)"],
+    "deny": ["Read(./.env)", "Read(./.env.*)", "Read(./secrets/**)"]
   },
   "hooks": {
     "SessionStart": [
