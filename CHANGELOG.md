@@ -1,11 +1,15 @@
 # Changelog
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Write new entries under `[Unreleased]`; `scripts/steps.sh bump` turns them into the new version's section
+Write new entries under `[Unreleased]`; `bash scripts/bump.sh` turns them into the new version's section
 and sets the version in VERSION and both package.json files (the merge is tagged `vX.Y.Z` automatically).
-Each entry names the step (S0NN), the PR and the timings before/after.
+Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
+
+## [1.0.7] — 2026-11-09
+
+- Planning follows the coding guidelines (claude-brain `setup/coding-guidelines.md`), as in claude-project-template 0.2.x: ROADMAP.md and `docs/steps/` became `feature_list.json` (S042, S043, S044, and S046 to move the decision records to the vault note) with the open steps' details in `docs/specs/`; `PROGRESS.md` is the session log. `scripts/steps.sh` is gone, `scripts/bump.sh` keeps its version bump (VERSION and both package.json files). The `/step` and `/handoff` skills became `/task`; hooks, `/groom`, `/spec`, the reviewer and the PR template follow the template; `scripts/check.sh` also runs the bookkeeping check (`scripts/check.py`). Finished step files are in git history (`docs/steps/archive/` up to 012f587). The app is unchanged.
 
 ## [1.0.6] — 2026-11-06
 

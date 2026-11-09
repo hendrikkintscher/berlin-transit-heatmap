@@ -1,0 +1,48 @@
+{
+  "features": [
+    {
+      "id": "S042",
+      "title": "Decide where VBB's trips are better: walking speed, change times, step-free rules (results sent 2026-11-06, waiting for Hendrik's yes; docs/specs/s042-where-vbb-is-better.md)",
+      "kind": "research",
+      "owner": "hendrik",
+      "priority": "medium",
+      "size": "S",
+      "deps": [],
+      "test": "Hendrik picked the options; the choice is in the vault note and each chosen change is its own build task",
+      "passes": false
+    },
+    {
+      "id": "S043",
+      "title": "Speed: the walk front only where the cap can bite (docs/specs/s043-walk-front-fringe.md)",
+      "kind": "refactor",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "M",
+      "deps": [],
+      "test": "bench/gridexact.ts 0 %, bench/suite.ts --ci exits 0, cells equal walkFront's on the 8 gridexact starts; timings before/after in the PR",
+      "passes": false
+    },
+    {
+      "id": "S044",
+      "title": "Speed: walk on a street graph without shape nodes (docs/specs/s044-junction-walk-graph.md)",
+      "kind": "refactor",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "M",
+      "deps": [],
+      "test": "bench/gridexact.ts 0 %, bench/suite.ts --ci exits 0, cells and stop times unchanged on the 8 gridexact starts; timings before/after in the PR",
+      "passes": false
+    },
+    {
+      "id": "S046",
+      "title": "Move the decision records docs/decisions/0001-0012 into the vault note Projects/Transport in Berlin visualised.md (after the vault audit S-014 in claude-brain), then delete docs/decisions/",
+      "kind": "chore",
+      "owner": "claude",
+      "priority": "low",
+      "size": "S",
+      "deps": [],
+      "test": "docs/decisions/ is gone, the vault note holds the 12 decisions, and CLAUDE.md points decisions only to the vault note",
+      "passes": false
+    }
+  ]
+}

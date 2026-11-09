@@ -5,4 +5,7 @@ data/
 work/
 coverage/
 pnpm-lock.yaml
-docs/steps/
+# Moved verbatim from docs/steps/ (which Prettier skipped too); S042-S044 delete or reformat them.
+docs/specs/s042-*.md
+docs/specs/s043-*.md
+docs/specs/s044-*.md

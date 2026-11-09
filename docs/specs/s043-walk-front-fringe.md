@@ -1,24 +1,16 @@
----
-id: 043
-title: Speed: the walk front only where the cap can bite
-type: build
-kind: refactor
-priority: P2
-size: M
-needs: S041
-status: open
----
-<!-- Change tags with: scripts/steps.sh tag NNN size=M priority=P1 needs=S002 (keeps ROADMAP.md in sync).
-     kind: feature|fix|refactor|chore|research · priority: P1|P2|P3 · size: XS|S|M|L · needs: S002,S003 or -
-     status: open | doing | waiting (results sent, waiting for yes) | done -->
+# S043: Speed: the walk front only where the cap can bite
+
+Task S043 in `feature_list.json`. Moved from `docs/steps/043-speed-the-walk-front-only-where-the-cap-.md` on 2026-11-09. The measurements it cites are in S041's step file: `git show 012f587:docs/steps/archive/041-map-minutes-a-nearer-stop-reached-later-.md`.
 
 ## Goal
+
 The map's exact walk (S041, `walkFront`) keeps about 3 (time, walk) labels per street node and takes
 about 5× main's single-label walk on foot (250 vs 44 ms; by bike 633 ms, a 3.6 M-label front), though
 only 29 % of the labels are ever used by a cell. Win back what can be won exactly: heatGrid in Node
 about 350 → 240 ms on foot, 747 → 420 ms by bike (estimates from the measurements in S041's step file).
 
-## Build steps only — acceptance criteria
+## Acceptance criteria
+
 - [ ] Two passes: an uncapped single-label walk (exact earliest time per node, 44 ms) marks the
   "fringe": nodes whose earliest label's walk, plus the way to one of their cells, exceeds the cap, or
   that are not reached. Everywhere else the earliest label is the exact answer
@@ -37,6 +29,7 @@ about 350 → 240 ms on foot, 747 → 420 ms by bike (estimates from the measure
   tolerance again, else lowered to what was won
 
 ## Notes
+
 - Measured 2026-11-06 (S041 step file, "Speed research"): fringe = 11 % of nodes with cells on foot,
   8 % by bike; the bound keeps 43 % / 54 % of the extra labels; a network Dijkstra for the bound costs
   52 ms, hence the grid transform. The bound must be sound: a prototype with "distance to the nearest

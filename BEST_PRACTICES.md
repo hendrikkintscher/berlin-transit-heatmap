@@ -1,8 +1,8 @@
 # Best practices
 
 How to write each language this repo uses, checked against the current references (October
-2026). The repo's own rules come first: [CLAUDE.md](CLAUDE.md) and the working agreement in
-[ROADMAP.md](ROADMAP.md) win over anything here, and **speed comes first** everywhere.
+2026). The repo's own rules come first: [CLAUDE.md](CLAUDE.md) wins over anything here, and **speed comes
+first** everywhere.
 
 | Language                 | Where                                                              | Checked by                           |
 | ------------------------ | ------------------------------------------------------------------ | ------------------------------------ |

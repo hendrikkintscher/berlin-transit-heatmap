@@ -1,8 +1,8 @@
 # Later (not scheduled)
 
-Planned, but for much later. Nothing here is on the roadmap or gets built until Hendrik moves it there;
-then the item leaves this list and becomes a step (`scripts/steps.sh new`). The one-line index is in
-ROADMAP.md under "Later (not scheduled)"; what is set aside or not planned is under "Out of scope".
+Planned, but for much later. Nothing here is a task or gets built until Hendrik says so; then the item
+leaves this list and becomes a task in `feature_list.json` (`/task add`). What is set aside or not
+planned is under "Out of scope" in CLAUDE.md.
 
 - **UI for desktop browsers**. Hendrik (2026-10-14): "work on UI for desktop browsers". The app is laid out for phones (checked at 360×740); on a computer it shows the same phone layout stretched over a wide window. A desktop layout would use the extra room, for example with the trip card and drawer as a side panel beside the map, and work with mouse, keyboard and hover. Step S021 (layout check on devices and browsers) only fixes small breaks and lists bigger ones; the desktop layout itself is this item.
 - **Personal colour coding for the heatmap**. Hendrik (2026-10-14): "adjust personal preferences in color coding for heatmap". Let each person pick their own colours and minute steps for the heatmap (the colour fill), for example another colour scale, colour-blind-friendly colours or where green ends, saved on the device. It changes only the paint, so a switch must stay one repaint with no extra routing.
