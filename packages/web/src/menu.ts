@@ -49,6 +49,7 @@ export function initMenu(deps: MenuDeps) {
   const freqToggle = $<HTMLInputElement>('freq-toggle');
   const placesToggle = $<HTMLInputElement>('places-toggle');
   const desertToggle = $<HTMLInputElement>('desert-toggle');
+  const atmToggle = $<HTMLInputElement>('atm-toggle');
   const isoToggle = $<HTMLInputElement>('iso-toggle');
   const heatToggle = $<HTMLInputElement>('heat-toggle');
   const stepFreeToggle = $<HTMLInputElement>('stepfree-toggle');
@@ -150,6 +151,7 @@ export function initMenu(deps: MenuDeps) {
     [freqToggle, 'freq'],
     [desertToggle, 'desert'],
     [placesToggle, 'places'],
+    [atmToggle, 'atm'],
   ] as const) {
     toggle.checked = state[name];
     toggle.addEventListener('change', () => {

@@ -79,6 +79,11 @@ const de = {
   places: 'Ausflugsziele',
   placesHint:
     'Seen, Badestellen, Parks und Aussichtspunkte mit ihren Minuten; näher ranzoomen zeigt mehr',
+  atm: 'Geldautomaten (Cash Group)',
+  atmHint:
+    'Commerzbank, Deutsche Bank, HypoVereinsbank und Postbank aus OpenStreetMap, ab Straßenzoom',
+  atmTitle: 'Geldautomat {bank}',
+  atmMissing: 'Die Geldautomaten sind gerade nicht zu laden.',
   desertLegend: 'Fußweg + Warten',
   min: 'Min.',
   stationFreq: '<b>{name}</b> · {n} Abfahrten/h',
@@ -403,6 +408,11 @@ const en: Record<Key, string> = {
   freqLegend: 'Departures/h',
   places: 'Places to go',
   placesHint: 'Lakes, bathing spots, parks and viewpoints with their minutes; zoom in to see more',
+  atm: 'ATMs (Cash Group)',
+  atmHint:
+    'Commerzbank, Deutsche Bank, HypoVereinsbank and Postbank from OpenStreetMap, at street zoom',
+  atmTitle: '{bank} ATM',
+  atmMissing: 'The ATMs cannot be loaded right now.',
   desertLegend: 'Walk + wait',
   min: 'min',
   stationFreq: '<b>{name}</b> · {n} departures/h',

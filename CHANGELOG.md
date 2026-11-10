@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-11-10
+
+- S049: the first add-on layer, the Cash Group ATMs (Commerzbank, Deutsche Bank, HypoVereinsbank, Postbank) from OpenStreetMap (decisions 0013, 0014). A switch under Ebenen; its code (0.7 KB gz) and `atm.json` (132 ATMs, 1.3 KB gz) load only when it is on, after the first map. Pins from zoom 12 with "€" from 14 and the bank from 15; a tap on a pin plans the trip there and names it on the card (with the ATM's opening hours where OSM has them). A new nightly workflow `addons-refresh.yml` builds the file into the release `addons-latest`; the deploy adds it (optional) and redeploys after it. Timings at 360×740, medians of 8 visits, main → switch off → switch on (ms): first map 806 → 752 → 750 (4× CPU 1320 → 1042 → 1354), tap to trip 275 → 251 → 256 (4×: 222 → 197 → 207), footpath map 1150 → 1226 → 1183 (4×: 1871 → 1642 → 1839); all within the runs' spread. main.js +0.8 KB gz.
+
 ## [1.0.9] — 2026-11-10
 
 - S046: the decision records 0001–0012 moved from `docs/decisions/` into the vault note's `## Decisions` (full records: `git show 66adaa7:docs/decisions/<file>`); `docs/decisions/` is gone and CLAUDE.md points decisions only to the vault note. The app is unchanged.

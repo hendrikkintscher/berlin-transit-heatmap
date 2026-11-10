@@ -36,6 +36,8 @@ export const LABELS_SOURCE = 'route-labels';
 export const ROUTE_LAYERS = ['routes-casing', 'routes-line', 'routes-label'];
 export const STATIONS_SOURCE = 'stations';
 export const STATIONS_LAYER = 'stations-dot';
+/** The Cash Group ATMs add-on (S049); its layers are added by addons.ts when first switched on. */
+export const ATM_LAYERS = ['atm', 'atm-euro', 'atm-name'] as const;
 /** Places to go (S019): a dot per place and its name with the minutes. */
 export const PLACES_SOURCE = 'places';
 export const PLACES_LAYERS = ['places-dot', 'places-label'];
@@ -62,9 +64,9 @@ export const TRIP_STOPS_SOURCE = 'trip-stops';
 /** "What's different today": the stretch of a line that does not run, from changes.json. */
 export const CHANGES_SOURCE = 'changes';
 const CHANGE_COLOR = '#d6336c';
-const BOLD_FONT = ['Noto Sans Bold'];
+export const BOLD_FONT = ['Noto Sans Bold'];
 /** Upright, unlike the basemap's first label font (italic water names). */
-const REGULAR_FONT = ['Noto Sans Regular'];
+export const REGULAR_FONT = ['Noto Sans Regular'];
 
 const modeColor = [
   'match',

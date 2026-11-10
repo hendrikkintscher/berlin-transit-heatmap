@@ -43,6 +43,39 @@
       "deps": [],
       "test": "docs/decisions/ is gone, the vault note holds the 12 decisions, and CLAUDE.md points decisions only to the vault note",
       "passes": true
+    },
+    {
+      "id": "S047",
+      "title": "Add-on layers: how optional place layers (built nightly, loaded only when switched on, after the first map) work without slowing the first map or taps (docs/specs/s047-add-on-layers.md; decided 2026-11-10, decision 0013)",
+      "kind": "research",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": [],
+      "test": "a short table (load path, file size, first map and tap to trip at 360x740, 1x and 4x, layer off and on) and a one-line recommendation sent to Hendrik",
+      "passes": true
+    },
+    {
+      "id": "S048",
+      "title": "Cash Group ATMs as the first add-on: OpenStreetMap (amenity=atm, operator, opening_hours) against the banks' own finders for Berlin: count, location match, opening hours, terms of use (results: docs/specs/s048-cash-group-atms.md, sent 2026-11-10, waiting for Hendrik's yes)",
+      "kind": "research",
+      "owner": "claude",
+      "priority": "low",
+      "size": "S",
+      "deps": ["S047"],
+      "test": "a short table per source (ATMs found, matched within 50 m, with opening hours, licence/terms) and a one-line recommendation sent to Hendrik",
+      "passes": false
+    },
+    {
+      "id": "S049",
+      "title": "Cash Group ATM add-on layer as designed in S047 (switch in Ebenen, lazy chunk, nightly data file from the source S048 picks, pins from street zoom, name and hours on the card)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "low",
+      "size": "M",
+      "deps": ["S048"],
+      "test": "layer off: first map and tap to trip unchanged against main at 360x740, 1x and 4x; layer on: pins appear after the first map, a pin tap gives the trip there; the nightly build publishes the file; check.sh, smoke and speed green",
+      "passes": false
     }
   ]
 }

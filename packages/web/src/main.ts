@@ -52,6 +52,7 @@ import {
   ROUTE_LAYERS,
   ROUTES_SOURCE,
   STATIONS_LAYER,
+  ATM_LAYERS,
   STATIONS_SOURCE,
   STOPS_SOURCE,
   VEIL_LAYER,
@@ -99,6 +100,7 @@ import { initWhenSheet } from './when-sheet';
 import { initBack, replaceUrl } from './back';
 import type { FromWorker } from './protocol';
 import { dataBase, region } from './region';
+import { dataPublished, dataUrl } from './data-url';
 import { cappedLine, STATUS_FADE_MS, STATUS_SHOW_MS } from './status-lines';
 
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
@@ -313,6 +315,7 @@ function afterFirstMap() {
   askWalk();
   askBackground();
   preloadNextHour();
+  showAtms(true);
 }
 let walkLoading = false;
 /** The footpaths are in: walks follow them. */
@@ -973,10 +976,70 @@ map.on('idle', () => {
   showPlaces();
 });
 
+// ---------- add-ons (S047, S049) ----------
+// The Cash Group ATMs: their chunk and file are loaded the first time the switch is on, and
+// only after the first map (when the page is idle, if it was on from the start), so the
+// first map and taps never wait for them. The switch is hidden when no file was deployed.
+const atmPublished = dataPublished('atm.json');
+$('atm-row').hidden = !atmPublished;
+// A link with the layer on, on a site without the file: off, without an error.
+if (!atmPublished) state.atm = false;
+let addons: typeof import('./addons') | null = null;
+let atmLoad: Promise<void> | null = null;
+function showAtms(idle = false) {
+  if (!state.atm) {
+    if (addons) addons.showAtmLayers(map, false);
+    return;
+  }
+  if (!state.mapReady || !state.result) return;
+  atmLoad ??= new Promise<void>((ok) => {
+    if (idle && 'requestIdleCallback' in window) requestIdleCallback(() => ok(), { timeout: 2000 });
+    else ok();
+  })
+    .then(() =>
+      Promise.all([
+        import('./addons'),
+        fetch(dataUrl(dataBase(), 'atm.json')).then((r) => {
+          if (!r.ok) throw new Error(`atm.json: ${r.status}`);
+          return r.json() as Promise<import('./addons').AtmFile>;
+        }),
+      ]),
+    )
+    .then(([a, data]) => {
+      a.addAtmLayers(map, data);
+      addons = a;
+    })
+    .catch(() => {
+      // Tried again the next time the switch is turned on.
+      atmLoad = null;
+      if (!state.atm) return;
+      state.atm = false;
+      $<HTMLInputElement>('atm-toggle').checked = false;
+      writeUrl();
+      setStatus(() => t('atmMissing'), true);
+    });
+  void atmLoad.then(() => addons?.showAtmLayers(map, state.atm));
+}
+/** The ATM under a tap, if the layer is shown: its place and its card title. */
+function atmAt(p: maplibregl.Point): { lat: number; lon: number; title: string } | null {
+  if (!state.atm || !map.getLayer(ATM_LAYERS[0])) return null;
+  const box: [maplibregl.PointLike, maplibregl.PointLike] = [
+    [p.x - 12, p.y - 12],
+    [p.x + 12, p.y + 12],
+  ];
+  const f = map.queryRenderedFeatures(box, { layers: [ATM_LAYERS[0]] })[0];
+  if (!f || f.geometry.type !== 'Point') return null;
+  const [lon, lat] = f.geometry.coordinates as [number, number];
+  const { bank, hours } = f.properties as { bank: string; hours: string };
+  const title = t('atmTitle', { bank }) + (hours ? ` · ${hours}` : '');
+  return { lat, lon, title };
+}
+
 /** Shows or hides the stop-frequency and desert layers, asking the worker for data once. */
 function showLayers() {
   renderLayerLegend();
   if (!state.mapReady) return;
+  showAtms();
   showPlaces();
   const data = state.layers[state.window];
   if ((state.freq || state.desert) && !data && !layersRequested.has(state.window)) {
@@ -1315,6 +1378,9 @@ map.on('click', (e: MapMouseEvent) => {
     return;
   }
   performance.mark('tap');
+  // A tap on an ATM pin is a tap on its place, named on the card (S049).
+  const atm = atmAt(e.point);
+  if (atm) return tap.tapAt(atm.lat, atm.lon, e.point, atm.title);
   tap.tapAt(e.lngLat.lat, e.lngLat.lng, e.point);
 });
 
