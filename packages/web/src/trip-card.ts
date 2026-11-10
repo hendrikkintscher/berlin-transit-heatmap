@@ -29,6 +29,8 @@ export interface TripContext {
    * the button that moves the map there.
    */
   rows?: { anchorTitle: string };
+  /** The map is step-free: rides whose access the feed does not give are named (S055). */
+  stepFree?: boolean;
 }
 
 /** A change note on the card, a button that opens the day's changes on its line. */
@@ -114,6 +116,7 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
         : '';
     const timeline = timelineHtml(j.legs);
     const long = rides.length ? longWalkHtml(j.legs) : '';
+    const access = c.stepFree ? accessUnknownHtml(rides) : '';
     // Stops where you get on, change and get off (the timeline has them with times).
     const stops = rides.length
       ? [rides[0].from, ...rides.map((l) => l.to)].map((n) => escapeHtml(shortStop(n)))
@@ -143,6 +146,7 @@ function journeyHtml(m: Pick<Trip, 'journeys'>, c: TripContext): string[] {
           : ''
       }</small>` +
       long +
+      access +
       [...notes].map(([n, l]) => changeNoteHtml(n, l)).join('') +
       '</span>' +
       timeline
@@ -175,6 +179,19 @@ export function longWalkHtml(legs: Legs): string {
       ? t('tripLongWalkBoth', { a, b: z })
       : t(longA ? 'tripLongWalkStart' : 'tripLongWalkEnd', { n: longA ? a : z });
   return `<small class="trip-long-walk">${text}</small>`;
+}
+
+/**
+ * In step-free mode, "RB24, 893: barrierefrei nicht bekannt" under the summary for the rides
+ * whose vehicles the feed marks neither way (S055, decision 0016): they count as usable, as
+ * in VBB's planner, but may have steps. Empty when every ride is known.
+ */
+export function accessUnknownHtml(
+  rides: readonly { name: string; accessUnknown?: true }[],
+): string {
+  const names = [...new Set(rides.filter((l) => l.accessUnknown).map((l) => l.name))];
+  if (!names.length) return '';
+  return `<small class="trip-access">${escapeHtml(t('tripAccessUnknown', { lines: names.join(', ') }))}</small>`;
 }
 
 /**

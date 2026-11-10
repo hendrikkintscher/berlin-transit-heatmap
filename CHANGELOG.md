@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.6] — 2026-11-11
+
+- S055: step-free mode also uses trips the feed marks neither way (`wheelchair_accessible` 0 or empty: 77 % of regional rail, 31 % of trams, 11 % of buses), as VBB's planner does (decision 0016); only trips marked not accessible stay out. The card names such rides in step-free mode ("RB24: barrierefrei nicht bekannt"), and the setting's hint says so. The timetable keeps the mark per route (format flag 4, which older apps ignore); takes effect with the next timetable build. Route quality suite, step-free, 400 trips over 11–13 Nov, seed 40, both timetables built from the same feed: VBB 3+ min better 17.2 % → 8.2 %, trips found 377 → 388, RB24 used in 0 → 5 and FEX in 0 → 5 trips; checks 1, 2 and 4 stay at 0. Timings (Node, `scripts/speed/check.mjs`): all maps 1244 → 1236 ms, loading 583 → 576 ms. Browser at 360×740, medians of 8 visits, main → branch: first map 666 → 621 ms, tap to trip 209 → 183 ms; 4× CPU: first map 1136 → 1168 ms (bimodal), tap to trip 187 → 182 ms (a first 4× run gave 180 → 253 ms with visits from 111 to 611 ms).
+
 ## [1.1.5] — 2026-11-10
 
 - S054 (measured, not shipped; decision 0017): snapping a place to several nearby paths. Places alone (up to 4 edges within 30 m more): start walks over 2.5× the straight line 72 → 38 of 990 trips, maps +3 %, but the card then parts from the map's cells and moving the map to the trip's other end can change the trip (7.6 % of places). Places and cells (2 edges): 72 → 58 and end walks 91 → 69, but maps +11–14 % and snapping cells +46 % in Node. New bench `packages/routing/bench/snapwalks.ts`; results in `docs/specs/s054-snap-several-paths.md`. S057 now names major stations only in the city view; S060 added (a switch for network lines and stations). No app change.

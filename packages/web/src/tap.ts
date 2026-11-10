@@ -562,6 +562,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
       avg: shownAvg,
       names: state.names,
       rows: home || state.others.length ? undefined : { anchorTitle: t('anchorIs') },
+      stepFree: state.stepFree,
     });
     if (open) el.querySelector<HTMLDetailsElement>('.trip-more')!.open = true;
     // Right after ⇅ or the rings moved, the rows show what changed (style.css).

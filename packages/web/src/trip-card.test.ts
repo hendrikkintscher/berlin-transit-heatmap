@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  accessUnknownHtml,
   leaveText,
   longWalkHtml,
   tripAltHtml,
@@ -296,6 +297,18 @@ describe('trip card', () => {
     expect(longWalkHtml([walk(25)])).toBe('');
     const html = tripHtml({ journeys: [{ transfers: 0, legs: [walk(2), r, walk(24)] }] }, ctx);
     expect(html).toContain('<small class="trip-long-walk">langer Fußweg am Ende (24 Min.)</small>');
+  });
+
+  it('names rides of unknown access in step-free mode only (S055)', () => {
+    const u = { ...ride('RB24', 'regional', 'A', 'B'), accessUnknown: true as const };
+    const legs = [{ type: 'walk', minutes: 2 } as const, u, ride('U8', 'ubahn', 'B', 'C')];
+    const trip = { journeys: [{ transfers: 1, legs }] };
+    expect(tripHtml(trip, { ...ctx, stepFree: true })).toContain(
+      '<small class="trip-access">RB24: barrierefrei nicht bekannt</small>',
+    );
+    expect(tripHtml(trip, ctx)).not.toContain('trip-access');
+    expect(accessUnknownHtml([ride('U8', 'ubahn', 'B', 'C')])).toBe('');
+    expect(accessUnknownHtml([u, { ...u }])).toContain('RB24: ');
   });
 });
 

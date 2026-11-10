@@ -49,8 +49,10 @@ export interface Route {
   trips: number[][];
   /** dwells[t][i] = seconds waited at stops[i] (arrival = departure - dwell). Absent: all 0. */
   dwells?: number[][];
-  /** false: the trips are not marked wheelchair-accessible. Absent: they are (or the feed does not say). */
+  /** false: the trips are marked not wheelchair-accessible. Absent: they are, or not known. */
   stepFree?: false;
+  /** true: the feed does not say whether the trips are wheelchair-accessible (S055). */
+  accessUnknown?: true;
 }
 
 export interface Transfer {

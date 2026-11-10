@@ -168,6 +168,8 @@ interface CandidateTrip {
   routeId: string;
   /** Wheelchair-accessible; trips of one route are only grouped with the same value. */
   stepFree?: boolean;
+  /** Not known whether wheelchair-accessible (counted as step-free, S055); grouped like stepFree. */
+  accessUnknown?: boolean;
   stops: number[]; // raw stop indices
   times: number[];
   /** Seconds waited at each stop (absent: none). */
@@ -181,6 +183,7 @@ export interface WindowRoute {
   trips: number[][];
   dwells?: number[][];
   stepFree?: boolean;
+  accessUnknown?: boolean;
 }
 
 export function modeOf(routeType: number): Mode {
@@ -347,9 +350,12 @@ export async function buildTimetables(
   });
   log(`stop_times.txt: ${stopTimeRows} rows`);
 
-  // Step-free trips: marked accessible ('1'). A feed that says nothing counts as all step-free.
+  // Step-free trips: all but those marked not accessible ('2'); those without a mark ('0' or
+  // empty) count too, as VBB's planner counts them, and the card says it is not known (S055,
+  // decision 0016). A feed that marks no trip at all counts as all step-free, without notes.
   const accessKnown = [...trips.values()].some((t) => t.access === '1' || t.access === '2');
-  const tripStepFree = (t: TripRows) => !accessKnown || t.access === '1';
+  const tripStepFree = (t: TripRows) => t.access !== '2';
+  const tripAccessUnknown = (t: TripRows) => accessKnown && t.access !== '1' && t.access !== '2';
 
   const ordered: TripRows[] = [];
   for (const trip of trips.values()) {
@@ -387,6 +393,7 @@ export async function buildTimetables(
           times,
           dwells: trip.dwell,
           stepFree: tripStepFree(trip),
+          accessUnknown: tripAccessUnknown(trip),
         });
       });
     }
@@ -542,6 +549,7 @@ export async function buildTimetables(
       trips: r.trips,
       ...(r.dwells ? { dwells: r.dwells } : {}),
       ...(r.stepFree === false ? { stepFree: false as const } : {}),
+      ...(r.accessUnknown ? { accessUnknown: true as const } : {}),
     }));
     timetables[w.name] = {
       version: 1,
@@ -621,7 +629,7 @@ export function fillTimes(times: number[]): boolean {
 export function groupIntoRoutes(candidates: CandidateTrip[]): WindowRoute[] {
   const groups = new Map<string, CandidateTrip[]>();
   for (const c of candidates) {
-    const key = `${c.routeId}|${c.stops.join(',')}|${c.stepFree === false ? 0 : 1}`;
+    const key = `${c.routeId}|${c.stops.join(',')}|${c.stepFree === false ? 0 : c.accessUnknown ? 2 : 1}`;
     const group = groups.get(key);
     if (group) group.push(c);
     else groups.set(key, [c]);
@@ -653,6 +661,7 @@ export function groupIntoRoutes(candidates: CandidateTrip[]): WindowRoute[] {
         trips: sub.map((t) => t.times),
         ...(dwells ? { dwells: sub.map((t) => t.dwells ?? t.times.map(() => 0)) } : {}),
         ...(group[0]!.stepFree === false ? { stepFree: false } : {}),
+        ...(group[0]!.accessUnknown ? { accessUnknown: true } : {}),
       });
     }
   }

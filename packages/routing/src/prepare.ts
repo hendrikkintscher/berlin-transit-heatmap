@@ -36,6 +36,8 @@ export interface PreparedTimetable {
   readonly routeSource: Int32Array;
   readonly routeNames: readonly string[];
   readonly routeModes: readonly RouteMode[];
+  /** 1 where the feed does not say whether the route's trips are wheelchair-accessible (S055). */
+  readonly routeAccessUnknown: Uint8Array;
   /** routeStops[routeStopOffset[r] .. routeStopOffset[r+1]) = stop indices of route r. */
   readonly routeStopOffset: Int32Array;
   readonly routeStops: Int32Array;
@@ -194,6 +196,9 @@ export function loadTimetable(json: Timetable): PreparedTimetable {
   }
   const routeNames = subRoutes.map((sr) => json.routes[sr.source].name);
   const routeModes = subRoutes.map((sr) => json.routes[sr.source].mode);
+  const routeAccessUnknown = Uint8Array.from(subRoutes, (sr) =>
+    json.routes[sr.source].accessUnknown ? 1 : 0,
+  );
 
   // Stop -> (route, index) lookup, CSR.
   const stopRouteOffset = new Int32Array(stopCount + 1);
@@ -256,6 +261,7 @@ export function loadTimetable(json: Timetable): PreparedTimetable {
     routeSource,
     routeNames,
     routeModes,
+    routeAccessUnknown,
     routeStopOffset,
     routeStops,
     routeTripCount,

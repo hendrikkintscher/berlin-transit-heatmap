@@ -141,7 +141,7 @@
       "size": "M",
       "deps": ["S042"],
       "test": "bench/suite.ts step-free: VBB 3+ min better well below 24.4 %; RB24/FEX used step-free; a card with such a ride shows the note; timings unchanged",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S056",

@@ -25,6 +25,8 @@ export type TripLeg =
       arr?: number;
       /** The stops in between, with the vehicle's departure there. */
       passed?: { name: string; at: number }[];
+      /** The feed does not say whether the vehicle is wheelchair-accessible (S055). */
+      accessUnknown?: true;
     };
 
 export type ToWorker =

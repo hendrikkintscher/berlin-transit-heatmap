@@ -52,8 +52,16 @@ export interface Route {
    * trips[t][i] - dwells[t][i]. Absent: arrival == departure everywhere. (Addition to Contract 1.)
    */
   dwells?: number[][];
-  /** false: trips not marked wheelchair-accessible. Absent: accessible or unknown. (Addition to Contract 1.) */
+  /**
+   * false: trips marked not wheelchair-accessible. Absent: accessible, or not known.
+   * (Addition to Contract 1.)
+   */
   stepFree?: false;
+  /**
+   * true: the feed does not say whether the trips are wheelchair-accessible (S055). Step-free
+   * maps use them, and the card says so.
+   */
+  accessUnknown?: true;
 }
 
 export interface Transfer {
