@@ -126,3 +126,25 @@ describe('access time', () => {
     expect(desertLevel(Infinity, desertThresholds({ day: 'weekday', hour: 2 }))).toBe(2);
   });
 });
+
+describe('big stations named in the city view (S057)', () => {
+  it("marks the region's hubs, by their name on the map", () => {
+    const hub = loadTimetable({
+      version: 1,
+      window: 'day',
+      serviceDate: '2026-10-13',
+      windowStart: 36000,
+      windowEnd: 39600,
+      feedVersion: 'test',
+      stops: [
+        { id: 'W', name: 'S Westkreuz (Berlin)', lat: 52.5, lon: 13.28 },
+        { id: 'X', name: 'S Halensee (Berlin)', lat: 52.5, lon: 13.29 },
+      ],
+      routes: [{ name: 'S41', mode: 'sbahn', stops: [0, 1], trips: [[36000, 36120]] }],
+      transfers: [],
+    });
+    const by = new Map(stopPoints(hub).features.map((f) => [f.properties.name, f.properties.h]));
+    expect(by.get('S Westkreuz')).toBe('Westkreuz');
+    expect(by.get('S Halensee')).toBeUndefined();
+  });
+});

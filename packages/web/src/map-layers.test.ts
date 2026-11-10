@@ -13,3 +13,31 @@ describe('time lines over the colour fill', () => {
     }
   });
 });
+
+describe('stops by zoom (S057)', () => {
+  it('shows dots and letters only from street level, and the big stations by name above it', async () => {
+    const { addMapLayers, STREET_ZOOM } = await import('./map-layers');
+    const layers: Record<string, Record<string, unknown>> = {};
+    const map = {
+      getStyle: () => ({ layers: [] }),
+      setPaintProperty: () => {},
+      addSource: () => {},
+      addLayer: (l: { id: string }) => (layers[l.id] = l),
+      getLayer: () => undefined,
+      on: () => {},
+    };
+    addMapLayers(map as never, { routes: false, iso: false, desertCanvas: {} as never });
+    expect(STREET_ZOOM).toBe(14);
+    for (const id of [
+      'stops-major',
+      'stops-minor',
+      'stops-letter',
+      'stops-major-name',
+      'stops-minor-name',
+    ])
+      expect(layers[id]!.minzoom).toBe(STREET_ZOOM);
+    const hubs = layers['stops-hub-name']!;
+    expect(hubs.maxzoom).toBe(STREET_ZOOM);
+    expect(hubs.filter).toEqual(['has', 'h']);
+  });
+});

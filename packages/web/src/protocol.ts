@@ -231,6 +231,8 @@ export interface StationProps {
 export interface StopProps {
   name: string;
   k: number;
+  /** A station named in the city view (REGION.hubs, S057): its short name there. */
+  h?: string;
 }
 
 /** A grid drawn as an image over [west, south, east, north], with its raw values for taps. */
