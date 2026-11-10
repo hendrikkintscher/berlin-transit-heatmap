@@ -10,6 +10,15 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
+## 2026-11-11 · cloud · S054, S055, S057
+
+- S054 (snap a place to several paths) built twice and measured, not shipped (decision 0017, #406, 1.1.5):
+  place only parts card from map and swap (7.6 % of places); with cells maps +11–14 %. `bench/snapwalks.ts`.
+- S055 step-free mode uses trips of unknown access, card names them (#407, 1.1.6): VBB 3+ min better 17.2 % → 8.2 %.
+- S057 stop dots from zoom 14, nine big stations named above it (`REGION.hubs`, decision 0018, #408, 1.1.7).
+  S060 added (switch for lines and stations). Open: S058, S059, S060, S043, S044.
+- Branch pushes after a squash merge: force push is blocked here; merged the old branch with `-s ours` instead.
+
 ## 2026-11-10 · cloud · S046–S059
 
 - S046 decision records moved to the vault note (1.0.9, #397). S047/S048/S050 research: add-on layers load only
