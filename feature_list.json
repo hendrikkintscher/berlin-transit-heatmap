@@ -43,6 +43,28 @@
       "deps": [],
       "test": "docs/decisions/ is gone, the vault note holds the 12 decisions, and CLAUDE.md points decisions only to the vault note",
       "passes": true
+    },
+    {
+      "id": "S047",
+      "title": "Add-on layers: how optional place layers (built nightly, loaded only when switched on, after the first map) work without slowing the first map or taps; first add-on S048",
+      "kind": "research",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": [],
+      "test": "a short table (load path, file size, first map and tap to trip at 360x740, 1x and 4x, layer off and on) and a one-line recommendation sent to Hendrik",
+      "passes": false
+    },
+    {
+      "id": "S048",
+      "title": "Cash Group ATMs as the first add-on: OpenStreetMap (amenity=atm, operator, opening_hours) against the banks' own finders for Berlin: count, location match, opening hours, terms of use",
+      "kind": "research",
+      "owner": "claude",
+      "priority": "low",
+      "size": "S",
+      "deps": ["S047"],
+      "test": "a short table per source (ATMs found, matched within 50 m, with opening hours, licence/terms) and a one-line recommendation sent to Hendrik",
+      "passes": false
     }
   ]
 }
