@@ -79,14 +79,14 @@
     },
     {
       "id": "S050",
-      "title": "Commerzbank ATMs: Commerzbank's own branch pages against OSM for Berlin (results: docs/specs/s050-commerzbank-atms.md, sent 2026-11-10, waiting for Hendrik's yes)",
+      "title": "Commerzbank ATMs: Commerzbank's own branch pages against OSM for Berlin (docs/specs/s050-commerzbank-atms.md; decided 2026-11-10: stay with OSM, decision 0015)",
       "kind": "research",
       "owner": "claude",
       "priority": "low",
       "size": "S",
       "deps": ["S049"],
       "test": "a short table (locations, matches within 50 m, hours, extra fields, terms) and a one-line recommendation sent to Hendrik",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S051",
@@ -97,7 +97,7 @@
       "size": "S",
       "deps": ["S049"],
       "test": "atms.test.mjs covers a disused bank with atm=yes; the rebuilt atm.json has no object with disused:amenity or was:amenity; check.sh green",
-      "passes": false
+      "passes": true
     }
   ]
 }

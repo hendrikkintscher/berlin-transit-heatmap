@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-11-10
+
+- S051: the ATM layer leaves out closed branches that kept `atm=yes` in OpenStreetMap (`disused:`/`was:`/`abandoned:` amenity without a current amenity, or `atm=no`): 132 → 129 ATMs in the area (Wilmersdorfer Str. 39 Commerzbank and two Postbank). Only the nightly data build changed; the app is unchanged, so no new timings. S050 (research): Commerzbank's branch pages against OSM, decided to stay with OSM (decision 0015, `docs/specs/s050-commerzbank-atms.md`).
+
 ## [1.1.0] — 2026-11-10
 
 - S049: the first add-on layer, the Cash Group ATMs (Commerzbank, Deutsche Bank, HypoVereinsbank, Postbank) from OpenStreetMap (decisions 0013, 0014). A switch under Ebenen; its code (0.7 KB gz) and `atm.json` (132 ATMs, 1.3 KB gz) load only when it is on, after the first map. Pins from zoom 12 with "€" from 14 and the bank from 15; a tap on a pin plans the trip there and names it on the card (with the ATM's opening hours where OSM has them). A new nightly workflow `addons-refresh.yml` builds the file into the release `addons-latest`; the deploy adds it (optional) and redeploys after it. Timings at 360×740, medians of 8 visits, main → switch off → switch on (ms): first map 806 → 752 → 750 (4× CPU 1320 → 1042 → 1354), tap to trip 275 → 251 → 256 (4×: 222 → 197 → 207), footpath map 1150 → 1226 → 1183 (4×: 1871 → 1642 → 1839); all within the runs' spread. main.js +0.8 KB gz.
