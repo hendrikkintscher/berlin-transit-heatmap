@@ -15,7 +15,12 @@ Tasks S057, S058 and S059 in `feature_list.json` (Hendrik, 2026-11-10). Ideas, n
 
 - **S057 Stop dots only from street level.** No stop dots in the city view, for every mode
   (this replaces decision 0009's S/U dots from the city view). Proposal: all dots from zoom 14,
-  names as today. Open: keep S/U names (without dots) in the city view, or nothing?
+  names as today. Hendrik (2026-11-10): in the city view only the names (no dots) of major
+  stations: Alexanderplatz, Friedrichstraße, Ostbahnhof, Zoologischer Garten and the stations where
+  the Ring crosses the Stadtbahn or a north–south line (Westkreuz, Ostkreuz, Gesundbrunnen,
+  Südkreuz and the like; the exact list is part of S057).
+- **S060 Layer switch for lines and stations.** One switch turns the network lines (S058) and the
+  stops with their names (S057) off and on.
 - **S058 Faint network lines by mode.** Thin, faint lines of the whole network in each mode's
   colour, each mode from its own zoom. Proposal: S-Bahn, U-Bahn and regional from the city view,
   tram from zoom 12, bus from zoom 14. Data: `lines.bin` already holds every hop's course along
