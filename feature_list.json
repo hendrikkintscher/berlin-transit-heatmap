@@ -142,6 +142,17 @@
       "deps": ["S042"],
       "test": "bench/suite.ts step-free: VBB 3+ min better well below 24.4 %; RB24/FEX used step-free; a card with such a ride shows the note; timings unchanged",
       "passes": false
+    },
+    {
+      "id": "S056",
+      "title": "Deploy can ship the previous timetable: right after build-timetable swaps in a fresh release, the release download links still serve the old files for a moment (seen 2026-11-10, deploy 7 s after the swap). The deploy should check the downloaded files against the release's checksums.json and retry until they match",
+      "kind": "fix",
+      "owner": "claude",
+      "priority": "high",
+      "size": "S",
+      "deps": [],
+      "test": "a deploy right after a swapped build ships the new files (data-v and stoplist.bin match the release's checksums.json); a mismatch retries and then fails instead of deploying old data",
+      "passes": false
     }
   ]
 }
