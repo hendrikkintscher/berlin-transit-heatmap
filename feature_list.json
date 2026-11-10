@@ -2,14 +2,14 @@
   "features": [
     {
       "id": "S042",
-      "title": "Decide where VBB's trips are better: walking speed, change times, step-free rules (results sent 2026-11-06, waiting for Hendrik's yes; docs/specs/s042-where-vbb-is-better.md)",
+      "title": "Decide where VBB's trips are better: walking speed, change times, step-free rules (docs/specs/s042-where-vbb-is-better.md; decided 2026-11-10, decision 0016: S053-S055)",
       "kind": "research",
       "owner": "hendrik",
       "priority": "medium",
       "size": "S",
       "deps": [],
       "test": "Hendrik picked the options; the choice is in the vault note and each chosen change is its own build task",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S043",
@@ -109,6 +109,39 @@
       "deps": ["S051"],
       "test": "the page is published, opens at phone width in light and dark without errors or sideways scrolling, and lists 124 OSM objects, 2 unnamed ATMs next to Cash Group branches, 6 places not in OSM and 102 Shell/TotalEnergies stations",
       "passes": true
+    },
+    {
+      "id": "S053",
+      "title": "Footpaths between stops capped at 1.3x the straight line + 60 s in timetable-build (S042, decision 0016)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": ["S042"],
+      "test": "bench/footpaths.ts and bench/suite.ts --vbb: VBB 3+ min better on foot about 7 % (from 12.3 %); suite --ci exits 0; timings before/after at 360x740 in the PR",
+      "passes": false
+    },
+    {
+      "id": "S054",
+      "title": "Snap a tapped point to several nearby paths, not one, so start and end walks stop taking cut-off paths (S042, decision 0016)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "M",
+      "deps": ["S042"],
+      "test": "start walks over 2.5x the straight line drop from 36 of 773 to near 0 (bench as in S042); first map and tap timings unchanged at 360x740, 1x and 4x",
+      "passes": false
+    },
+    {
+      "id": "S055",
+      "title": "Step-free mode counts trips with unknown wheelchair access as usable, and the card notes when a ride's access is unknown (S042, decision 0016)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "M",
+      "deps": ["S042"],
+      "test": "bench/suite.ts step-free: VBB 3+ min better well below 24.4 %; RB24/FEX used step-free; a card with such a ride shows the note; timings unchanged",
+      "passes": false
     }
   ]
 }
