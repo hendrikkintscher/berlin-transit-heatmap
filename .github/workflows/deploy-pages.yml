@@ -6,9 +6,9 @@ on:
     # Roadmap, README and other notes change nothing on the site.
     paths-ignore: ['**.md']
   workflow_dispatch:
-  # Redeploy when a new timetable has been published.
+  # Redeploy when a new timetable or new add-on data has been published.
   workflow_run:
-    workflows: ['Build timetable']
+    workflows: ['Build timetable', 'Refresh add-ons']
     types: [completed]
 
 permissions:
@@ -71,6 +71,9 @@ jobs:
           fi
           # A failed download fails the deploy: half a data folder is worse than the last site.
           scripts/publish/download.sh timetable-latest "$dir"
+          # The add-on layers (S049): optional, the app hides a switch whose file is missing.
+          scripts/publish/download.sh addons-latest "$dir" atm.json \
+            || echo "::warning::No atm.json on addons-latest; the ATM switch stays hidden."
           ls -la "$dir"
           # The files' versions go into the start page: phones keep each file until it changes.
           node scripts/publish/data-versions.mjs "$dir" packages/web/dist/index.html

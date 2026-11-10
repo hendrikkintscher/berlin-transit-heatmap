@@ -62,6 +62,7 @@ export interface LinkState {
   freq: boolean;
   desert: boolean;
   places: boolean;
+  atm: boolean;
   iso: boolean;
   heat: boolean;
   /** "Bis N Min." in minutes (one of LIMIT_MINUTES), 0 = off. */
@@ -118,6 +119,7 @@ export function readLink(search: string, base: LinkState): LinkState {
   const layers = (p.get('layers') ?? '').split(',');
   s.freq = layers.includes('freq');
   s.places = layers.includes('places');
+  s.atm = layers.includes('atm');
   s.desert = layers.includes('desert');
   s.iso = !layers.includes('noiso');
   // The colour fill is on unless switched off (S013): "noheat" says off, "heat" (older
@@ -179,6 +181,7 @@ export function linkQuery(s: LinkState, now: When, lang?: string | null): string
     s.freq && 'freq',
     s.desert && 'desert',
     s.places && 'places',
+    s.atm && 'atm',
     !s.iso && 'noiso',
   ]
     .filter(Boolean)

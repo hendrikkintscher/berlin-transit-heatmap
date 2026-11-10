@@ -93,6 +93,8 @@ export interface State {
   desert: boolean;
   /** Lakes, bathing spots, parks and viewpoints with their minutes (S019). */
   places: boolean;
+  /** The Cash Group ATMs add-on (S049), from street zoom. */
+  atm: boolean;
   /** Isochrone outlines every 5 min; on by default, so the minutes read without colours. */
   iso: boolean;
   /**
@@ -141,6 +143,7 @@ export function createState(read = readNumber, when = NOW_WHEN): State {
     freq: false,
     desert: false,
     places: false,
+    atm: false,
     iso: true,
     heat: read('heat', 1) > 0,
     limit: 0,

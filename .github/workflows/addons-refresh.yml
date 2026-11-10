@@ -1,0 +1,75 @@
+name: Refresh add-ons
+
+# The map's add-on layers (S047, S049): every night, the Cash Group ATMs from the
+# OpenStreetMap extracts on Geofabrik (decision 0014), as `atm.json` on the release
+# `addons-latest`. The deploy copies it into the region's data folder; an unchanged file
+# is not uploaded again and keeps its data version, so phones keep their copy.
+
+on:
+  schedule:
+    # 01:53 UTC, after Geofabrik's nightly extracts and before the timetable build's deploy.
+    - cron: '53 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: addons-refresh
+  cancel-in-progress: false
+
+env:
+  ADDONS_TAG: addons-latest
+
+# Steps run as bash -eo pipefail: a failing command in a pipe fails the step.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Read the region
+        run: |
+          echo "BBOX=$(node scripts/region.mjs osmBbox)" >> "$GITHUB_ENV"
+          echo "EXTRACTS=$(node scripts/region.mjs osmExtracts)" >> "$GITHUB_ENV"
+
+      - name: Install osmium
+        run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+
+      - name: Download extracts
+        run: |
+          mkdir -p work/out
+          for region in $EXTRACTS; do
+            curl -fsSL --retry 4 --retry-delay 10 -o "work/$region.osm.pbf" \
+              "https://download.geofabrik.de/europe/germany/$region-latest.osm.pbf"
+          done
+
+      - name: Cash Group ATMs
+        run: |
+          cd work
+          read -ra extracts <<<"$EXTRACTS"
+          osmium merge "${extracts[@]/%/.osm.pbf}" -o merged.osm.pbf
+          osmium extract -b "$BBOX" merged.osm.pbf -o area.osm.pbf
+          osmium tags-filter area.osm.pbf nwr/amenity=atm nwr/atm=yes -o atms.osm.pbf
+          osmium export -f geojsonseq -a type,id atms.osm.pbf -o atms.geojsonseq
+          node ../scripts/addons/atms.mjs atms.geojsonseq out/atm.json
+          ls -la out
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          notes="Add-on layers for the web app, built $(date -u +%Y-%m-%d) from Geofabrik's OpenStreetMap extracts. © OpenStreetMap contributors, ODbL."
+          node scripts/publish/publish.mjs --dir work/out --tag "$ADDONS_TAG" --title "Add-ons (latest)" --notes "$notes"

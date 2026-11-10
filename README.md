@@ -65,6 +65,10 @@ The feed is about 50–100 MB, so it lives in releases rather than in git:
 
 [`.github/workflows/build-timetable.yml`](.github/workflows/build-timetable.yml) runs after every successful refresh and by hand. It turns `gtfs-latest` into the hourly binary timetables (`timetable-*.bin`, for typical days and the coming week's dates) with the stops, their station numbers and the footpaths they share (`stoplist.bin`), `walk.bin`, `lines.bin`, `streets.json`, `changes.json` and `build-info.json` (see [`packages/timetable-build`](packages/timetable-build/README.md)) and publishes them on the release `timetable-latest`, which the web app deploy picks up. [`scripts/publish`](scripts/publish/publish.mjs) uploads only new and changed files (by the sha256 in `checksums.json`), never removes a file before its new copy is up, and switches to a fresh release when most files changed, so a run stays well inside the hourly API budget.
 
+### Add-on layers
+
+[`.github/workflows/addons-refresh.yml`](.github/workflows/addons-refresh.yml) runs every night and by hand. It takes the Cash Group ATMs (Commerzbank, Deutsche Bank, HypoVereinsbank, Postbank) from Geofabrik's OpenStreetMap extracts ([`scripts/addons/atms.mjs`](scripts/addons/atms.mjs)) and publishes `atm.json` on the release `addons-latest`; the deploy copies it next to the timetables. The app loads it only when the "Geldautomaten" switch under Ebenen is on, after the first map. Without the file the switch is hidden. Missing or untagged ATMs are fixed in OpenStreetMap itself.
+
 ### Using the data locally
 
 With the [GitHub CLI](https://cli.github.com/) installed and logged in:
