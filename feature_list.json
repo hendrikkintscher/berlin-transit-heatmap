@@ -98,6 +98,17 @@
       "deps": ["S049"],
       "test": "atms.test.mjs covers a disused bank with atm=yes; the rebuilt atm.json has no object with disused:amenity or was:amenity; check.sh green",
       "passes": true
+    },
+    {
+      "id": "S052",
+      "title": "Side project: a private phone worklist of every Cash Group ATM in OSM for Berlin (what each is missing, closed branches, 6 Commerzbank locations not in OSM, 102 Shell/TotalEnergies stations that may have Postbank partner ATMs) so Hendrik can survey and fix OSM; page https://claude.ai/artifact/TTPLLcDMzJ2kDN2rytvprg (OSM data of 2026-11-07)",
+      "kind": "chore",
+      "owner": "claude",
+      "priority": "low",
+      "size": "S",
+      "deps": ["S051"],
+      "test": "the page is published, opens at phone width in light and dark without errors or sideways scrolling, and lists 124 OSM objects, 2 unnamed ATMs next to Cash Group branches, 6 places not in OSM and 102 Shell/TotalEnergies stations",
+      "passes": true
     }
   ]
 }

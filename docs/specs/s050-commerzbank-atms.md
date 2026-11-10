@@ -48,3 +48,16 @@ deposit machines and wheelchair access. Two clean ways to get that in:
 - Ask Commerzbank for consent to use the Berlin branch list (a request, not code).
 - Add the 6 missing ATMs in OSM by surveying them (StreetComplete or the OSM editor). Copying
   them from Commerzbank's pages into OSM is not allowed either.
+
+## The other Cash Group banks (2026-11-10, for the survey worklist S052)
+
+None of them can be read the way Commerzbank's pages were:
+
+- **Postbank:** its Berlin page (`postbank.de/privatkunden/services/filiale/filiale-berlin.html`) loads the
+  list from `postbank.de/cip/…/yellowmap2018/…`. robots.txt disallows `/cip/`, and the data is
+  YellowMap's, as for the Cash Group finder. Not read. The list includes "Postbank Partner Geldautomat"
+  machines at petrol stations (TOTAL, Shell filter).
+- **Deutsche Bank:** the finder (`deutsche-bank.de/pk/filialsuche.html`) loads from
+  `deutsche-bank.de/cip/engine/filialfinder/…`, also under the disallowed `/cip/`. Not read.
+- **HypoVereinsbank:** `hypovereinsbank.de` answers 403 to automated visits, including a real browser.
+  Not read.
