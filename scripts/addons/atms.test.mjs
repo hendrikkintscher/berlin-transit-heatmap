@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bankOf, buildAtms, pointOf, readSeq } from './atms.mjs';
+import { bankOf, buildAtms, closed, pointOf, readSeq } from './atms.mjs';
 
 const atm = (lon, lat, tags) => ({
   type: 'Feature',
@@ -78,6 +78,25 @@ describe('Cash Group ATMs add-on', () => {
         geometry: { type: 'MultiPolygon', coordinates: [[ring]] },
         properties: tags,
       },
+    ]);
+    expect(out.p).toHaveLength(1);
+  });
+
+  it('leaves out closed branches that kept atm=yes', () => {
+    const at = (tags) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [13.3, 52.5] },
+      properties: { atm: 'yes', name: 'Commerzbank', ...tags },
+    });
+    expect(closed({ 'disused:amenity': 'bank', atm: 'yes' })).toBe(true);
+    expect(closed({ 'was:amenity': 'atm' })).toBe(true);
+    expect(closed({ amenity: 'bank', atm: 'no' })).toBe(true);
+    // A self-service point mapped without an amenity is still there.
+    expect(closed({ atm: 'yes', name: 'Commerzbank' })).toBe(false);
+    const out = buildAtms([
+      at({ 'disused:amenity': 'bank' }),
+      at({ 'was:amenity': 'bank', '@type': 'way', '@id': 2 }),
+      at({}),
     ]);
     expect(out.p).toHaveLength(1);
   });

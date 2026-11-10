@@ -4,6 +4,7 @@
 //
 //   node scripts/addons/atms.mjs <atms.geojsonseq> <out/atm.json>
 //
+// Closed branches that kept `atm=yes` (`disused:amenity=bank`, S051) are left out.
 // An ATM counts as Cash Group when its operator, brand, network or name names one of the
 // four banks (decision 0014). Opening hours come from the ATM itself (`opening_hours` on
 // an ATM, `opening_hours:atm` elsewhere), never from the bank it stands in. A bank tagged
@@ -54,6 +55,12 @@ export function pointOf(geometry) {
   return [sum[0] / ring.length, sum[1] / ring.length];
 }
 
+/** A closed place keeps its tags under a lifecycle prefix (disused:amenity=bank, was:amenity=atm). */
+const LIFECYCLE = /^(disused|was|abandoned|demolished|removed|razed):(amenity|atm)$/;
+/** Whether the object is a place that is gone (S051): its ATM went with it. */
+export const closed = (tags) =>
+  tags.atm === 'no' || (!tags.amenity && Object.keys(tags).some((k) => LIFECYCLE.test(k)));
+
 const metres = ([x1, y1], [x2, y2]) =>
   Math.hypot((x1 - x2) * 111320 * Math.cos((y1 * Math.PI) / 180), (y1 - y2) * 110540);
 const round5 = (x) => Math.round(x * 1e5) / 1e5;
@@ -68,6 +75,7 @@ export function buildAtms(features) {
     const id = tags['@id'] != null ? `${tags['@type']}/${tags['@id']}` : null;
     if (id && seen.has(id)) continue;
     if (id) seen.add(id);
+    if (closed(tags)) continue;
     const bank = bankOf(tags);
     const at = f.geometry && pointOf(f.geometry);
     if (bank < 0 || !at) continue;
