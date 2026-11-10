@@ -1,8 +1,7 @@
 # Progress
 
 Session log, newest first. Keep the last ~10 entries; roll older ones into the summary. Tasks live in
-`feature_list.json`, history in git and `CHANGELOG.md`, decisions in the vault note (until S046 also
-`docs/decisions/`).
+`feature_list.json`, history in git and `CHANGELOG.md`, decisions in the vault note.
 
 ## Earlier (summary)
 
@@ -10,6 +9,13 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-05: 1.0.0 shipped, all steps to 1.0 done; after that only route quality work (1.0.x).
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
+
+## 2026-11-10 · cloud · S046 decisions to the vault
+
+- The 12 decision records are now one line each in the vault note's `## Decisions` (project-vault eecc152),
+  with a pointer to the full records in git (66adaa7); `docs/decisions/` deleted, CLAUDE.md, README and the
+  planning guard point to the vault note.
+- Next: S042 waits for Hendrik's yes; S043 and S044 only when Hendrik names them.
 
 ## 2026-11-09 · local · coding guidelines
 
