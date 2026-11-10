@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillTimes, modeOf, samePlatform } from '../src/build.ts';
+import { fillTimes, footpathSeconds, modeOf, samePlatform } from '../src/build.ts';
 import { berlinHolidays, pickReferenceDay, ServiceCalendar } from '../src/calendar.ts';
 import { parseTime, splitCsvLine } from '../src/csv.ts';
 import { distanceM, forEachNearbyPair } from '../src/geo.ts';
@@ -125,5 +125,18 @@ describe('samePlatform', () => {
     expect(samePlatform('de:11000:900120001::5', 'de:11000:900120001::6')).toBe(false);
     expect(samePlatform('A', 'B')).toBe(false);
     expect(samePlatform('x:1', 'x:2')).toBe(false);
+  });
+});
+
+describe('change walks between stops (S053)', () => {
+  it('count the street walk, capped at 1.3x the straight line at 5 km/h, plus 60 s', () => {
+    // A street walk as long as the straight line is kept: 100 m at 4 km/h = 90 s
+    // (the cap would be 130 m at 5 km/h = 94 s).
+    expect(footpathSeconds(100, 100)).toBe(150);
+    // Already a small detour is capped, since the cap walks at 5 km/h: 90 m straight -> 84 s.
+    expect(footpathSeconds(100, 90)).toBe(144);
+    // A detour (300 m on the street for 100 m straight) is capped: 130 m at 5 km/h = 94 s.
+    expect(footpathSeconds(300, 100)).toBe(154);
+    expect(footpathSeconds(0, 0)).toBe(60);
   });
 });
