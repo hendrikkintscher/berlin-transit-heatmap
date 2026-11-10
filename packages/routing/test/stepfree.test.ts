@@ -17,6 +17,7 @@ const tt: Timetable = {
     { name: 'U1', mode: 'ubahn', stops: [0, 1, 2], trips: [[36000, 36060, 36120]] },
     { name: 'M1', mode: 'tram', stops: [0, 2], trips: [[36000, 36300]], stepFree: false },
     { name: 'U2', mode: 'ubahn', stops: [0, 1], trips: [[36000, 36060]] },
+    { name: 'RB24', mode: 'regional', stops: [0, 2], trips: [[36000, 36400]], accessUnknown: true },
   ],
   transfers: [
     { from: 0, to: 1, seconds: 60 },
@@ -30,6 +31,14 @@ describe('stepFreeTimetable', () => {
   it('keeps accessible trips and lets them pass stairs-only platforms', () => {
     expect(sf.routes).toEqual([
       { name: 'U1', mode: 'ubahn', stops: [0, 2], trips: [[36000, 36120]] },
+      // Not known whether accessible (S055): kept, with its mark.
+      {
+        name: 'RB24',
+        mode: 'regional',
+        stops: [0, 2],
+        trips: [[36000, 36400]],
+        accessUnknown: true,
+      },
     ]);
   });
 

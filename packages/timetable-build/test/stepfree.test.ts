@@ -4,7 +4,8 @@ import { buildTimetables, type BuildResult } from '../src/build.ts';
 import { openGtfs } from '../src/source.ts';
 
 // The mini fixture plus an entrance with a lift to platform A and stairs to platform B,
-// and wheelchair_accessible on every trip but the night bus N9.
+// and wheelchair_accessible: 1 on most trips, 2 (not accessible) on the ferry, 0 (not
+// known) on the night bus N9.
 const FIXTURE = join(import.meta.dirname, 'fixtures', 'stepfree');
 
 let result: BuildResult;
@@ -25,8 +26,15 @@ describe('step-free data', () => {
   });
 
   it('marks routes whose trips are not wheelchair-accessible', () => {
+    const day = result.timetables.day!.routes;
+    expect(day.filter((r) => r.stepFree === false).map((r) => r.name)).toEqual(['Fähre Wannsee']);
+    for (const r of day) expect(r.accessUnknown).toBeUndefined();
+  });
+
+  it('counts trips without a mark as step-free, marked as not known (S055)', () => {
     const night = result.timetables.night!;
-    expect(night.routes.map((r) => [r.name, r.stepFree])).toEqual([['N9', false]]);
-    for (const r of result.timetables.day!.routes) expect(r.stepFree).toBeUndefined();
+    expect(night.routes.map((r) => [r.name, r.stepFree, r.accessUnknown])).toEqual([
+      ['N9', undefined, true],
+    ]);
   });
 });

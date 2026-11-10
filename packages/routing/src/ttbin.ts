@@ -62,6 +62,7 @@ export interface TimetableData {
     trips: number[][];
     dwells?: number[][];
     stepFree?: false;
+    accessUnknown?: true;
   }[];
   transfers: { from: number; to: number; seconds: number }[];
 }
@@ -153,7 +154,8 @@ function writeRoutes(w: Writer, routes: TimetableData['routes']) {
     const m = MODES.indexOf(r.mode);
     w.uvar(m < 0 ? MODES.length - 1 : m);
     const dwells = r.dwells?.some((d) => d.some((x) => x !== 0)) ? r.dwells : undefined;
-    w.uvar((r.stepFree === false ? 1 : 0) | (dwells ? 2 : 0));
+    // Bit 4 (S055): older apps ignore it, so they treat such routes as step-free.
+    w.uvar((r.stepFree === false ? 1 : 0) | (dwells ? 2 : 0) | (r.accessUnknown ? 4 : 0));
     w.uvar(r.stops.length);
     let prev = 0;
     for (const s of r.stops) {
@@ -369,6 +371,7 @@ function readRoutes(r: Reader): TimetableData['routes'] {
     }
     routes[ri] = { name: routeName, mode, stops: rs, trips, ...(dwells ? { dwells } : {}) };
     if (flags & 1) routes[ri]!.stepFree = false;
+    if (flags & 4) routes[ri]!.accessUnknown = true;
   }
   return routes;
 }

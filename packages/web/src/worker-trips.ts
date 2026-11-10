@@ -780,6 +780,10 @@ export function tripMessage(
         from: tt.stops[l.from].name,
         to: tt.stops[l.to].name,
         stops: l.stops.length - 1,
+        // Not known to be wheelchair-accessible (S055): the card says so in step-free mode.
+        ...((l.parts ?? [{ route: l.route }]).some((p) => tt.routeAccessUnknown[p.route])
+          ? { accessUnknown: true as const }
+          : {}),
         ...(clock
           ? {
               dep: clock.dep,

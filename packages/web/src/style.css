@@ -1915,6 +1915,15 @@ body.special .legend {
 #readout .trip-long-walk::before {
   content: '🚶 ';
 }
+/* Step-free mode: rides whose access the feed does not give (S055). */
+#readout .trip-access {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+}
+#readout .trip-access::before {
+  content: '♿ ';
+}
 /* The ride with a shorter walk next to a long one (S045); a tap swaps it. */
 #readout .trip-alt {
   display: block;

@@ -37,6 +37,7 @@ const tt: TimetableData = {
       trips: [[36100, 36160, 36700]],
       stepFree: false,
     },
+    { name: 'RB24', mode: 'regional', stops: [0, 2], trips: [[36000, 36400]], accessUnknown: true },
   ],
   transfers: [
     { from: 2, to: 0, seconds: 60 },

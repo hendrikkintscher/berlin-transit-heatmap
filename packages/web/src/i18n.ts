@@ -208,7 +208,7 @@ const de = {
     'Rad + Bahn: mit 15 km/h zur Station und vom Ausstieg zum Ziel, 2 Min. pro Station fürs Mitnehmen, ohne Busse. Nur Rad: bis 60 Min. auf Straßen und Wegen.',
   stepFree: 'Barrierefrei',
   stepFreeHint:
-    'Für Rollstuhl, Kinderwagen und Koffer: nur Bahnsteige mit Aufzug oder Rampe und Fahrzeuge, die als barrierefrei markiert sind',
+    'Für Rollstuhl, Kinderwagen und Koffer: nur Bahnsteige mit Aufzug oder Rampe, ohne Fahrzeuge, die als nicht barrierefrei markiert sind; wo das nicht bekannt ist, steht es an der Verbindung',
   isoHint: 'Ringe bei 15, 30, 45 und 60 Minuten',
   isoHintHeat: 'Mit Farben: eine Linie alle 5 Minuten, beschriftet bei 15, 30 und 45',
   opacity: 'Deckkraft der Farben',
@@ -269,6 +269,7 @@ const de = {
   cmpMinutes: '<b>{a} → {b} Min.</b> ({d})',
   legendDiff: 'Legende: Minuten länger oder kürzer zur Vergleichszeit',
   tripWalk: '{n} Min. Fußweg',
+  tripAccessUnknown: '{lines}: barrierefrei nicht bekannt',
   tripBike: '{n} Min. Rad',
   tripLongWalkStart: 'langer Fußweg am Anfang ({n} Min.)',
   tripLongWalkEnd: 'langer Fußweg am Ende ({n} Min.)',
@@ -538,7 +539,7 @@ const en: Record<Key, string> = {
     'Bike + train: 15 km/h to the station and from the last stop, 2 min per station to take the bike along, no buses. Bike only: up to 60 min on streets and paths.',
   stepFree: 'Accessible',
   stepFreeHint:
-    'For wheelchairs, prams and suitcases: only platforms with a lift or ramp, and vehicles marked accessible',
+    'For wheelchairs, prams and suitcases: only platforms with a lift or ramp, no vehicles marked not accessible; where it is not known, the trip says so',
   isoHint: 'Rings at 15, 30, 45 and 60 minutes',
   isoHintHeat: 'With colours: a line every 5 minutes, labelled at 15, 30 and 45',
   opacity: 'Colour opacity',
@@ -596,6 +597,7 @@ const en: Record<Key, string> = {
   cmpMinutes: '<b>{a} → {b} min</b> ({d})',
   legendDiff: 'Legend: minutes longer or shorter at the comparison time',
   tripWalk: 'walk {n} min',
+  tripAccessUnknown: '{lines}: step-free access not known',
   tripBike: 'cycle {n} min',
   tripLongWalkStart: 'long walk at the start ({n} min)',
   tripLongWalkEnd: 'long walk at the end ({n} min)',

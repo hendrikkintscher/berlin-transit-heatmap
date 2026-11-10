@@ -211,3 +211,30 @@ describe('tapAlternative (S045)', () => {
     expect(alt!.trip.journeys[0]!.arrive).toBe(shown.journeys[0]!.arrive);
   });
 });
+
+describe('rides of unknown access (S055)', () => {
+  it('marks a ride whose route the feed marks neither way', () => {
+    const day = miniTimetable('day');
+    day.routes = day.routes.map((r) =>
+      r.name === 'U1' ? { ...r, accessUnknown: true as const } : r,
+    );
+    const f = loadTimetable(day);
+    const b = loadTimetable(reverseTimetable(day, day.windowEnd, day.windowEnd + 3600));
+    const origin = { lat: STOP_POS[A]!.lat, lon: STOP_POS[A]!.lon };
+    trips.setLastTrip({
+      tt: f,
+      runs: [runs.run(f, origin, true, 'walk', true, H10)],
+      direction: 'depart',
+      travel: 'walk',
+      leaveAt: null,
+      from: H10,
+      otherTt: b,
+    });
+    const rides = trips
+      .tapTrip({ ...tap, ...near(D) })
+      .journeys[0]!.legs.filter((l) => l.type === 'ride');
+    expect(rides.length).toBeGreaterThan(0);
+    for (const l of rides) expect(!!l.accessUnknown).toBe(l.name === 'U1');
+    expect(rides.some((l) => l.name === 'U1')).toBe(true);
+  });
+});
