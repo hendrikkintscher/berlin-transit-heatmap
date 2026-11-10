@@ -76,6 +76,28 @@
       "deps": ["S048"],
       "test": "layer off: first map and tap to trip unchanged against main at 360x740, 1x and 4x; layer on: pins appear after the first map, a pin tap gives the trip there; the nightly build publishes the file; check.sh, smoke and speed green",
       "passes": true
+    },
+    {
+      "id": "S050",
+      "title": "Commerzbank ATMs: Commerzbank's own branch pages against OSM for Berlin (results: docs/specs/s050-commerzbank-atms.md, sent 2026-11-10, waiting for Hendrik's yes)",
+      "kind": "research",
+      "owner": "claude",
+      "priority": "low",
+      "size": "S",
+      "deps": ["S049"],
+      "test": "a short table (locations, matches within 50 m, hours, extra fields, terms) and a one-line recommendation sent to Hendrik",
+      "passes": false
+    },
+    {
+      "id": "S051",
+      "title": "ATM layer: drop closed branches that kept atm=yes in OSM (disused:amenity / was:amenity), 4 in the area today",
+      "kind": "fix",
+      "owner": "claude",
+      "priority": "high",
+      "size": "S",
+      "deps": ["S049"],
+      "test": "atms.test.mjs covers a disused bank with atm=yes; the rebuilt atm.json has no object with disused:amenity or was:amenity; check.sh green",
+      "passes": false
     }
   ]
 }
