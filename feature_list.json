@@ -46,7 +46,7 @@
     },
     {
       "id": "S047",
-      "title": "Add-on layers: how optional place layers (built nightly, loaded only when switched on, after the first map) work without slowing the first map or taps; first add-on S048",
+      "title": "Add-on layers: how optional place layers (built nightly, loaded only when switched on, after the first map) work without slowing the first map or taps; first add-on S048 (results: docs/specs/s047-add-on-layers.md, sent 2026-11-10, waiting for Hendrik's yes)",
       "kind": "research",
       "owner": "claude",
       "priority": "medium",
