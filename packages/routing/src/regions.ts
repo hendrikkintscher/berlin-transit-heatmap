@@ -35,6 +35,12 @@ export interface Region {
   osmExtracts: string[];
   /** Ringbahn, Bezirke and landmarks on the map (orientation.ts). */
   orientation: boolean;
+  /**
+   * Stations named in the city view, where the map shows no stop dots (S057): their name as
+   * the map shows it (stationName) and the short name shown there. Every other stop appears
+   * from street level.
+   */
+  hubs: Record<string, string>;
   /** Live delays from the region's journey API (live.ts); null when there is none. */
   liveApi: string | null;
 }
@@ -57,6 +63,19 @@ export const REGIONS = {
     gtfsUrl: 'https://www.vbb.de/vbbgtfs',
     osmExtracts: ['berlin', 'brandenburg'],
     orientation: true,
+    // The big stations and where the Ring crosses the Stadtbahn and the north-south line
+    // (Hendrik, 2026-11-10).
+    hubs: {
+      'S+U Alexanderplatz Bhf': 'Alexanderplatz',
+      'S+U Friedrichstr. Bhf': 'Friedrichstraße',
+      'S+U Berlin Hauptbahnhof': 'Hauptbahnhof',
+      'S Ostbahnhof': 'Ostbahnhof',
+      'S+U Zoologischer Garten Bhf': 'Zoo',
+      'S Westkreuz': 'Westkreuz',
+      'S Ostkreuz Bhf': 'Ostkreuz',
+      'S+U Gesundbrunnen Bhf': 'Gesundbrunnen',
+      'S Südkreuz Bhf': 'Südkreuz',
+    },
     liveApi: 'https://v6.vbb.transport.rest',
   },
 } satisfies Record<string, Region>;

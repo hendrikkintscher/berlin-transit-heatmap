@@ -2,6 +2,7 @@
 // how far a place is from frequent service ("transit deserts"). Both are computed in the
 // worker from the timetable already loaded for routing.
 import {
+  REGION,
   heatGrid,
   type HeatGrid,
   type PreparedTimetable,
@@ -171,13 +172,14 @@ export function stopPoints(tt: PreparedTimetable): FeatureCollection<Point, Stop
     }
   }
   const { groups, of } = mergeStations(tt, (s) => rank[s] !== 255);
+  const hubs: Record<string, string | undefined> = REGION.hubs;
   const best = new Uint8Array(groups.length).fill(255);
   for (let s = 0; s < tt.stopCount; s++)
     if (of[s] >= 0 && rank[s] < best[of[s]]) best[of[s]] = rank[s];
   const features = groups.map((g, i) => ({
     type: 'Feature' as const,
     geometry: { type: 'Point' as const, coordinates: centre(g) },
-    properties: { name: g.name, k: best[i] },
+    properties: { name: g.name, k: best[i], ...(hubs[g.name] ? { h: hubs[g.name] } : {}) },
   }));
   features.sort((a, b) => b.properties.k - a.properties.k);
   return { type: 'FeatureCollection', features };

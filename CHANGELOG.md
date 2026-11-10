@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.7] — 2026-11-11
+
+- S057: stop dots only from street level (zoom 14), for every mode, with their names and the S/U letters (decision 0018, replacing 0009's S/U dots in the city view). Above it only nine big stations by a short name (Alexanderplatz, Friedrichstraße, Hauptbahnhof, Ostbahnhof, Zoo, Westkreuz, Ostkreuz, Gesundbrunnen, Südkreuz; `REGION.hubs`), over the time rings' minute labels and under the district names; where they collide some stay hidden at the start view. Browser at 360×740, medians of 8 visits, main → branch, three runs at 1×: first map 659 → 698, 689 → 609, 688 → 641 ms; tap to trip 212 → 235, 189 → 208, 244 → 195 ms (within the runs' spread); 4× CPU: first map 1168 → 1187 ms, tap to trip 217 → 143 ms. No routing change.
+
 ## [1.1.6] — 2026-11-11
 
 - S055: step-free mode also uses trips the feed marks neither way (`wheelchair_accessible` 0 or empty: 77 % of regional rail, 31 % of trams, 11 % of buses), as VBB's planner does (decision 0016); only trips marked not accessible stay out. The card names such rides in step-free mode ("RB24: barrierefrei nicht bekannt"), and the setting's hint says so. The timetable keeps the mark per route (format flag 4, which older apps ignore); takes effect with the next timetable build. Route quality suite, step-free, 400 trips over 11–13 Nov, seed 40, both timetables built from the same feed: VBB 3+ min better 17.2 % → 8.2 %, trips found 377 → 388, RB24 used in 0 → 5 and FEX in 0 → 5 trips; checks 1, 2 and 4 stay at 0. Timings (Node, `scripts/speed/check.mjs`): all maps 1244 → 1236 ms, loading 583 → 576 ms. Browser at 360×740, medians of 8 visits, main → branch: first map 666 → 621 ms, tap to trip 209 → 183 ms; 4× CPU: first map 1136 → 1168 ms (bimodal), tap to trip 187 → 182 ms (a first 4× run gave 180 → 253 ms with visits from 111 to 611 ms).

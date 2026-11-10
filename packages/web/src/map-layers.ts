@@ -352,6 +352,24 @@ export function addMapLayers(
     'routes-label',
   );
   addStops(map, empty);
+  // Above street level no dots, only the region's big stations by a short name (S057). Over
+  // the time rings' minute labels (which repeat along each ring), under the trip and the
+  // district names, which are added later.
+  map.addLayer({
+    id: 'stops-hub-name',
+    type: 'symbol',
+    source: STOPS_SOURCE,
+    filter: ['has', 'h'],
+    maxzoom: STREET_ZOOM,
+    layout: {
+      'text-field': ['get', 'h'],
+      'text-font': BOLD_FONT,
+      'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 13, 13],
+      'text-max-width': 8,
+      'text-optional': true,
+    },
+    paint: { 'text-color': MAP_TEXT, 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
+  });
   // Places to go above the stops, so their names and minutes stay on top (S019).
   map.addSource(PLACES_SOURCE, { type: 'geojson', data: empty });
   map.addLayer({
@@ -566,11 +584,18 @@ export function addMapLayers(
 }
 
 /**
- * Stops with a dot in their mode's colour and their name where there is room, over the
- * colours and time rings and under the trip (S032, decision 0009). S-, U-Bahn and regional
- * stations from the city view, with a bold S or U from zoom 13; tram, bus and ferry stops as
- * dots from zoom 13 and named from zoom 14. Labels of stronger modes win where they collide.
+ * Stop dots and their names from this zoom on, every mode (S057, replacing decision 0009's
+ * S- and U-Bahn dots in the city view): below it the map's colours and rings speak alone.
  */
+export const STREET_ZOOM = 14;
+
+/**
+ * Stops with a dot in their mode's colour and their name where there is room, over the
+ * colours and time rings and under the trip (S032): every mode from STREET_ZOOM, S and U with
+ * a bold letter; above it only the region's big stations by name (S057). Labels of stronger
+ * modes win where they collide.
+ */
+
 function addStops(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
   map.addSource(STOPS_SOURCE, { type: 'geojson', data: empty });
   // Under the time rings' minute labels, so those keep their place.
@@ -588,10 +613,10 @@ function addStops(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
     type: 'circle',
     source: STOPS_SOURCE,
     filter: minor,
-    minzoom: 13,
+    minzoom: STREET_ZOOM,
     paint: {
       'circle-color': color,
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 2.5, 14, 3.5, 17, 5],
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 3.5, 17, 5],
       'circle-stroke-color': '#ffffff',
       'circle-stroke-width': 1,
     },
@@ -601,11 +626,12 @@ function addStops(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
     type: 'circle',
     source: STOPS_SOURCE,
     filter: major,
+    minzoom: STREET_ZOOM,
     paint: {
       'circle-color': color,
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 2.5, 13, 5, 16, 8],
+      'circle-radius': ['interpolate', ['linear'], ['zoom'], 14, 6, 16, 8],
       'circle-stroke-color': '#ffffff',
-      'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 10, 0.6, 14, 1.5],
+      'circle-stroke-width': 1.5,
     },
   });
   add({
@@ -613,11 +639,11 @@ function addStops(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
     type: 'symbol',
     source: STOPS_SOURCE,
     filter: ['<', ['get', 'k'], 2],
-    minzoom: 13,
+    minzoom: STREET_ZOOM,
     layout: {
       'text-field': ['match', ['get', 'k'], 0, 'S', 'U'],
       'text-font': BOLD_FONT,
-      'text-size': ['interpolate', ['linear'], ['zoom'], 13, 7, 16, 11],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 14, 8, 16, 11],
       'text-allow-overlap': true,
       'text-ignore-placement': true,
     },
@@ -648,8 +674,8 @@ function addStops(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
       paint: { 'text-color': MAP_TEXT, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4 },
     });
   // The upper layer's labels are placed first: S, U and regional names win over the rest.
-  names('stops-minor-name', minor, 14, 10);
-  names('stops-major-name', major, 0, 11);
+  names('stops-minor-name', minor, STREET_ZOOM, 10);
+  names('stops-major-name', major, STREET_ZOOM, 11);
 }
 
 /** A font the basemap's glyph server has, taken from its own labels. */
