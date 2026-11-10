@@ -1,7 +1,7 @@
 import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
 import type { Origin, RoundLegs, StopProfile, TravelTimeOptions, TravelTimeResult } from './types';
 import {
-  sameEdgeMetresNear,
+  sameEdgeMetres,
   snapOrigin,
   snapStops,
   timeAt,
@@ -59,14 +59,14 @@ export function travelTimes(
   const net = opts.walk;
   const speeds = walkSpeeds(opts.walkSpeedMps);
   const given = opts.accessSeconds;
-  const originSnap = net && !given ? snapOrigin(net, origin, opts.snapEdges) : null;
+  const originSnap = net && !given ? snapOrigin(net, origin) : null;
   const findAccess = (maxWalk: number) => {
     if (net && originSnap && originSnap.edge[0] >= 0) {
       // Walk the footpath network; stops off the network fall back to a straight line.
       const pace = 1 / speeds.network;
       const maxM = maxWalk * speeds.network;
       const sources = new WalkSources(pace);
-      sources.addAll(net, originSnap, 0, 0, -1);
+      sources.add(net, originSnap, 0, 0, 0, -1);
       const labels = walkFrom(
         net,
         sources.nodes,
@@ -82,7 +82,7 @@ export function travelTimes(
           snaps.edge[s] >= 0
             ? Math.min(
                 timeAt(net, labels, snaps, s, maxM, pace),
-                sameEdgeMetresNear(net, originSnap, snaps, s) * pace,
+                sameEdgeMetres(net, originSnap, 0, snaps, s) * pace,
               )
             : d / speeds.straight;
         if (t <= maxWalk) {

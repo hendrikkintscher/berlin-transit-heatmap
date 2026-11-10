@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.5] — 2026-11-10
+
+- S054 (measured, not shipped; decision 0017): snapping a place to several nearby paths. Places alone (up to 4 edges within 30 m more): start walks over 2.5× the straight line 72 → 38 of 990 trips, maps +3 %, but the card then parts from the map's cells and moving the map to the trip's other end can change the trip (7.6 % of places). Places and cells (2 edges): 72 → 58 and end walks 91 → 69, but maps +11–14 % and snapping cells +46 % in Node. New bench `packages/routing/bench/snapwalks.ts`; results in `docs/specs/s054-snap-several-paths.md`. S057 now names major stations only in the city view; S060 added (a switch for network lines and stations). No app change.
+
 ## [1.1.4] — 2026-11-10
 
 - Tasks S057–S059 (stops from street level, faint network lines by mode, ATMs almost always; `docs/specs/s057-s059-map-layers.md`); CLAUDE.md: S042 is decided; session log. No app change.

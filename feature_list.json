@@ -123,14 +123,14 @@
     },
     {
       "id": "S054",
-      "title": "Snap a tapped point to several nearby paths, not one, so start and end walks stop taking cut-off paths (S042, decision 0016)",
-      "kind": "feature",
+      "title": "Snap a tapped point to several nearby paths (S042, decision 0016): measured and built, not shipped, as every version keeping map and card in agreement slows the maps (decision 0017, docs/specs/s054-snap-several-paths.md)",
+      "kind": "research",
       "owner": "claude",
       "priority": "medium",
       "size": "M",
       "deps": ["S042"],
-      "test": "start walks over 2.5x the straight line drop from 36 of 773 to near 0 (bench as in S042); first map and tap timings unchanged at 360x740, 1x and 4x",
-      "passes": false
+      "test": "bench/snapwalks.ts on main and both versions (1,000 trips) and scripts/speed/check.mjs timings, results in docs/specs/s054-snap-several-paths.md",
+      "passes": true
     },
     {
       "id": "S055",

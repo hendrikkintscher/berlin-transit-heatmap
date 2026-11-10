@@ -84,7 +84,6 @@ export {
   sameEdgeMetres,
   snapCells,
   snapCellsInSteps,
-  snapNear,
   snapOrigin,
   snapPoint,
   snapStops,

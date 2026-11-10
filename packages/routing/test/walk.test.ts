@@ -15,7 +15,6 @@ import {
   nodeLonLat,
   snapCells,
   snapCellsInSteps,
-  snapNear,
   snapPoint,
   travelTimes,
   walkFrom,
@@ -517,86 +516,5 @@ describe('a nearer stop reached later', () => {
     const k = cellAt(g, LAT, LON0 + 18 * lonStep);
     expect(Math.abs(g.seconds[k] - 1800)).toBeLessThan(40);
     expect(g.stop![k]).toBe(-1);
-  });
-});
-
-describe('a place next to a cut-off path (S054)', () => {
-  // A street (nodes 0–10, 100 m apart) and, 25 m north of it, a footway from x = 5 to x = 8
-  // (nodes 11–14) that reaches the street only at its east end (node 14 to node 8).
-  const Y = 52.5;
-  const NORTH = 25 / 111320;
-  const nodes: [number, number][] = [];
-  const edges: [number, number, number][] = [];
-  for (let i = 0; i <= 10; i++) nodes.push([LON0 + i * STEP, Y]);
-  for (let i = 5; i <= 8; i++) nodes.push([LON0 + i * STEP, Y + NORTH]);
-  for (let i = 0; i < 10; i++) edges.push([i, i + 1, 100]);
-  for (let i = 11; i < 14; i++) edges.push([i, i + 1, 100]);
-  edges.push([14, 8, 25]);
-  const cut = loadWalkNetwork(encode(nodes, edges));
-  // 3 m south of the footway, 22 m north of the street.
-  const place = { lat: Y + NORTH - 3 / 111320, lon: LON0 + 5.2 * STEP };
-  const stopTt = loadTimetable({
-    ...timetable,
-    stops: [{ id: 'x', name: 'Street', lat: Y, lon: LON0 + 5.2 * STEP }],
-  });
-
-  it('snaps to the footway first and to the street as well', () => {
-    const s = snapNear(cut, place.lat, place.lon);
-    expect(cut.edgeA[s.edge[0]]).toBe(11);
-    expect(s.metres[0]).toBeLessThan(4); // walk.bin keeps 1e-5 degrees, about a metre
-    expect(cut.edgeA[s.edge[1]]).toBe(5);
-    expect(Math.abs(s.metres[1] - 22)).toBeLessThan(1.5);
-    expect(s.edge.length).toBe(2);
-    // With room for more: edges touching the footway's or the street's are the same path going on.
-    expect(snapNear(cut, place.lat, place.lon, 300, 30, 4).edge[2]).toBe(-1);
-    // Further than the spread from the nearest: not taken.
-    expect(snapNear(cut, place.lat, place.lon, 300, 10).edge[1]).toBe(-1);
-  });
-
-  it('walks to the stop by the street, not round the footway', () => {
-    const r = travelTimes(stopTt, place, { walk: cut, maxRounds: 0 });
-    // 22 m onto the street, along it to the stop: well under a minute (round the footway ~590 m).
-    expect(r.stopSeconds[0]).toBeLessThan(30);
-  });
-
-  it("gives the map's cells the walk by the street too", () => {
-    // A map from the street's west end: a cell centred on the place gets there by the
-    // street, not round by the footway's east end.
-    const start = { lat: Y, lon: LON0 };
-    // 50 m cells as in the app, one of them centred on the place.
-    const dLat = 50 / 111320;
-    const dLon = 50 / cut.mPerLon;
-    const west = place.lon - 5.5 * dLon;
-    const north = place.lat + 2.5 * dLat;
-    const bbox: [number, number, number, number] = [
-      west,
-      north - 6 * dLat,
-      west + 20 * dLon,
-      north,
-    ];
-    const g = heatGrid(stopTt, travelTimes(stopTt, start, { walk: cut, maxRounds: 0 }), {
-      cellSizeM: 50,
-      bbox,
-      walk: cut,
-    });
-    const v = gridValueAt(g, place.lat, place.lon);
-    // About 520 m along the street and 22 m off it at 4 km/h: under 9 minutes; round the
-    // footway (800 m along the street and 25 m up, 280 m back) about 16.
-    expect(v).toBeLessThan(9 * 60);
-  });
-
-  it('draws the walk by the street', () => {
-    const to = { lat: Y - 0.0001, lon: LON0 + 2 * STEP };
-    const path = walkPath(cut, place, to)!;
-    let m = 0;
-    for (let i = 1; i < path.length; i++)
-      m += Math.hypot(
-        (path[i][0] - path[i - 1][0]) * cut.mPerLon,
-        (path[i][1] - path[i - 1][1]) * 111320,
-      );
-    // 22 m to the street, about 320 m west along it, 11 m off it.
-    expect(m).toBeLessThan(400);
-    expect(path[0]).toEqual([place.lon, place.lat]);
-    expect(path[path.length - 1]).toEqual([to.lon, to.lat]);
   });
 });

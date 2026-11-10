@@ -3,7 +3,8 @@
 // file and many more trips. A walk far longer than the straight line means the place was
 // snapped to a cut-off path (S042: 36 of 773 start walks over 2.5×).
 //
-// Usage: tsx bench/snapwalks.ts [--n 1000] [--seed 40] [--data packages/routing/.data]
+// Usage: tsx bench/snapwalks.ts [--n 1000] [--seed 40] [--data .data] [--list]
+// --list prints each walk over 2.5× (and 100+ m longer) with its stop and both snaps.
 import { parseArgs } from 'node:util';
 import { distanceM, snapOrigin, snapStops, walksToStops, type Origin } from '../src';
 import { REGION } from '../src/regions';
