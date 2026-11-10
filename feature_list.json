@@ -153,6 +153,39 @@
       "deps": [],
       "test": "a deploy right after a swapped build ships the new files (data-v and stoplist.bin match the release's checksums.json); a mismatch retries and then fails instead of deploying old data",
       "passes": true
+    },
+    {
+      "id": "S057",
+      "title": "Stop dots only from street level (about zoom 14), for every mode; replaces decision 0009's S/U dots in the city view (docs/specs/s057-s059-map-layers.md)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": [],
+      "test": "no stop dots below the chosen zoom, all from it on (screenshots at city view, 12, 15); first map and tap timings unchanged at 360x740, 1x and 4x",
+      "passes": false
+    },
+    {
+      "id": "S058",
+      "title": "Faint lines of the whole network by mode: S/U/regional from the city view, tram from zoom 12, bus from zoom 14, from lines.bin (docs/specs/s057-s059-map-layers.md)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "M",
+      "deps": [],
+      "test": "each mode's lines appear at its zoom, faint, under the time rings and the trip (screenshots light and dark); first map and tap timings unchanged at 360x740, 1x and 4x",
+      "passes": false
+    },
+    {
+      "id": "S059",
+      "title": "ATM dots visible almost always: small dots from zoom 10, growing with zoom; '€' and bank name as today (docs/specs/s057-s059-map-layers.md)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": ["S049"],
+      "test": "ATM dots show from zoom 10 with the switch on (screenshots); timings with the switch on unchanged at 360x740, 1x and 4x",
+      "passes": false
     }
   ]
 }
