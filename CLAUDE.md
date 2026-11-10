@@ -117,8 +117,8 @@ desktop are not comparable with the cloud container's, so time main and the bran
   not see them: check the bookkeeping (VERSION, both package.json, CHANGELOG.md, feature_list.json) yourself.
 - Prettier checks every Markdown and JSON file (`pnpm format:check` in CI); run `npx prettier --write`
   on the docs you change.
-- Route quality (S036–S040, 2026-11-06): the open findings and options are in `docs/specs/s042-*.md` and
-  the finished step files S039 and S041 (`git show 012f587:docs/steps/archive/041-map-minutes-a-nearer-stop-reached-later-.md`).
+- Route quality (S036–S040, 2026-11-06): S042 was decided on 2026-11-10 (decision 0016: S053 done,
+  S054 and S055 open); its measurements are in `docs/specs/s042-*.md` and the finished step files S039 and S041 (`git show 012f587:docs/steps/archive/041-map-minutes-a-nearer-stop-reached-later-.md`).
   Not in git, so a new machine makes them again: the raw GTFS feed (recipe under Commands),
   `work/suite-*` outputs (`bench/suite.ts`), and the planners' answers in `packages/routing/.data/providers/`
   (asking VBB again takes about 15 min per 1,000 trips; Transitous and VBB need network access).
