@@ -21,7 +21,7 @@ case "$upper" in
     {
       echo "Blocked: '$name' looks like a planning/notes file outside the system."
       echo "Tasks -> feature_list.json; session log -> PROGRESS.md; history -> CHANGELOG.md + git;"
-      echo "decisions -> the brain; specs -> docs/specs/. Ask the user if it's really needed."
+      echo "decisions -> the vault note (cross-project: the brain); specs -> docs/specs/. Ask the user if it's really needed."
     } >&2
     exit 2 ;;
 esac

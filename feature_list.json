@@ -42,7 +42,7 @@
       "size": "S",
       "deps": [],
       "test": "docs/decisions/ is gone, the vault note holds the 12 decisions, and CLAUDE.md points decisions only to the vault note",
-      "passes": false
+      "passes": true
     }
   ]
 }

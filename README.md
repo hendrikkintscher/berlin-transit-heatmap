@@ -85,7 +85,7 @@ scripts/                   check.sh, bump.sh (version), gtfs/, layout/, publish/
 packages/timetable-build/  GTFS -> compact timetable files
 packages/routing/          RAPTOR engine and heatmap grid
 packages/web/              web app
-docs/                      decisions/, specs/ (details of open tasks; later.md)
+docs/                      specs/ (details of open tasks; later.md)
 showcase/                  screenshots (screens/) and sharepics (sharepics/), made by scripts/showcase/build.mjs
 ```
 
