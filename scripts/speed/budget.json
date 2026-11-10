@@ -18,6 +18,7 @@
     }
   },
   "bundle": {
+    "addons.js": 702,
     "index.css": 16222,
     "index.js": 3267,
     "main.js": 337994,
