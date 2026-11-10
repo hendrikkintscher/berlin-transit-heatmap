@@ -160,14 +160,16 @@ export function heatGrid(
       if (list) list.push(s);
       else edgeStop.set(stopSnap.edge[s], [s]);
     }
-    const originEdge = originSnap ? originSnap.edge[0] : -1;
+    // The origin's edges (snapNear: the nearest and a few more), -1 where unused.
+    const originEdges = originSnap ? originSnap.edge : new Int32Array(0);
+    const originEdge = originEdges.length ? originEdges[0] : -1;
     // The origin may go further than the stops: it starts with that much "less walked".
     const originExtraM = Math.max(0, (opts.maxOriginSeconds ?? 0) * speeds.network - fallbackM);
     // Going further than the stops, the origin's own walk (riding all the way) counts as
     // one within maxM all the way: it is not held back by a later stop's shorter walk.
     const originM = originExtraM > 0 ? fallbackM : maxM;
     if (originSnap && originEdge >= 0 && near(result.origin!.lat, result.origin!.lon, originExtraM))
-      sources.add(net, originSnap, 0, 0, -originExtraM, -1);
+      sources.addAll(net, originSnap, 0, -originExtraM, -1);
     const front = walkFront(
       net,
       sources.nodes,
@@ -248,8 +250,10 @@ export function heatGrid(
             ffrom = s;
           }
         }
-      if (e === originEdge) {
-        w = sameEdgeCellMetres(net, originSnap!, 0, cells, k);
+      let oi = -1;
+      for (let i = 0; i < originEdges.length; i++) if (originEdges[i] === e) oi = i;
+      if (oi >= 0) {
+        w = sameEdgeCellMetres(net, originSnap!, oi, cells, k);
         t = w * pace;
         if (w <= maxM) {
           if (t < v) {

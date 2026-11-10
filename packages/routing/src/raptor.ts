@@ -1,7 +1,7 @@
 import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
 import type { Origin, RoundLegs, StopProfile, TravelTimeOptions, TravelTimeResult } from './types';
 import {
-  sameEdgeMetres,
+  sameEdgeMetresNear,
   snapOrigin,
   snapStops,
   timeAt,
@@ -66,7 +66,7 @@ export function travelTimes(
       const pace = 1 / speeds.network;
       const maxM = maxWalk * speeds.network;
       const sources = new WalkSources(pace);
-      sources.add(net, originSnap, 0, 0, 0, -1);
+      sources.addAll(net, originSnap, 0, 0, -1);
       const labels = walkFrom(
         net,
         sources.nodes,
@@ -82,7 +82,7 @@ export function travelTimes(
           snaps.edge[s] >= 0
             ? Math.min(
                 timeAt(net, labels, snaps, s, maxM, pace),
-                sameEdgeMetres(net, originSnap, 0, snaps, s) * pace,
+                sameEdgeMetresNear(net, originSnap, snaps, s) * pace,
               )
             : d / speeds.straight;
         if (t <= maxWalk) {

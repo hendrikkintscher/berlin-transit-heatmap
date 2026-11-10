@@ -244,11 +244,90 @@ export function snapPoint(
   out.metres[i] = best >= 0 ? Math.sqrt(bestD2) : Infinity;
 }
 
-/** A one-slot snap of an origin. */
+/**
+ * A place snaps to more than its nearest edge: also to other edges at most this much further
+ * away. The nearest is often a cut-off path (a courtyard, a fenced footway) that reaches the
+ * street only far round; with the street a few metres further as a second way in, the walk
+ * takes whichever is shorter (S054).
+ */
+export const SNAP_SPREAD_M = 30;
+/** At most this many edges per place (the nearest and the next ones not touching it). */
+export const SNAP_EDGES = 4;
+
+/**
+ * Snaps a place to its nearest edge (slot 0) and to up to SNAP_EDGES - 1 more within
+ * SNAP_SPREAD_M of that one's distance, nearest first; an edge sharing an end with one already
+ * taken is skipped (it is the same path going on). Unused slots have edge -1.
+ */
+export function snapNear(
+  net: WalkNetwork,
+  lat: number,
+  lon: number,
+  maxM: number = MAX_SNAP_M,
+  spreadM: number = SNAP_SPREAD_M,
+  count: number = SNAP_EDGES,
+): Snaps {
+  const out = makeSnaps(count);
+  snapPoint(net, lat, lon, out, 0, maxM);
+  const e0 = out.edge[0];
+  if (e0 < 0 || count < 2) return out;
+  const reach = Math.min(maxM, out.metres[0] + spreadM);
+  const px = (lon - net.lon0) * net.mPerLon;
+  const py = (lat - net.lat0) * M_PER_DEG_LAT;
+  const { x, y, edgeA, edgeB, bucketOffset, bucketEdges, bucketCols, bucketRows } = net;
+  const c0 = Math.max(0, Math.floor((px - reach) / BUCKET_M));
+  const c1 = Math.min(bucketCols - 1, Math.floor((px + reach) / BUCKET_M));
+  const r0 = Math.max(0, Math.floor((py - reach) / BUCKET_M));
+  const r1 = Math.min(bucketRows - 1, Math.floor((py + reach) / BUCKET_M));
+  const found: { e: number; f: number; d: number }[] = [];
+  const seen = new Set<number>([e0]);
+  for (let r = r0; r <= r1; r++)
+    for (let c = c0; c <= c1; c++) {
+      const b = r * bucketCols + c;
+      for (let k = bucketOffset[b]; k < bucketOffset[b + 1]; k++) {
+        const e = bucketEdges[k];
+        if (seen.has(e)) continue;
+        seen.add(e);
+        const ax = x[edgeA[e]];
+        const ay = y[edgeA[e]];
+        const vx = x[edgeB[e]] - ax;
+        const vy = y[edgeB[e]] - ay;
+        const len2 = vx * vx + vy * vy;
+        let f = len2 > 0 ? ((px - ax) * vx + (py - ay) * vy) / len2 : 0;
+        f = f < 0 ? 0 : f > 1 ? 1 : f;
+        const d = Math.hypot(ax + f * vx - px, ay + f * vy - py);
+        if (d <= reach) found.push({ e, f, d });
+      }
+    }
+  found.sort((p, q) => p.d - q.d || p.e - q.e);
+  const ends = new Set<number>([edgeA[e0], edgeB[e0]]);
+  let n = 1;
+  for (const { e, f, d } of found) {
+    if (n >= count) break;
+    if (ends.has(edgeA[e]) || ends.has(edgeB[e])) continue;
+    ends.add(edgeA[e]);
+    ends.add(edgeB[e]);
+    out.edge[n] = e;
+    out.along[n] = f;
+    out.metres[n] = d;
+    n++;
+  }
+  return out;
+}
+
+/** An origin (or any tapped place) snapped to its nearby edges (snapNear). */
 export function snapOrigin(net: WalkNetwork, origin: { lat: number; lon: number }): Snaps {
-  const snap = makeSnaps(1);
-  snapPoint(net, origin.lat, origin.lon, snap, 0);
-  return snap;
+  return snapNear(net, origin.lat, origin.lon);
+}
+
+/** sameEdgeMetres from any slot of `a` (a place's snapNear) to slot j of `b`. */
+export function sameEdgeMetresNear(net: WalkNetwork, a: Snaps, b: Snaps, j: number): number {
+  let best = Infinity;
+  for (let i = 0; i < a.edge.length; i++) {
+    const m = sameEdgeMetres(net, a, i, b, j);
+    if (m < best) best = m;
+  }
+  return best;
 }
 
 /**
@@ -348,6 +427,10 @@ export class WalkSources {
   readonly pace: number;
   constructor(pace: number) {
     this.pace = pace;
+  }
+  /** Adds every used slot of `snaps` (a place's snapNear), as `add` adds one. */
+  addAll(net: WalkNetwork, snaps: Snaps, time: number, walked: number, tag: number): void {
+    for (let i = 0; i < snaps.edge.length; i++) this.add(net, snaps, i, time, walked, tag);
   }
   /** Adds snap slot i of `snaps`, reached at `time` after `walked` metres of walking, as `tag`. */
   add(net: WalkNetwork, snaps: Snaps, i: number, time: number, walked: number, tag: number): void {
@@ -950,12 +1033,11 @@ export function walkPath(
   to: { lat: number; lon: number },
   maxSnapM: number = MAX_CELL_SNAP_M,
 ): [number, number][] | null {
-  const snaps = makeSnaps(2);
-  snapPoint(net, from.lat, from.lon, snaps, 0, maxSnapM);
-  snapPoint(net, to.lat, to.lon, snaps, 1, maxSnapM);
-  const e0 = snaps.edge[0];
-  const e1 = snaps.edge[1];
-  if (e0 < 0 || e1 < 0) return null;
+  // Both places enter the network at each of their nearby edges (snapNear), the way onto
+  // the edge counted, as the map's walks count it.
+  const s0 = snapNear(net, from.lat, from.lon, maxSnapM);
+  const s1 = snapNear(net, to.lat, to.lon, maxSnapM);
+  if (s0.edge[0] < 0 || s1.edge[0] < 0) return null;
   const { x, y, edgeA, edgeB, edgeMetres, offset, target, metres } = net;
   const onEdge = (e: number, f: number): [number, number] => {
     const a = edgeA[e];
@@ -966,36 +1048,56 @@ export function walkPath(
   };
   const start: [number, number] = [from.lon, from.lat];
   const end: [number, number] = [to.lon, to.lat];
-  const p0 = onEdge(e0, snaps.along[0]);
-  const p1 = onEdge(e1, snaps.along[1]);
-  if (e0 === e1) return [start, p0, p1, end];
+  const slots = (sn: Snaps) => [...sn.edge.keys()].filter((i) => sn.edge[i] >= 0);
+  // The shortest walk along a shared edge, if the two share one.
+  let sameBest = Infinity;
+  let same: [number, number] | null = null;
+  for (const i of slots(s0))
+    for (const j of slots(s1)) {
+      const m = sameEdgeMetres(net, s0, i, s1, j);
+      if (m < sameBest) [sameBest, same] = [m, [i, j]];
+    }
 
-  // Goal: either end of the target edge, plus the rest of that edge to the snapped point.
-  const goalCost = new Map<number, number>([
-    [edgeA[e1], snaps.along[1] * edgeMetres[e1]],
-    [edgeB[e1], (1 - snaps.along[1]) * edgeMetres[e1]],
-  ]);
-  const gx = x[edgeA[e1]] + snaps.along[1] * (x[edgeB[e1]] - x[edgeA[e1]]);
-  const gy = y[edgeA[e1]] + snaps.along[1] * (y[edgeB[e1]] - y[edgeA[e1]]);
-  // Each edge length is at least the straight distance between its ends, so this
-  // never overestimates and the path found is the shortest.
+  // Goal: either end of each target edge, plus the rest of that edge and the way off it.
+  const goalCost = new Map<number, { cost: number; slot: number }>();
+  const goal = (v: number, cost: number, slot: number) => {
+    if (cost < (goalCost.get(v)?.cost ?? Infinity)) goalCost.set(v, { cost, slot });
+  };
+  for (const j of slots(s1)) {
+    const e = s1.edge[j];
+    const f = s1.along[j];
+    goal(edgeA[e], f * edgeMetres[e] + s1.metres[j], j);
+    goal(edgeB[e], (1 - f) * edgeMetres[e] + s1.metres[j], j);
+  }
+  const gx = (to.lon - net.lon0) * net.mPerLon;
+  const gy = (to.lat - net.lat0) * M_PER_DEG_LAT;
+  // Each edge length is at least the straight distance between its ends, and the way off the
+  // network at least the straight line to the place, so this never overestimates and the
+  // path found is the shortest.
   const h = (v: number) => Math.hypot(x[v] - gx, y[v] - gy);
   const dist = new Map<number, number>();
   const prev = new Map<number, number>();
+  const seedSlot = new Map<number, number>();
   const heap = new MinHeap();
-  const seed = (v: number, d: number) => {
+  const seed = (v: number, d: number, slot: number) => {
     if (d < (dist.get(v) ?? Infinity)) {
       dist.set(v, d);
       prev.set(v, -1);
+      seedSlot.set(v, slot);
       heap.push(d + h(v), v);
     }
   };
-  seed(edgeA[e0], snaps.along[0] * edgeMetres[e0]);
-  seed(edgeB[e0], (1 - snaps.along[0]) * edgeMetres[e0]);
+  for (const i of slots(s0)) {
+    const e = s0.edge[i];
+    const f = s0.along[i];
+    seed(edgeA[e], f * edgeMetres[e] + s0.metres[i], i);
+    seed(edgeB[e], (1 - f) * edgeMetres[e] + s0.metres[i], i);
+  }
   // Give up beyond a generous detour, so a point across a river with no bridge nearby
   // cannot make the search sweep the whole city.
+  const e0 = s0.edge[0];
   const limit = 3 * Math.hypot(x[edgeA[e0]] - gx, y[edgeA[e0]] - gy) + 2000;
-  let best = Infinity;
+  let best = sameBest;
   let bestNode = -1;
   while (heap.size) {
     const [key, v] = heap.pop();
@@ -1003,8 +1105,8 @@ export function walkPath(
     const d = dist.get(v)!;
     if (key - h(v) > d + 1e-6) continue; // stale entry
     const g = goalCost.get(v);
-    if (g !== undefined && d + g < best) {
-      best = d + g;
+    if (g !== undefined && d + g.cost < best) {
+      best = d + g.cost;
       bestNode = v;
     }
     for (let k = offset[v]; k < offset[v + 1]; k++) {
@@ -1017,11 +1119,21 @@ export function walkPath(
       }
     }
   }
-  if (bestNode < 0) return null;
+  if (bestNode < 0) {
+    if (!same) return null;
+    const [i, j] = same;
+    return [start, onEdge(s0.edge[i], s0.along[i]), onEdge(s1.edge[j], s1.along[j]), end];
+  }
   const nodes: [number, number][] = [];
-  for (let v = bestNode; v >= 0; v = prev.get(v)!) nodes.push(nodeLonLat(net, v));
+  let first = bestNode;
+  for (let v = bestNode; v >= 0; v = prev.get(v)!) {
+    nodes.push(nodeLonLat(net, v));
+    first = v;
+  }
   nodes.reverse();
-  return [start, p0, ...nodes, p1, end];
+  const i = seedSlot.get(first)!;
+  const j = goalCost.get(bestNode)!.slot;
+  return [start, onEdge(s0.edge[i], s0.along[i]), ...nodes, onEdge(s1.edge[j], s1.along[j]), end];
 }
 
 /** A binary min-heap of (key, value) pairs. */
