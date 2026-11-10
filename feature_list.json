@@ -156,7 +156,7 @@
     },
     {
       "id": "S057",
-      "title": "Stop dots only from street level (about zoom 14), for every mode; replaces decision 0009's S/U dots in the city view (docs/specs/s057-s059-map-layers.md)",
+      "title": "Stop dots only from street level (about zoom 14), for every mode; in the city view only the names of major stations (Alexanderplatz, Friedrichstraße, Ostbahnhof, Zoo, Ring/Stadtbahn crossings); replaces decision 0009 (docs/specs/s057-s059-map-layers.md)",
       "kind": "feature",
       "owner": "claude",
       "priority": "medium",
@@ -185,6 +185,17 @@
       "size": "S",
       "deps": ["S049"],
       "test": "ATM dots show from zoom 10 with the switch on (screenshots); timings with the switch on unchanged at 360x740, 1x and 4x",
+      "passes": false
+    },
+    {
+      "id": "S060",
+      "title": "Layer switch for network lines and stations (on/off for S058's lines and S057's stops and names; Hendrik, 2026-11-10, docs/specs/s057-s059-map-layers.md)",
+      "kind": "feature",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": ["S057", "S058"],
+      "test": "switching it off hides every network line, stop dot and stop name, on brings them back (screenshots); first map and tap timings unchanged at 360x740, 1x and 4x",
       "passes": false
     }
   ]
