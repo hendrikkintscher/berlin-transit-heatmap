@@ -152,7 +152,7 @@
       "size": "S",
       "deps": [],
       "test": "a deploy right after a swapped build ships the new files (data-v and stoplist.bin match the release's checksums.json); a mismatch retries and then fails instead of deploying old data",
-      "passes": false
+      "passes": true
     }
   ]
 }
