@@ -11,7 +11,7 @@ none better (the reference search agrees with the app), and decide what to chang
 
 - Question: which model differences make VBB's trips better, and which should the app take over?
 - Measure: bench/suite.ts (seed 40, from 2026-11-06): VBB 3+ min better on foot 12.3 % of 941, arriving 14.2 % of 183, step-free 24.4 % of 176. Class each case: VBB walks a stretch quicker (walking speed, straight line against streets), changes quicker (station change times), uses a stop or ride the app's step-free rule leaves out, or a trip outside the app's hourly file.
-- Results (2026-11-06; bench/vbbwhy.ts, bench/footpaths.ts; not yet decided):
+- Results (2026-11-06; bench/vbbwhy.ts, bench/footpaths.ts):
 
   | Why VBB is 3+ min better (on foot, 116 of 941)                                                    | Trips | Median |
   | ------------------------------------------------------------------------------------------------- | ----- | ------ |
@@ -38,3 +38,8 @@ none better (the reference search agrees with the app), and decide what to chang
 ## Notes
 
 - S039 covers the same arrival with more walking; this one the arrival itself.
+
+## Decision (Hendrik, 2026-11-10, decision 0016)
+
+- Taken: footpaths capped at 1.3× the straight line + 60 s (S053); snapping a tapped point to several nearby paths (S054); step-free mode counts unknown wheelchair access as usable, with a note on the card (S055).
+- Not taken: 7 rides instead of 6.
