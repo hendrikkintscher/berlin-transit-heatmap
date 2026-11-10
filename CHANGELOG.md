@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.4] — 2026-11-10
+
+- Tasks S057–S059 (stops from street level, faint network lines by mode, ATMs almost always; `docs/specs/s057-s059-map-layers.md`); CLAUDE.md: S042 is decided; session log. No app change.
+
 ## [1.1.3] — 2026-11-10
 
 - S056: the deploy can no longer ship the previous timetable. On 2026-11-10 a deploy started 7 s after build-timetable swapped in a fresh release and downloaded the old files, because the release's download links still served them. `scripts/publish/download.sh` now checks every file against the sha256 the release API gives (`scripts/publish/verify.mjs`), fetches stale files again every 15 s (12 tries), and fails instead of handing on old data. This runs in every workflow with a token, at no extra API calls when it lists the release anyway. Checked with a stand-in for curl that serves a stale file first: fetched again and then matching; with one try it fails. No app change, so no timings.
