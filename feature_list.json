@@ -119,7 +119,7 @@
       "size": "S",
       "deps": ["S042"],
       "test": "bench/footpaths.ts and bench/suite.ts --vbb: VBB 3+ min better on foot about 7 % (from 12.3 %); suite --ci exits 0; timings before/after at 360x740 in the PR",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S054",

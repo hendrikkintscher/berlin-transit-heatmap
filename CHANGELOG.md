@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-11-10
+
+- S053: changes between stops are shorter. A street walk between two stops counts at most 1.3× the straight line at 5 km/h, plus 60 s (decision 0016, from S042); transfers.txt times and the same-station floors are unchanged. Takes effect with the next timetable build. Route quality suite, seed 40, 1,000 trips leaving on foot, both timetables built from the same feed (7 Nov) and footpaths: VBB 3+ min better 12.3 % → 6.6 %; the app 3+ min earlier than VBB 21.4 % → 26.0 %; same arrival as VBB with 3+ min more walking 11.9 % → 13.2 %; arrival moves by 1+ min in 39 % of trips; checks 1, 2 and 4 stay at 0. Timings (Node, `scripts/speed/check.mjs`): all maps 1516 → 1412 ms, loading 694 → 681 ms; first map with straight-line walks (four origins, medians of 15) 913 → 907 ms. Browser at 360×740, medians of 8–12 visits: first map 716–748 → 750–803 ms at 1× (within the runs' spread, see the PR), tap to trip 261–286 → 221–263 ms; 4×: first map 1333 → 1439 ms (bimodal), tap to trip 170 → 234 ms.
+
 ## [1.1.1] — 2026-11-10
 
 - S051: the ATM layer leaves out closed branches that kept `atm=yes` in OpenStreetMap (`disused:`/`was:`/`abandoned:` amenity without a current amenity, or `atm=no`): 132 → 129 ATMs in the area (Wilmersdorfer Str. 39 Commerzbank and two Postbank). Only the nightly data build changed; the app is unchanged, so no new timings. S050 (research): Commerzbank's branch pages against OSM, decided to stay with OSM (decision 0015, `docs/specs/s050-commerzbank-atms.md`).
