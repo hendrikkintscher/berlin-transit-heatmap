@@ -75,6 +75,20 @@ export const SAME_STATION_TRANSFER_S = 120;
 export const SAME_PLATFORM_TRANSFER_S = 60;
 /** Stops further than this from any footpath keep straight-line transfers. */
 export const MAX_STOP_SNAP_M = 150;
+/**
+ * A walk between stops on the street network counts at most this many times the straight
+ * line, walked at CAPPED_WALK_SPEED_MPS (S053, decision 0016): stations have passages and
+ * crossings the footpaths miss, and VBB's change times are shorter than our street walks.
+ */
+export const FOOTPATH_DETOUR_CAP = 1.3;
+export const CAPPED_WALK_SPEED_MPS = 5 / 3.6;
+
+/** Seconds for a change between stops: the street walk, capped by the straight line, plus the penalty. */
+export function footpathSeconds(networkM: number, straightM: number): number {
+  const walk = networkM / NETWORK_WALK_SPEED_MPS;
+  const cap = (FOOTPATH_DETOUR_CAP * straightM) / CAPPED_WALK_SPEED_MPS;
+  return Math.round(Math.min(walk, cap) + TRANSFER_PENALTY_S);
+}
 
 export interface BuildOptions {
   bbox?: BBox;
@@ -728,7 +742,8 @@ async function buildTransfers(
   const points = servedList.map((s) => rawStops[s]!);
 
   // Walking between nearby stops: on the footpath network when there is one (a pair
-  // whose walk is more than twice the radius gets no transfer), else in a straight line.
+  // whose walk is more than twice the radius gets no transfer; a long detour counts at most
+  // 1.3x the straight line, S053), else in a straight line.
   const pairs: [number, number, number][] = [];
   forEachNearbyPair(points, TRANSFER_RADIUS_M, (i, j, metres) => pairs.push([i, j, metres]));
   const snaps = walk ? points.map((p) => walk.snap(p.lat, p.lon, MAX_STOP_SNAP_M)) : [];
@@ -752,7 +767,7 @@ async function buildTransfers(
       let s: number;
       if (network && snaps[j]) {
         if (network[k] === Infinity) return;
-        s = Math.round(network[k]! / NETWORK_WALK_SPEED_MPS + TRANSFER_PENALTY_S);
+        s = footpathSeconds(network[k]!, metres);
       } else s = Math.round(metres / WALK_SPEED_MPS + TRANSFER_PENALTY_S);
       const a = newIndex.get(servedList[i]!)!;
       const b = newIndex.get(servedList[j]!)!;
