@@ -37,7 +37,7 @@ export function bankOf(tags) {
 /** A feature's point: the point itself, or the mean of a line's or an outer ring's points. */
 export function pointOf(geometry) {
   if (geometry.type === 'Point') return geometry.coordinates;
-  const ring =
+  let ring =
     geometry.type === 'Polygon'
       ? geometry.coordinates[0]
       : geometry.type === 'MultiPolygon'
@@ -46,6 +46,10 @@ export function pointOf(geometry) {
           ? geometry.coordinates
           : null;
   if (!ring?.length) return null;
+  // A closed ring repeats its first point at the end: count it once.
+  const [x0, y0] = ring[0];
+  const [xn, yn] = ring[ring.length - 1];
+  if (ring.length > 1 && x0 === xn && y0 === yn) ring = ring.slice(0, -1);
   const sum = ring.reduce((s, [x, y]) => [s[0] + x, s[1] + y], [0, 0]);
   return [sum[0] / ring.length, sum[1] / ring.length];
 }
@@ -57,8 +61,13 @@ const round5 = (x) => Math.round(x * 1e5) / 1e5;
 /** The add-on file for these GeoJSON features (osmium's export of ATMs and banks with ATMs). */
 export function buildAtms(features) {
   const atms = [];
+  // osmium writes a closed way both as a line and as an area: one object, one ATM.
+  const seen = new Set();
   for (const f of features) {
     const tags = f.properties ?? {};
+    const id = tags['@id'] != null ? `${tags['@type']}/${tags['@id']}` : null;
+    if (id && seen.has(id)) continue;
+    if (id) seen.add(id);
     const bank = bankOf(tags);
     const at = f.geometry && pointOf(f.geometry);
     if (bank < 0 || !at) continue;

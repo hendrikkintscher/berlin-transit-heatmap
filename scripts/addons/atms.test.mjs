@@ -27,6 +27,8 @@ describe('Cash Group ATMs add-on', () => {
       [13, 53],
     ];
     expect(pointOf({ type: 'Polygon', coordinates: [ring] })).toEqual([13.5, 52.5]);
+    // osmium's rings are closed: the repeated first point counts once.
+    expect(pointOf({ type: 'Polygon', coordinates: [[...ring, ring[0]]] })).toEqual([13.5, 52.5]);
   });
 
   it('keeps the ATM’s own hours, never the bank’s', () => {
@@ -59,6 +61,25 @@ describe('Cash Group ATMs add-on', () => {
     };
     const out = buildAtms([bank, atm(13.4, 52.5, { operator: 'Deutsche Bank' })]);
     expect(out.p).toEqual([[13.4, 52.5, 1, -1]]);
+  });
+
+  it('counts a way exported as a line and as an area once', () => {
+    const ring = [
+      [13, 52],
+      [13.001, 52],
+      [13.001, 52.001],
+      [13, 52],
+    ];
+    const tags = { '@type': 'way', '@id': 7, amenity: 'atm', operator: 'Postbank' };
+    const out = buildAtms([
+      { type: 'Feature', geometry: { type: 'LineString', coordinates: ring }, properties: tags },
+      {
+        type: 'Feature',
+        geometry: { type: 'MultiPolygon', coordinates: [[ring]] },
+        properties: tags,
+      },
+    ]);
+    expect(out.p).toHaveLength(1);
   });
 
   it('reads osmium’s GeoJSON text sequence', () => {

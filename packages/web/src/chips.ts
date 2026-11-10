@@ -109,6 +109,7 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
         state.freq ||
         state.desert ||
         state.places ||
+        state.atm ||
         !state.routes ||
         !state.iso ||
         !!state.compare,

@@ -980,7 +980,10 @@ map.on('idle', () => {
 // The Cash Group ATMs: their chunk and file are loaded the first time the switch is on, and
 // only after the first map (when the page is idle, if it was on from the start), so the
 // first map and taps never wait for them. The switch is hidden when no file was deployed.
-$('atm-row').hidden = !dataPublished('atm.json');
+const atmPublished = dataPublished('atm.json');
+$('atm-row').hidden = !atmPublished;
+// A link with the layer on, on a site without the file: off, without an error.
+if (!atmPublished) state.atm = false;
 let addons: typeof import('./addons') | null = null;
 let atmLoad: Promise<void> | null = null;
 function showAtms(idle = false) {
@@ -1009,6 +1012,7 @@ function showAtms(idle = false) {
     .catch(() => {
       // Tried again the next time the switch is turned on.
       atmLoad = null;
+      if (!state.atm) return;
       state.atm = false;
       $<HTMLInputElement>('atm-toggle').checked = false;
       writeUrl();
