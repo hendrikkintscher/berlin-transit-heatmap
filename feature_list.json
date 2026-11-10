@@ -57,14 +57,14 @@
     },
     {
       "id": "S048",
-      "title": "Cash Group ATMs as the first add-on: OpenStreetMap (amenity=atm, operator, opening_hours) against the banks' own finders for Berlin: count, location match, opening hours, terms of use (results: docs/specs/s048-cash-group-atms.md, sent 2026-11-10, waiting for Hendrik's yes)",
+      "title": "Cash Group ATMs as the first add-on: OpenStreetMap (amenity=atm, operator, opening_hours) against the banks' own finders for Berlin: count, location match, opening hours, terms of use (docs/specs/s048-cash-group-atms.md; decided 2026-11-10: OSM, decision 0014)",
       "kind": "research",
       "owner": "claude",
       "priority": "low",
       "size": "S",
       "deps": ["S047"],
       "test": "a short table per source (ATMs found, matched within 50 m, with opening hours, licence/terms) and a one-line recommendation sent to Hendrik",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S049",
@@ -75,7 +75,7 @@
       "size": "M",
       "deps": ["S048"],
       "test": "layer off: first map and tap to trip unchanged against main at 360x740, 1x and 4x; layer on: pins appear after the first map, a pin tap gives the trip there; the nightly build publishes the file; check.sh, smoke and speed green",
-      "passes": false
+      "passes": true
     }
   ]
 }
