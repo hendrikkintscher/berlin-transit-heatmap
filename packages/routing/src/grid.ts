@@ -99,7 +99,7 @@ export function heatGrid(
   const egress = opts.egressPenaltySeconds ?? 0;
   const net = opts.walk;
   const stopSnap = net ? snapStops(net, tt) : null;
-  const originSnap = net && result.origin ? snapOrigin(net, result.origin) : null;
+  const originSnap = net && result.origin ? snapOrigin(net, result.origin, opts.snapEdges) : null;
   // Sources off the walking network (or all, without one) walk in a straight line.
   for (let s = 0; s < tt.stopCount; s++) {
     const t = stopSeconds[s];
@@ -133,7 +133,12 @@ export function heatGrid(
         for (let c = wc0; c < wc1; c++) {
           const k = r * cols + c;
           if (cells.a[k] < 0) continue;
-          for (const v of [cells.a[k], cells.b[k]]) {
+          const e2 = cells.edge2[k];
+          const ends =
+            e2 < 0
+              ? [cells.a[k], cells.b[k]]
+              : [cells.a[k], cells.b[k], net.edgeA[e2], net.edgeB[e2]];
+          for (const v of ends) {
             x0 = Math.min(x0, net.x[v]);
             x1 = Math.max(x1, net.x[v]);
             y0 = Math.min(y0, net.y[v]);
@@ -179,12 +184,62 @@ export function heatGrid(
       fallbackM,
       pace,
     );
-    const { a: cellA, b: cellB, da: cellDa, db: cellDb } = cells;
+    const { a: cellA, b: cellB, da: cellDa, db: cellDb, edge2: cellEdge2 } = cells;
     const { time, walk, source, more, xnext, xtime, xwalk, xsource } = front;
     const cellEdge = cells.edge;
+    const { edgeA, edgeB, edgeMetres, x: nx, y: ny } = net;
+    const { cx0, cy0, cw, ch } = cells;
     // Edges with a stop on them, so the map lookup below runs only where it can find one.
     const hasStop = new Uint8Array(net.edgeCount);
     for (const e of edgeStop.keys()) hasStop[e] = 1;
+    const origin0 = originEdges.length > 0 ? originEdges[0] : -1;
+    const origin1 = originEdges.length > 1 ? originEdges[1] : -1;
+    // The best walk to a cell so far: within maxM (v, from), and up to fallbackM (fv, ffrom).
+    // Only the sources on a cell's second edge go through onEdge (rare), so the loop keeps its locals.
+    const best = { v: Infinity, from: -1, fv: Infinity, ffrom: -1 };
+    /**
+     * Improves `best` by the sources on edge e (a cell's second edge), walking straight along
+     * it to the cell, which sits `at` metres from its start and `off` metres off it.
+     */
+    const onEdge = (e: number, off: number, at: number) => {
+      let { v, from, fv, ffrom } = best;
+      let w: number;
+      let t: number;
+      const len = edgeMetres[e];
+      const here = hasStop[e] ? edgeStop.get(e) : undefined;
+      if (here)
+        for (const s of here) {
+          w = Math.abs(stopSnap.along[s] * len - at) + stopSnap.metres[s] + off;
+          t = stopSeconds[s] + egress + w * pace;
+          if (w <= maxM) {
+            if (t < v) {
+              v = t;
+              from = s;
+            }
+          } else if (w <= fallbackM && t < fv) {
+            fv = t;
+            ffrom = s;
+          }
+        }
+      const oi = e === origin0 ? 0 : e === origin1 ? 1 : -1;
+      if (oi >= 0) {
+        w = Math.abs(originSnap!.along[oi] * len - at) + originSnap!.metres[oi] + off;
+        t = w * pace;
+        if (w <= maxM) {
+          if (t < v) {
+            v = t;
+            from = -1;
+          }
+        } else if (w <= fallbackM && t < fv) {
+          fv = t;
+          ffrom = -1;
+        }
+      }
+      best.v = v;
+      best.from = from;
+      best.fv = fv;
+      best.ffrom = ffrom;
+    };
     for (let o = 0; o < outCols * outRows; o++) {
       // The cell in the whole grid (snaps and ends are the whole grid's).
       const k = (wr0 + Math.floor(o / outCols)) * cols + wc0 + (o % outCols);
@@ -250,10 +305,8 @@ export function heatGrid(
             ffrom = s;
           }
         }
-      let oi = -1;
-      for (let i = 0; i < originEdges.length; i++) if (originEdges[i] === e) oi = i;
-      if (oi >= 0) {
-        w = sameEdgeCellMetres(net, originSnap!, oi, cells, k);
+      if (e === origin0 || e === origin1) {
+        w = sameEdgeCellMetres(net, originSnap!, e === origin0 ? 0 : 1, cells, k);
         t = w * pace;
         if (w <= maxM) {
           if (t < v) {
@@ -263,6 +316,63 @@ export function heatGrid(
         } else if (w <= fallbackM && t < fv) {
           fv = t;
           ffrom = -1;
+        }
+      }
+      // A second edge where the nearest is a way round from it (S054, about 1 cell in 8):
+      // its ends as above, inline, and sources on it through fromEdge (rarely any).
+      const e2 = cellEdge2[k];
+      if (e2 >= 0) {
+        // Where the cell's centre falls on it (cellOnEdge, inline).
+        const r = (k / cols) | 0;
+        const px = cx0 + (k - r * cols) * cw;
+        const py = cy0 - r * ch;
+        const ax = nx[edgeA[e2]];
+        const ay = ny[edgeA[e2]];
+        const vx = nx[edgeB[e2]] - ax;
+        const vy = ny[edgeB[e2]] - ay;
+        const q = vx * vx + vy * vy;
+        let f2 = q > 0 ? ((px - ax) * vx + (py - ay) * vy) / q : 0;
+        f2 = f2 < 0 ? 0 : f2 > 1 ? 1 : f2;
+        const ex = ax + f2 * vx - px;
+        const ey = ay + f2 * vy - py;
+        const off2 = Math.sqrt(ex * ex + ey * ey);
+        const len2 = edgeMetres[e2];
+        const da2 = off2 + f2 * len2;
+        const db2 = off2 + (1 - f2) * len2;
+        for (let end = 0; end < 2; end++) {
+          const n0 = end === 0 ? edgeA[e2] : edgeB[e2];
+          const d = end === 0 ? da2 : db2;
+          w = walk[n0] + d;
+          t = time[n0] + d * pace;
+          if (w <= (source[n0] === -1 ? originM : maxM)) {
+            if (t < v) {
+              v = t;
+              from = source[n0];
+            }
+            continue;
+          }
+          if (w <= fallbackM && t < fv) {
+            fv = t;
+            ffrom = source[n0];
+          }
+          for (let l = more[n0]; l !== -1; l = xnext[l]) {
+            w = xwalk[l] + d;
+            t = xtime[l] + d * pace;
+            if (w <= (xsource[l] === -1 ? originM : maxM)) {
+              if (t < v) {
+                v = t;
+                from = xsource[l];
+              }
+            } else if (w <= fallbackM && t < fv) {
+              fv = t;
+              ffrom = xsource[l];
+            }
+          }
+        }
+        if (hasStop[e2] || e2 === origin0 || e2 === origin1) {
+          Object.assign(best, { v, from, fv, ffrom });
+          onEdge(e2, off2, f2 * len2);
+          ({ v, from, fv, ffrom } = best);
         }
       }
       if (v === Infinity) {

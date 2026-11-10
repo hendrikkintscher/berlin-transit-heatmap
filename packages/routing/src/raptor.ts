@@ -59,7 +59,7 @@ export function travelTimes(
   const net = opts.walk;
   const speeds = walkSpeeds(opts.walkSpeedMps);
   const given = opts.accessSeconds;
-  const originSnap = net && !given ? snapOrigin(net, origin) : null;
+  const originSnap = net && !given ? snapOrigin(net, origin, opts.snapEdges) : null;
   const findAccess = (maxWalk: number) => {
     if (net && originSnap && originSnap.edge[0] >= 0) {
       // Walk the footpath network; stops off the network fall back to a straight line.

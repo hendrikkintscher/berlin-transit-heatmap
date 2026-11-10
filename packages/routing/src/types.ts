@@ -77,6 +77,11 @@ export interface TravelTimeOptions {
    */
   maxFallbackWalkSeconds?: number;
   /**
+   * How many nearby paths the origin snaps to (snapNear; default SNAP_EDGES). 1 snaps it
+   * to its nearest path only, as the map's cells are.
+   */
+  snapEdges?: number;
+  /**
    * Walk on this footpath network (Contract 3) instead of in a straight line. Stops
    * and origins off the network still use the straight line. (Addition to Contract 2.)
    */
@@ -225,6 +230,8 @@ export interface HeatGridOptions {
    * maxFinalWalkSeconds. (Addition to Contract 2.)
    */
   maxFallbackWalkSeconds?: number;
+  /** How many nearby paths the origin snaps to, as the pass's TravelTimeOptions.snapEdges. */
+  snapEdges?: number;
   /** Walk on this footpath network, as in TravelTimeOptions. (Addition to Contract 2.) */
   walk?: WalkNetwork;
   /** Walking speed, as in TravelTimeOptions. (Addition to Contract 2.) */

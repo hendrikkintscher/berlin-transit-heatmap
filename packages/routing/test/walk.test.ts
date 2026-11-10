@@ -546,8 +546,9 @@ describe('a place next to a cut-off path (S054)', () => {
     expect(s.metres[0]).toBeLessThan(4); // walk.bin keeps 1e-5 degrees, about a metre
     expect(cut.edgeA[s.edge[1]]).toBe(5);
     expect(Math.abs(s.metres[1] - 22)).toBeLessThan(1.5);
-    // Edges touching the footway's or the street's edge are the same path going on.
-    expect(s.edge[2]).toBe(-1);
+    expect(s.edge.length).toBe(2);
+    // With room for more: edges touching the footway's or the street's are the same path going on.
+    expect(snapNear(cut, place.lat, place.lon, 300, 30, 4).edge[2]).toBe(-1);
     // Further than the spread from the nearest: not taken.
     expect(snapNear(cut, place.lat, place.lon, 300, 10).edge[1]).toBe(-1);
   });
@@ -556,6 +557,32 @@ describe('a place next to a cut-off path (S054)', () => {
     const r = travelTimes(stopTt, place, { walk: cut, maxRounds: 0 });
     // 22 m onto the street, along it to the stop: well under a minute (round the footway ~590 m).
     expect(r.stopSeconds[0]).toBeLessThan(30);
+  });
+
+  it("gives the map's cells the walk by the street too", () => {
+    // A map from the street's west end: a cell centred on the place gets there by the
+    // street, not round by the footway's east end.
+    const start = { lat: Y, lon: LON0 };
+    // 50 m cells as in the app, one of them centred on the place.
+    const dLat = 50 / 111320;
+    const dLon = 50 / cut.mPerLon;
+    const west = place.lon - 5.5 * dLon;
+    const north = place.lat + 2.5 * dLat;
+    const bbox: [number, number, number, number] = [
+      west,
+      north - 6 * dLat,
+      west + 20 * dLon,
+      north,
+    ];
+    const g = heatGrid(stopTt, travelTimes(stopTt, start, { walk: cut, maxRounds: 0 }), {
+      cellSizeM: 50,
+      bbox,
+      walk: cut,
+    });
+    const v = gridValueAt(g, place.lat, place.lon);
+    // About 520 m along the street and 22 m off it at 4 km/h: under 9 minutes; round the
+    // footway (800 m along the street and 25 m up, 280 m back) about 16.
+    expect(v).toBeLessThan(9 * 60);
   });
 
   it('draws the walk by the street', () => {
