@@ -10,6 +10,14 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
+## 2026-11-11 · cloud · S058
+
+- S058 faint network lines by mode (#409, 1.1.8): rail from the city view, tram from 12, bus from 14, built in
+  the worker from the hour's routes and lines.bin, each group handed to MapLibre only near its zoom.
+- `browser.mjs` also times a second tap and panning. Panning is about one frame slower in the test browser:
+  even a one-feature line layer costs that there, and the page's own work is unchanged; shipped on Hendrik's yes.
+- Worker bundle budget 37.7 → 39.0 KB (main was already over it, within tolerance). Open: S059, S060, S043, S044.
+
 ## 2026-11-11 · cloud · S054, S055, S057
 
 - S054 (snap a place to several paths) built twice and measured, not shipped (decision 0017, #406, 1.1.5):
