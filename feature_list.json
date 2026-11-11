@@ -185,7 +185,7 @@
       "size": "S",
       "deps": ["S049"],
       "test": "ATM dots show from zoom 10 with the switch on (screenshots); timings with the switch on unchanged at 360x740, 1x and 4x",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S060",
