@@ -93,7 +93,7 @@ export interface State {
   desert: boolean;
   /** Lakes, bathing spots, parks and viewpoints with their minutes (S019). */
   places: boolean;
-  /** The Cash Group ATMs add-on (S049), from street zoom. */
+  /** The Cash Group ATMs add-on (S049), from zoom 10 (S059). */
   atm: boolean;
   /** Isochrone outlines every 5 min; on by default, so the minutes read without colours. */
   iso: boolean;
