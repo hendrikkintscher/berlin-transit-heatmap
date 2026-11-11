@@ -2,6 +2,7 @@
 import type { FeatureCollection, LineString, Point } from 'geojson';
 import type { ContourProps } from './contours';
 import type { MeetSuggestion } from './meet';
+import type { NetworkFiles } from './worker-network';
 
 /** A timetable window, e.g. "weekday-10" (see when.ts). */
 export type Window = string;
@@ -334,6 +335,8 @@ export type FromWorker =
     }
   /** The nearest stop's name (null: none close or no timetable yet). */
   | { type: 'placeName'; id: number; name: string | null }
+  /** The whole network as GeoJSON bytes per group, for faint lines by mode (S058). */
+  | { type: 'network'; files: NetworkFiles }
   /** The map `id`'s lines again, now along the real tracks and roads (lines.bin arrived). */
   | {
       type: 'routes';
