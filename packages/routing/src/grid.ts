@@ -6,6 +6,7 @@ import {
   snapOrigin,
   snapStops,
   walkFront,
+  walkFrontForCells,
   walkSpeeds,
   WalkSources,
 } from './walk';
@@ -168,15 +169,33 @@ export function heatGrid(
     const originM = originExtraM > 0 ? fallbackM : maxM;
     if (originSnap && originEdge >= 0 && near(result.origin!.lat, result.origin!.lon, originExtraM))
       sources.add(net, originSnap, 0, 0, -originExtraM, -1);
-    const front = walkFront(
-      net,
-      sources.nodes,
-      sources.times,
-      sources.walked,
-      sources.tags,
-      fallbackM,
-      pace,
-    );
+    // The walk front only where a cell needs more than its earliest label (S043). Not where
+    // the origin reaches further than the stops (cycling all the way): the ride from it
+    // and the long caps reach nearly every node from the cells that need more, so nothing
+    // would be left out and the first passes would only add to the time.
+    const front =
+      originExtraM > 0
+        ? walkFront(
+            net,
+            sources.nodes,
+            sources.times,
+            sources.walked,
+            sources.tags,
+            fallbackM,
+            pace,
+          )
+        : walkFrontForCells(
+            net,
+            sources.nodes,
+            sources.times,
+            sources.walked,
+            sources.tags,
+            fallbackM,
+            pace,
+            { cells, cols, c0: wc0, c1: wc1, r0: wr0, r1: wr1 },
+            maxM,
+            originM,
+          );
     const { a: cellA, b: cellB, da: cellDa, db: cellDb } = cells;
     const { time, walk, source, more, xnext, xtime, xwalk, xsource } = front;
     const cellEdge = cells.edge;

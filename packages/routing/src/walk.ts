@@ -605,6 +605,24 @@ export function walkFront(
   maxWalkMetres: number,
   pace: number,
 ): WalkFront {
+  return frontWalk(net, nodes, times, walked, tags, maxWalkMetres, pace, null);
+}
+
+/**
+ * walkFront, dropping a label at node v as soon as its walk plus `bound[v]` exceeds
+ * maxWalkMetres (walkFrontForCells: no descendant can then be used by a cell). Without a
+ * bound only the cap itself (the check reads nothing more per arc).
+ */
+function frontWalk(
+  net: WalkNetwork,
+  nodes: ArrayLike<number>,
+  times: ArrayLike<number>,
+  walked: ArrayLike<number>,
+  tags: ArrayLike<number>,
+  maxWalkMetres: number,
+  pace: number,
+  bound: Float32Array | null,
+): WalkFront {
   const n = net.nodeCount;
   let st = fronts.get(net);
   if (!st) {
@@ -674,7 +692,7 @@ export function walkFront(
     const v = nodes[i];
     const t = times[i];
     const w = walked[i];
-    if (v < 0 || !(t < Infinity) || w > maxWalkMetres) continue;
+    if (v < 0 || !(t < Infinity) || w + (bound ? bound[v] : 0) > maxWalkMetres) continue;
     if (pendTime[v] <= t && pendWalk[v] <= w + SAME_WALK_M) continue;
     pendTime[v] = t;
     pendWalk[v] = w;
@@ -744,8 +762,8 @@ export function walkFront(
       }
       for (let k = k0; k < k1; k++) {
         const nw = w + metres[k];
-        if (nw > maxWalkMetres) continue;
         const u = target[k];
+        if (bound ? nw + bound[u] > maxWalkMetres : nw > maxWalkMetres) continue;
         const nt = t + metres[k] * pace;
         // Beaten by the last label pushed to u (it is settled, or beaten by one that is),
         // or by u's newest settled label (the shortest walk so far).
@@ -768,6 +786,258 @@ export function walkFront(
   }
   out.extra = extra;
   return out;
+}
+
+/** The cells of a grid window, as walkFrontForCells reads them (whole-grid indices). */
+export interface CellWindow {
+  cells: CellSnaps;
+  /** Columns of the whole grid. */
+  cols: number;
+  c0: number;
+  c1: number;
+  r0: number;
+  r1: number;
+}
+
+/** A window's cell end nodes, each once, with the least and most way from it to its cells. */
+interface WindowEnds {
+  key: string;
+  node: Int32Array;
+  minD: Float32Array;
+  maxD: Float32Array;
+  count: number;
+}
+
+const windowEndCache = new WeakMap<CellSnaps, WindowEnds[]>();
+/** Windows kept per grid layout: the whole map and the latest taps' few cells. */
+const WINDOW_ENDS_KEPT = 3;
+
+function windowEnds(net: WalkNetwork, win: CellWindow): WindowEnds {
+  const key = `${win.cols} ${win.c0} ${win.c1} ${win.r0} ${win.r1}`;
+  let list = windowEndCache.get(win.cells);
+  if (!list) windowEndCache.set(win.cells, (list = []));
+  const i = list.findIndex((e) => e.key === key);
+  if (i >= 0) {
+    const hit = list[i];
+    list.splice(i, 1);
+    list.unshift(hit);
+    return hit;
+  }
+  const { a: cellA, b: cellB, da: cellDa, db: cellDb } = win.cells;
+  const slot = fringeSlots(net);
+  slot.fill(-1);
+  let count = 0;
+  let node = new Int32Array(1024);
+  let minD = new Float32Array(1024);
+  let maxD = new Float32Array(1024);
+  const add = (v: number, d: number) => {
+    const at = slot[v];
+    if (at >= 0) {
+      if (d < minD[at]) minD[at] = d;
+      if (d > maxD[at]) maxD[at] = d;
+      return;
+    }
+    if (count === node.length) {
+      node = grown(node, 2 * count);
+      minD = grown(minD, 2 * count);
+      maxD = grown(maxD, 2 * count);
+    }
+    slot[v] = count;
+    node[count] = v;
+    minD[count] = d;
+    maxD[count++] = d;
+  };
+  for (let r = win.r0; r < win.r1; r++)
+    for (let k = r * win.cols + win.c0, k1 = r * win.cols + win.c1; k < k1; k++) {
+      if (cellA[k] < 0) continue;
+      add(cellA[k], cellDa[k]);
+      add(cellB[k], cellDb[k]);
+    }
+  const ends = { key, node, minD, maxD, count };
+  list.unshift(ends);
+  if (list.length > WINDOW_ENDS_KEPT) list.pop();
+  return ends;
+}
+
+const fringeSlotCache = new WeakMap<WalkNetwork, Int32Array>();
+
+function fringeSlots(net: WalkNetwork): Int32Array {
+  let m = fringeSlotCache.get(net);
+  if (!m) fringeSlotCache.set(net, (m = new Int32Array(net.nodeCount)));
+  return m;
+}
+
+interface CellsFrontState {
+  /** The first pass: each node's earliest time with no cap on the walk, its walk and source. */
+  time: Float64Array;
+  walk: Float32Array;
+  source: Int32Array;
+  /** Per node the least way on from it to a fringe node's cell (Infinity: none within reach). */
+  bound: Float32Array;
+  /** The fringe ends this walk (indices into its window's ends). */
+  fringe: Uint8Array;
+}
+
+const cellsFronts = new WeakMap<WalkNetwork, CellsFrontState>();
+
+/**
+ * walkFront for the cells of a grid window, in less time (S043). Only valid at the cells'
+ * end nodes, which is all heatGrid reads. Most cells take their end's earliest label, whose
+ * walk then fits the cap; the later labels count only at the "fringe", where it does not.
+ *
+ * 1. A single-label walk with no cap gives each node its earliest time (the walk along that
+ *    way only grows, so where it fits the cap it is the front's earliest label too).
+ * 2. Fringe nodes: cell ends where a cell's earliest walk plus the way to it exceeds the
+ *    cell's cap (`capM`; `originCapM` for the origin's own walk). From their cells a walk
+ *    over the network gives every node the least way on to a cell of a fringe node (bound).
+ * 3. walkFront again, dropping a label as soon as its walk plus that bound exceeds
+ *    maxWalkMetres: no descendant can then serve a fringe node's cell. The fringe ends get
+ *    these labels, every other end the first pass's.
+ */
+export function walkFrontForCells(
+  net: WalkNetwork,
+  nodes: ArrayLike<number>,
+  times: ArrayLike<number>,
+  walked: ArrayLike<number>,
+  tags: ArrayLike<number>,
+  maxWalkMetres: number,
+  pace: number,
+  win: CellWindow,
+  capM: number,
+  originCapM: number,
+): WalkFront {
+  const n = net.nodeCount;
+  let st = cellsFronts.get(net);
+  if (!st) {
+    st = {
+      time: new Float64Array(n),
+      walk: new Float32Array(n),
+      source: new Int32Array(n),
+      bound: new Float32Array(n),
+      fringe: new Uint8Array(0),
+    };
+    cellsFronts.set(net, st);
+  }
+  const { time, walk, source, bound } = st;
+  const { offset, target, metres } = net;
+
+  // 1. Earliest labels with no cap (only as late as a capped walk can reach).
+  time.fill(Infinity);
+  let maxEnd = 0;
+  let minWalked = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const t = times[i];
+    if (nodes[i] < 0 || !(t < Infinity) || walked[i] > maxWalkMetres) continue;
+    const end = t + (maxWalkMetres - walked[i]) * pace;
+    if (end > maxEnd) maxEnd = end;
+    if (walked[i] < minWalked) minWalked = walked[i];
+  }
+  const bucketCount = Math.floor(maxEnd) + 2;
+  // Every node is expanded once with a new label (a second expansion with the same one
+  // pushes nothing), so sources + arcs bound the entries, as in walkFrom.
+  let q = queueFor(net, bucketCount, nodes.length + target.length);
+  let used = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const v = nodes[i];
+    const t = times[i];
+    if (v < 0 || !(t < time[v]) || walked[i] > maxWalkMetres) continue;
+    time[v] = t;
+    walk[v] = walked[i];
+    source[v] = tags[i];
+    const b = Math.floor(t);
+    q.entry[used] = v;
+    q.next[used] = q.head[b];
+    q.head[b] = used++;
+  }
+  {
+    const { head, next, entry } = q;
+    for (let b = 0; b < bucketCount; b++) {
+      while (head[b] !== -1) {
+        const e = head[b];
+        head[b] = next[e];
+        const v = entry[e];
+        const t = time[v];
+        if (Math.floor(t) !== b) continue;
+        const w = walk[v];
+        const src = source[v];
+        for (let k = offset[v]; k < offset[v + 1]; k++) {
+          const u = target[k];
+          const nt = t + metres[k] * pace;
+          if (nt < time[u]) {
+            const nb = Math.floor(nt);
+            if (nb >= bucketCount) continue;
+            time[u] = nt;
+            walk[u] = w + metres[k];
+            source[u] = src;
+            entry[used] = u;
+            next[used] = head[nb];
+            head[nb] = used++;
+          }
+        }
+      }
+    }
+  }
+
+  // 2. The fringe, and from its cells the least way on to one (as far as a label can still
+  // walk: they start at minWalked).
+  const ends = windowEnds(net, win);
+  if (st.fringe.length < ends.count) st.fringe = new Uint8Array(ends.node.length);
+  const fringe = st.fringe;
+  bound.fill(Infinity);
+  const reach = maxWalkMetres - minWalked;
+  const boundBuckets = Math.floor(reach) + 2;
+  q = queueFor(net, boundBuckets, ends.count + target.length);
+  used = 0;
+  {
+    const { head, next, entry } = q;
+    for (let i = 0; i < ends.count; i++) {
+      const v = ends.node[i];
+      fringe[i] = 0;
+      if (time[v] === Infinity) continue;
+      if (walk[v] + ends.maxD[i] <= (source[v] === -1 ? originCapM : capM)) continue;
+      fringe[i] = 1;
+      const d = ends.minD[i];
+      if (d > reach) continue;
+      bound[v] = d;
+      const b = Math.floor(d);
+      entry[used] = v;
+      next[used] = head[b];
+      head[b] = used++;
+    }
+    for (let b = 0; b < boundBuckets; b++) {
+      while (head[b] !== -1) {
+        const e = head[b];
+        head[b] = next[e];
+        const v = entry[e];
+        const d = bound[v];
+        if (Math.floor(d) !== b) continue;
+        // The network is undirected: the arcs out of v are the arcs into it.
+        for (let k = offset[v]; k < offset[v + 1]; k++) {
+          const u = target[k];
+          const nd = d + metres[k];
+          if (nd < bound[u] && nd <= reach) {
+            bound[u] = nd;
+            const nb = Math.floor(nd);
+            entry[used] = u;
+            next[used] = head[nb];
+            head[nb] = used++;
+          }
+        }
+      }
+    }
+  }
+
+  // 3. The front where it counts; the first pass's labels at every other cell end.
+  const front = frontWalk(net, nodes, times, walked, tags, maxWalkMetres, pace, bound);
+  for (let i = 0; i < ends.count; i++) {
+    if (fringe[i]) continue;
+    const v = ends.node[i];
+    front.time[v] = time[v];
+    front.walk[v] = walk[v];
+    front.source[v] = source[v];
+    front.more[v] = -1;
+  }
+  return front;
 }
 
 const cellSnaps = new WeakMap<WalkNetwork, Map<string, CellSnaps>>();

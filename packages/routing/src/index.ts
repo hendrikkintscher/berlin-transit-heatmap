@@ -91,6 +91,7 @@ export {
   timeAt,
   walkFrom,
   walkFront,
+  walkFrontForCells,
   walkPath,
   walkSpeeds,
   WalkSources,
