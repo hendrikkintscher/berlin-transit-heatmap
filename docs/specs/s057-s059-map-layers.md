@@ -27,7 +27,9 @@ Tasks S057, S058 and S059 in `feature_list.json` (Hendrik, 2026-11-10). Ideas, n
   tram from zoom 12, bus from zoom 14. Data: `lines.bin` already holds every hop's course along
   the tracks and roads; the hops would need their mode (from the hour's routes) and be merged into
   one line per mode. Drawn under the time rings and the trip, so they never compete with the
-  map's minutes.
+  map's minutes. Built in 1.1.8 (`packages/web/src/worker-network.ts`): each group goes to MapLibre
+  only near its zoom; panning is about one frame slower in the test browser (software GPU, even
+  for a one-feature layer), shipped on Hendrik's yes.
 - **S059 ATM dots almost always.** Proposal: small dots from zoom 10 (the whole city), growing with
   zoom; "€" and the bank's name as today.
 

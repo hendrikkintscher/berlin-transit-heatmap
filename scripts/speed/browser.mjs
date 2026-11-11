@@ -12,7 +12,7 @@
 // (Chrome cannot slow the worker). Chromium: $CHROMIUM, else the cloud container's
 // /opt/pw-browsers/chromium, else the installed Chrome (Windows/macOS). The GPU flags avoid the
 // ~75 ms per-frame copy of plain headless Chromium that delays every worker answer (decision 0008).
-/* global window */
+/* global window, requestAnimationFrame */
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';

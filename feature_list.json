@@ -174,7 +174,7 @@
       "size": "M",
       "deps": [],
       "test": "each mode's lines appear at its zoom, faint, under the time rings and the trip (screenshots light and dark); first map and tap timings unchanged at 360x740, 1x and 4x",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S059",
