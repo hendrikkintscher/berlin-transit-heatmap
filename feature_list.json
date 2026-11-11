@@ -196,7 +196,7 @@
       "size": "S",
       "deps": ["S057", "S058"],
       "test": "switching it off hides every network line, stop dot and stop name, on brings them back (screenshots); first map and tap timings unchanged at 360x740, 1x and 4x",
-      "passes": false
+      "passes": true
     }
   ]
 }

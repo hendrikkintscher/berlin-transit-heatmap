@@ -95,6 +95,8 @@ export interface State {
   places: boolean;
   /** The Cash Group ATMs add-on (S049), from zoom 10 (S059). */
   atm: boolean;
+  /** The whole network's faint lines (S058) and the stops with their names (S057), on by default (S060). */
+  network: boolean;
   /** Isochrone outlines every 5 min; on by default, so the minutes read without colours. */
   iso: boolean;
   /**
@@ -144,6 +146,7 @@ export function createState(read = readNumber, when = NOW_WHEN): State {
     desert: false,
     places: false,
     atm: false,
+    network: true,
     iso: true,
     heat: read('heat', 1) > 0,
     limit: 0,

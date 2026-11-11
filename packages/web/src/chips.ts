@@ -111,6 +111,7 @@ export function initChips({ state, closeSearch }: ChipsDeps) {
         state.places ||
         state.atm ||
         !state.routes ||
+        !state.network ||
         !state.iso ||
         !!state.compare,
     );
