@@ -81,7 +81,7 @@ const de = {
     'Seen, Badestellen, Parks und Aussichtspunkte mit ihren Minuten; näher ranzoomen zeigt mehr',
   atm: 'Geldautomaten (Cash Group)',
   atmHint:
-    'Commerzbank, Deutsche Bank, HypoVereinsbank und Postbank aus OpenStreetMap, ab Straßenzoom',
+    'Commerzbank, Deutsche Bank, HypoVereinsbank und Postbank aus OpenStreetMap; näher ranzoomen zeigt die Bank',
   atmTitle: 'Geldautomat {bank}',
   atmMissing: 'Die Geldautomaten sind gerade nicht zu laden.',
   desertLegend: 'Fußweg + Warten',
@@ -411,7 +411,7 @@ const en: Record<Key, string> = {
   placesHint: 'Lakes, bathing spots, parks and viewpoints with their minutes; zoom in to see more',
   atm: 'ATMs (Cash Group)',
   atmHint:
-    'Commerzbank, Deutsche Bank, HypoVereinsbank and Postbank from OpenStreetMap, at street zoom',
+    'Commerzbank, Deutsche Bank, HypoVereinsbank and Postbank from OpenStreetMap; zoom in for the bank',
   atmTitle: '{bank} ATM',
   atmMissing: 'The ATMs cannot be loaded right now.',
   desertLegend: 'Walk + wait',

@@ -1,6 +1,6 @@
 # S057–S059: Stops, network lines and ATMs on the map, by zoom
 
-Tasks S057–S060 in `feature_list.json` (Hendrik, 2026-11-10). S057 and S058 are built; S059 and S060 are open.
+Tasks S057–S060 in `feature_list.json` (Hendrik, 2026-11-10). S057, S058 and S059 are built; S060 is open.
 
 ## Before these tasks
 
@@ -31,7 +31,7 @@ Tasks S057–S060 in `feature_list.json` (Hendrik, 2026-11-10). S057 and S058 ar
   only near its zoom; panning is about one frame slower in the test browser (software GPU, even
   for a one-feature layer), shipped on Hendrik's yes.
 - **S059 ATM dots almost always.** Proposal: small dots from zoom 10 (the whole city), growing with
-  zoom; "€" and the bank's name as today.
+  zoom; "€" and the bank's name as today. Built in 1.1.9: 1.5 px at zoom 10, 2.5 at 12, 6 at 14.
 
 ## Checks for each
 

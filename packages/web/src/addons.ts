@@ -31,10 +31,26 @@ export function atmFeatures(d: AtmFile): GeoJSON.FeatureCollection<GeoJSON.Point
 }
 
 const ATM_COLOR = '#0b6e4f';
+/** The ATM dots show from this zoom on (S059): the whole city fits the screen there. */
+export const ATM_DOT_ZOOM = 10;
+/** Dot radius by zoom: 1.5 px over the whole city, the 6 px dot for the "€" from zoom 14. */
+export const ATM_RADIUS: maplibregl.ExpressionSpecification = [
+  'interpolate',
+  ['linear'],
+  ['zoom'],
+  ATM_DOT_ZOOM,
+  1.5,
+  12,
+  2.5,
+  14,
+  6,
+  17,
+  9,
+];
 
 /**
- * The ATMs from street zoom: a green dot, a white "€" on it from zoom 14 and the bank's
- * name beside it from zoom 15. Under the time rings' minute labels like the stops, so the
+ * The ATMs almost always (S059): a small green dot from zoom 10 (the whole city), growing with
+ * zoom, a white "€" on it from zoom 14 and the bank's name beside it from zoom 15. Under the time rings' minute labels like the stops, so the
  * trip and its stops stay on top.
  */
 export function addAtmLayers(map: maplibregl.Map, data: AtmFile) {
@@ -51,12 +67,12 @@ export function addAtmLayers(map: maplibregl.Map, data: AtmFile) {
     id: dots,
     type: 'circle',
     source: dots,
-    minzoom: 12,
+    minzoom: ATM_DOT_ZOOM,
     paint: {
       'circle-color': ATM_COLOR,
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 14, 6, 17, 9],
+      'circle-radius': ATM_RADIUS,
       'circle-stroke-color': '#ffffff',
-      'circle-stroke-width': 1.5,
+      'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], ATM_DOT_ZOOM, 0.5, 14, 1.5],
     },
   });
   add({

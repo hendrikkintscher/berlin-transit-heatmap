@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.9] — 2026-11-11
+
+- S059: ATM dots almost always: with the switch on, small dots (1.5 px) from zoom 10, the whole city, growing to the 6 px dot with its "€" at zoom 14; the bank's name from 15 as before. The switch's hint no longer says "from street zoom". Browser at 360×740 with the ATMs on, medians of 7 visits, main → branch: first map 724 → 693 ms, tap to trip 170 → 162 ms, footpath map 1267 → 1170 ms, tap after the network 37 → 38 ms, mean pan frame 72.6 → 73.5 ms (city) and 55.1 → 55.6 ms (street); 4× CPU: first map 1263 → 1243 ms, tap to trip 172 → 156 ms, tap after the network 59 → 67 ms (spread 51–99), mean pan frame 95.3 → 92.7 / 65.0 → 66.2 ms.
+
 ## [1.1.8] — 2026-11-11
 
 - S058: faint lines of the whole network by mode, under the time rings, the map's lines and the trip: S-Bahn, U-Bahn and regional from the city view, tram (and ferry) from zoom 12, bus from street level (14), thin and at 35 % in each mode's colour. The worker chains every hop of the hour's routes into lines per mode along the hops' courses (lines.bin), in slices once the base map is up (about 1 s after the first map), and again only when a map of another hour has other hops; the page hands the GeoJSON bytes to MapLibre as blob URLs, each group only once the map is zoomed in near its zoom (all at once, MapLibre's worker parsing the bus lines held up a tap right after by about 25 ms). `browser.mjs` now also times a second tap and panning in the city view and at street level. Browser at 360×740, medians of 8 visits, main → branch: first map 792 → 738 ms, tap to trip 276 → 231 ms, footpath map 1150 → 1152 ms, tap after the network is in 35 → 37 ms; 4× CPU: first map 1338 → 1364 ms, tap to trip 175 → 159 ms, tap after the network 40 → 42 ms. Panning is slower in the test browser: mean frame 54 → 66 ms (1×) and 69 → 86 ms (4×) in the city view; even one extra one-feature line layer costs the same there, and the page's own work during a pan is unchanged (about 860 vs 835 ms), so it is the software GPU's drawing; shipped on Hendrik's yes (2026-11-11).
