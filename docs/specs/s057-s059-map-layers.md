@@ -1,14 +1,14 @@
 # S057–S059: Stops, network lines and ATMs on the map, by zoom
 
-Tasks S057, S058 and S059 in `feature_list.json` (Hendrik, 2026-11-10). Ideas, not built yet.
+Tasks S057–S060 in `feature_list.json` (Hendrik, 2026-11-10). S057 and S058 are built; S059 and S060 are open.
 
-## Today
+## Before these tasks
 
 - Stops (decision 0009, S032): S-, U-Bahn and regional stations as dots from the city view, with a
   bold S or U from zoom 13; tram, bus and ferry stops as dots from zoom 13, named from zoom 14
   (`addStops` in `packages/web/src/map-layers.ts`).
 - Lines: only the lines of the shown map's trips ("Linien" switch) and the trip on the card. The
-  network itself is not drawn; the base map shows some rail.
+  network itself was not drawn; the base map shows some rail.
 - ATMs (S049): dots from zoom 12, "€" from 14, the bank's name from 15 (`packages/web/src/addons.ts`).
 
 ## Wanted
@@ -27,7 +27,9 @@ Tasks S057, S058 and S059 in `feature_list.json` (Hendrik, 2026-11-10). Ideas, n
   tram from zoom 12, bus from zoom 14. Data: `lines.bin` already holds every hop's course along
   the tracks and roads; the hops would need their mode (from the hour's routes) and be merged into
   one line per mode. Drawn under the time rings and the trip, so they never compete with the
-  map's minutes.
+  map's minutes. Built in 1.1.8 (`packages/web/src/worker-network.ts`): each group goes to MapLibre
+  only near its zoom; panning is about one frame slower in the test browser (software GPU, even
+  for a one-feature layer), shipped on Hendrik's yes.
 - **S059 ATM dots almost always.** Proposal: small dots from zoom 10 (the whole city), growing with
   zoom; "€" and the bank's name as today.
 

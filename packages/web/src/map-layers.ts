@@ -34,6 +34,19 @@ export const VEIL_LAYER = 'limit-veil';
 export const ROUTES_SOURCE = 'routes';
 export const LABELS_SOURCE = 'route-labels';
 export const ROUTE_LAYERS = ['routes-casing', 'routes-line', 'routes-label'];
+/**
+ * The whole network as faint lines by mode (S058), each group from its zoom: S-Bahn, U-Bahn
+ * and regional from the city view, tram (and ferry) from 12, bus from street level. Bottom
+ * to top: bus, tram, rail.
+ */
+export const NETWORK_GROUPS = [
+  { group: 'bus', minzoom: 14 },
+  { group: 'tram', minzoom: 12 },
+  { group: 'rail', minzoom: 0 },
+] as const;
+export const networkSource = (group: string) => `network-${group}`;
+export const NETWORK_LAYERS = NETWORK_GROUPS.map((g) => `network-${g.group}-line`);
+export const NETWORK_OPACITY = 0.35;
 export const STATIONS_SOURCE = 'stations';
 export const STATIONS_LAYER = 'stations-dot';
 /** The Cash Group ATMs add-on (S049); its layers are added by addons.ts when first switched on. */
@@ -272,6 +285,7 @@ export function addMapLayers(
     },
     paint: { 'text-color': INK, 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
   });
+  addNetwork(map, empty);
   map.addSource('ring', { type: 'geojson', data: orient(ringLine) });
   map.addLayer(
     {
@@ -588,6 +602,28 @@ export function addMapLayers(
  * S- and U-Bahn dots in the city view): below it the map's colours and rings speak alone.
  */
 export const STREET_ZOOM = 14;
+
+/** Thin lines in the mode's colour under the time rings, the map's lines and the trip (S058). */
+function addNetwork(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
+  for (const { group, minzoom } of NETWORK_GROUPS) {
+    map.addSource(networkSource(group), { type: 'geojson', data: empty });
+    map.addLayer(
+      {
+        id: `network-${group}-line`,
+        type: 'line',
+        source: networkSource(group),
+        minzoom,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': modeColor,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 14, 1.5, 17, 2.5],
+          'line-opacity': NETWORK_OPACITY,
+        },
+      },
+      'outlines-casing',
+    );
+  }
+}
 
 /**
  * Stops with a dot in their mode's colour and their name where there is room, over the

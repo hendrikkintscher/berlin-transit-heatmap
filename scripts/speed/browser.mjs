@@ -12,7 +12,7 @@
 // (Chrome cannot slow the worker). Chromium: $CHROMIUM, else the cloud container's
 // /opt/pw-browsers/chromium, else the installed Chrome (Windows/macOS). The GPU flags avoid the
 // ~75 ms per-frame copy of plain headless Chromium that delays every worker answer (decision 0008).
-/* global window */
+/* global window, requestAnimationFrame */
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -103,6 +103,7 @@ async function visit(browser, url, cpu) {
   await ctx.addInitScript(() => {
     window.__results = [];
     window.__walk = 0;
+    window.__network = 0;
     const W = window.Worker;
     window.Worker = class extends W {
       constructor(...a) {
@@ -111,6 +112,8 @@ async function visit(browser, url, cpu) {
           if (e.data?.type === 'result') window.__results.push(performance.now());
           // The footpaths are in (the map is redone with them next, S041).
           if (e.data?.type === 'walk') window.__walk = performance.now();
+          // The whole network as faint lines (S058).
+          if (e.data?.type === 'network') window.__network = performance.now();
         });
       }
     };
@@ -134,13 +137,60 @@ async function visit(browser, url, cpu) {
     null,
     { timeout: 60000 },
   );
-  const t = await page.evaluate(() => ({
-    firstMap: window.__results[0],
-    tapTrip:
-      performance.getEntriesByName('trip')[0].startTime -
-      performance.getEntriesByName('tap')[0].startTime,
-    footMap: window.__results.find((x) => x > window.__walk) - window.__walk,
-  }));
+  // A second tap at the same moment on every build: 2.5 s after the footpath map, when the
+  // network's lines (S058, about 1 s after the first map) are drawn.
+  await page.waitForTimeout(2500);
+  await page.mouse.click(box.x + box.width / 2 - 80, box.y + box.height / 2 - 90);
+  await page.waitForFunction(() => performance.getEntriesByName('trip').length > 1, null, {
+    timeout: 30000,
+  });
+  await page.waitForTimeout(300);
+  // Panning: the median and slowest frame while the map is dragged, in the city view and at
+  // street level (zoom 14.3, where S058's bus lines are drawn too).
+  const pan = async () => {
+    const frames = page.evaluate(
+      () =>
+        new Promise((done) => {
+          const at = [];
+          const step = (now) => {
+            at.push(now);
+            if (at.length < 40) requestAnimationFrame(step);
+            else done(at.slice(1).map((x, i) => x - at[i]));
+          };
+          requestAnimationFrame(step);
+        }),
+    );
+    await page.mouse.move(180, 300);
+    await page.mouse.down();
+    for (let i = 1; i <= 30; i++) await page.mouse.move(180 + i * 4, 300 + i * 3);
+    await page.mouse.up();
+    return (await frames).sort((x, y) => x - y);
+  };
+  const gaps = await pan();
+  await page.focus('.maplibregl-canvas');
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Equal');
+    await page.waitForTimeout(400);
+  }
+  await page.waitForTimeout(2000);
+  const street = await pan();
+  const t = await page.evaluate(() => {
+    const trips = performance.getEntriesByName('trip');
+    const taps = performance.getEntriesByName('tap');
+    return {
+      firstMap: window.__results[0],
+      tapTrip: trips[0].startTime - taps[0].startTime,
+      footMap: window.__results.find((x) => x > window.__walk) - window.__walk,
+      tap2: trips[trips.length - 1].startTime - taps[taps.length - 1].startTime,
+      network: window.__network ? window.__network - window.__results[0] : NaN,
+    };
+  });
+  t.frame = gaps[Math.floor(gaps.length / 2)];
+  t.frameMax = gaps[gaps.length - 1];
+  t.street = street[Math.floor(street.length / 2)];
+  t.mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+  t.streetMean = street.reduce((a, b) => a + b, 0) / street.length;
+  t.streetMax = street[street.length - 1];
   await ctx.close();
   return t;
 }
@@ -168,7 +218,11 @@ for (const [name, dist] of runs) {
     `${name} (${dist}), cpu ${cpu}x, ${visits} visits: first map ${r(median(rows.map((x) => x.firstMap)))} ms` +
       ` [${rows.map((x) => r(x.firstMap)).join(' ')}], tap to trip ${r(median(rows.map((x) => x.tapTrip)))} ms` +
       ` [${rows.map((x) => r(x.tapTrip)).join(' ')}], footpath map ${r(median(rows.map((x) => x.footMap)))} ms` +
-      ` [${rows.map((x) => r(x.footMap)).join(' ')}]`,
+      ` [${rows.map((x) => r(x.footMap)).join(' ')}], tap after the network ${r(median(rows.map((x) => x.tap2)))} ms` +
+      ` [${rows.map((x) => r(x.tap2)).join(' ')}], pan frame ${r(median(rows.map((x) => x.frame)))} ms` +
+      ` (slowest ${r(median(rows.map((x) => x.frameMax)))}), street pan frame ${r(median(rows.map((x) => x.street)))} ms` +
+      ` (slowest ${r(median(rows.map((x) => x.streetMax)))}), mean pan frame ${median(rows.map((x) => x.mean)).toFixed(1)}` +
+      ` / ${median(rows.map((x) => x.streetMean)).toFixed(1)} ms, network ${r(median(rows.map((x) => x.network)))} ms after the first map`,
   );
 }
 await browser.close();

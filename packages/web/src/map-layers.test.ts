@@ -41,3 +41,33 @@ describe('stops by zoom (S057)', () => {
     expect(hubs.filter).toEqual(['has', 'h']);
   });
 });
+
+describe('the network by zoom (S058)', () => {
+  it('draws rail from the city view, tram from 12, bus from 14, under the time rings', async () => {
+    const { addMapLayers, NETWORK_OPACITY } = await import('./map-layers');
+    const layers: Record<string, Record<string, unknown>> = {};
+    const before: Record<string, string | undefined> = {};
+    const map = {
+      getStyle: () => ({ layers: [] }),
+      setPaintProperty: () => {},
+      addSource: () => {},
+      addLayer: (l: { id: string }, b?: string) => {
+        layers[l.id] = l;
+        before[l.id] = b;
+      },
+      getLayer: () => undefined,
+      on: () => {},
+    };
+    addMapLayers(map as never, { routes: false, iso: false, desertCanvas: {} as never });
+    expect(layers['network-rail-line']!.minzoom).toBe(0);
+    expect(layers['network-tram-line']!.minzoom).toBe(12);
+    expect(layers['network-bus-line']!.minzoom).toBe(14);
+    for (const g of ['rail', 'tram', 'bus']) {
+      expect(before[`network-${g}-line`]).toBe('outlines-casing');
+      expect((layers[`network-${g}-line`]!.paint as Record<string, unknown>)['line-opacity']).toBe(
+        NETWORK_OPACITY,
+      );
+    }
+    expect(NETWORK_OPACITY).toBeLessThan(0.5);
+  });
+});

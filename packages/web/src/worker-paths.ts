@@ -14,8 +14,9 @@ import {
 } from '@berlin-transit-heatmap/routing';
 import type { FeatureCollection, LineString } from 'geojson';
 import { dataUrl } from './data-url';
-import type { RouteProps } from './protocol';
-import { inSlices, post } from './worker-post';
+import { chainHops, hopsInSteps, hopsKey, networkInSteps } from './worker-network';
+import type { FromWorker, RouteProps } from './protocol';
+import { ctx, inSlices, post } from './worker-post';
 import { CELL_M } from './worker-runs';
 import { dataBase, readWithProgress } from './worker-timetables';
 
@@ -104,6 +105,46 @@ export function setLastRoutes(routes: { id: number; tt: PreparedTimetable; used:
 export function mapShown(tt: PreparedTimetable) {
   lastTimetable = tt;
   if (backgroundOk) void loadLines(tt);
+  if (linesSettled) void showNetwork(tt);
+}
+
+/** The network last sent (S058), by its hops' fingerprint; a newer map cancels a build. */
+let networkKey = '';
+let networkFor: PreparedTimetable | null = null;
+
+/**
+ * The whole network as faint lines (S058), once the lines' courses are in, and again when a
+ * map from another hour or set of trips has other hops. Built in slices, so a tap waits one
+ * slice at most; the files are handed over, not copied.
+ */
+async function showNetwork(tt: PreparedTimetable): Promise<void> {
+  // Without the courses the lines would cut every corner: no network then.
+  if (networkFor === tt || !lineShapes) return;
+  networkFor = tt;
+  const files = await inSlices(
+    (function* () {
+      // A newer map takes over between any two steps.
+      const current = () => networkFor === tt;
+      const hops = yield* hopsInSteps(tt);
+      const key = hopsKey(hops);
+      if (!current() || key === networkKey) return null;
+      const steps = networkInSteps(tt, hops, (stops) => course(tt, stops));
+      for (;;) {
+        yield;
+        if (!current()) return null;
+        const s = steps.next();
+        if (s.done) return { key, files: s.value };
+      }
+    })(),
+  );
+  if (!files || networkFor !== tt) return;
+  networkKey = files.key;
+  const { rail, tram, bus } = files.files;
+  ctx.postMessage({ type: 'network', files: { rail, tram, bus } } satisfies FromWorker, [
+    rail,
+    tram,
+    bus,
+  ]);
 }
 
 async function loadLines(tt: PreparedTimetable): Promise<void> {
@@ -120,6 +161,7 @@ async function loadLines(tt: PreparedTimetable): Promise<void> {
     console.warn('Line courses not used:', err);
   }
   linesSettled = true;
+  if (lastTimetable) void showNetwork(lastTimetable);
   const last = lastRoutes;
   if (last)
     post({
@@ -180,48 +222,12 @@ export function labelLines(
     groups.set(name, [...(groups.get(name) ?? []), s]);
   }
   const features: FeatureCollection<LineString, { names: string }>['features'] = [];
-  for (const [names, segs] of groups) {
-    const adj = new Map<number, number[]>();
-    for (const s of segs) {
-      adj.set(s.a, [...(adj.get(s.a) ?? []), s.b]);
-      adj.set(s.b, [...(adj.get(s.b) ?? []), s.a]);
-    }
-    const used = new Set<string>();
-    const key = (a: number, b: number) => (a < b ? `${a},${b}` : `${b},${a}`);
-    const walk = (start: number, next: number) => {
-      const path = [start];
-      let prev = start;
-      let cur = next;
-      for (;;) {
-        used.add(key(prev, cur));
-        path.push(cur);
-        const nbrs = adj.get(cur)!;
-        if (nbrs.length !== 2) break;
-        const nxt = nbrs[0] === prev ? nbrs[1] : nbrs[0];
-        if (used.has(key(cur, nxt))) break;
-        prev = cur;
-        cur = nxt;
-      }
-      return path;
-    };
-    // Start at ends and junctions first, then whatever is left (loops).
-    const starts = [...adj.keys()].sort(
-      (x, y) => Number(adj.get(x)!.length === 2) - Number(adj.get(y)!.length === 2),
-    );
-    for (const a of starts) {
-      for (const b of adj.get(a)!) {
-        if (used.has(key(a, b))) continue;
-        const path = walk(a, b);
-        features.push({
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates: course(tt, path),
-          },
-          properties: { names },
-        });
-      }
-    }
-  }
+  for (const [names, segs] of groups)
+    for (const path of chainHops(segs.map((s) => [s.a, s.b] as const)))
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: course(tt, path) },
+        properties: { names },
+      });
   return { type: 'FeatureCollection', features };
 }

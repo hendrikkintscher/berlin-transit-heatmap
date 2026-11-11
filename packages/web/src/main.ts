@@ -55,6 +55,8 @@ import {
   ATM_LAYERS,
   STATIONS_SOURCE,
   STOPS_SOURCE,
+  NETWORK_GROUPS,
+  networkSource,
   VEIL_LAYER,
   VEIL_SOURCE,
   veilAround,
@@ -459,6 +461,8 @@ listen((ev: MessageEvent<FromWorker>) => {
   } else if (m.type === 'stops') {
     (map.getSource(STOPS_SOURCE) as GeoJSONSource | undefined)?.setData(m.stops);
     performance.mark('stops');
+  } else if (m.type === 'network') {
+    showNetwork(m.files);
   } else if (m.type === 'placeName') {
     tap.onPlaceName(m);
   } else if (m.type === 'stations') {
@@ -942,6 +946,39 @@ map.once('style.load', () => {
   tap.onMapReady();
   showLayers();
 });
+
+// ---------- the network as faint lines (S058) ----------
+// The worker's GeoJSON bytes go to MapLibre as blob URLs: it fetches and parses them in its
+// own worker, so this page never parses or copies them. Each group goes in only once the map
+// is zoomed in to where it shows: parsing the bus lines (most of the network) kept MapLibre's
+// worker busy for a while, and a tap or a pan meanwhile waited for it.
+const networkUrls = new Map<string, string>();
+const networkSet = new Set<string>();
+function showNetwork(files: Record<string, ArrayBuffer>) {
+  for (const url of networkUrls.values()) URL.revokeObjectURL(url);
+  networkUrls.clear();
+  networkSet.clear();
+  for (const [group, bytes] of Object.entries(files))
+    networkUrls.set(group, URL.createObjectURL(new Blob([bytes], { type: 'application/json' })));
+  networkByZoom();
+  performance.mark('network');
+}
+/** Hands MapLibre the groups shown at this zoom (or just about to be) that it lacks. */
+function networkByZoom() {
+  if (!state.mapReady) return;
+  const zoom = map.getZoom();
+  for (const { group, minzoom } of NETWORK_GROUPS) {
+    const url = networkUrls.get(group);
+    if (!url || networkSet.has(group) || zoom < minzoom - NETWORK_AHEAD) continue;
+    const source = map.getSource(networkSource(group)) as GeoJSONSource | undefined;
+    if (!source) continue;
+    networkSet.add(group);
+    source.setData(url);
+  }
+}
+/** Zoom levels ahead of a group's own at which its lines start loading. */
+const NETWORK_AHEAD = 1;
+map.on('zoomend', networkByZoom);
 
 // ---------- places to go (S019) ----------
 // Lakes, bathing spots, parks and viewpoints from the base map's loaded tiles, with their
