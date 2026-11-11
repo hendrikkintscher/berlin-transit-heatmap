@@ -14,9 +14,11 @@ about 350 → 240 ms on foot, 747 → 420 ms by bike (estimates from the measure
 - [ ] Two passes: an uncapped single-label walk (exact earliest time per node, 44 ms) marks the
   "fringe": nodes whose earliest label's walk, plus the way to one of their cells, exceeds the cap, or
   that are not reached. Everywhere else the earliest label is the exact answer
-- [ ] A Euclidean distance transform on a coarse grid over the network (about 200 m; Felzenszwalb, a
-  few ms) gives each node a lower bound of its network distance to the nearest fringe node (take the
-  cell's own far walk into it: min over fringe cells of sqrt(d² + dc²))
+- [x] A bound per node: the exact network distance to the nearest fringe node's cell, from a walk
+  over the network out of the fringe cells (about 20–35 ms; 2026-11-11). Not a Euclidean grid as first
+  planned: edge lengths are whole metres and node positions quantised (the straight line is up to 1.6 m
+  longer than an edge), so a straight-line bound is not sound. All cells of a fringe node count, not
+  only those its earliest label cannot serve (they read the same labels)
 - [ ] The second pass propagates only labels that are not their node's earliest (seeded from the
   labels the first pass dropped and from the earliest labels' arcs), and drops a label as soon as its
   walk plus that bound exceeds the cap — exact, since no descendant can then fit the cap at any
@@ -27,6 +29,16 @@ about 350 → 240 ms on foot, 747 → 420 ms by bike (estimates from the measure
   (`scripts/speed/browser.mjs` "footpath map") and `scripts/speed/check.mjs`; the one-time map
   allowance in `scripts/speed/budget.json` (`mapAllowanceOnce`) is removed when the maps fit the
   tolerance again, else lowered to what was won
+
+## Status (2026-11-11, paused, continued locally)
+
+Built on branch `ccr-abfac0b5-jjjw6t` (`walkFrontForCells` in `walk.ts`, no PR yet): on foot every
+cell's minutes and stop equal main's on the 8 gridexact starts, heatGrid 3164 → 2085 ms for all 8
+(`bench/frontexact.ts`). The second pass is walkFront with the bound, not yet "only labels that are not
+their node's earliest". By bike it gains nothing (the long caps and the ride all the way leave nothing
+to prune), so heatGrid keeps plain walkFront there; measured +2.5 %, main against itself ±2 %: recheck.
+Open: tests for walkFrontForCells, gridexact.ts, suite.ts --ci, browser.mjs and check.mjs timings,
+CHANGELOG and bump, PR.
 
 ## Notes
 

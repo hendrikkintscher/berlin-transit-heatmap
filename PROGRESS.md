@@ -10,6 +10,16 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
+## 2026-11-11 · cloud · S059, S060, S043
+
+- S059 ATM dots from zoom 10, small and growing (#410, 1.1.9); S060 one switch "Netz und Haltestellen" for the
+  network lines, stops and station names, `layers=nonet` (#411, 1.1.10). Both live.
+- S043 paused (Hendrik): work in progress on branch `ccr-abfac0b5-jjjw6t`, not merged; status and what is left in
+  `docs/specs/s043-walk-front-fringe.md`. On foot exact and −34 % in Node; by bike unchanged. `mapAllowanceOnce`
+  (lapsed since 1.0.5) removed from budget.json there.
+- GitHub Actions: this repo is public, so its runs use no minutes (this session: 37 billed minutes, free).
+  Open: S043 (branch), S044.
+
 ## 2026-11-11 · cloud · S058
 
 - S058 faint network lines by mode (#409, 1.1.8): rail from the city view, tram from 12, bus from 14, built in
