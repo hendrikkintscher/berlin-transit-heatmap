@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.10] — 2026-11-11
+
+- S060: one switch in Ebenen, "Netz und Haltestellen" (on by default, `layers=nonet` in a link when off), shows or hides the network's faint lines (S058) and every stop dot, S/U letter and stop name with the big stations' names (S057); the trip's own stops stay. While it is off MapLibre gets no network lines. Browser at 360×740, medians of 7–8 visits, 1.1.9 → branch, switch on: first map 784 → 712 ms, tap to trip 264 → 253 ms, footpath map 1209 → 1227 ms, tap after the network 32 → 34 ms, mean pan frame 71.4 → 71.4 / 54.7 → 54.3 ms; 4× CPU, three runs: first map 888 → 1444, 1434 → 1400, 1319 → 1369 ms (bimodal, both builds in both modes), tap to trip 209 → 228, 172 → 201, 274 → 118 ms, mean pan frame 94–100 → 94–98 ms. Switch off (1×): first map 716 ms, mean pan frame 59.4 / 44.4 ms.
+
 ## [1.1.9] — 2026-11-11
 
 - S059: ATM dots almost always: with the switch on, small dots (1.5 px) from zoom 10, the whole city, growing to the 6 px dot with its "€" at zoom 14; the bank's name from 15 as before. The switch's hint no longer says "from street zoom". Browser at 360×740 with the ATMs on, medians of 7 visits, main → branch: first map 724 → 693 ms, tap to trip 170 → 162 ms, footpath map 1267 → 1170 ms, tap after the network 37 → 38 ms, mean pan frame 72.6 → 73.5 ms (city) and 55.1 → 55.6 ms (street); 4× CPU: first map 1263 → 1243 ms, tap to trip 172 → 156 ms, tap after the network 59 → 67 ms (spread 51–99), mean pan frame 95.3 → 92.7 / 65.0 → 66.2 ms.

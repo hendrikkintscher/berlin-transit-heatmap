@@ -24,7 +24,7 @@ export interface MenuDeps {
   /** The stop-frequency or desert layer was switched. */
   layerChanged: () => void;
   /** Lines or outlines switched: show or hide their map layers. */
-  setLayerVisible: (layers: 'routes' | 'outlines', on: boolean) => void;
+  setLayerVisible: (layers: 'routes' | 'outlines' | 'network', on: boolean) => void;
   opacityChanged: () => void;
   /** The Heatmap switch changed: show or hide the colours, restyle the outlines. */
   heatChanged: () => void;
@@ -51,6 +51,7 @@ export function initMenu(deps: MenuDeps) {
   const desertToggle = $<HTMLInputElement>('desert-toggle');
   const atmToggle = $<HTMLInputElement>('atm-toggle');
   const isoToggle = $<HTMLInputElement>('iso-toggle');
+  const networkToggle = $<HTMLInputElement>('network-toggle');
   const heatToggle = $<HTMLInputElement>('heat-toggle');
   const stepFreeToggle = $<HTMLInputElement>('stepfree-toggle');
   const opacityInput = $<HTMLInputElement>('opacity');
@@ -160,6 +161,13 @@ export function initMenu(deps: MenuDeps) {
       deps.writeUrl();
     });
   }
+  // The network's lines and the stops with their names, one switch (S060).
+  networkToggle.checked = state.network;
+  networkToggle.addEventListener('change', () => {
+    state.network = networkToggle.checked;
+    deps.setLayerVisible('network', state.network);
+    deps.writeUrl();
+  });
   isoToggle.checked = state.iso;
   isoToggle.addEventListener('change', () => {
     state.iso = isoToggle.checked;

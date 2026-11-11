@@ -1,6 +1,6 @@
 # S057–S059: Stops, network lines and ATMs on the map, by zoom
 
-Tasks S057–S060 in `feature_list.json` (Hendrik, 2026-11-10). S057, S058 and S059 are built; S060 is open.
+Tasks S057–S060 in `feature_list.json` (Hendrik, 2026-11-10). All four are built (S060 in 1.1.10).
 
 ## Before these tasks
 
@@ -21,7 +21,7 @@ Tasks S057–S060 in `feature_list.json` (Hendrik, 2026-11-10). S057, S058 and S
   Südkreuz and the like). Built in 1.1.7 (decision 0018): these eight plus Hauptbahnhof, by a
   short name, in `REGION.hubs` (`packages/routing/src/regions.ts`).
 - **S060 Layer switch for lines and stations.** One switch turns the network lines (S058) and the
-  stops with their names (S057) off and on.
+  stops with their names (S057) off and on. Built in 1.1.10: "Netz und Haltestellen" in Ebenen, `layers=nonet`.
 - **S058 Faint network lines by mode.** Thin, faint lines of the whole network in each mode's
   colour, each mode from its own zoom. Proposal: S-Bahn, U-Bahn and regional from the city view,
   tram from zoom 12, bus from zoom 14. Data: `lines.bin` already holds every hop's course along

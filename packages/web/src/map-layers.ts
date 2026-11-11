@@ -47,6 +47,15 @@ export const NETWORK_GROUPS = [
 export const networkSource = (group: string) => `network-${group}`;
 export const NETWORK_LAYERS = NETWORK_GROUPS.map((g) => `network-${g.group}-line`);
 export const NETWORK_OPACITY = 0.35;
+/** The stops' dots, letters and names, the big stations' names among them (S057); one switch with the network (S060). */
+export const STOP_LAYERS = [
+  'stops-minor',
+  'stops-major',
+  'stops-letter',
+  'stops-minor-name',
+  'stops-major-name',
+  'stops-hub-name',
+];
 export const STATIONS_SOURCE = 'stations';
 export const STATIONS_LAYER = 'stations-dot';
 /** The Cash Group ATMs add-on (S049); its layers are added by addons.ts when first switched on. */
@@ -91,7 +100,7 @@ const modeColor = [
 /** Adds the app's sources and layers once the basemap style has loaded. */
 export function addMapLayers(
   map: maplibregl.Map,
-  o: { routes: boolean; iso: boolean; desertCanvas: HTMLCanvasElement },
+  o: { routes: boolean; iso: boolean; network: boolean; desertCanvas: HTMLCanvasElement },
 ) {
   const firstSymbol = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
   // The colours go under the basemap's roads, so streets stay readable on top of them.
@@ -285,7 +294,8 @@ export function addMapLayers(
     },
     paint: { 'text-color': INK, 'text-halo-color': '#ffffff', 'text-halo-width': 1.8 },
   });
-  addNetwork(map, empty);
+  const networkVisibility = o.network ? 'visible' : 'none';
+  addNetwork(map, empty, networkVisibility);
   map.addSource('ring', { type: 'geojson', data: orient(ringLine) });
   map.addLayer(
     {
@@ -365,7 +375,7 @@ export function addMapLayers(
     },
     'routes-label',
   );
-  addStops(map, empty);
+  addStops(map, empty, networkVisibility);
   // Above street level no dots, only the region's big stations by a short name (S057). Over
   // the time rings' minute labels (which repeat along each ring), under the trip and the
   // district names, which are added later.
@@ -376,6 +386,7 @@ export function addMapLayers(
     filter: ['has', 'h'],
     maxzoom: STREET_ZOOM,
     layout: {
+      visibility: networkVisibility,
       'text-field': ['get', 'h'],
       'text-font': BOLD_FONT,
       'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 13, 13],
@@ -604,7 +615,11 @@ export function addMapLayers(
 export const STREET_ZOOM = 14;
 
 /** Thin lines in the mode's colour under the time rings, the map's lines and the trip (S058). */
-function addNetwork(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
+function addNetwork(
+  map: maplibregl.Map,
+  empty: GeoJSON.FeatureCollection,
+  visibility: 'visible' | 'none',
+) {
   for (const { group, minzoom } of NETWORK_GROUPS) {
     map.addSource(networkSource(group), { type: 'geojson', data: empty });
     map.addLayer(
@@ -613,7 +628,7 @@ function addNetwork(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
         type: 'line',
         source: networkSource(group),
         minzoom,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        layout: { visibility, 'line-cap': 'round', 'line-join': 'round' },
         paint: {
           'line-color': modeColor,
           'line-width': ['interpolate', ['linear'], ['zoom'], 10, 1, 14, 1.5, 17, 2.5],
@@ -632,10 +647,18 @@ function addNetwork(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
  * modes win where they collide.
  */
 
-function addStops(map: maplibregl.Map, empty: GeoJSON.FeatureCollection) {
+function addStops(
+  map: maplibregl.Map,
+  empty: GeoJSON.FeatureCollection,
+  visibility: 'visible' | 'none',
+) {
   map.addSource(STOPS_SOURCE, { type: 'geojson', data: empty });
   // Under the time rings' minute labels, so those keep their place.
-  const add = (l: maplibregl.LayerSpecification) => map.addLayer(l, 'outlines-label');
+  const add = (l: maplibregl.LayerSpecification) =>
+    map.addLayer(
+      { ...l, layout: { ...l.layout, visibility } } as maplibregl.LayerSpecification,
+      'outlines-label',
+    );
   const major = ['<=', ['get', 'k'], MAJOR_STOP_RANK] as maplibregl.FilterSpecification;
   const minor = ['>', ['get', 'k'], MAJOR_STOP_RANK] as maplibregl.FilterSpecification;
   const color = [

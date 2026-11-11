@@ -79,6 +79,9 @@ const de = {
   places: 'Ausflugsziele',
   placesHint:
     'Seen, Badestellen, Parks und Aussichtspunkte mit ihren Minuten; näher ranzoomen zeigt mehr',
+  network: 'Netz und Haltestellen',
+  networkHint:
+    'Alle Linien blass im Hintergrund, große Bahnhöfe mit Namen, ab Straßenzoom jede Haltestelle',
   atm: 'Geldautomaten (Cash Group)',
   atmHint:
     'Commerzbank, Deutsche Bank, HypoVereinsbank und Postbank aus OpenStreetMap; näher ranzoomen zeigt die Bank',
@@ -409,6 +412,9 @@ const en: Record<Key, string> = {
   freqLegend: 'Departures/h',
   places: 'Places to go',
   placesHint: 'Lakes, bathing spots, parks and viewpoints with their minutes; zoom in to see more',
+  network: 'Network and stops',
+  networkHint:
+    'Every line faint in the background, big stations by name, every stop at street zoom',
   atm: 'ATMs (Cash Group)',
   atmHint:
     'Commerzbank, Deutsche Bank, HypoVereinsbank and Postbank from OpenStreetMap; zoom in for the bank',

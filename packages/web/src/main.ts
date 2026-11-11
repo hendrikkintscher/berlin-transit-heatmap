@@ -56,6 +56,8 @@ import {
   STATIONS_SOURCE,
   STOPS_SOURCE,
   NETWORK_GROUPS,
+  NETWORK_LAYERS,
+  STOP_LAYERS,
   networkSource,
   VEIL_LAYER,
   VEIL_SOURCE,
@@ -939,7 +941,7 @@ map.once('load', () => {
 // held the first map back by about a second on a fresh visit, roadmap 0.13.0).
 map.once('style.load', () => {
   state.mapReady = true;
-  addMapLayers(map, { routes: state.routes, iso: state.iso, desertCanvas });
+  addMapLayers(map, { routes: state.routes, iso: state.iso, network: state.network, desertCanvas });
   showArrows = addTripArrows(map);
   showHeat();
   if (state.result) showResult(state.result);
@@ -965,7 +967,8 @@ function showNetwork(files: Record<string, ArrayBuffer>) {
 }
 /** Hands MapLibre the groups shown at this zoom (or just about to be) that it lacks. */
 function networkByZoom() {
-  if (!state.mapReady) return;
+  // Switched off (S060): MapLibre gets the lines only once they are switched on.
+  if (!state.mapReady || !state.network) return;
   const zoom = map.getZoom();
   for (const { group, minzoom } of NETWORK_GROUPS) {
     const url = networkUrls.get(group);
@@ -1733,8 +1736,14 @@ const menu = initMenu({
   setLayerVisible: (layers, on) => {
     chips.render();
     if (!state.mapReady) return;
-    for (const id of layers === 'routes' ? ROUTE_LAYERS : OUTLINE_LAYERS)
-      map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    const ids =
+      layers === 'routes'
+        ? ROUTE_LAYERS
+        : layers === 'network'
+          ? [...NETWORK_LAYERS, ...STOP_LAYERS]
+          : OUTLINE_LAYERS;
+    for (const id of ids) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+    if (layers === 'network' && on) networkByZoom();
     // (The time lines stay away while a trip is open.)
     if (layers === 'outlines' && tripOpen) hideHeatForTrip();
   },
