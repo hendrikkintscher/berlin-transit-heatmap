@@ -2,6 +2,7 @@
 // routing source folder (main's walkFront), cell by cell, at gridexact's 8 starts on foot and
 // by bike: the whole 50 m grid, its minutes and the stop each cell comes from. Prints the
 // cells that differ and the median heatGrid time of each. Exits 1 if any cell differs.
+// By bike (15 and 30 min caps) heatGrid keeps walkFront, so that half only checks it is unchanged.
 // Usage (in packages/routing): tsx bench/fringe.ts <base routing src dir> [runs=3]
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';

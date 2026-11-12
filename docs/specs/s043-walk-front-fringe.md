@@ -37,3 +37,14 @@ about 350 → 240 ms on foot, 747 → 420 ms by bike (estimates from the measure
   where its blocker died; "distance to the nearest fringe node" after an uncapped pass is.
 - Tried and not worth it (same place): walk order instead of time order, packed records, Morton
   node order, a stronger pending check, capped fronts.
+
+## Built (1.1.11)
+
+- Used where every walk has one cap: on foot, the bike-only ride and the trip-on-tap windows. By bike
+  to the trains (15 and 30 min caps) heatGrid keeps `walkFront`: there the later walks under the
+  15 min cap are needed almost everywhere (2.62 of 2.63 M labels kept even with a split fringe per
+  cap), so the bike goal (747 → 420 ms) is not met.
+- The bound is an 8-neighbour grid distance (two sweeps) on 100 m cells with the cell's own far walk
+  added, not a Felzenszwalb transform on 200 m: grid size and a 16-neighbour mask changed the labels
+  kept by under 4 %, and adding the far walk beats sqrt(d² + dc²).
+- Unreached nodes are not marked: the first pass has no cap, so no walk reaches them either.

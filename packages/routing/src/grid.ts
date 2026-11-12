@@ -173,6 +173,7 @@ export function heatGrid(
     const { a: cellA, b: cellB, da: cellDa, db: cellDb } = cells;
     // With one cap for every walk (on foot), the later labels count only at cell ends whose
     // earliest label walks too far for a cell (the test below): there, the nearest such cell.
+    // Unreached ends need nothing: the first pass has no cap, so no walk reaches them either.
     const fringe = (f: WalkFront, near: Float32Array) => {
       const { time, walk } = f;
       for (let r = wr0; r < wr1; r++)

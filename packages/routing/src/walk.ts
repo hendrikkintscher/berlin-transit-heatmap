@@ -784,9 +784,11 @@ const BOUND_CELL_M = 100;
  */
 const OCTAGON = 1.0825;
 /**
- * Street lengths are whole metres and the network's positions are flat and float32, so a
- * walk may be a little shorter than the straight line between its ends: the bound gives
- * away this share and these metres.
+ * Street lengths are whole metres (up to half a metre under the straight line each) and the
+ * network's positions are flat and float32, so a walk may be a little shorter than the
+ * straight line between its ends: the bound gives away this share and these metres. This is
+ * a margin, not a proof (a long straight chain of streets under 17 m could beat it); the
+ * grid's octagon and in-cell margins add more, and bench/fringe.ts checks every cell.
  */
 const BOUND_SHARE = 0.97;
 const BOUND_SLACK_M = 2;
@@ -833,7 +835,7 @@ function fringeGrid(net: WalkNetwork): FringeGrid {
  * Per grid cell, the longest walk a label there may have and still count: maxWalkMetres
  * less a lower bound of the way from the cell to a node v with near[v] < Infinity and on by
  * near[v]. The bound is the least, over those nodes, of the straight line plus near[v]: grid
- * distances over 16 neighbours (two sweeps), less the way within the two grid cells and the
+ * distances over 8 neighbours (two sweeps), less the way within the two grid cells and the
  * margin for street lengths. False if there is no such node.
  */
 function fringeLimits(fg: FringeGrid, maxWalkMetres: number): boolean {
@@ -984,7 +986,9 @@ export function walkFrontFringe(
         const nw = w + metres[k];
         if (!(nt < time[u])) {
           // A later label with a shorter walk: the second pass has work.
-          if (nw + SAME_WALK_M < walk[u]) later = true;
+          // (An earliest label over the cap drops none: walkFront never has it.)
+          if (nw <= maxWalkMetres && !(walk[u] <= Math.min(maxWalkMetres, nw + SAME_WALK_M)))
+            later = true;
           continue;
         }
         const nb = Math.floor(nt);
@@ -1006,7 +1010,7 @@ export function walkFrontFringe(
     const t = times[i];
     const w = walked[i];
     if (v < 0 || !(t < Infinity) || w > maxWalkMetres || Math.floor(t) >= bucketCount) continue;
-    if (!(time[v] <= t && walk[v] <= w + SAME_WALK_M)) later = true;
+    if (!(time[v] <= t && walk[v] <= Math.min(maxWalkMetres, w + SAME_WALK_M))) later = true;
   }
   if (!later) return out;
   const fg = fringeGrid(net);
@@ -1027,7 +1031,7 @@ export function walkFrontFringe(
   head.fill(-1, 0, bucketCount);
   used = 0;
   const seed = (u: number, nt: number, nw: number, src: number) => {
-    if (time[u] <= nt && walk[u] <= nw + SAME_WALK_M) return;
+    if (time[u] <= nt && walk[u] <= Math.min(maxWalkMetres, nw + SAME_WALK_M)) return;
     if (nw > limit[cellOf[u]]) return;
     if (pendTime[u] <= nt && pendWalk[u] <= nw + SAME_WALK_M) return;
     const nb = Math.floor(nt);
@@ -1059,7 +1063,7 @@ export function walkFrontFringe(
       if (nw > maxWalkMetres) continue;
       const u = target[k];
       // Most streets lead to a node whose earliest label walks no further.
-      if (walk[u] <= nw + SAME_WALK_M) continue;
+      if (walk[u] <= Math.min(maxWalkMetres, nw + SAME_WALK_M)) continue;
       seed(u, t + metres[k] * pace, nw, src);
     }
   }
@@ -1070,7 +1074,7 @@ export function walkFrontFringe(
       const t = qtime[e];
       const w = qwalk[e];
       const src = qsrc[e];
-      if (time[v] <= t && walk[v] <= w + SAME_WALK_M) continue;
+      if (time[v] <= t && walk[v] <= Math.min(maxWalkMetres, w + SAME_WALK_M)) continue;
       const x = more[v];
       if (x !== -1 && xtime[x] <= t && xwalk[x] <= w + SAME_WALK_M) continue;
       if (extra === xnext.length) {
@@ -1094,7 +1098,7 @@ export function walkFrontFringe(
         if (nw > limit[cellOf[u]]) continue;
         const nt = t + metres[k] * pace;
         if (pendTime[u] <= nt && pendWalk[u] <= nw + SAME_WALK_M) continue;
-        if (time[u] <= nt && walk[u] <= nw + SAME_WALK_M) continue;
+        if (time[u] <= nt && walk[u] <= Math.min(maxWalkMetres, nw + SAME_WALK_M)) continue;
         const xu = more[u];
         if (xu !== -1 && xtime[xu] <= nt && xwalk[xu] <= nw + SAME_WALK_M) continue;
         pendTime[u] = nt;

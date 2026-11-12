@@ -607,7 +607,8 @@ describe('walkFrontFringe', () => {
       for (let i = 0; i < 12; i++) {
         src.nodes.push(Math.floor(rnd() * N * N));
         src.times.push(Math.round(2000 * rnd()));
-        src.walked.push(Math.round(100 * rnd()));
+        // Fractional, some below zero (the start going further), some near the cap.
+        src.walked.push(i < 2 ? cap - 150 * rnd() : 200 * rnd() - 50);
         src.tags.push(i);
       }
       // A place at every node, some way off it.
