@@ -10,6 +10,15 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
+## 2026-11-12 · cloud · S043
+
+- S043 map walk in two passes where every walk has one cap (#412, 1.1.11): on foot heatGrid 455 → ~360 ms in
+  Node, every cell equal to `walkFront` (`bench/fringe.ts`); bike to the trains keeps `walkFront` (the bound
+  prunes nothing there, so the bike goal was not reached).
+- 4× tap-to-trip medians were noisy (bimodal; the tap does not run the changed code); shipped on Hendrik's yes.
+- S061 added: the CI speed probe walks 900/1800 s, so it cannot see S043. Open: S044, S061.
+- Comparing against main: `git fetch origin main` first; a stale local `origin/main` gave a 1.0.6 base once.
+
 ## 2026-11-11 · cloud · S058
 
 - S058 faint network lines by mode (#409, 1.1.8): rail from the city view, tram from 12, bus from 14, built in
