@@ -20,7 +20,7 @@
       "size": "M",
       "deps": [],
       "test": "bench/gridexact.ts 0 %, bench/suite.ts --ci exits 0, cells equal walkFront's on the 8 gridexact starts; timings before/after in the PR",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S044",
@@ -197,6 +197,17 @@
       "deps": ["S057", "S058"],
       "test": "switching it off hides every network line, stop dot and stop name, on brings them back (screenshots); first map and tap timings unchanged at 360x740, 1x and 4x",
       "passes": true
+    },
+    {
+      "id": "S061",
+      "title": "Speed CI: time the maps with the app's own walk options (FASTEST_WALK on foot; bench/speed.ts still walks 900/1800 s, which S043's two passes do not cover)",
+      "kind": "chore",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": [],
+      "test": "scripts/speed/check.mjs times the maps with FASTEST_WALK and the speed job stays green on main",
+      "passes": false
     }
   ]
 }

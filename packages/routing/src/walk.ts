@@ -587,24 +587,8 @@ function grown<T extends Int32Array | Float32Array | Float64Array>(a: T, n: numb
   return b;
 }
 
-/**
- * walkFrom with a Pareto front of (time, walk) labels per node, so the cap holds exactly for
- * every source: a label is dropped only when another at its node is no later and walks no
- * further. Labels are settled in time order (Dial's buckets per second), so a later one
- * survives only with a shorter walk. A new label is checked against the node's earliest and
- * newest labels and the last one pushed there; that may keep a few labels another would
- * beat, but never drops one that counts. The arrays are kept per network and overwritten
- * by the next walk.
- */
-export function walkFront(
-  net: WalkNetwork,
-  nodes: ArrayLike<number>,
-  times: ArrayLike<number>,
-  walked: ArrayLike<number>,
-  tags: ArrayLike<number>,
-  maxWalkMetres: number,
-  pace: number,
-): WalkFront {
+/** The arrays of walkFront and walkFrontFringe, kept per network (one set for both). */
+function frontState(net: WalkNetwork): FrontState {
   const n = net.nodeCount;
   let st = fronts.get(net);
   if (!st) {
@@ -632,6 +616,28 @@ export function walkFront(
     };
     fronts.set(net, st);
   }
+  return st;
+}
+
+/**
+ * walkFrom with a Pareto front of (time, walk) labels per node, so the cap holds exactly for
+ * every source: a label is dropped only when another at its node is no later and walks no
+ * further. Labels are settled in time order (Dial's buckets per second), so a later one
+ * survives only with a shorter walk. A new label is checked against the node's earliest and
+ * newest labels and the last one pushed there; that may keep a few labels another would
+ * beat, but never drops one that counts. The arrays are kept per network and overwritten
+ * by the next walkFront or walkFrontFringe.
+ */
+export function walkFront(
+  net: WalkNetwork,
+  nodes: ArrayLike<number>,
+  times: ArrayLike<number>,
+  walked: ArrayLike<number>,
+  tags: ArrayLike<number>,
+  maxWalkMetres: number,
+  pace: number,
+): WalkFront {
+  const st = frontState(net);
   const out = st.front;
   const { time, walk, source, more } = out;
   time.fill(Infinity);
@@ -754,6 +760,343 @@ export function walkFront(
         if (xu !== -1) {
           if (xtime[xu] <= nt && xwalk[xu] <= nw + SAME_WALK_M) continue;
         } else if (time[u] <= nt && walk[u] <= nw + SAME_WALK_M) continue;
+        pendTime[u] = nt;
+        pendWalk[u] = nw;
+        const nb = Math.floor(nt);
+        qnode[used] = u;
+        qtime[used] = nt;
+        qwalk[used] = nw;
+        qsrc[used] = src;
+        qnext[used] = head[nb];
+        head[nb] = used++;
+      }
+    }
+  }
+  out.extra = extra;
+  return out;
+}
+
+/** Grid for the bound on the way to the fringe (metres). */
+const BOUND_CELL_M = 100;
+/**
+ * The grid's distances step to 8 neighbours, which is up to this much longer than the
+ * straight line (at 22.5°), so its steps are this much shorter.
+ */
+const OCTAGON = 1.0825;
+/**
+ * Street lengths are whole metres and the network's positions are flat and float32, so a
+ * walk may be a little shorter than the straight line between its ends: the bound gives
+ * away this share and these metres.
+ */
+const BOUND_SHARE = 0.97;
+const BOUND_SLACK_M = 2;
+
+interface FringeGrid {
+  /** Per node: the shortest way on to a place that needs more than its earliest label. */
+  near: Float32Array;
+  /** Bound grid: columns, rows, the cell of each node; per grid cell the longest walk that can count. */
+  cols: number;
+  rows: number;
+  cellOf: Int32Array;
+  limit: Float64Array;
+}
+
+const fringeGrids = new WeakMap<WalkNetwork, FringeGrid>();
+
+function fringeGrid(net: WalkNetwork): FringeGrid {
+  let fg = fringeGrids.get(net);
+  if (fg) return fg;
+  const n = net.nodeCount;
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (let v = 0; v < n; v++) {
+    x0 = Math.min(x0, net.x[v]);
+    x1 = Math.max(x1, net.x[v]);
+    y0 = Math.min(y0, net.y[v]);
+    y1 = Math.max(y1, net.y[v]);
+  }
+  const cols = n ? Math.floor((x1 - x0) / BOUND_CELL_M) + 1 : 1;
+  const rows = n ? Math.floor((y1 - y0) / BOUND_CELL_M) + 1 : 1;
+  const cellOf = new Int32Array(n);
+  for (let v = 0; v < n; v++)
+    cellOf[v] =
+      Math.floor((net.y[v] - y0) / BOUND_CELL_M) * cols +
+      Math.floor((net.x[v] - x0) / BOUND_CELL_M);
+  fg = { near: new Float32Array(n), cols, rows, cellOf, limit: new Float64Array(cols * rows) };
+  fringeGrids.set(net, fg);
+  return fg;
+}
+
+/**
+ * Per grid cell, the longest walk a label there may have and still count: maxWalkMetres
+ * less a lower bound of the way from the cell to a node v with near[v] < Infinity and on by
+ * near[v]. The bound is the least, over those nodes, of the straight line plus near[v]: grid
+ * distances over 16 neighbours (two sweeps), less the way within the two grid cells and the
+ * margin for street lengths. False if there is no such node.
+ */
+function fringeLimits(fg: FringeGrid, maxWalkMetres: number): boolean {
+  const { near, limit: dist, cellOf, cols, rows } = fg;
+  dist.fill(Infinity);
+  let any = false;
+  for (let v = 0; v < near.length; v++) {
+    const d = near[v];
+    if (d === Infinity) continue;
+    any = true;
+    const c = cellOf[v];
+    if (d < dist[c]) dist[c] = d;
+  }
+  if (!any) return false;
+  const a = BOUND_CELL_M / OCTAGON;
+  const b = (Math.SQRT2 * BOUND_CELL_M) / OCTAGON;
+  for (let r = 0; r < rows; r++) {
+    const k0 = r * cols;
+    for (let c = 0; c < cols; c++) {
+      const k = k0 + c;
+      let d = dist[k];
+      if (c > 0 && dist[k - 1] + a < d) d = dist[k - 1] + a;
+      if (r > 0) {
+        const u = k - cols;
+        if (dist[u] + a < d) d = dist[u] + a;
+        if (c > 0 && dist[u - 1] + b < d) d = dist[u - 1] + b;
+        if (c < cols - 1 && dist[u + 1] + b < d) d = dist[u + 1] + b;
+      }
+      dist[k] = d;
+    }
+  }
+  for (let r = rows - 1; r >= 0; r--) {
+    const k0 = r * cols;
+    for (let c = cols - 1; c >= 0; c--) {
+      const k = k0 + c;
+      let d = dist[k];
+      if (c < cols - 1 && dist[k + 1] + a < d) d = dist[k + 1] + a;
+      if (r < rows - 1) {
+        const u = k + cols;
+        if (dist[u] + a < d) d = dist[u] + a;
+        if (c > 0 && dist[u - 1] + b < d) d = dist[u - 1] + b;
+        if (c < cols - 1 && dist[u + 1] + b < d) d = dist[u + 1] + b;
+      }
+      dist[k] = d;
+    }
+  }
+  const within = Math.SQRT2 * BOUND_CELL_M;
+  for (let k = 0; k < dist.length; k++)
+    dist[k] = maxWalkMetres - Math.max(0, BOUND_SHARE * (dist[k] - within) - BOUND_SLACK_M);
+  return true;
+}
+
+/**
+ * walkFront's labels where they count, in two passes (S043). The first walks with one label
+ * per node and no cap on the walk, which gives every node its exact earliest label (it may
+ * walk further than the cap). Most places need only that one: `fringe` then sets, in `near`,
+ * for each node whose places need more (its earliest label walks too far for one of them),
+ * the shortest way on from it to such a place (Infinity elsewhere). The second pass walks
+ * only the later labels (from the sources and the earliest labels' streets), with walkFront's
+ * dominance, and drops one as soon as its walk plus a lower bound of the way on to such a
+ * place is beyond the cap (fringeLimits): none of its walks can count there. When the first
+ * pass leaves no other label (one source alone), `fringe` is not called.
+ *
+ * Where the places need only the earliest label, the later labels are incomplete; where they
+ * need more, they hold all walkFront keeps that can count there. The arrays are kept per
+ * network and overwritten by the next walkFrontFringe or walkFront.
+ */
+export function walkFrontFringe(
+  net: WalkNetwork,
+  nodes: ArrayLike<number>,
+  times: ArrayLike<number>,
+  walked: ArrayLike<number>,
+  tags: ArrayLike<number>,
+  maxWalkMetres: number,
+  pace: number,
+  fringe: (front: WalkFront, near: Float32Array) => void,
+): WalkFront {
+  const n = net.nodeCount;
+  const st = frontState(net);
+  const out = st.front;
+  const { time, walk, source, more } = out;
+  const { offset, target, metres } = net;
+  time.fill(Infinity);
+  more.fill(-1);
+  out.extra = 0;
+
+  let maxEnd = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const t = times[i];
+    if (nodes[i] < 0 || !(t < Infinity) || walked[i] > maxWalkMetres) continue;
+    const end = t + (maxWalkMetres - walked[i]) * pace;
+    if (end > maxEnd) maxEnd = end;
+  }
+  // No label of walkFront is later than maxEnd, so neither pass goes beyond it.
+  const bucketCount = Math.floor(maxEnd) + 2;
+  if (st.bucket.length < bucketCount) st.bucket = new Int32Array(bucketCount);
+  const head = st.bucket;
+  let qnext = st.qnext;
+  let qnode = st.qnode;
+  let qtime = st.qtime;
+  let qwalk = st.qwalk;
+  let qsrc = st.qsrc;
+  const room = (need: number) => {
+    if (need <= qnext.length) return;
+    const size = Math.max(need, 2 * qnext.length);
+    qnext = st.qnext = grown(qnext, size);
+    qnode = st.qnode = grown(qnode, size);
+    qtime = st.qtime = grown(qtime, size);
+    qwalk = st.qwalk = grown(qwalk, size);
+    qsrc = st.qsrc = grown(qsrc, size);
+  };
+
+  // Pass 1: one label per node, no cap (Dial's buckets per second; a node improved within
+  // the bucket being scanned goes back into it, so the labels are exact). `later`: whether
+  // any label besides the earliest can be left for the second pass (a single source, such
+  // as a ride from the start alone, has none).
+  let later = false;
+  head.fill(-1, 0, bucketCount);
+  room(nodes.length);
+  let used = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    const v = nodes[i];
+    const t = times[i];
+    const w = walked[i];
+    if (v < 0 || !(t < time[v]) || w > maxWalkMetres) continue;
+    time[v] = t;
+    walk[v] = w;
+    source[v] = tags[i];
+    const bk = Math.floor(t);
+    qnode[used] = v;
+    qnext[used] = head[bk];
+    head[bk] = used++;
+  }
+  for (let b = 0; b < bucketCount; b++) {
+    for (let e = head[b]; e !== -1; e = head[b]) {
+      head[b] = qnext[e];
+      const v = qnode[e];
+      const t = time[v];
+      if (Math.floor(t) !== b) continue;
+      const w = walk[v];
+      const src = source[v];
+      const k0 = offset[v];
+      const k1 = offset[v + 1];
+      room(used + k1 - k0);
+      for (let k = k0; k < k1; k++) {
+        const u = target[k];
+        const nt = t + metres[k] * pace;
+        const nw = w + metres[k];
+        if (!(nt < time[u])) {
+          // A later label with a shorter walk: the second pass has work.
+          if (nw + SAME_WALK_M < walk[u]) later = true;
+          continue;
+        }
+        const nb = Math.floor(nt);
+        if (nb >= bucketCount) continue;
+        // A label replaced by one that walks further may be needed later on.
+        if (time[u] < Infinity && nw > walk[u]) later = true;
+        time[u] = nt;
+        walk[u] = nw;
+        source[u] = src;
+        qnode[used] = u;
+        qnext[used] = head[nb];
+        head[nb] = used++;
+      }
+    }
+  }
+
+  for (let i = 0; i < nodes.length && !later; i++) {
+    const v = nodes[i];
+    const t = times[i];
+    const w = walked[i];
+    if (v < 0 || !(t < Infinity) || w > maxWalkMetres || Math.floor(t) >= bucketCount) continue;
+    if (!(time[v] <= t && walk[v] <= w + SAME_WALK_M)) later = true;
+  }
+  if (!later) return out;
+  const fg = fringeGrid(net);
+  const { near, limit, cellOf } = fg;
+  near.fill(Infinity);
+  fringe(out, near);
+  if (!fringeLimits(fg, maxWalkMetres)) return out;
+
+  // Pass 2: the later labels, seeded from the sources and the earliest labels' streets.
+  const pendTime = st.pendTime;
+  const pendWalk = st.pendWalk;
+  pendTime.fill(Infinity);
+  let xnext = out.xnext;
+  let xtime = out.xtime;
+  let xwalk = out.xwalk;
+  let xsrc = out.xsource;
+  let extra = 0;
+  head.fill(-1, 0, bucketCount);
+  used = 0;
+  const seed = (u: number, nt: number, nw: number, src: number) => {
+    if (time[u] <= nt && walk[u] <= nw + SAME_WALK_M) return;
+    if (nw > limit[cellOf[u]]) return;
+    if (pendTime[u] <= nt && pendWalk[u] <= nw + SAME_WALK_M) return;
+    const nb = Math.floor(nt);
+    if (nb >= bucketCount) return;
+    pendTime[u] = nt;
+    pendWalk[u] = nw;
+    if (used === qnext.length) room(used + 1);
+    qnode[used] = u;
+    qtime[used] = nt;
+    qwalk[used] = nw;
+    qsrc[used] = src;
+    qnext[used] = head[nb];
+    head[nb] = used++;
+  };
+  for (let i = 0; i < nodes.length; i++) {
+    const v = nodes[i];
+    const t = times[i];
+    const w = walked[i];
+    if (v < 0 || !(t < Infinity) || w > maxWalkMetres) continue;
+    seed(v, t, w, tags[i]);
+  }
+  for (let v = 0; v < n; v++) {
+    const t = time[v];
+    const w = walk[v];
+    if (t === Infinity || w > maxWalkMetres) continue;
+    const src = source[v];
+    for (let k = offset[v]; k < offset[v + 1]; k++) {
+      const nw = w + metres[k];
+      if (nw > maxWalkMetres) continue;
+      const u = target[k];
+      // Most streets lead to a node whose earliest label walks no further.
+      if (walk[u] <= nw + SAME_WALK_M) continue;
+      seed(u, t + metres[k] * pace, nw, src);
+    }
+  }
+  for (let b = 0; b < bucketCount; b++) {
+    for (let e = head[b]; e !== -1; e = head[b]) {
+      head[b] = qnext[e];
+      const v = qnode[e];
+      const t = qtime[e];
+      const w = qwalk[e];
+      const src = qsrc[e];
+      if (time[v] <= t && walk[v] <= w + SAME_WALK_M) continue;
+      const x = more[v];
+      if (x !== -1 && xtime[x] <= t && xwalk[x] <= w + SAME_WALK_M) continue;
+      if (extra === xnext.length) {
+        const size = 2 * extra;
+        xnext = out.xnext = grown(xnext, size);
+        xtime = out.xtime = grown(xtime, size);
+        xwalk = out.xwalk = grown(xwalk, size);
+        xsrc = out.xsource = grown(xsrc, size);
+      }
+      xtime[extra] = t;
+      xwalk[extra] = w;
+      xsrc[extra] = src;
+      xnext[extra] = x;
+      more[v] = extra++;
+      const k0 = offset[v];
+      const k1 = offset[v + 1];
+      room(used + k1 - k0);
+      for (let k = k0; k < k1; k++) {
+        const nw = w + metres[k];
+        const u = target[k];
+        if (nw > limit[cellOf[u]]) continue;
+        const nt = t + metres[k] * pace;
+        if (pendTime[u] <= nt && pendWalk[u] <= nw + SAME_WALK_M) continue;
+        if (time[u] <= nt && walk[u] <= nw + SAME_WALK_M) continue;
+        const xu = more[u];
+        if (xu !== -1 && xtime[xu] <= nt && xwalk[xu] <= nw + SAME_WALK_M) continue;
         pendTime[u] = nt;
         pendWalk[u] = nw;
         const nb = Math.floor(nt);
