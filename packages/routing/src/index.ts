@@ -91,6 +91,7 @@ export {
   timeAt,
   walkFrom,
   walkFront,
+  walkFrontFringe,
   walkPath,
   walkSpeeds,
   WalkSources,

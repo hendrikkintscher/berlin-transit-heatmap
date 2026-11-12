@@ -19,6 +19,7 @@ import {
   travelTimes,
   walkFrom,
   walkFront,
+  walkFrontFringe,
   walkPath,
   type Timetable,
 } from '../src';
@@ -516,5 +517,119 @@ describe('a nearer stop reached later', () => {
     const k = cellAt(g, LAT, LON0 + 18 * lonStep);
     expect(Math.abs(g.seconds[k] - 1800)).toBeLessThan(40);
     expect(g.stop![k]).toBe(-1);
+  });
+});
+
+// S043: the walk front in two passes, against walkFront.
+describe('walkFrontFringe', () => {
+  type Front = ReturnType<typeof walkFront>;
+  /** The earliest time at node v over labels that walk at most `cap` with `d` metres more. */
+  const best = (f: Front, v: number, d: number, cap: number, pace: number) => {
+    let t = f.walk[v] + d <= cap ? f.time[v] + d * pace : Infinity;
+    for (let l = f.more[v]; l !== -1; l = f.xnext[l])
+      if (f.xwalk[l] + d <= cap) t = Math.min(t, f.xtime[l] + d * pace);
+    return t;
+  };
+
+  it('gives the earliest label uncapped, and the later ones where they count', () => {
+    const LAT = 52.5;
+    const lonStep = 100 / (111320 * Math.cos((LAT * Math.PI) / 180));
+    const line = loadWalkNetwork(
+      encode(
+        Array.from({ length: 31 }, (_, i): [number, number] => [LON0 + i * lonStep, LAT]),
+        Array.from({ length: 30 }, (_, i): [number, number, number] => [i, i + 1, 100]),
+      ),
+    );
+    // Every node has a place right on it: the far stop's walk is too long from node 16 on.
+    let marked: number[] = [];
+    const f = walkFrontFringe(line, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1, (front, near) => {
+      marked = [];
+      for (let v = 0; v < 31; v++)
+        if (front.time[v] < Infinity && front.walk[v] > 1500) {
+          near[v] = 0;
+          marked.push(v);
+        }
+    });
+    // Nodes past 21 are later than any walk can reach (600 s + 1500 m), so unreached.
+    expect(marked).toEqual([16, 17, 18, 19, 20, 21]);
+    // The earliest label at node 16 is the far stop's, 1600 m: over the cap.
+    expect([f.time[16], f.walk[16], f.source[16]]).toEqual([1600, 1600, 1]);
+    const later = (v: number) => {
+      const out: number[][] = [];
+      for (let l = f.more[v]; l !== -1; l = f.xnext[l])
+        out.push([f.xtime[l], f.xwalk[l], f.xsource[l]]);
+      return out;
+    };
+    expect(later(16)).toEqual([[1700, 1100, 2]]);
+    expect(later(20)).toEqual([[2100, 1500, 2]]);
+    expect(later(21)).toEqual([]);
+    // Node 10 needs only its earliest label, but its later one leads on to node 16.
+    expect(later(10)).toEqual([[1100, 500, 2]]);
+  });
+
+  it('skips the second pass when one source leaves no later label', () => {
+    let asked = false;
+    const f = walkFrontFringe(net, [0], [0], [0], [7], 1200, 0.9, () => {
+      asked = true;
+    });
+    expect(asked).toBe(false);
+    expect(f.extra).toBe(0);
+    expect([f.time[5], f.walk[5], f.source[5]]).toEqual([450, 500, 7]);
+  });
+
+  it('agrees with walkFront wherever a place needs more than the earliest label', () => {
+    // A 30 x 30 street grid, 100 m apart, with streets up to 1.6 times the straight line.
+    const LAT = 52.5;
+    const lonStep = 100 / (111320 * Math.cos((LAT * Math.PI) / 180));
+    const latStep = 100 / 111320;
+    const N = 30;
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
+    const gridNodes: [number, number][] = [];
+    const gridEdges: [number, number, number][] = [];
+    for (let r = 0; r < N; r++)
+      for (let c = 0; c < N; c++) {
+        gridNodes.push([LON0 + c * lonStep, LAT + r * latStep]);
+        const v = r * N + c;
+        if (c + 1 < N && rnd() < 0.9) gridEdges.push([v, v + 1, Math.round(101 + 60 * rnd())]);
+        if (r + 1 < N && rnd() < 0.9) gridEdges.push([v, v + N, Math.round(101 + 60 * rnd())]);
+      }
+    const g = loadWalkNetwork(encode(gridNodes, gridEdges));
+    for (let trial = 0; trial < 20; trial++) {
+      const cap = 600 + 1200 * rnd();
+      const pace = 0.5 + rnd();
+      const src = {
+        nodes: [] as number[],
+        times: [] as number[],
+        walked: [] as number[],
+        tags: [] as number[],
+      };
+      for (let i = 0; i < 12; i++) {
+        src.nodes.push(Math.floor(rnd() * N * N));
+        src.times.push(Math.round(2000 * rnd()));
+        // Fractional, some below zero (the start going further), some near the cap.
+        src.walked.push(i < 2 ? cap - 150 * rnd() : 200 * rnd() - 50);
+        src.tags.push(i);
+      }
+      // A place at every node, some way off it.
+      const d = Array.from({ length: N * N }, () => Math.round(300 * rnd()));
+      const ref = walkFront(g, src.nodes, src.times, src.walked, src.tags, cap, pace);
+      const want = d.map((dv, v) => best(ref, v, dv, cap, pace));
+      const f = walkFrontFringe(
+        g,
+        src.nodes,
+        src.times,
+        src.walked,
+        src.tags,
+        cap,
+        pace,
+        (front, near) => {
+          for (let v = 0; v < N * N; v++)
+            if (front.time[v] < Infinity && front.walk[v] + d[v] > cap) near[v] = d[v];
+        },
+      );
+      const got = d.map((dv, v) => best(f, v, dv, cap, pace));
+      expect(got).toEqual(want);
+    }
   });
 });

@@ -6,8 +6,10 @@ import {
   snapOrigin,
   snapStops,
   walkFront,
+  walkFrontFringe,
   walkSpeeds,
   WalkSources,
+  type WalkFront,
 } from './walk';
 import type {
   GeoJSONFeature,
@@ -168,16 +170,36 @@ export function heatGrid(
     const originM = originExtraM > 0 ? fallbackM : maxM;
     if (originSnap && originEdge >= 0 && near(result.origin!.lat, result.origin!.lon, originExtraM))
       sources.add(net, originSnap, 0, 0, -originExtraM, -1);
-    const front = walkFront(
-      net,
-      sources.nodes,
-      sources.times,
-      sources.walked,
-      sources.tags,
-      fallbackM,
-      pace,
-    );
     const { a: cellA, b: cellB, da: cellDa, db: cellDb } = cells;
+    // With one cap for every walk (on foot), the later labels count only at cell ends whose
+    // earliest label walks too far for a cell (the test below): there, the nearest such cell.
+    // Unreached ends need nothing: the first pass has no cap, so no walk reaches them either.
+    const fringe = (f: WalkFront, near: Float32Array) => {
+      const { time, walk } = f;
+      for (let r = wr0; r < wr1; r++)
+        for (let k = r * cols + wc0, k1 = r * cols + wc1; k < k1; k++) {
+          const a = cellA[k];
+          if (a < 0) continue;
+          const b = cellB[k];
+          const da = cellDa[k];
+          const db = cellDb[k];
+          if (time[a] < Infinity && walk[a] + da > maxM && da < near[a]) near[a] = da;
+          if (time[b] < Infinity && walk[b] + db > maxM && db < near[b]) near[b] = db;
+        }
+    };
+    const oneCap = maxM === fallbackM && originM === fallbackM;
+    const front = oneCap
+      ? walkFrontFringe(
+          net,
+          sources.nodes,
+          sources.times,
+          sources.walked,
+          sources.tags,
+          fallbackM,
+          pace,
+          fringe,
+        )
+      : walkFront(net, sources.nodes, sources.times, sources.walked, sources.tags, fallbackM, pace);
     const { time, walk, source, more, xnext, xtime, xwalk, xsource } = front;
     const cellEdge = cells.edge;
     // Edges with a stop on them, so the map lookup below runs only where it can find one.
@@ -194,7 +216,7 @@ export function heatGrid(
       const b = cellB[k];
       // Walks within maxM win; longer ones up to fallbackM count only where none is.
       // The earliest label at each end, and where its walk is too long the later ones,
-      // which walk less (walkFront keeps them all).
+      // which walk less (walkFrontFringe keeps them where they count).
       let v = Infinity;
       let from = -1;
       let fv = Infinity;
