@@ -73,10 +73,11 @@ export interface WalkNetwork {
   readonly edgePos: Float32Array;
   /**
    * The walk graph: the junctions, joined by their chains (a loop back to its own junction
-   * is left out, it never shortens a walk). Neighbours of junction v: jTarget[jOffset[v] ..
-   * jOffset[v+1]) with the chain's metres; shape nodes have none. walkPath keeps the full graph.
+   * is left out, it never shortens a walk). Neighbours of junction v: jTarget[offset[v] ..
+   * jEnd[v]) with the chain's metres (a junction has at most as many chains as streets, so
+   * it reuses the full graph's offsets); shape nodes have none. walkPath keeps the full graph.
    */
-  readonly jOffset: Int32Array;
+  readonly jEnd: Int32Array;
   readonly jTarget: Int32Array;
   readonly jMetres: Float32Array;
 }
@@ -209,7 +210,7 @@ type Chains = Pick<
   | 'chainMetres'
   | 'edgeChain'
   | 'edgePos'
-  | 'jOffset'
+  | 'jEnd'
   | 'jTarget'
   | 'jMetres'
 >;
@@ -241,22 +242,23 @@ function* buildChains(
     end: new Int32Array(m),
     length: new Float32Array(m),
     count: 0,
+    jEnd: offset.slice(0, n),
+    jTarget: new Int32Array(2 * m),
+    jMetres: new Float32Array(2 * m),
   };
   yield* inPieces(m, (from, to) => chainsFromEnds(st, from, to));
   yield* inPieces(m, (from, to) => ringChains(st, from, to));
-  const { count, start, end, length } = st;
-  const { jOffset, jTarget, jMetres } = junctionGraph(n, st);
-  yield;
+  const { count } = st;
   return {
     chainCount: count,
-    chainStart: start.slice(0, count),
-    chainEnd: end.slice(0, count),
-    chainMetres: length.slice(0, count),
+    chainStart: st.start.subarray(0, count),
+    chainEnd: st.end.subarray(0, count),
+    chainMetres: st.length.subarray(0, count),
     edgeChain: st.edgeChain,
     edgePos: st.edgePos,
-    jOffset,
-    jTarget,
-    jMetres,
+    jEnd: st.jEnd,
+    jTarget: st.jTarget,
+    jMetres: st.jMetres,
   };
 }
 
@@ -276,33 +278,9 @@ interface ChainBuild {
   end: Int32Array;
   length: Float32Array;
   count: number;
-}
-
-/** The junctions joined by their chains, as walkFrom walks them (loops left out). */
-function junctionGraph(n: number, st: ChainBuild) {
-  const { count, start, end, length } = st;
-  const jOffset = new Int32Array(n + 1);
-  for (let c = 0; c < count; c++) {
-    const a = start[c];
-    const b = end[c];
-    if (a === b) continue;
-    jOffset[a + 1]++;
-    jOffset[b + 1]++;
-  }
-  for (let v = 0; v < n; v++) jOffset[v + 1] += jOffset[v];
-  const jfill = jOffset.slice(0, n);
-  const jTarget = new Int32Array(jOffset[n]);
-  const jMetres = new Float32Array(jOffset[n]);
-  for (let c = 0; c < count; c++) {
-    const a = start[c];
-    const b = end[c];
-    if (a === b) continue;
-    jTarget[jfill[a]] = b;
-    jMetres[jfill[a]++] = length[c];
-    jTarget[jfill[b]] = a;
-    jMetres[jfill[b]++] = length[c];
-  }
-  return { jOffset, jTarget, jMetres };
+  jEnd: Int32Array;
+  jTarget: Int32Array;
+  jMetres: Float32Array;
 }
 
 /**
@@ -356,6 +334,14 @@ function follow(st: ChainBuild, j: number, e: number, ring: boolean): void {
   st.start[c] = j;
   st.end[c] = u;
   st.length[c] = pos;
+  // Into the walk graph at both junctions (a loop back to its own is left out).
+  if (u !== j) {
+    const { jEnd, jTarget, jMetres } = st;
+    jTarget[jEnd[j]] = u;
+    jMetres[jEnd[j]++] = pos;
+    jTarget[jEnd[u]] = j;
+    jMetres[jEnd[u]++] = pos;
+  }
 }
 
 /** The place of a point `along` edge e (0..1 from edgeA), in metres from its chain's start. */
@@ -502,20 +488,26 @@ export interface CellSnaps {
 
 function* cellEnds(net: WalkNetwork, cells: Snaps): Generator<void, CellSnaps> {
   const n = cells.edge.length;
+  const { edge, along, metres } = cells;
+  const { edgeChain, edgePos, edgeMetres, chainStart, chainEnd, chainMetres } = net;
   const a = new Int32Array(n).fill(-1);
   const b = new Int32Array(n).fill(-1);
   const da = new Float32Array(n);
   const db = new Float32Array(n);
   yield* inPieces(n, (from, to) => {
     for (let k = from; k < to; k++) {
-      const e = cells.edge[k];
+      const e = edge[k];
       if (e < 0) continue;
-      const c = net.edgeChain[e];
-      toJunctions(net, cells, k, ends);
-      a[k] = net.chainStart[c];
-      b[k] = net.chainEnd[c];
-      da[k] = ends[0];
-      db[k] = ends[1];
+      const c = edgeChain[e];
+      // chainPos, inlined: this runs for every cell.
+      const pe = edgePos[e];
+      const f = along[k] * edgeMetres[e];
+      const pos = pe >= 0 ? pe + f : -pe - f;
+      const off = metres[k];
+      a[k] = chainStart[c];
+      b[k] = chainEnd[c];
+      da[k] = off + pos;
+      db[k] = off + chainMetres[c] - pos;
     }
   });
   return { edge: cells.edge, a, b, da, db };
@@ -698,7 +690,7 @@ export function walkFrom(
   const { time, walk, source } = out;
   time.fill(Infinity);
   // The junction graph: shape nodes carry no decision (S044).
-  const { jOffset: offset, jTarget: target, jMetres: metres } = net;
+  const { offset, jEnd, jTarget: target, jMetres: metres } = net;
   // Dial's algorithm: a bucket per whole second, scanned in order. A node improved
   // within the bucket being scanned goes back into it, so the labels stay exact.
   // The latest time any source can still walk to.
@@ -740,7 +732,7 @@ export function walkFrom(
       if (Math.floor(t) !== b) continue;
       const w = walk[v];
       const src = source[v];
-      for (let k = offset[v]; k < offset[v + 1]; k++) {
+      for (let k = offset[v]; k < jEnd[v]; k++) {
         const u = target[k];
         const nt = t + metres[k] * pace;
         if (nt < time[u]) {
@@ -913,7 +905,7 @@ export function walkFront(
     head[bk] = used++;
   }
   // The junction graph: shape nodes carry no decision (S044).
-  const { jOffset: offset, jTarget: target, jMetres: metres } = net;
+  const { offset, jEnd, jTarget: target, jMetres: metres } = net;
   for (let b = 0; b < bucketCount; b++) {
     for (let e = head[b]; e !== -1; e = head[b]) {
       head[b] = qnext[e];
@@ -959,7 +951,7 @@ export function walkFront(
         }
       }
       const k0 = offset[v];
-      const k1 = offset[v + 1];
+      const k1 = jEnd[v];
       // Room for a push along every arc (entries are not reused).
       if (used + k1 - k0 > qnext.length) {
         const size = 2 * qnext.length;
@@ -1139,7 +1131,7 @@ export function walkFrontFringe(
   const out = st.front;
   const { time, walk, source, more } = out;
   // The junction graph: shape nodes carry no decision (S044).
-  const { jOffset: offset, jTarget: target, jMetres: metres } = net;
+  const { offset, jEnd, jTarget: target, jMetres: metres } = net;
   time.fill(Infinity);
   more.fill(-1);
   out.extra = 0;
@@ -1200,7 +1192,7 @@ export function walkFrontFringe(
       const w = walk[v];
       const src = source[v];
       const k0 = offset[v];
-      const k1 = offset[v + 1];
+      const k1 = jEnd[v];
       room(used + k1 - k0);
       for (let k = k0; k < k1; k++) {
         const u = target[k];
@@ -1280,7 +1272,7 @@ export function walkFrontFringe(
     const w = walk[v];
     if (t === Infinity || w > maxWalkMetres) continue;
     const src = source[v];
-    for (let k = offset[v]; k < offset[v + 1]; k++) {
+    for (let k = offset[v]; k < jEnd[v]; k++) {
       const nw = w + metres[k];
       if (nw > maxWalkMetres) continue;
       const u = target[k];
@@ -1312,7 +1304,7 @@ export function walkFrontFringe(
       xnext[extra] = x;
       more[v] = extra++;
       const k0 = offset[v];
-      const k1 = offset[v + 1];
+      const k1 = jEnd[v];
       room(used + k1 - k0);
       for (let k = k0; k < k1; k++) {
         const nw = w + metres[k];

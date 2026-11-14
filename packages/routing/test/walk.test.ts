@@ -132,7 +132,9 @@ describe('walking network', () => {
   it('folds the shape nodes into chains between the junctions', () => {
     // Junctions: the four street ends and the bridge's two ends; five chains between them.
     expect(net.chainCount).toBe(5);
-    expect(net.jTarget.length).toBe(10);
+    let arcs = 0;
+    for (let v = 0; v < net.nodeCount; v++) arcs += net.jEnd[v] - net.offset[v];
+    expect(arcs).toBe(10);
     const chainOf = (a: number, b: number) => {
       for (let e = 0; e < net.edgeCount; e++)
         if (net.edgeA[e] === a && net.edgeB[e] === b) return net.edgeChain[e];
@@ -145,8 +147,8 @@ describe('walking network', () => {
     expect(chainOf(0, 1)).toBe(north);
     expect(chainOf(10, 11)).not.toBe(north);
     // Shape nodes have no neighbours in the walk graph; node 10 has its three chains.
-    expect(net.jOffset[6] - net.jOffset[5]).toBe(0);
-    expect(net.jOffset[11] - net.jOffset[10]).toBe(3);
+    expect(net.jEnd[5] - net.offset[5]).toBe(0);
+    expect(net.jEnd[10] - net.offset[10]).toBe(3);
   });
 
   it('runs a capped multi-source Dijkstra on the junctions', () => {
@@ -197,7 +199,7 @@ describe('walking network', () => {
     );
     expect(ring.chainCount).toBe(1);
     expect([ring.chainStart[0], ring.chainEnd[0], ring.chainMetres[0]]).toEqual([0, 0, 400]);
-    expect(ring.jTarget.length).toBe(0);
+    expect([...ring.jEnd].every((e, v) => e === ring.offset[v])).toBe(true);
     // From the middle of the first street to the middle of the third: 200 m either way.
     const a = snapOrigin(ring, { lat: LAT_N, lon: LON0 + 0.75 * d });
     const b = snapOrigin(ring, { lat: LAT_N + d, lon: LON0 + 0.75 * d });
