@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.13] — 2026-11-14
+
+- S044: the walk runs on the junctions only: the 131 k shape nodes of degree 2 (points along a street) are folded into chains between junctions when walk.bin is loaded (660 k chains, 1.32 M arcs instead of 1.58 M), and snapped stops, starts and cells enter and leave at their chain's junctions, walking straight along it to other points on the same chain. `walkPath` keeps the full graph. On foot every cell's minutes and stop and every stop's time are as before at gridexact's 8 starts (`bench/chains.ts`, within 1 ms of float rounding); `bench/gridexact.ts` 0 %, `bench/suite.ts --ci` passes. By bike 7–238 cells per start (of 1.63 M) are now earlier, by up to 36 min, none later: main dropped a ride from the start at a shape node where a stop's walk was no later and no longer, though only the ride's longer cap let it count there. TIMINGS
+
 ## [1.1.12] — 2026-11-14
 
 - S061: the CI speed probe (`bench/speed.ts`, run by `scripts/speed/check.mjs`) times the maps with the app's own walk caps on foot (`FASTEST_WALK`: walks up to 30 min at both ends) instead of the routing defaults (900/1800 s), so it now runs the map's two-pass walk (S043). Against 1.1.10 (before S043) on the same Windows desktop, median of 5: all maps 3682 → 3419 ms (−7.2 %), each map −1.5 to −12.9 %; against main (same code) all maps 3705 → 3933 ms, noise of this desktop (the CI runner decides). The old probe on main: all maps 5013 ms on that desktop. `check.mjs` starts the probe as `node --import tsx` (the `.bin/tsx` shell script could not be spawned on Windows). App code unchanged.
