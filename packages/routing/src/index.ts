@@ -81,7 +81,7 @@ export {
   loadWalkNetworkInSteps,
   nodeLonLat,
   NETWORK_WALK_SPEED_MPS,
-  sameEdgeMetres,
+  sameChainMetres,
   snapCells,
   snapCellsInSteps,
   snapOrigin,

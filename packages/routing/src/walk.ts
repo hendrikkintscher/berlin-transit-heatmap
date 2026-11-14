@@ -54,6 +54,31 @@ export interface WalkNetwork {
   readonly bucketRows: number;
   readonly bucketOffset: Int32Array;
   readonly bucketEdges: Int32Array;
+  /**
+   * Chains (S044): the streets between junctions (nodes of degree ≠ 2), through the shape
+   * nodes of degree 2 that carry no decision. A ring of shape nodes alone takes one of them as
+   * its junction. Chain c runs from chainStart[c] to chainEnd[c] (the same junction for a
+   * loop) over chainMetres[c].
+   */
+  readonly chainCount: number;
+  readonly chainStart: Int32Array;
+  readonly chainEnd: Int32Array;
+  readonly chainMetres: Float32Array;
+  /**
+   * Per edge its chain, and where edgeA sits along it in metres from the chain's start: as
+   * is when edgeA is the end nearer the start, negated when edgeB is (it is then at least
+   * the edge's length, so never 0). chainPos gives a point's place along the chain.
+   */
+  readonly edgeChain: Int32Array;
+  readonly edgePos: Float32Array;
+  /**
+   * The walk graph: the junctions, joined by their chains (a loop back to its own junction
+   * is left out, it never shortens a walk). Neighbours of junction v: jTarget[jOffset[v] ..
+   * jOffset[v+1]) with the chain's metres; shape nodes have none. walkPath keeps the full graph.
+   */
+  readonly jOffset: Int32Array;
+  readonly jTarget: Int32Array;
+  readonly jMetres: Float32Array;
 }
 
 export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
@@ -107,16 +132,21 @@ export function* loadWalkNetworkInSteps(
   const target = new Int32Array(2 * m);
   const metres = new Float32Array(2 * m);
   const edgeMetres = new Float32Array(m);
+  // The edge of each arc, for following chains (dropped after the load).
+  const arcEdge = new Int32Array(2 * m);
   yield* inPieces(m, (from, to) => {
     for (let k = from; k < to; k++) {
       const s = em[k];
       edgeMetres[k] = s;
+      arcEdge[fill[ea[k]]] = k;
       target[fill[ea[k]]] = eb[k];
       metres[fill[ea[k]]++] = s;
+      arcEdge[fill[eb[k]]] = k;
       target[fill[eb[k]]] = ea[k];
       metres[fill[eb[k]]++] = s;
     }
   });
+  const chains = yield* buildChains(n, m, ea, eb, edgeMetres, offset, arcEdge);
 
   const lat0 = n ? minLat : 0;
   const lon0 = n ? minLon : 0;
@@ -167,7 +197,171 @@ export function* loadWalkNetworkInSteps(
     bucketRows,
     bucketOffset,
     bucketEdges,
+    ...chains,
   };
+}
+
+type Chains = Pick<
+  WalkNetwork,
+  | 'chainCount'
+  | 'chainStart'
+  | 'chainEnd'
+  | 'chainMetres'
+  | 'edgeChain'
+  | 'edgePos'
+  | 'jOffset'
+  | 'jTarget'
+  | 'jMetres'
+>;
+
+/**
+ * The chains and the junction graph (S044): from a junction along each of its streets
+ * through the shape nodes to the next junction; then the rings of shape nodes alone, each
+ * from its first node. Street lengths are whole metres, so a chain's metres are exact.
+ */
+function* buildChains(
+  n: number,
+  m: number,
+  ea: Int32Array,
+  eb: Int32Array,
+  edgeMetres: Float32Array,
+  offset: Int32Array,
+  arcEdge: Int32Array,
+): Generator<void, Chains> {
+  // At most one chain per edge.
+  const st: ChainBuild = {
+    ea,
+    eb,
+    edgeMetres,
+    offset,
+    arcEdge,
+    edgeChain: new Int32Array(m).fill(-1),
+    edgePos: new Float32Array(m),
+    start: new Int32Array(m),
+    end: new Int32Array(m),
+    length: new Float32Array(m),
+    count: 0,
+  };
+  yield* inPieces(m, (from, to) => chainsFromEnds(st, from, to));
+  yield* inPieces(m, (from, to) => ringChains(st, from, to));
+  const { count, start, end, length } = st;
+  const { jOffset, jTarget, jMetres } = junctionGraph(n, st);
+  yield;
+  return {
+    chainCount: count,
+    chainStart: start.slice(0, count),
+    chainEnd: end.slice(0, count),
+    chainMetres: length.slice(0, count),
+    edgeChain: st.edgeChain,
+    edgePos: st.edgePos,
+    jOffset,
+    jTarget,
+    jMetres,
+  };
+}
+
+/**
+ * buildChains' state. Its loops are plain functions over this object: in the generator,
+ * closures over its locals ran about four times slower.
+ */
+interface ChainBuild {
+  ea: Int32Array;
+  eb: Int32Array;
+  edgeMetres: Float32Array;
+  offset: Int32Array;
+  arcEdge: Int32Array;
+  edgeChain: Int32Array;
+  edgePos: Float32Array;
+  start: Int32Array;
+  end: Int32Array;
+  length: Float32Array;
+  count: number;
+}
+
+/** The junctions joined by their chains, as walkFrom walks them (loops left out). */
+function junctionGraph(n: number, st: ChainBuild) {
+  const { count, start, end, length } = st;
+  const jOffset = new Int32Array(n + 1);
+  for (let c = 0; c < count; c++) {
+    const a = start[c];
+    const b = end[c];
+    if (a === b) continue;
+    jOffset[a + 1]++;
+    jOffset[b + 1]++;
+  }
+  for (let v = 0; v < n; v++) jOffset[v + 1] += jOffset[v];
+  const jfill = jOffset.slice(0, n);
+  const jTarget = new Int32Array(jOffset[n]);
+  const jMetres = new Float32Array(jOffset[n]);
+  for (let c = 0; c < count; c++) {
+    const a = start[c];
+    const b = end[c];
+    if (a === b) continue;
+    jTarget[jfill[a]] = b;
+    jMetres[jfill[a]++] = length[c];
+    jTarget[jfill[b]] = a;
+    jMetres[jfill[b]++] = length[c];
+  }
+  return { jOffset, jTarget, jMetres };
+}
+
+/**
+ * The chains with an end among edges from..to-1, each from that end's junction. Most edges
+ * join two junctions and are a chain alone, so this goes through the edges in order rather
+ * than from each junction (about half the time); an edge between two shape nodes is left for
+ * the chain that reaches it from an end, or for ringChains.
+ */
+function chainsFromEnds(st: ChainBuild, from: number, to: number): void {
+  const { ea, eb, offset, edgeChain } = st;
+  for (let e = from; e < to; e++) {
+    if (edgeChain[e] !== -1) continue;
+    const a = ea[e];
+    if (offset[a + 1] - offset[a] !== 2) follow(st, a, e, false);
+    else {
+      const b = eb[e];
+      if (offset[b + 1] - offset[b] !== 2) follow(st, b, e, false);
+    }
+  }
+}
+
+/** The rings of shape nodes alone among edges from..to-1: each from its first edge's edgeA. */
+function ringChains(st: ChainBuild, from: number, to: number): void {
+  const { ea, edgeChain } = st;
+  for (let e = from; e < to; e++) if (edgeChain[e] === -1) follow(st, ea[e], e, true);
+}
+
+/** Follows the chain from junction j along edge e through the shape nodes to its far junction. */
+function follow(st: ChainBuild, j: number, e: number, ring: boolean): void {
+  const { ea, eb, edgeMetres, offset, arcEdge, edgeChain, edgePos } = st;
+  const c = st.count++;
+  let prev = j;
+  let pos = 0;
+  let u: number;
+  for (;;) {
+    const len = edgeMetres[e];
+    const forward = ea[e] === prev;
+    edgeChain[e] = c;
+    edgePos[e] = forward ? pos : -(pos + len);
+    pos += len;
+    u = forward ? eb[e] : ea[e];
+    const k = offset[u];
+    if (offset[u + 1] - k !== 2 || (ring && u === j)) break;
+    // The shape node's other street (two streets between the same nodes are two edges).
+    const next = arcEdge[k] === e ? arcEdge[k + 1] : arcEdge[k];
+    // A shape node whose two arcs are one edge (a street from a node to itself) ends it.
+    if (next === e) break;
+    prev = u;
+    e = next;
+  }
+  st.start[c] = j;
+  st.end[c] = u;
+  st.length[c] = pos;
+}
+
+/** The place of a point `along` edge e (0..1 from edgeA), in metres from its chain's start. */
+export function chainPos(net: WalkNetwork, e: number, along: number): number {
+  const p = net.edgePos[e];
+  return p >= 0 ? p + along * net.edgeMetres[e] : -p - along * net.edgeMetres[e];
 }
 
 /** Node v's position as [lon, lat] (from its metres, to a few millimetres). */
@@ -252,20 +446,51 @@ export function snapOrigin(net: WalkNetwork, origin: { lat: number; lon: number 
 }
 
 /**
- * The walk between two snapped points on the same edge, straight along it
- * (Infinity when they are on different edges). Going through the edge's ends,
- * as Dijkstra does, would overstate it.
+ * The walk between two snapped points on the same chain, straight along it (Infinity when
+ * they are on different chains). The walk leaves a chain only at its junctions, so this is
+ * the one way between them that stays on it; round a loop the other way goes through its
+ * junction, which the walk itself covers.
  */
-export function sameEdgeMetres(net: WalkNetwork, a: Snaps, i: number, b: Snaps, j: number): number {
+export function sameChainMetres(
+  net: WalkNetwork,
+  a: Snaps,
+  i: number,
+  b: Snaps,
+  j: number,
+): number {
   const e = a.edge[i];
-  if (e < 0 || e !== b.edge[j]) return Infinity;
-  return Math.abs(a.along[i] - b.along[j]) * net.edgeMetres[e] + a.metres[i] + b.metres[j];
+  const f = b.edge[j];
+  if (e < 0 || f < 0) return Infinity;
+  if (e === f)
+    return Math.abs(a.along[i] - b.along[j]) * net.edgeMetres[e] + a.metres[i] + b.metres[j];
+  if (net.edgeChain[e] !== net.edgeChain[f]) return Infinity;
+  return (
+    Math.abs(chainPos(net, e, a.along[i]) - chainPos(net, f, b.along[j])) +
+    a.metres[i] +
+    b.metres[j]
+  );
 }
 
 /**
- * Grid cells on the network, kept per layout: each cell's edge (-1: none), the edge's two
- * ends and the walk from the cell to each (along the edge plus the way onto it). Where on
- * the edge a cell sits follows from those (see sameEdgeCellMetres), so it is not kept.
+ * The walk from snap slot i to the junctions of its chain: to the chain's start and to its
+ * end (along the chain plus the way onto it), or false when off the network.
+ */
+function toJunctions(net: WalkNetwork, snaps: Snaps, i: number, out: Float64Array): boolean {
+  const e = snaps.edge[i];
+  if (e < 0) return false;
+  const p = chainPos(net, e, snaps.along[i]);
+  const off = snaps.metres[i];
+  out[0] = off + p;
+  out[1] = off + net.chainMetres[net.edgeChain[e]] - p;
+  return true;
+}
+const ends = new Float64Array(2);
+
+/**
+ * Grid cells on the network, kept per layout: each cell's edge (-1: none), its chain's
+ * start and end junction (a, b) and the walk from the cell to each (along the chain plus the
+ * way onto it). Where on the chain a cell sits follows from those (see sameChainCellMetres),
+ * so it is not kept.
  */
 export interface CellSnaps {
   edge: Int32Array;
@@ -285,20 +510,19 @@ function* cellEnds(net: WalkNetwork, cells: Snaps): Generator<void, CellSnaps> {
     for (let k = from; k < to; k++) {
       const e = cells.edge[k];
       if (e < 0) continue;
-      const len = net.edgeMetres[e];
-      const off = cells.metres[k];
-      const d = cells.along[k] * len + off;
-      a[k] = net.edgeA[e];
-      b[k] = net.edgeB[e];
-      da[k] = d;
-      db[k] = len + 2 * off - d;
+      const c = net.edgeChain[e];
+      toJunctions(net, cells, k, ends);
+      a[k] = net.chainStart[c];
+      b[k] = net.chainEnd[c];
+      da[k] = ends[0];
+      db[k] = ends[1];
     }
   });
   return { edge: cells.edge, a, b, da, db };
 }
 
-/** sameEdgeMetres between snap slot i of `s` and grid cell k. */
-export function sameEdgeCellMetres(
+/** sameChainMetres between snap slot i of `s` and grid cell k. */
+export function sameChainCellMetres(
   net: WalkNetwork,
   s: Snaps,
   i: number,
@@ -306,11 +530,14 @@ export function sameEdgeCellMetres(
   k: number,
 ): number {
   const e = s.edge[i];
-  if (e < 0 || e !== cells.edge[k]) return Infinity;
-  const len = net.edgeMetres[e];
-  // da + db = len + 2 * off, and da = along * len + off.
+  const f = cells.edge[k];
+  if (e < 0 || f < 0) return Infinity;
+  const c = net.edgeChain[e];
+  if (c !== net.edgeChain[f]) return Infinity;
+  const len = net.chainMetres[c];
+  // da + db = len + 2 * off, and da = off + the cell's place along the chain.
   const off = Math.max(0, (cells.da[k] + cells.db[k] - len) / 2);
-  return Math.abs(s.along[i] * len - (cells.da[k] - off)) + s.metres[i] + off;
+  return Math.abs(chainPos(net, e, s.along[i]) - (cells.da[k] - off)) + s.metres[i] + off;
 }
 
 const stopSnaps = new WeakMap<WalkNetwork, WeakMap<PreparedTimetable, Snaps>>();
@@ -338,7 +565,7 @@ export function* snapStopsInSteps(net: WalkNetwork, tt: PreparedTimetable): Gene
   return snap;
 }
 
-/** Collects Dijkstra sources: a snapped point enters the network at both ends of its edge. */
+/** Collects Dijkstra sources: a snapped point enters the network at both junctions of its chain. */
 export class WalkSources {
   nodes: number[] = [];
   times: number[] = [];
@@ -351,15 +578,11 @@ export class WalkSources {
   }
   /** Adds snap slot i of `snaps`, reached at `time` after `walked` metres of walking, as `tag`. */
   add(net: WalkNetwork, snaps: Snaps, i: number, time: number, walked: number, tag: number): void {
-    const e = snaps.edge[i];
-    if (e < 0) return;
-    const len = net.edgeMetres[e];
-    const f = snaps.along[i];
-    const off = snaps.metres[i];
-    const da = off + f * len;
-    const db = off + (1 - f) * len;
-    this.push(net.edgeA[e], time + da * this.pace, walked + da, tag);
-    this.push(net.edgeB[e], time + db * this.pace, walked + db, tag);
+    if (!toJunctions(net, snaps, i, ends)) return;
+    const c = net.edgeChain[snaps.edge[i]];
+    const [da, db] = ends;
+    this.push(net.chainStart[c], time + da * this.pace, walked + da, tag);
+    this.push(net.chainEnd[c], time + db * this.pace, walked + db, tag);
   }
   private push(node: number, time: number, walked: number, tag: number) {
     this.nodes.push(node);
@@ -383,15 +606,11 @@ export function timeAt(
   pace: number,
   src?: Int32Array,
 ): number {
-  const e = snaps.edge[i];
-  if (e < 0) return Infinity;
-  const len = net.edgeMetres[e];
-  const f = snaps.along[i];
-  const off = snaps.metres[i];
-  const a = net.edgeA[e];
-  const b = net.edgeB[e];
-  const da = f * len + off;
-  const db = (1 - f) * len + off;
+  if (!toJunctions(net, snaps, i, ends)) return Infinity;
+  const c = net.edgeChain[snaps.edge[i]];
+  const a = net.chainStart[c];
+  const b = net.chainEnd[c];
+  const [da, db] = ends;
   let best = Infinity;
   if (labels.walk[a] + da <= maxWalkMetres) {
     best = labels.time[a] + da * pace;
@@ -478,7 +697,8 @@ export function walkFrom(
   };
   const { time, walk, source } = out;
   time.fill(Infinity);
-  const { offset, target, metres } = net;
+  // The junction graph: shape nodes carry no decision (S044).
+  const { jOffset: offset, jTarget: target, jMetres: metres } = net;
   // Dial's algorithm: a bucket per whole second, scanned in order. A node improved
   // within the bucket being scanned goes back into it, so the labels stay exact.
   // The latest time any source can still walk to.
@@ -692,7 +912,8 @@ export function walkFront(
     qnext[used] = head[bk];
     head[bk] = used++;
   }
-  const { offset, target, metres } = net;
+  // The junction graph: shape nodes carry no decision (S044).
+  const { jOffset: offset, jTarget: target, jMetres: metres } = net;
   for (let b = 0; b < bucketCount; b++) {
     for (let e = head[b]; e !== -1; e = head[b]) {
       head[b] = qnext[e];
@@ -917,7 +1138,8 @@ export function walkFrontFringe(
   const st = frontState(net);
   const out = st.front;
   const { time, walk, source, more } = out;
-  const { offset, target, metres } = net;
+  // The junction graph: shape nodes carry no decision (S044).
+  const { jOffset: offset, jTarget: target, jMetres: metres } = net;
   time.fill(Infinity);
   more.fill(-1);
   out.extra = 0;
