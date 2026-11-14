@@ -207,6 +207,17 @@
       "size": "S",
       "deps": [],
       "test": "scripts/speed/check.mjs times the maps with FASTEST_WALK and the speed job stays green on main",
+      "passes": true
+    },
+    {
+      "id": "S062",
+      "title": "Windows checkout: the web build fails with CRLF line endings (vite.config.ts early-start wants '<meta charset=\"UTF-8\" />\\n'; core.autocrlf=true is Git for Windows' default) and prettier flags every CRLF file; check out text as LF",
+      "kind": "fix",
+      "owner": "claude",
+      "priority": "low",
+      "size": "S",
+      "deps": [],
+      "test": "a fresh clone with core.autocrlf=true on Windows builds packages/web and passes pnpm check",
       "passes": false
     }
   ]

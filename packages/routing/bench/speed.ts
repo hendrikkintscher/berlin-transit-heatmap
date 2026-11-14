@@ -37,6 +37,15 @@ const web = webDir
 // (the app defaults to 5 km/h, which does not matter for comparing timings).
 const CELL_M = 50;
 const WALK_MPS = 4 / 3.6;
+// On foot the app counts walks up to 30 minutes at both ends (worker-runs.ts FASTEST_WALK,
+// 0.13.9); before S061 the probe walked the routing defaults (900/1800 s) and so missed
+// the map's own two-pass walk (S043). The worker module is not imported: it needs the
+// worker's footpaths, and main's copy may not export it.
+const FASTEST_WALK = {
+  maxInitialWalkSeconds: 1800,
+  maxFallbackWalkSeconds: 1800,
+  maxFinalWalkSeconds: 1800,
+} as const;
 const ORIGINS = {
   Alexanderplatz: { lat: 52.5219, lon: 13.4132 },
   'Spandau Rathaus': { lat: 52.5354, lon: 13.1998 },
@@ -67,7 +76,7 @@ const loadMs = performance.now() - t;
 const origins: Record<string, number> = {};
 const draw = { colours: 0, outlines: 0 };
 const mapFrom = (origin: { lat: number; lon: number }) => {
-  const w = { walk, walkSpeedMps: WALK_MPS };
+  const w = { walk, walkSpeedMps: WALK_MPS, ...FASTEST_WALK };
   const result = r.travelTimes(tt, origin, { trackLegs: true, typical: true, ...w });
   const grid = r.heatGrid(
     tt,
