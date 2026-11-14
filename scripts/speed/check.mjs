@@ -77,9 +77,11 @@ for (const [key, size] of Object.entries(sizes)) {
 // ---------- routing ----------
 if (args.data) {
   const probe = ({ routing, web }) => {
+    // Node with tsx's loader rather than node_modules/.bin/tsx, a shell script that
+    // spawnSync cannot start on Windows.
     const run = spawnSync(
-      join(root, 'packages/routing/node_modules/.bin/tsx'),
-      ['bench/speed.ts', routing, resolve(args.data), web],
+      process.execPath,
+      ['--import', 'tsx', 'bench/speed.ts', routing, resolve(args.data), web],
       { cwd: join(root, 'packages/routing'), encoding: 'utf8' },
     );
     if (run.status !== 0) throw new Error(`Speed probe failed for ${routing}:\n${run.stderr}`);
