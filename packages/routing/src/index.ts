@@ -77,11 +77,13 @@ export { decodeLines, encodeLines, hopCourse } from './linesbin';
 export { BIKE_ONLY_MAX_SECONDS, BIKE_SPEED_MPS, BIKE_STATION_SECONDS, bikeTimetable } from './bike';
 export type { CellSnaps, Snaps, WalkFront, WalkLabels, WalkNetwork } from './walk';
 export {
+  chainWalkNetwork,
+  chainWalkNetworkInSteps,
   loadWalkNetwork,
   loadWalkNetworkInSteps,
   nodeLonLat,
   NETWORK_WALK_SPEED_MPS,
-  sameEdgeMetres,
+  sameChainMetres,
   snapCells,
   snapCellsInSteps,
   snapOrigin,

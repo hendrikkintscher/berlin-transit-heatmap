@@ -13,14 +13,19 @@ import {
   loadWalkNetworkInSteps,
   NETWORK_WALK_SPEED_MPS,
   nodeLonLat,
+  chainWalkNetwork,
   snapCells,
   snapCellsInSteps,
+  sameChainMetres,
+  snapOrigin,
   snapPoint,
+  timeAt,
   travelTimes,
   walkFrom,
   walkFront,
   walkFrontFringe,
   walkPath,
+  WalkSources,
   type Timetable,
 } from '../src';
 
@@ -125,14 +130,129 @@ describe('walking network', () => {
     expect(snaps.edge[0]).toBe(-1);
   });
 
-  it('runs a capped multi-source Dijkstra', () => {
+  it('folds the shape nodes into chains between the junctions', () => {
+    // Junctions: the four street ends and the bridge's two ends; five chains between them.
+    expect(net.chainCount).toBe(5);
+    let arcs = 0;
+    for (let v = 0; v < net.nodeCount; v++) arcs += net.jEnd[v] - net.offset[v];
+    expect(arcs).toBe(10);
+    const chainOf = (a: number, b: number) => {
+      for (let e = 0; e < net.edgeCount; e++)
+        if (net.edgeA[e] === a && net.edgeB[e] === b) return net.edgeChain[e];
+      return -1;
+    };
+    const north = chainOf(4, 5);
+    expect([net.chainStart[north], net.chainEnd[north], net.chainMetres[north]]).toEqual([
+      0, 10, 1000,
+    ]);
+    expect(chainOf(0, 1)).toBe(north);
+    expect(chainOf(10, 11)).not.toBe(north);
+    // Shape nodes have no neighbours in the walk graph; node 10 has its three chains.
+    expect(net.jEnd[5] - net.offset[5]).toBe(0);
+    expect(net.jEnd[10] - net.offset[10]).toBe(3);
+  });
+
+  it('runs a capped multi-source Dijkstra on the junctions', () => {
     const l = walkFrom(net, [0, 20], [0, 50], [0, 0], [7, 8], 1200, 0.9);
-    expect(l.time[5]).toBeCloseTo(450, 3);
-    expect(l.source[5]).toBe(7);
-    expect(l.source[19]).toBe(8);
+    expect(l.time[10]).toBeCloseTo(900, 3);
+    expect(l.source[10]).toBe(7);
+    // Shape nodes get no label of their own; a point there reads the chain's junctions.
+    expect(l.time[5]).toBe(Infinity);
+    const p = snapOrigin(net, { lat: LAT_N, lon: LON0 + 5 * STEP });
+    const src = new Int32Array(1);
+    expect(timeAt(net, l, p, 0, 1200, 0.9, src)).toBeCloseTo(450, 0);
+    expect(src[0]).toBe(7);
+    const q = snapOrigin(net, { lat: LAT_N, lon: LON0 + 19 * STEP });
+    expect(timeAt(net, l, q, 0, 1200, 0.9, src)).toBeCloseTo(140, 0);
+    expect(src[0]).toBe(8);
     // Across the bridge: 1 km + 200 m from node 0, right at the 1200 m cap.
     expect(l.time[31]).toBeCloseTo(1080, 3);
-    expect(l.time[32]).toBe(Infinity);
+    expect(l.time[41]).toBe(Infinity);
+  });
+
+  it('walks straight along a chain between points on different edges', () => {
+    const a = snapOrigin(net, { lat: LAT_N, lon: LON0 + 2.5 * STEP });
+    const b = snapOrigin(net, { lat: LAT_N, lon: LON0 + 7.5 * STEP });
+    expect(sameChainMetres(net, a, 0, b, 0)).toBeCloseTo(500, 0);
+    // Past the bridge the street is another chain: the walk goes through node 10.
+    const c = snapOrigin(net, { lat: LAT_N, lon: LON0 + 12.5 * STEP });
+    expect(sameChainMetres(net, a, 0, c, 0)).toBe(Infinity);
+  });
+
+  it('takes a ring of shape nodes alone as one chain from one of them', () => {
+    // A square of four 100 m streets, every node of degree 2.
+    const d = 0.0009;
+    const ring = loadWalkNetwork(
+      encode(
+        [
+          [LON0, LAT_N],
+          [LON0 + 1.5 * d, LAT_N],
+          [LON0 + 1.5 * d, LAT_N + d],
+          [LON0, LAT_N + d],
+        ],
+        [
+          [0, 1, 100],
+          [1, 2, 100],
+          [2, 3, 100],
+          [3, 0, 100],
+        ],
+      ),
+    );
+    expect(ring.chainCount).toBe(1);
+    expect([ring.chainStart[0], ring.chainEnd[0], ring.chainMetres[0]]).toEqual([0, 0, 400]);
+    expect([...ring.jEnd].every((e, v) => e === ring.offset[v])).toBe(true);
+    // From the middle of the first street to the middle of the third: 200 m either way.
+    const a = snapOrigin(ring, { lat: LAT_N, lon: LON0 + 0.75 * d });
+    const b = snapOrigin(ring, { lat: LAT_N + d, lon: LON0 + 0.75 * d });
+    expect(sameChainMetres(ring, a, 0, b, 0)).toBeCloseTo(200, 0);
+    // From a quarter up the fourth street: 75 m one way round to the first street's middle
+    // (through the ring's junction, node 0), 325 m the other way along the chain.
+    const c = snapOrigin(ring, { lat: LAT_N + 0.25 * d, lon: LON0 });
+    const s = new WalkSources(1);
+    s.add(ring, c, 0, 0, 0, 1);
+    const l = walkFrom(ring, s.nodes, s.times, s.walked, s.tags, 1000, 1);
+    expect(timeAt(ring, l, a, 0, 1000, 1)).toBeCloseTo(75, 0);
+    expect(sameChainMetres(ring, c, 0, a, 0)).toBeCloseTo(325, 0);
+  });
+
+  it('walks the full graph until the chains are built, to the same times', () => {
+    const plain = loadWalkNetwork(encode(nodes, edges), false);
+    expect(plain.chainCount).toBe(plain.edgeCount);
+    const before = walkFrom(plain, [0, 20], [0, 50], [0, 0], [7, 8], 1200, 0.9);
+    // A shape node has its own label on the full graph.
+    expect(before.time[5]).toBeCloseTo(450, 3);
+    const p = snapOrigin(plain, { lat: LAT_N, lon: LON0 + 5 * STEP });
+    const at = timeAt(plain, before, p, 0, 1200, 0.9);
+    chainWalkNetwork(plain);
+    expect(plain.chainCount).toBe(5);
+    const after = walkFrom(plain, [0, 20], [0, 50], [0, 0], [7, 8], 1200, 0.9);
+    expect(after.time[5]).toBe(Infinity);
+    expect(timeAt(plain, after, p, 0, 1200, 0.9)).toBeCloseTo(at, 3);
+  });
+
+  it('moves grid cells snapped before the chains onto them', () => {
+    const bbox: [number, number, number, number] = [13.398, 52.497, 13.43, 52.503];
+    const fresh = snapCells(net, bbox, 40, 12);
+    const plain = loadWalkNetwork(encode(nodes, edges), false);
+    const early = snapCells(plain, bbox, 40, 12);
+    // Another grid half snapped when the chains come, finished after them.
+    const steps = snapCellsInSteps(plain, bbox, 20, 6);
+    for (let i = 0; i < 3; i++) steps.next();
+    chainWalkNetwork(plain);
+    let late = steps.next();
+    while (!late.done) late = steps.next();
+    const lateFresh = snapCells(net, bbox, 20, 6);
+    for (const [got, want] of [
+      [early, fresh],
+      [late.value, lateFresh],
+    ] as const) {
+      expect([...got.a]).toEqual([...want.a]);
+      expect([...got.b]).toEqual([...want.b]);
+      for (let k = 0; k < want.da.length; k++) {
+        expect(got.da[k]).toBeCloseTo(want.da[k], 2);
+        expect(got.db[k]).toBeCloseTo(want.db[k], 2);
+      }
+    }
   });
 
   it('walks to stops on the network, around the river', () => {
@@ -276,7 +396,8 @@ describe('walking network', () => {
       );
       // The way onto the edge, from the walks to its two ends.
       const e = cells.edge[k];
-      const off = e < 0 ? Infinity : (cells.da[k] + cells.db[k] - net.edgeMetres[e]) / 2;
+      const len = e < 0 ? 0 : net.chainMetres[net.edgeChain[e]];
+      const off = e < 0 ? Infinity : (cells.da[k] + cells.db[k] - len) / 2;
       expect(off).toBeCloseTo(one.metres[0], 1);
     }
   });
@@ -356,7 +477,19 @@ describe('unpacking in steps', () => {
     let s = steps.next();
     for (; !s.done; s = steps.next()) pauses++;
     expect(pauses).toBeGreaterThan(10);
-    expect(s.value).toEqual(loadWalkNetwork(bin));
+    // Field by field, the arrays byte for byte: a deep toEqual of all of them took ~3.5 s.
+    const got = s.value as unknown as Record<string, unknown>;
+    const want = loadWalkNetwork(bin, false) as unknown as Record<string, unknown>;
+    expect(Object.keys(got).sort()).toEqual(Object.keys(want).sort());
+    for (const k of Object.keys(want)) {
+      const a = got[k];
+      const b = want[k];
+      if (ArrayBuffer.isView(a) && ArrayBuffer.isView(b)) {
+        expect(a.constructor, k).toBe(b.constructor);
+        const bytes = (v: ArrayBufferView) => Buffer.from(v.buffer, v.byteOffset, v.byteLength);
+        expect(bytes(a).equals(bytes(b)), k).toBe(true);
+      } else expect(a, k).toEqual(b);
+    }
   });
 });
 
@@ -397,18 +530,30 @@ describe('walk.bin version 2', () => {
   });
 });
 
+/**
+ * One street of 31 nodes, 100 m apart. With `spurs` every inner node also has a 1 m side
+ * street, so each is a junction the walk labels (the street alone is one chain, S044).
+ */
+function street(lonStep: number, lat: number, spurs: boolean) {
+  const nodes = Array.from({ length: 31 }, (_, i): [number, number] => [LON0 + i * lonStep, lat]);
+  const edges = Array.from({ length: 30 }, (_, i): [number, number, number] => [i, i + 1, 100]);
+  if (spurs)
+    for (let i = 1; i < 30; i++) {
+      edges.push([i, nodes.length, 1]);
+      nodes.push([LON0 + i * lonStep, lat + 0.00001]);
+    }
+  return loadWalkNetwork(encode(nodes, edges));
+}
+
 // S041: one street, 100 m between nodes. A stop far down it is reached early (node 0 at 0 s),
 // a nearer one late (node 5 at 600 s): the early one's walks pass node 5 first, but end at
 // its cap, and the places behind must still get the later stop's walk.
 describe('a nearer stop reached later', () => {
   const LAT = 52.5;
   const lonStep = 100 / (111320 * Math.cos((LAT * Math.PI) / 180));
-  const line = loadWalkNetwork(
-    encode(
-      Array.from({ length: 31 }, (_, i): [number, number] => [LON0 + i * lonStep, LAT]),
-      Array.from({ length: 30 }, (_, i): [number, number, number] => [i, i + 1, 100]),
-    ),
-  );
+  const line = street(lonStep, LAT, false);
+  // For the labels at every node of the street.
+  const spurred = street(lonStep, LAT, true);
   const labelsAt = (f: ReturnType<typeof walkFront>, v: number) => {
     const out: [number, number, number][] = [];
     if (f.time[v] < Infinity) out.push([f.time[v], f.walk[v], f.source[v]]);
@@ -419,10 +564,10 @@ describe('a nearer stop reached later', () => {
 
   it('is not blocked by a farther stop reached earlier', () => {
     // The old walk: the early stop takes every node and stops at its 1500 m cap.
-    const one = walkFrom(line, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1);
+    const one = walkFrom(spurred, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1);
     expect(one.time[15]).toBe(1500);
     expect(one.time[16]).toBe(Infinity);
-    const f = walkFront(line, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1);
+    const f = walkFront(spurred, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1);
     // Both walks at node 10: the early one first, the later one with less walking.
     expect(labelsAt(f, 10)).toEqual([
       [1000, 1000, 1],
@@ -435,7 +580,7 @@ describe('a nearer stop reached later', () => {
   });
 
   it('drops a walk that is no earlier and no shorter', () => {
-    const f = walkFront(line, [0, 5], [0, 400], [0, 0], [1, 2], 1500, 1);
+    const f = walkFront(spurred, [0, 5], [0, 400], [0, 0], [1, 2], 1500, 1);
     // From node 5 on the later stop is earlier too (400 s < 500 s) and walks less: one
     // label per node. Before it, both count: the far stop is earlier, the near one closer.
     expect(labelsAt(f, 10)).toEqual([[900, 500, 2]]);
@@ -534,12 +679,7 @@ describe('walkFrontFringe', () => {
   it('gives the earliest label uncapped, and the later ones where they count', () => {
     const LAT = 52.5;
     const lonStep = 100 / (111320 * Math.cos((LAT * Math.PI) / 180));
-    const line = loadWalkNetwork(
-      encode(
-        Array.from({ length: 31 }, (_, i): [number, number] => [LON0 + i * lonStep, LAT]),
-        Array.from({ length: 30 }, (_, i): [number, number, number] => [i, i + 1, 100]),
-      ),
-    );
+    const line = street(lonStep, LAT, true);
     // Every node has a place right on it: the far stop's walk is too long from node 16 on.
     let marked: number[] = [];
     const f = walkFrontFringe(line, [0, 5], [0, 600], [0, 0], [1, 2], 1500, 1, (front, near) => {
@@ -574,7 +714,7 @@ describe('walkFrontFringe', () => {
     });
     expect(asked).toBe(false);
     expect(f.extra).toBe(0);
-    expect([f.time[5], f.walk[5], f.source[5]]).toEqual([450, 500, 7]);
+    expect([f.time[10], f.walk[10], f.source[10]]).toEqual([900, 1000, 7]);
   });
 
   it('agrees with walkFront wherever a place needs more than the earliest label', () => {

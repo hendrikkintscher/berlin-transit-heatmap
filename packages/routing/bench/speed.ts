@@ -64,14 +64,20 @@ const data =
     ? r.decodeTimetable(bin, r.decodeStopList(readFileSync(join(dataDir, 'stoplist.bin'))))
     : r.decodeTimetable(bin);
 const tt = r.loadTimetable(data as Parameters<Routing['loadTimetable']>[0]);
-const walk = r.loadWalkNetwork(
-  walkBin.buffer.slice(walkBin.byteOffset, walkBin.byteOffset + walkBin.byteLength),
-);
+// Since S044 the app loads the footpaths without their chains and builds them after the
+// first map with the footpaths (chainMs); the maps below walk on the chains.
+// (Older code has no chainWalkNetwork and ignores the `false`.)
+const chainWalk = (r as Partial<Routing>).chainWalkNetwork;
+const walkBuf = walkBin.buffer.slice(walkBin.byteOffset, walkBin.byteOffset + walkBin.byteLength);
+const walk = r.loadWalkNetwork(walkBuf, false);
 const layout = r.gridLayout({ cellSizeM: CELL_M });
 const snapAt = performance.now();
 r.snapCells(walk, layout.bbox, layout.cols, layout.rows);
 const snapMs = performance.now() - snapAt;
 const loadMs = performance.now() - t;
+t = performance.now();
+chainWalk?.(walk);
+const chainMs = chainWalk ? performance.now() - t : undefined;
 
 const origins: Record<string, number> = {};
 const draw = { colours: 0, outlines: 0 };
@@ -126,5 +132,5 @@ const list = 'encodeStopList' in r ? r.encodeStopList(data) : null;
 const binGzip = gz(r.encodeTimetable(data, list?.id));
 const listGzip = list ? gz(list.data) : 0;
 console.log(
-  JSON.stringify({ loadMs, snapMs, origins, ...(web ? { draw } : {}), binGzip, listGzip }),
+  JSON.stringify({ loadMs, snapMs, chainMs, origins, ...(web ? { draw } : {}), binGzip, listGzip }),
 );

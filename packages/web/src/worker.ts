@@ -16,6 +16,7 @@ import type { Direction, FromWorker, ToWorker } from './protocol';
 import { cancelSpecial, home, homeTrip, living, livingAt } from './worker-home';
 import { meetFields, paintDesert, paintDiff, paintShown, type Shown } from './worker-paint';
 import {
+  chainWalk,
   labelLines,
   lastTimetable,
   linesSettled,
@@ -51,6 +52,7 @@ import {
   tripMessage,
   warmGoalWalks,
   warmNextTrip,
+  warmTap,
 } from './worker-trips';
 
 /**
@@ -281,6 +283,17 @@ function sendMap(msg: ComputeMsg, made: Made, t0: number) {
   mapShown(tt);
 }
 
+/**
+ * The footpaths' chains (S044), then one trip on tap thrown away (warmTap), so the first
+ * real tap after them is as quick as the ones after it; not while a tap or a map waits.
+ */
+async function warmAfterChains(): Promise<void> {
+  if (!(await chainWalk())) return;
+  const [trips, compute] = [latestTrip, latestCompute];
+  await nextTask();
+  if (trips === latestTrip && compute === latestCompute) warmTap();
+}
+
 ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
   const msg = ev.data;
   try {
@@ -371,6 +384,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       );
     } else if (msg.type === 'compute') {
       latestCompute = msg.id;
+      // The footpaths this map walks (they may come while it is made).
+      const footpaths = walk;
       await nextTask();
       if (msg.id !== latestCompute) return;
       cancelSpecial();
@@ -396,6 +411,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       // them (S027); after the messages queued meanwhile, unless a tap or a newer map came.
       await nextTask();
       if (msg.id === latestCompute && latestTrip === tapped) warmGoalWalks();
+      // After the first map with the footpaths and the work above: their chains (S044).
+      if (footpaths && footpaths === walk) void warmAfterChains();
     } else if (msg.type === 'paint') {
       paintLast(msg.id, msg.limit);
     } else if (msg.type === 'living') {

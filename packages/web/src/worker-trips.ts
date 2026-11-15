@@ -887,6 +887,20 @@ export function tapTrip(msg: Extract<ToWorker, { type: 'trip' }>, nextHour?: Nex
 }
 
 /**
+ * A trip on tap made and thrown away, about a kilometre from the last map's start (S044).
+ * Building the footpaths' chains swaps the walk network's arrays, and the first walk after
+ * that ran about 25 ms slower in the browser (the engine reoptimises its code for them);
+ * this lets that happen before a real tap. The drawer's connection stays the shown one.
+ */
+export function warmTap(): void {
+  const origin = lastTrip?.runs[0]?.result.origin;
+  if (!origin) return;
+  const kept = [lastFound, lastFoundOn, lastFoundAt] as const;
+  tapTrip({ type: 'trip', id: -1, lat: origin.lat - 0.008, lon: origin.lon + 0.01 });
+  [lastFound, lastFoundOn, lastFoundAt] = kept;
+}
+
+/**
  * The feeder ride next to a trip on tap that walks long at an end (S045, decision 0012): the
  * same trip within the shown one's times with every walk at the ends capped at ten minutes,
  * kept when it arrives no later and walks 3+ minutes less. Run after the trip's message went

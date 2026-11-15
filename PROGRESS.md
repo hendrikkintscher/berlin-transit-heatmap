@@ -10,6 +10,18 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
+## 2026-11-15 · cloud · S044
+
+- S044 walk on the junction graph (#415, 1.1.13): shape nodes folded into chains, built in the worker after
+  the first footpath map; Node all maps 1283 → 1223 ms, on foot every cell and stop as main, by bike 7–238
+  cells per start earlier (none later).
+- The first browser timings showed the second tap slower: building the chains overwrote the network's fields
+  and V8 dropped the optimised walk code (`--trace-deopt`), so the first tap after them ran ~25 ms slower.
+  Fixed with a throwaway tap in idle time (`warmTap`). The footpath map's +8 % was noise (same code, the wait
+  before the worker starts the map varies 0.1–1.5 s). Shipped on Hendrik's yes. Open: S062.
+- The stop hook runs `check.sh` while a browser timing runs: it disturbs the timing, and the routing test
+  "unpacking in steps" times out under that load (passes alone).
+
 ## 2026-11-12 · cloud · S043
 
 - S043 map walk in two passes where every walk has one cap (#412, 1.1.11): on foot heatGrid 455 → ~360 ms in

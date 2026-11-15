@@ -1,7 +1,7 @@
 import { M_PER_DEG_LAT, metresPerDegLon } from './geo';
 import type { PreparedTimetable } from './prepare';
 import {
-  sameEdgeCellMetres,
+  sameChainCellMetres,
   snapCells,
   snapOrigin,
   snapStops,
@@ -134,8 +134,10 @@ export function heatGrid(
       for (let r = wr0; r < wr1; r++)
         for (let c = wc0; c < wc1; c++) {
           const k = r * cols + c;
-          if (cells.a[k] < 0) continue;
-          for (const v of [cells.a[k], cells.b[k]]) {
+          const e = cells.edge[k];
+          if (e < 0) continue;
+          // The ends of the cell's own edge: its walk to a source passes one of them.
+          for (const v of [net.edgeA[e], net.edgeB[e]]) {
             x0 = Math.min(x0, net.x[v]);
             x1 = Math.max(x1, net.x[v]);
             y0 = Math.min(y0, net.y[v]);
@@ -151,18 +153,20 @@ export function heatGrid(
         return dx * dx + dy * dy <= (fallbackM + extraM + 1) ** 2;
       };
     }
-    // Stops sitting on each edge, so cells on the same edge can walk straight to them.
-    const edgeStop = new Map<number, number[]>();
+    // Stops sitting on each chain, so cells on the same chain can walk straight to them.
+    const chainStop = new Map<number, number[]>();
     for (let s = 0; s < tt.stopCount; s++) {
       const t = stopSeconds[s];
       if (t === Infinity || t !== t || stopSnap.edge[s] < 0) continue;
       if (!near(tt.stopLat[s], tt.stopLon[s], 0)) continue;
       sources.add(net, stopSnap, s, t + egress, 0, s);
-      const list = edgeStop.get(stopSnap.edge[s]);
+      const c = net.edgeChain[stopSnap.edge[s]];
+      const list = chainStop.get(c);
       if (list) list.push(s);
-      else edgeStop.set(stopSnap.edge[s], [s]);
+      else chainStop.set(c, [s]);
     }
     const originEdge = originSnap ? originSnap.edge[0] : -1;
+    const originChain = originEdge >= 0 ? net.edgeChain[originEdge] : -1;
     // The origin may go further than the stops: it starts with that much "less walked".
     const originExtraM = Math.max(0, (opts.maxOriginSeconds ?? 0) * speeds.network - fallbackM);
     // Going further than the stops, the origin's own walk (riding all the way) counts as
@@ -202,15 +206,16 @@ export function heatGrid(
       : walkFront(net, sources.nodes, sources.times, sources.walked, sources.tags, fallbackM, pace);
     const { time, walk, source, more, xnext, xtime, xwalk, xsource } = front;
     const cellEdge = cells.edge;
-    // Edges with a stop on them, so the map lookup below runs only where it can find one.
-    const hasStop = new Uint8Array(net.edgeCount);
-    for (const e of edgeStop.keys()) hasStop[e] = 1;
+    // Chains with a stop on them, so the map lookup below runs only where it can find one.
+    const hasStop = new Uint8Array(net.chainCount);
+    for (const c of chainStop.keys()) hasStop[c] = 1;
+    const edgeChain = net.edgeChain;
     for (let o = 0; o < outCols * outRows; o++) {
       // The cell in the whole grid (snaps and ends are the whole grid's).
       const k = (wr0 + Math.floor(o / outCols)) * cols + wc0 + (o % outCols);
       const a = cellA[k];
       if (a < 0) continue;
-      const e = cellEdge[k];
+      const ch = edgeChain[cellEdge[k]];
       const da = cellDa[k];
       const db = cellDb[k];
       const b = cellB[k];
@@ -254,11 +259,11 @@ export function heatGrid(
           }
         }
       }
-      // Sources on the cell's own edge walk straight along it.
-      const here = hasStop[e] ? edgeStop.get(e) : undefined;
+      // Sources on the cell's own chain walk straight along it.
+      const here = hasStop[ch] ? chainStop.get(ch) : undefined;
       if (here)
         for (const s of here) {
-          w = sameEdgeCellMetres(net, stopSnap, s, cells, k);
+          w = sameChainCellMetres(net, stopSnap, s, cells, k);
           t = stopSeconds[s] + egress + w * pace;
           if (w <= maxM) {
             if (t < v) {
@@ -270,8 +275,8 @@ export function heatGrid(
             ffrom = s;
           }
         }
-      if (e === originEdge) {
-        w = sameEdgeCellMetres(net, originSnap!, 0, cells, k);
+      if (ch === originChain) {
+        w = sameChainCellMetres(net, originSnap!, 0, cells, k);
         t = w * pace;
         if (w <= maxM) {
           if (t < v) {

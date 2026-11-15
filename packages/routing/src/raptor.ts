@@ -1,7 +1,7 @@
 import { forStopsWithin, UNREACHED, type PreparedTimetable } from './prepare';
 import type { Origin, RoundLegs, StopProfile, TravelTimeOptions, TravelTimeResult } from './types';
 import {
-  sameEdgeMetres,
+  sameChainMetres,
   snapOrigin,
   snapStops,
   timeAt,
@@ -82,7 +82,7 @@ export function travelTimes(
           snaps.edge[s] >= 0
             ? Math.min(
                 timeAt(net, labels, snaps, s, maxM, pace),
-                sameEdgeMetres(net, originSnap, 0, snaps, s) * pace,
+                sameChainMetres(net, originSnap, 0, snaps, s) * pace,
               )
             : d / speeds.straight;
         if (t <= maxWalk) {
