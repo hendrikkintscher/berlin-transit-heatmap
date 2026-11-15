@@ -31,7 +31,7 @@
       "size": "M",
       "deps": [],
       "test": "bench/gridexact.ts 0 %, bench/suite.ts --ci exits 0, cells and stop times unchanged on the 8 gridexact starts; timings before/after in the PR",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S046",
