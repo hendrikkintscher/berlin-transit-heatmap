@@ -140,6 +140,16 @@ describe('tapAlternative (S045)', () => {
     expect(alt!.trip.journeys[0]!.arrive).toBe(shown.journeys[0]!.arrive);
   });
 
+  it("is still the shown trip's after the warm-up tap (S044)", () => {
+    trips.setLastTrip(feederMap(989));
+    const shown = trips.tapTrip({ ...tap, ...far });
+    const alt = trips.tapAlternative();
+    trips.warmTap();
+    expect(trips.tapAlternative()).toEqual(alt);
+    // The next real tap is as without the warm-up.
+    expect(trips.tapTrip({ ...tap, ...far })).toEqual(shown);
+  });
+
   it('finds nothing when the other ride arrives later', () => {
     trips.setLastTrip(feederMap(1000));
     trips.tapTrip({ ...tap, ...far });

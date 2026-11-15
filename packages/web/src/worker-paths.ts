@@ -79,12 +79,13 @@ let chaining = false;
 /**
  * The footpaths' chains (S044), once a map with the footpaths is out: from then on the maps
  * walk on the junctions only. In slices, so a tap or a map meanwhile waits one slice at most;
- * the first map with the footpaths does not wait for them at all.
+ * the first map with the footpaths does not wait for them at all. True when this call built them.
  */
-export async function chainWalk(): Promise<void> {
-  if (!walk || chaining) return;
+export async function chainWalk(): Promise<boolean> {
+  if (!walk || chaining) return false;
   chaining = true;
   await inSlices(chainWalkNetworkInSteps(walk));
+  return true;
 }
 
 /**

@@ -52,6 +52,7 @@ import {
   tripMessage,
   warmGoalWalks,
   warmNextTrip,
+  warmTap,
 } from './worker-trips';
 
 /**
@@ -282,6 +283,17 @@ function sendMap(msg: ComputeMsg, made: Made, t0: number) {
   mapShown(tt);
 }
 
+/**
+ * The footpaths' chains (S044), then one trip on tap thrown away (warmTap), so the first
+ * real tap after them is as quick as the ones after it; not while a tap or a map waits.
+ */
+async function warmAfterChains(): Promise<void> {
+  if (!(await chainWalk())) return;
+  const [trips, compute] = [latestTrip, latestCompute];
+  await nextTask();
+  if (trips === latestTrip && compute === latestCompute) warmTap();
+}
+
 ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
   const msg = ev.data;
   try {
@@ -400,7 +412,7 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       await nextTask();
       if (msg.id === latestCompute && latestTrip === tapped) warmGoalWalks();
       // After the first map with the footpaths and the work above: their chains (S044).
-      if (footpaths && footpaths === walk) void chainWalk();
+      if (footpaths && footpaths === walk) void warmAfterChains();
     } else if (msg.type === 'paint') {
       paintLast(msg.id, msg.limit);
     } else if (msg.type === 'living') {
