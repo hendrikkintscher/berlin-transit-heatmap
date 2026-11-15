@@ -13,6 +13,7 @@ import {
   loadWalkNetworkInSteps,
   NETWORK_WALK_SPEED_MPS,
   nodeLonLat,
+  chainWalkNetwork,
   snapCells,
   snapCellsInSteps,
   sameChainMetres,
@@ -212,6 +213,46 @@ describe('walking network', () => {
     const l = walkFrom(ring, s.nodes, s.times, s.walked, s.tags, 1000, 1);
     expect(timeAt(ring, l, a, 0, 1000, 1)).toBeCloseTo(75, 0);
     expect(sameChainMetres(ring, c, 0, a, 0)).toBeCloseTo(325, 0);
+  });
+
+  it('walks the full graph until the chains are built, to the same times', () => {
+    const plain = loadWalkNetwork(encode(nodes, edges), false);
+    expect(plain.chainCount).toBe(plain.edgeCount);
+    const before = walkFrom(plain, [0, 20], [0, 50], [0, 0], [7, 8], 1200, 0.9);
+    // A shape node has its own label on the full graph.
+    expect(before.time[5]).toBeCloseTo(450, 3);
+    const p = snapOrigin(plain, { lat: LAT_N, lon: LON0 + 5 * STEP });
+    const at = timeAt(plain, before, p, 0, 1200, 0.9);
+    chainWalkNetwork(plain);
+    expect(plain.chainCount).toBe(5);
+    const after = walkFrom(plain, [0, 20], [0, 50], [0, 0], [7, 8], 1200, 0.9);
+    expect(after.time[5]).toBe(Infinity);
+    expect(timeAt(plain, after, p, 0, 1200, 0.9)).toBeCloseTo(at, 3);
+  });
+
+  it('moves grid cells snapped before the chains onto them', () => {
+    const bbox: [number, number, number, number] = [13.398, 52.497, 13.43, 52.503];
+    const fresh = snapCells(net, bbox, 40, 12);
+    const plain = loadWalkNetwork(encode(nodes, edges), false);
+    const early = snapCells(plain, bbox, 40, 12);
+    // Another grid half snapped when the chains come, finished after them.
+    const steps = snapCellsInSteps(plain, bbox, 20, 6);
+    for (let i = 0; i < 3; i++) steps.next();
+    chainWalkNetwork(plain);
+    let late = steps.next();
+    while (!late.done) late = steps.next();
+    const lateFresh = snapCells(net, bbox, 20, 6);
+    for (const [got, want] of [
+      [early, fresh],
+      [late.value, lateFresh],
+    ] as const) {
+      expect([...got.a]).toEqual([...want.a]);
+      expect([...got.b]).toEqual([...want.b]);
+      for (let k = 0; k < want.da.length; k++) {
+        expect(got.da[k]).toBeCloseTo(want.da[k], 2);
+        expect(got.db[k]).toBeCloseTo(want.db[k], 2);
+      }
+    }
   });
 
   it('walks to stops on the network, around the river', () => {
@@ -436,7 +477,7 @@ describe('unpacking in steps', () => {
     let s = steps.next();
     for (; !s.done; s = steps.next()) pauses++;
     expect(pauses).toBeGreaterThan(10);
-    expect(s.value).toEqual(loadWalkNetwork(bin));
+    expect(s.value).toEqual(loadWalkNetwork(bin, false));
   });
 });
 

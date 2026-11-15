@@ -133,6 +133,7 @@ if (args.data) {
       loadMs: at((r) => r.loadMs),
       // Older probes did not time these.
       snapMs: at((r) => r.snapMs),
+      chainMs: at((r) => r.chainMs),
       origins: Object.fromEntries(keys((r) => r.origins).map((o) => [o, at((r) => r.origins[o])])),
       draw: Object.fromEntries(keys((r) => r.draw).map((d) => [d, at((r) => r.draw?.[d])])),
     };
@@ -175,6 +176,15 @@ if (args.data) {
   row('Load timetable and footpaths', pr.loadMs, main?.loadMs, ms, limit(main?.loadMs));
   if (pr.snapMs !== undefined)
     row('of which snapping cells', pr.snapMs, main?.snapMs, ms, limit(main?.snapMs));
+  // Built after the first map with the footpaths (S044), so not part of the load above.
+  if (pr.chainMs !== undefined)
+    row(
+      'Chains, after the first footpath map',
+      pr.chainMs,
+      main?.chainMs,
+      ms,
+      limit(main?.chainMs),
+    );
   // The file sizes are exact, so any growth beyond a few bytes counts: an hour's file, and
   // what a first visit downloads (that and the stop list, 0.13.13).
   row('Timetable file (gzipped)', pr.binGzip, main?.binGzip, kb, main ? main.binGzip * 1.005 : 0);

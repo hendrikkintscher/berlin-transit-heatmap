@@ -58,7 +58,8 @@ export interface WalkNetwork {
    * Chains (S044): the streets between junctions (nodes of degree ≠ 2), through the shape
    * nodes of degree 2 that carry no decision. A ring of shape nodes alone takes one of them as
    * its junction. Chain c runs from chainStart[c] to chainEnd[c] (the same junction for a
-   * loop) over chainMetres[c].
+   * loop) over chainMetres[c]. Until chainWalkNetwork has run, every edge is a chain of its
+   * own and the walk graph is the full graph, as before S044.
    */
   readonly chainCount: number;
   readonly chainStart: Int32Array;
@@ -82,8 +83,11 @@ export interface WalkNetwork {
   readonly jMetres: Float32Array;
 }
 
-export function loadWalkNetwork(data: ArrayBuffer | Uint8Array): WalkNetwork {
-  return finish(loadWalkNetworkInSteps(data));
+/** The network, with its chains unless `chains` is false (see chainWalkNetwork). */
+export function loadWalkNetwork(data: ArrayBuffer | Uint8Array, chains = true): WalkNetwork {
+  const net = finish(loadWalkNetworkInSteps(data));
+  if (chains) chainWalkNetwork(net);
+  return net;
 }
 
 /** Runs a generator made of steps to its end. */
@@ -95,8 +99,8 @@ function finish<T>(steps: Generator<void, T>): T {
 }
 
 /**
- * loadWalkNetwork in steps: the generator pauses every millisecond or so, so a worker can
- * answer other messages in between (see snapCellsInSteps).
+ * loadWalkNetwork in steps, without the chains: the generator pauses every millisecond or
+ * so, so a worker can answer other messages in between (see snapCellsInSteps).
  */
 export function* loadWalkNetworkInSteps(
   data: ArrayBuffer | Uint8Array,
@@ -133,21 +137,32 @@ export function* loadWalkNetworkInSteps(
   const target = new Int32Array(2 * m);
   const metres = new Float32Array(2 * m);
   const edgeMetres = new Float32Array(m);
-  // The edge of each arc, for following chains (dropped after the load).
-  const arcEdge = new Int32Array(2 * m);
   yield* inPieces(m, (from, to) => {
     for (let k = from; k < to; k++) {
       const s = em[k];
       edgeMetres[k] = s;
-      arcEdge[fill[ea[k]]] = k;
       target[fill[ea[k]]] = eb[k];
       metres[fill[ea[k]]++] = s;
-      arcEdge[fill[eb[k]]] = k;
       target[fill[eb[k]]] = ea[k];
       metres[fill[eb[k]]++] = s;
     }
   });
-  const chains = yield* buildChains(n, m, ea, eb, edgeMetres, offset, arcEdge);
+  // One chain per edge until chainWalkNetwork: the walk graph is the full graph.
+  const edgeChain = new Int32Array(m);
+  yield* inPieces(m, (from, to) => {
+    for (let k = from; k < to; k++) edgeChain[k] = k;
+  });
+  const chains: Chains = {
+    chainCount: m,
+    chainStart: ea,
+    chainEnd: eb,
+    chainMetres: edgeMetres,
+    edgeChain,
+    edgePos: new Float32Array(m),
+    jEnd: offset.subarray(1),
+    jTarget: target,
+    jMetres: metres,
+  };
 
   const lat0 = n ? minLat : 0;
   const lon0 = n ? minLon : 0;
@@ -214,6 +229,59 @@ type Chains = Pick<
   | 'jTarget'
   | 'jMetres'
 >;
+
+const chained = new WeakSet<WalkNetwork>();
+
+/**
+ * Folds the shape nodes into chains (S044) and walks on the junctions from then on; the
+ * grid cells snapped so far get their ends at the new chains. Loading leaves this out:
+ * the first map with the footpaths need not wait for it, and the worker runs it after
+ * that map (it takes about as long as unpacking walk.bin). Runs once per network.
+ */
+export function chainWalkNetwork(net: WalkNetwork): void {
+  finish(chainWalkNetworkInSteps(net));
+}
+
+/**
+ * chainWalkNetwork in steps. The network and its cells change only at the end, all at
+ * once, so whatever runs between two steps sees either the old graph or the new one.
+ */
+export function* chainWalkNetworkInSteps(net: WalkNetwork): Generator<void, void> {
+  if (chained.has(net)) return;
+  const { nodeCount: n, edgeCount: m, edgeA: ea, edgeB: eb, edgeMetres, offset } = net;
+  // The edge of each arc, for following chains (dropped afterwards).
+  const fill = offset.slice(0, n);
+  const arcEdge = new Int32Array(2 * m);
+  yield* inPieces(m, (from, to) => arcEdges(ea, eb, fill, arcEdge, from, to));
+  const chains = yield* buildChains(n, m, ea, eb, edgeMetres, offset, arcEdge);
+  const byLayout = cellSnaps.get(net);
+  const cells = [...(byLayout?.values() ?? [])];
+  const ends: CellEnds[] = [];
+  for (const c of cells) ends.push(yield* rechainCells(net, chains, c));
+  // A second run may have finished meanwhile.
+  if (chained.has(net)) return;
+  Object.assign(net, chains);
+  cells.forEach((c, i) => Object.assign(c, ends[i]));
+  // Grids snapped while this ran.
+  for (const c of byLayout?.values() ?? [])
+    if (!cells.includes(c)) Object.assign(c, finish(rechainCells(net, chains, c)));
+  chained.add(net);
+}
+
+/** Each arc's edge among edges from..to-1, in the order the load filled the arcs. */
+function arcEdges(
+  ea: Int32Array,
+  eb: Int32Array,
+  fill: Int32Array,
+  arcEdge: Int32Array,
+  from: number,
+  to: number,
+): void {
+  for (let k = from; k < to; k++) {
+    arcEdge[fill[ea[k]]++] = k;
+    arcEdge[fill[eb[k]]++] = k;
+  }
+}
 
 /**
  * The chains and the junction graph (S044): from a junction along each of its streets
@@ -511,6 +579,49 @@ function* cellEnds(net: WalkNetwork, cells: Snaps): Generator<void, CellSnaps> {
     }
   });
   return { edge: cells.edge, a, b, da, db };
+}
+
+type CellEnds = Pick<CellSnaps, 'a' | 'b' | 'da' | 'db'>;
+
+/**
+ * Cell ends made at one-edge chains, moved to `ch`'s chains: the way onto the edge and the
+ * place along it follow from the old ends (da + db = edge length + 2 * the way onto it).
+ */
+function* rechainCells(net: WalkNetwork, ch: Chains, cells: CellSnaps): Generator<void, CellEnds> {
+  const n = cells.edge.length;
+  const out: CellEnds = {
+    a: new Int32Array(n).fill(-1),
+    b: new Int32Array(n).fill(-1),
+    da: new Float32Array(n),
+    db: new Float32Array(n),
+  };
+  yield* inPieces(n, (from, to) => rechainRange(net.edgeMetres, ch, cells, out, from, to));
+  return out;
+}
+
+function rechainRange(
+  edgeMetres: Float32Array,
+  ch: Chains,
+  cells: CellSnaps,
+  out: CellEnds,
+  from: number,
+  to: number,
+): void {
+  const { edge, da, db } = cells;
+  const { edgeChain, edgePos, chainStart, chainEnd, chainMetres } = ch;
+  for (let k = from; k < to; k++) {
+    const e = edge[k];
+    if (e < 0) continue;
+    const off = Math.max(0, (da[k] + db[k] - edgeMetres[e]) / 2);
+    const f = da[k] - off;
+    const pe = edgePos[e];
+    const pos = pe >= 0 ? pe + f : -pe - f;
+    const c = edgeChain[e];
+    out.a[k] = chainStart[c];
+    out.b[k] = chainEnd[c];
+    out.da[k] = off + pos;
+    out.db[k] = off + chainMetres[c] - pos;
+  }
 }
 
 /** sameChainMetres between snap slot i of `s` and grid cell k. */
@@ -1494,7 +1605,10 @@ export function* snapCellsInSteps(
     }
   });
   // Only the cell ends are kept: along and metres follow from them.
+  const chainsAt = net.edgeChain;
   const ends = yield* cellEnds(net, snap);
+  // The chains came meanwhile (chainWalkNetworkInSteps), after these ends were begun.
+  if (net.edgeChain !== chainsAt) Object.assign(ends, finish(rechainCells(net, net, ends)));
   byLayout.set(key, ends);
   return ends;
 }

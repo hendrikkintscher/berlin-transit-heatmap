@@ -16,6 +16,7 @@ import type { Direction, FromWorker, ToWorker } from './protocol';
 import { cancelSpecial, home, homeTrip, living, livingAt } from './worker-home';
 import { meetFields, paintDesert, paintDiff, paintShown, type Shown } from './worker-paint';
 import {
+  chainWalk,
   labelLines,
   lastTimetable,
   linesSettled,
@@ -371,6 +372,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       );
     } else if (msg.type === 'compute') {
       latestCompute = msg.id;
+      // The footpaths this map walks (they may come while it is made).
+      const footpaths = walk;
       await nextTask();
       if (msg.id !== latestCompute) return;
       cancelSpecial();
@@ -396,6 +399,8 @@ ctx.onmessage = async (ev: MessageEvent<ToWorker>) => {
       // them (S027); after the messages queued meanwhile, unless a tap or a newer map came.
       await nextTask();
       if (msg.id === latestCompute && latestTrip === tapped) warmGoalWalks();
+      // After the first map with the footpaths and the work above: their chains (S044).
+      if (footpaths && footpaths === walk) void chainWalk();
     } else if (msg.type === 'paint') {
       paintLast(msg.id, msg.limit);
     } else if (msg.type === 'living') {
