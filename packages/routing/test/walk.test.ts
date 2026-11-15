@@ -477,7 +477,19 @@ describe('unpacking in steps', () => {
     let s = steps.next();
     for (; !s.done; s = steps.next()) pauses++;
     expect(pauses).toBeGreaterThan(10);
-    expect(s.value).toEqual(loadWalkNetwork(bin, false));
+    // Field by field, the arrays byte for byte: a deep toEqual of all of them took ~3.5 s.
+    const got = s.value as unknown as Record<string, unknown>;
+    const want = loadWalkNetwork(bin, false) as unknown as Record<string, unknown>;
+    expect(Object.keys(got).sort()).toEqual(Object.keys(want).sort());
+    for (const k of Object.keys(want)) {
+      const a = got[k];
+      const b = want[k];
+      if (ArrayBuffer.isView(a) && ArrayBuffer.isView(b)) {
+        expect(a.constructor, k).toBe(b.constructor);
+        const bytes = (v: ArrayBufferView) => Buffer.from(v.buffer, v.byteOffset, v.byteLength);
+        expect(bytes(a).equals(bytes(b)), k).toBe(true);
+      } else expect(a, k).toEqual(b);
+    }
   });
 });
 
