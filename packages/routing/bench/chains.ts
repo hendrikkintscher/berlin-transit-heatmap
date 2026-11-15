@@ -3,6 +3,8 @@
 // stop times (the access walk on tap, leaving at 10:00, and the typical map's pass) and the
 // whole 50 m heatGrid, its seconds and the stop each cell comes from. Prints what differs and
 // the median times of each. Exits 1 if anything differs by more than float rounding (1 ms).
+// Also the first map with the footpaths, made before the chains are built: its cells must be
+// main's exactly, by bike too.
 // Usage (in packages/routing): tsx bench/chains.ts <base routing src dir> [runs=3]
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -23,6 +25,7 @@ const tt = (await timetable('weekday', 10, 'depart', 'weekday-10'))!;
 // Each side walks its own network object (main's has no chains).
 const bin = readFileSync('.data/walk.bin');
 const baseWalk = base.loadWalkNetwork(bin);
+const plainWalk = loadWalkNetwork(bin, false);
 const STARTS = [
   ['Alexanderplatz', 52.5219, 13.4132],
   ['Spandau', 52.5354, 13.1998],
@@ -54,6 +57,7 @@ console.log(
 for (const mode of ['depart', 'bike'] as const) {
   const ob = modeOptions(mode, baseWalk);
   const on = modeOptions(mode, walk);
+  const op = modeOptions(mode, plainWalk);
   const t = {
     tapB: [] as number[],
     tapN: [] as number[],
@@ -92,6 +96,12 @@ for (const mode of ['depart', 'bike'] as const) {
       a = timed(() => base.heatGrid(tt, rb, optsB), gb);
       b = timed(() => heatGrid(tt, rb, optsN), gn);
     }
+    // Before the chains: main's map, cell for cell.
+    const p = heatGrid(tt, rb, { cellSizeM: 50, trackStops: true, ...op });
+    let plain = 0;
+    for (let k = 0; k < a.seconds.length; k++)
+      if (a.seconds[k] !== p.seconds[k] || a.stop![k] !== p.stop![k]) plain++;
+    bad += plain;
     let diff = 0;
     let bits = 0;
     let stop = 0;
@@ -113,7 +123,8 @@ for (const mode of ['depart', 'bike'] as const) {
     }
     bad += diff + stop + stopDiff;
     console.log(
-      `${mode} ${name}: stops ${stopDiff} differ (worst ${stopWorst.toFixed(1)} s); ` +
+      `${mode} ${name}: before the chains ${plain} cells differ; ` +
+        `stops ${stopDiff} differ (worst ${stopWorst.toFixed(1)} s); ` +
         `${a.seconds.length} cells, ${diff} differ (worst ${worst.toFixed(1)} s), ` +
         `${bits} by float rounding, ${stop} other stop` +
         (diff ? `; ${better} of the ${diff} earlier here` : ''),
