@@ -10,6 +10,15 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
+## 2026-11-15 · local · S061, S044
+
+- S061 speed probe times the maps with the app's FASTEST_WALK (#414, 1.1.12); `check.mjs` runs the probe as
+  `node --import tsx` (the `.bin/tsx` shell script cannot be spawned on Windows).
+- S044 built on Hendrik's PC (Node 26 and pnpm via winget/npm, Edge as `CHROMIUM`). The first version made
+  the footpath load +58 ms on CI; on Hendrik's choice the chains are built after the first footpath map
+  (`chainWalkNetworkInSteps`), load back to +1.2 %. Size accepted (~790 lines).
+- Browser timings moved to the cloud: Blender/DaVinci keep the PC at ~74 % CPU, local timings are unusable.
+
 ## 2026-11-15 · cloud · S044
 
 - S044 walk on the junction graph (#415, 1.1.13): shape nodes folded into chains, built in the worker after
