@@ -1,5 +1,4 @@
-# Normalize line endings; bash scripts must stay LF or hooks break on Windows.
-* text=auto
-*.sh text eol=lf
-*.md text eol=lf
-*.json text eol=lf
+# Every text file is checked out with LF line endings, also where core.autocrlf=true
+# (Git for Windows' default): the web build reads index.html line by line and prettier
+# wants LF (S062). Bash scripts break on Windows with CRLF anyway.
+* text=auto eol=lf

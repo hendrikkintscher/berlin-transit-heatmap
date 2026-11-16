@@ -18,7 +18,9 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - The first browser timings showed the second tap slower: building the chains overwrote the network's fields
   and V8 dropped the optimised walk code (`--trace-deopt`), so the first tap after them ran ~25 ms slower.
   Fixed with a throwaway tap in idle time (`warmTap`). The footpath map's +8 % was noise (same code, the wait
-  before the worker starts the map varies 0.1–1.5 s). Shipped on Hendrik's yes. Open: S062.
+  before the worker starts the map varies 0.1–1.5 s). Shipped on Hendrik's yes.
+- S062 LF checkout (#416, 1.1.14): `* text=auto eol=lf`; tested as a fresh clone with `core.autocrlf=true` on
+  Linux (Hendrik accepted that as the test). Open tasks: none.
 - The stop hook runs `check.sh` while a browser timing runs: it disturbs the timing, and the routing test
   "unpacking in steps" times out under that load (passes alone).
 
