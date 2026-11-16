@@ -4,6 +4,7 @@
 
 import type maplibregl from 'maplibre-gl';
 import type { GeoJSONSource } from 'maplibre-gl';
+import { distanceM } from '@berlin-transit-heatmap/routing';
 import { MODE_COLORS } from './colors';
 
 const ARROW_SOURCE = 'trip-arrows';
@@ -12,16 +13,10 @@ const ARROW_PX = 20;
 
 type Coord = [number, number];
 
-/** Rough metres between two lon/lat points (fine at city scale). */
-function metres(a: Coord, b: Coord): number {
-  const k = Math.cos((a[1] * Math.PI) / 180);
-  return Math.hypot((b[0] - a[0]) * k, b[1] - a[1]) * 111_320;
-}
-
 /** The point `share` of the way along a line, and the compass bearing there (degrees). */
 export function pointAlong(line: Coord[], share: number): { at: Coord; bearing: number } | null {
   if (line.length < 2) return null;
-  const lengths = line.slice(1).map((p, i) => metres(line[i]!, p));
+  const lengths = line.slice(1).map((p, i) => distanceM(line[i]![1], line[i]![0], p[1], p[0]));
   const total = lengths.reduce((a, b) => a + b, 0);
   if (!total) return null;
   let left = total * share;

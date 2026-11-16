@@ -2,7 +2,7 @@
 // and walking minutes and the stops along the way.
 
 import { MODE_COLORS } from './colors';
-import { escapeHtml, eveningClock, shortStop } from './format';
+import { escapeHtml, eveningClock, shortStop, twoDigitClock } from './format';
 import { stopName } from './stop-name';
 import { t } from './i18n';
 import { icon } from './icons';
@@ -239,7 +239,7 @@ export const arrivedBy = (s: number) => Math.ceil(s / 60) * 60;
 /** "10:02" (seconds of the day, past midnight too). */
 export const hhmm = (s: number) => {
   const m = Math.floor(s / 60);
-  return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  return twoDigitClock(Math.floor(m / 60) % 24, m % 60);
 };
 
 type Legs = NonNullable<Trip['journeys'][number]>['legs'];

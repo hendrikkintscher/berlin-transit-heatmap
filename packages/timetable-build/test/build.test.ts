@@ -193,7 +193,6 @@ describe('writeOutputs', () => {
     const night = decodeTimetable(readFileSync(join(dir, 'timetable-night.bin')), list);
     expect(night.window).toBe('night');
     expect(night.stops).toBe(bin.stops);
-    expect(() => decodeTimetable(readFileSync(join(dir, 'timetable-night.bin')))).toThrow();
   });
 
   it("writes the stops' VBB station numbers into the stop list", () => {

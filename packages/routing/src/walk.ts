@@ -3,7 +3,7 @@ import type { PreparedTimetable } from './prepare';
 import { decodeWalkBinInSteps, inPieces } from './walkbin';
 
 /**
- * Contract 3: the walking network (`walk.bin`, format in walkbin.ts), built by
+ * The walking network (`walk.bin`, format in walkbin.ts), built by
  * timetable-build from OpenStreetMap footpaths and streets.
  */
 
@@ -733,22 +733,6 @@ export interface WalkLabels {
   source: Int32Array;
 }
 
-const labelCache = new WeakMap<WalkNetwork, WalkLabels>();
-
-/** Label arrays reused between walks on the same network (the result of the previous walk is overwritten). */
-export function sharedLabels(net: WalkNetwork): WalkLabels {
-  let l = labelCache.get(net);
-  if (!l) {
-    l = {
-      time: new Float64Array(net.nodeCount),
-      walk: new Float32Array(net.nodeCount),
-      source: new Int32Array(net.nodeCount),
-    };
-    labelCache.set(net, l);
-  }
-  return l;
-}
-
 interface WalkQueue {
   head: Int32Array;
   next: Int32Array;
@@ -1112,7 +1096,7 @@ const OCTAGON = 1.0825;
  * network's positions are flat and float32, so a walk may be a little shorter than the
  * straight line between its ends: the bound gives away this share and these metres. This is
  * a margin, not a proof (a long straight chain of streets under 17 m could beat it); the
- * grid's octagon and in-cell margins add more, and bench/fringe.ts checks every cell.
+ * grid's octagon and in-cell margins add more, and bench/fringe.ts (S043, in git history) checked every cell.
  */
 const BOUND_SHARE = 0.97;
 const BOUND_SLACK_M = 2;

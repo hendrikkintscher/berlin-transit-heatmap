@@ -3,6 +3,7 @@
 // placed on its shape in order; the shape between two neighbouring stops, simplified to a
 // few metres, becomes that hop's course. Hops whose course would be straight anyway, or
 // where the shape does not fit the stops, are left out (the app draws them straight).
+import { M_PER_DEG_LAT, metresPerDegLon } from '../../routing/src/geo.ts';
 import type { Hop } from '../../routing/src/linesbin.ts';
 
 /** Points closer than this to the simplified line are dropped. */
@@ -25,8 +26,8 @@ export interface Pattern {
 
 /** Local metres around a latitude: x east, y north. */
 function projector(lat0: number) {
-  const ky = 111_320;
-  const kx = 111_320 * Math.cos((lat0 * Math.PI) / 180);
+  const ky = M_PER_DEG_LAT;
+  const kx = metresPerDegLon(lat0);
   return {
     x: (lon: number) => lon * kx,
     y: (lat: number) => lat * ky,

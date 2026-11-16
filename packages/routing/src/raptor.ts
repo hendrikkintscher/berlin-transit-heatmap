@@ -12,6 +12,17 @@ import {
 
 const DEFAULT_MAX_INITIAL_WALK_S = 900;
 
+/**
+ * The app's caps on foot: every walk up to 30 minutes counts at both ends, and the fastest
+ * way wins even with a longer walk (0.13.9). Before, a walk over 15 minutes counted only
+ * where no stop was nearer, so the map and the trip on tap could each pick another walk.
+ */
+export const FASTEST_WALK = {
+  maxInitialWalkSeconds: 1800,
+  maxFallbackWalkSeconds: 1800,
+  maxFinalWalkSeconds: 1800,
+} as const;
+
 /** TravelLegs.kind values; any value >= 0 is a (sub-)route index. */
 export const LEG_NONE = -3;
 export const LEG_ORIGIN = -2;

@@ -6,7 +6,6 @@ import {
   decodeStopList,
   decodeTimetable,
   loadTimetable,
-  needsStopList,
   reverseTimetable,
   shiftTimetable,
   stepFreeTimetable,
@@ -14,7 +13,7 @@ import {
   type StopListData,
   type Timetable,
 } from '@berlin-transit-heatmap/routing';
-import { dataPublished, dataUrl } from './data-url';
+import { dataUrl } from './data-url';
 import type { Direction, Window } from './protocol';
 import { typicalWindow } from './when';
 import { post } from './worker-post';
@@ -57,20 +56,18 @@ async function downloadTimetable(
   if (!binary) throw new Error(`Timetable not available (${res.status} for ${url.pathname})`);
   let hour = { loaded: 0, total: 0 };
   const report = () => {
-    const l = list?.done === false ? list : { loaded: 0, total: 0 };
+    const l = list.done ? { loaded: 0, total: 0 } : list;
     post({ type: 'progress', window, loaded: hour.loaded + l.loaded, total: hour.total + l.total });
   };
-  list?.listeners.add(report);
+  list.listeners.add(report);
   try {
     const buf = await readWithProgress(res.body, res, (loaded, total) => {
       hour = { loaded, total };
       report();
     });
-    if (!needsStopList(buf)) return decodeTimetable(buf) as Timetable;
-    if (!list) throw new Error('Timetable needs a stop list, and this deploy has none');
     return decodeTimetable(buf, await list.data) as Timetable;
   } finally {
-    list?.listeners.delete(report);
+    list.listeners.delete(report);
   }
 }
 
@@ -86,12 +83,10 @@ let stopListLoad: StopListLoad | null = null;
 
 /**
  * The build's stops and footpaths (stoplist.bin): downloaded and read once, then shared by
- * every hour's timetable; tried again after a failure. Null when the deploy's data has no
- * stop list (built before it was split out: its timetables are whole).
+ * every hour's timetable; tried again after a failure.
  */
-function stopList(): StopListLoad | null {
+function stopList(): StopListLoad {
   if (stopListLoad) return stopListLoad;
-  if (!dataPublished('stoplist.bin')) return null;
   const progress = { loaded: 0, total: 0, done: false, listeners: new Set<() => void>() };
   const data = (async () => {
     const url = dataUrl(dataBase, 'stoplist.bin');

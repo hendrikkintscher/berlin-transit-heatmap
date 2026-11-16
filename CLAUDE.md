@@ -83,14 +83,13 @@ node scripts/speed/browser.mjs --data packages/routing/.data [--base <main dist>
 pnpm --dir packages/routing fetch-data       # real timetable + walk.bin into packages/routing/.data
 ```
 
-Benchmarks on the real data live in `packages/routing/bench/` (`swap.ts`: same trip from
-both ends; `goal.ts`: map to a Ziel leaving at a time; `walkrule.ts`: map minutes against the
-trip on tap; `kept.ts`: a trip kept before the footpaths; `arrivehour.ts`: Ankommen trips
-against the map's hour; `rollon.ts`: a missed connection rolling on, on the hourly files built below; `latest.ts`: the tap to a Ziel leaving with its latest leaving read off the map's profile;
-`snapwalks.ts`: start and end walks against the straight line (S054);
-`fringe.ts`: the map's two-pass walk against a main checkout's `walkFront`, every cell, on foot and by bike (S043);
-`providers.ts`: the trip on tap against VBB's planner and Transitous for random trips, answers cached;
-`suite.ts`: the route quality suite with its targets, `--gtfs` replays rides against the raw feed, `--vbb` asks VBB, `--ci` is the speed job's sample; `gridexact.ts`, `vbbwhy.ts`, `footpaths.ts`: the measurements behind S041 and S042). The release downloads are public: if `fetch-data` gets a 401, run it
+Benchmarks on the real data live in `packages/routing/bench/` (`suite.ts`: the route quality
+suite with its targets, `--gtfs` replays rides against the raw feed, `--vbb` asks VBB, `--ci` is the
+speed job's sample; `speed.ts`: the speed job's probe; `providers.ts`: the trip on tap against VBB's
+planner and Transitous for random trips, answers cached; `goal.ts`: map to a Ziel leaving at a time;
+`swap.ts`: same trip from both ends; `chains.ts`: the walk on the junction graph against a main
+checkout, every cell, on foot and by bike, S044). Benches of finished tasks are in git history.
+The release downloads are public: if `fetch-data` gets a 401, run it
 without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest`: `pnpm gtfs:fetch` unpacks it into `data/gtfs`
 (for `suite.ts --gtfs data/gtfs`), and `pnpm build-timetable --gtfs data/gtfs --out <dir>` builds all
 hourly files in about 30 s.
@@ -110,8 +109,8 @@ desktop are not comparable with the cloud container's, so time main and the bran
   about) commits you did not make instead of overwriting them.
 - When a task's PR is merged, reset the branch to `origin/main` before the next task.
 - The working walk rule since 0.13.9: on foot, walks up to 30 minutes count at both ends
-  (`FASTEST_WALK` in `packages/web/src/worker-runs.ts`); the Node benches in
-  `packages/routing/bench` pass their own options.
+  (`FASTEST_WALK` in `packages/routing/src/raptor.ts`, used by the app and the benches); the
+  routing defaults (900/1800 s) are not the app's.
 - 0.15.13 fixed an empty app after a deploy on a slow network (`packages/web/public/sw.js`,
   `shellReady()`). It is not confirmed that this was the "Navigation lädt nicht" Hendrik saw; if he
   reports it again, the cause is elsewhere.

@@ -29,41 +29,18 @@ import {
   type Timetable,
 } from '../src';
 
-/** Encodes nodes [lon, lat] and edges [a, b, metres] as walk.bin (Contract 3). */
+/** Encodes nodes [lon, lat] and edges [a, b, metres] as walk.bin. */
 function encode(nodes: [number, number][], edges: [number, number, number][]): Uint8Array {
-  const out: number[] = [0x42, 0x54, 0x48, 0x57, 1];
-  const uvar = (v: number) => {
-    while (v >= 0x80) {
-      out.push((v % 0x80) | 0x80);
-      v = Math.floor(v / 0x80);
-    }
-    out.push(v);
-  };
-  const svar = (v: number) => uvar(v < 0 ? -2 * v - 1 : 2 * v);
-  uvar(nodes.length);
-  uvar(edges.length);
-  let px = 0;
-  let py = 0;
-  for (const [lon, lat] of nodes) {
-    const x = Math.round(lon * 1e5);
-    const y = Math.round(lat * 1e5);
-    svar(x - px);
-    svar(y - py);
-    px = x;
-    py = y;
-  }
   const sorted = edges
     .map(([a, b, m]) => (a < b ? [a, b, m] : [b, a, m]))
-    .sort((p, q) => p[0] - q[0]);
-  for (let a = 0; a < nodes.length; a++) {
-    const mine = sorted.filter((e) => e[0] === a);
-    uvar(mine.length);
-    for (const [, b, m] of mine) {
-      uvar(b - a);
-      uvar(m);
-    }
-  }
-  return Uint8Array.from(out);
+    .sort((p, q) => p[0]! - q[0]!);
+  return encodeWalkBin({
+    lat: nodes.map(([, lat]) => lat),
+    lon: nodes.map(([lon]) => lon),
+    edgeA: sorted.map((e) => e[0]!),
+    edgeB: sorted.map((e) => e[1]!),
+    edgeM: sorted.map((e) => e[2]!),
+  });
 }
 
 // Two streets along a river, 200 m apart, with the only bridge 1 km east.
@@ -494,23 +471,16 @@ describe('unpacking in steps', () => {
 });
 
 describe('walk.bin version 2', () => {
-  it('reads back the same network as version 1', () => {
-    const sorted = edges
-      .map(([a, b, m]) => (a < b ? [a, b, m] : [b, a, m]))
-      .sort((p, q) => p[0] - q[0]);
-    const v1 = decodeWalkBin(encode(nodes, edges));
-    const bin = encodeWalkBin({
-      lat: nodes.map(([, lat]) => lat),
-      lon: nodes.map(([lon]) => lon),
-      edgeA: sorted.map((e) => e[0]),
-      edgeB: sorted.map((e) => e[1]),
-      edgeM: sorted.map((e) => e[2]),
-    });
+  it('reads back the nodes and whole metres it was given, and no other version', () => {
+    const bin = encode(nodes, edges);
     expect(bin[4]).toBe(2);
-    expect(decodeWalkBin(bin)).toEqual(v1);
-    const again = loadWalkNetwork(bin);
-    expect(again.edgeMetres).toEqual(net.edgeMetres);
-    expect(again.x).toEqual(net.x);
+    const back = decodeWalkBin(bin);
+    expect([...back.lon]).toEqual(nodes.map(([lon]) => Math.round(lon * 1e5) / 1e5));
+    const metres = edges.map(([, , m]) => m).sort((p, q) => p - q);
+    expect([...back.edgeM].sort((p, q) => p - q)).toEqual(metres);
+    const v1 = bin.slice();
+    v1[4] = 1;
+    expect(() => decodeWalkBin(v1)).toThrow(/version 1/);
   });
 
   it('keeps detours and crooked edges exact', () => {

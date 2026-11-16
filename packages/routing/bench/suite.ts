@@ -13,6 +13,7 @@
 //        [--start YYYYMMDD] [--days 1-6] [--gtfs <unpacked GTFS dir>] [--vbb] [--out work/suite]
 //        tsx bench/suite.ts --ci --data <dir with timetable-weekday-10.bin, walk.bin, stoplist.bin>
 // --ci: 40 trips on that one file, offline; exits 1 when a target of checks 1, 2 or 4 fails.
+import { M_PER_DEG_LAT, metresPerDegLon } from '../src/geo';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -33,6 +34,7 @@ import {
   cellCentre,
   dateOf,
   dayStartMs,
+  hhmm,
   isWeekend,
   liveData,
   modeOptions,
@@ -178,8 +180,8 @@ for (const mode of modes) {
         const a = rnd() * 2 * Math.PI;
         const m = rnd() * 400;
         return {
-          lat: s.lat + (m * Math.cos(a)) / 111320,
-          lon: s.lon + (m * Math.sin(a)) / (111320 * Math.cos((s.lat * Math.PI) / 180)),
+          lat: s.lat + (m * Math.cos(a)) / M_PER_DEG_LAT,
+          lon: s.lon + (m * Math.sin(a)) / metresPerDegLon(s.lat),
         };
       }
     };
@@ -314,8 +316,6 @@ if (opt.vbb) {
 mkdirSync(opt.out, { recursive: true });
 writeFileSync(join(opt.out, 'cases.jsonl'), cases.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const pct = (n: number, of: number) => (of ? `${((100 * n) / of).toFixed(1)} %` : '–');
-const hhmm = (s: number) =>
-  `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 /** VBB's trip is 3+ min better: arrives earlier, or (arriving) leaves later. */
 const vbbBetter = (c: Case) =>
   !!c.vbb && (c.mode === 'arrive' ? c.vbb.leave - c.leave >= 180 : c.arrive - c.vbb.arrive >= 180);

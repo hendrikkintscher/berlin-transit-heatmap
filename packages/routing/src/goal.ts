@@ -134,7 +134,7 @@ export function goalArrival(p: StopProfile, s: number, leave: number): number {
  * spread over the stop's events by the share of [from, to] each serves as the first to
  * allow leaving then, for goalUsage. One per profile event, as goalCells' `cells`. The walk
  * to the stop is left out (it shifts the hour only by a few minutes); weighting each cell by
- * its own walk drew about the same lines for ten times the cost (bench/typlines.ts).
+ * its own walk drew about the same lines for ten times the cost (bench/typlines.ts, in git history).
  */
 export function goalShares(p: StopProfile, grid: HeatGrid, from: number, to: number): Float64Array {
   const stop = grid.stop;

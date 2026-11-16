@@ -2,7 +2,7 @@
 // days or a typical weekday or weekend, the hour, leaving or arriving), Reisezeit (typical, best case or next
 // departure) and Vergleich (a second time to compare with). The Zeit chip shows the choice.
 
-import { clockLabel, dayLabel, hourLabel, pillText, whenChipText } from './format';
+import { clockLabel, dayLabel, hourLabel, pillText, twoDigitClock, whenChipText } from './format';
 import { t } from './i18n';
 import type { Measure } from './protocol';
 import { $, type State } from './state';
@@ -116,7 +116,7 @@ export function initWhenSheet({ state, changed, closePanel, rendered }: WhenShee
     // Jetzt: today's current hour, leaving on the clock under Nächste.
     nowBtn.setAttribute('aria-pressed', String(!arrive && state.measure === 'next' && isNow(w)));
     timeBox.classList.toggle('on', w.minute !== undefined);
-    timeInput.value = `${String(w.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    timeInput.value = twoDigitClock(w.hour, minute);
     $('when-hour').textContent = t(arrive ? 'whenHourArr' : 'whenHour');
     for (const b of dirButtons)
       b.setAttribute('aria-checked', String(b.dataset.dir === state.direction));

@@ -4,7 +4,6 @@ import {
   decodeTimetable,
   encodeStopList,
   encodeTimetable,
-  needsStopList,
   type TimetableData,
 } from '../src';
 
@@ -46,9 +45,15 @@ const tt: TimetableData = {
   ],
 };
 
+/** Writes the hour and its stop list, and reads them back. */
+const roundTrip = (t: TimetableData) => {
+  const list = encodeStopList(t);
+  return decodeTimetable(encodeTimetable(t, list.id), decodeStopList(list.data));
+};
+
 describe('binary timetable', () => {
   it('reads back what was written, without stop ids and with footpaths in stop order', () => {
-    const back = decodeTimetable(encodeTimetable(tt));
+    const back = roundTrip(tt);
     expect(back).toEqual({
       ...tt,
       stops: tt.stops.map((s) => ({ ...s, id: '' })),
@@ -74,7 +79,7 @@ describe('binary timetable', () => {
         { ...tt.routes[1]!, dwells: [[0, 0, 0]] },
       ],
     };
-    const back = decodeTimetable(encodeTimetable(withDwells));
+    const back = roundTrip(withDwells);
     expect(back.routes[0]!.dwells).toEqual([
       [0, 30],
       [0, 45],
@@ -83,25 +88,24 @@ describe('binary timetable', () => {
   });
 
   it('rejects other and broken files', () => {
-    expect(() => decodeTimetable(new Uint8Array([1, 2, 3, 4, 1]))).toThrow();
-    const bin = encodeTimetable(tt);
-    expect(() => decodeTimetable(bin.subarray(0, bin.length - 3))).toThrow();
+    const list = encodeStopList(tt);
+    const stops = decodeStopList(list.data);
+    expect(() => decodeTimetable(new Uint8Array([1, 2, 3, 4, 1]), stops)).toThrow();
+    const bin = encodeTimetable(tt, list.id);
+    expect(() => decodeTimetable(bin.subarray(0, bin.length - 3), stops)).toThrow();
+    const v2 = bin.slice();
+    v2[4] = 2;
+    expect(() => decodeTimetable(v2, stops)).toThrow(/version 2/);
   });
 });
 
 describe('stop list and hourly files', () => {
-  const whole = decodeTimetable(encodeTimetable(tt));
-
-  it('reads an hour back with its stop list as from a whole file', () => {
+  it('shares the one stop list between every hour', () => {
     const list = encodeStopList(tt);
-    const hour = encodeTimetable(tt, list.id);
-    expect(needsStopList(hour)).toBe(true);
-    expect(needsStopList(encodeTimetable(tt))).toBe(false);
     const stops = decodeStopList(list.data);
     expect(stops.id).toBe(list.id);
     expect(stops.feedVersion).toBe('test');
-    const back = decodeTimetable(hour, stops);
-    expect(back).toEqual(whole);
+    const back = decodeTimetable(encodeTimetable(tt, list.id), stops);
     // Every hour shares the one list's stops and footpaths.
     const later = decodeTimetable(encodeTimetable({ ...tt, window: 'weekday-11' }, list.id), stops);
     expect(later.stops).toBe(back.stops);
@@ -121,9 +125,8 @@ describe('stop list and hourly files', () => {
     expect(encodeStopList(longer).id).not.toBe(encodeStopList(tt).id);
   });
 
-  it("refuses an hour without its stop list, or with another build's", () => {
+  it("refuses an hour with another build's stop list", () => {
     const hour = encodeTimetable(tt, encodeStopList(tt).id);
-    expect(() => decodeTimetable(hour)).toThrow(/stop list/);
     const moved = { ...tt, stops: [{ ...tt.stops[0]!, lat: 52.5 }, ...tt.stops.slice(1)] };
     const other = decodeStopList(encodeStopList(moved).data);
     expect(() => decodeTimetable(hour, other)).toThrow(/different builds/);
@@ -148,19 +151,12 @@ describe('stop list and hourly files', () => {
     expect(hour.stops[0]!.station).toBe(900100003);
   });
 
-  it('still reads a stop list from before the station numbers (version 1)', () => {
-    // Version 2 is version 1 plus one svar per stop at the end: 0 for a stop without a number.
-    const { data } = encodeStopList(tt);
-    const v1 = data.slice(0, data.length - tt.stops.length);
-    v1[4] = 1;
-    const back = decodeStopList(v1);
-    expect(back.stops).toEqual(decodeStopList(data).stops);
-    expect(back.stops.some((s) => s.station !== undefined)).toBe(false);
-  });
-
   it('rejects broken stop lists', () => {
     const { data } = encodeStopList(tt);
     expect(() => decodeStopList(data.subarray(0, data.length - 2))).toThrow();
-    expect(() => decodeStopList(encodeTimetable(tt))).toThrow();
+    expect(() => decodeStopList(encodeTimetable(tt, encodeStopList(tt).id))).toThrow();
+    const v1 = data.slice();
+    v1[4] = 1;
+    expect(() => decodeStopList(v1)).toThrow(/version 1/);
   });
 });

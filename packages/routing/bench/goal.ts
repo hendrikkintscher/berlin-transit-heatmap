@@ -8,8 +8,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  FASTEST_WALK,
   cellAt,
-  decodeTimetable,
   directSeconds,
   goalCells,
   goalUsage,
@@ -25,26 +25,19 @@ import {
   tripBetween,
   walksToStops,
   type HeatGrid,
-  type Timetable,
 } from '../src/index';
-import { DATA_DIR, TIMETABLE_FILES } from './data';
+import { DATA_DIR, readTimetable } from './data';
 
 const N = Number(process.argv[2] ?? 300);
 let seed = Number(process.argv[3] ?? 5);
 const rnd = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
-const raw = decodeTimetable(readFileSync(join(DATA_DIR, TIMETABLE_FILES.day))) as Timetable;
+const raw = await readTimetable('day');
 const fwd = loadTimetable(raw);
 const back = loadTimetable(reverseTimetable(raw, raw.windowEnd, raw.windowEnd + 3600));
 const wb = readFileSync(join(DATA_DIR, 'walk.bin'));
 const walk = loadWalkNetwork(wb.buffer.slice(wb.byteOffset, wb.byteOffset + wb.byteLength));
-// On foot, as the app since 0.13.9 (FASTEST_WALK in worker-runs.ts).
-const w = {
-  walk,
-  walkSpeedMps: 5 / 3.6,
-  maxInitialWalkSeconds: 1800,
-  maxFallbackWalkSeconds: 1800,
-  maxFinalWalkSeconds: 1800,
-};
+// On foot, as the app.
+const w = { walk, walkSpeedMps: 5 / 3.6, ...FASTEST_WALK };
 const GUESS2 = Number(process.env.GUESS2 ?? 1800);
 const ZIELE = [
   { name: 'Alexanderplatz', lat: 52.5219, lon: 13.4132 },

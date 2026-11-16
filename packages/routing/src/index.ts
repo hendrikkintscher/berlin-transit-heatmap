@@ -1,51 +1,31 @@
 export type {
-  CellProperties,
-  GeoJSONFeature,
-  GeoJSONFeatureCollection,
-  GeoJSONPolygon,
   HeatGrid,
   HeatGridOptions,
   Origin,
-  Route,
   RouteMode,
-  Stop,
   Timetable,
-  Transfer,
-  TravelLegs,
-  RoundLegs,
   TravelTimeOptions,
   StopProfile,
   TravelTimeResult,
 } from './types';
 export type { PreparedTimetable } from './prepare';
 export { loadTimetable } from './prepare';
-export { travelTimes } from './raptor';
+export { FASTEST_WALK, travelTimes } from './raptor';
 export { reverseTimetable } from './reverse';
 export { shiftTimetable } from './shift';
 export { goalArrival, goalCells, goalShares, goalWindow } from './goal';
 export { stepFreeTimetable } from './stepfree';
-export { REGION, REGIONS, type Box, type Region } from './regions';
-export {
-  cellAt,
-  cellColRow,
-  DEFAULT_BBOX,
-  gridLayout,
-  gridToGeoJSON,
-  gridValueAt,
-  heatGrid,
-  type GridShape,
-} from './grid';
-export { distanceM, WALK_SPEED_MPS } from './geo';
+export { REGION } from './regions';
+export { cellAt, cellColRow, DEFAULT_BBOX, gridLayout, gridValueAt, heatGrid } from './grid';
+export { distanceM, M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 export { LEG_NONE, LEG_ORIGIN, LEG_WALK, NO_DEPARTURE } from './raptor';
-export type { RouteUsageOptions, UsedSegment } from './usage';
+export type { UsedSegment } from './usage';
 export { goalUsage, routeUsage } from './usage';
-export type { Journey, JourneyLeg, RidePart } from './journey';
+export type { Journey, JourneyLeg } from './journey';
 export {
   departureAt,
   journeyTo,
-  journeyVia,
   laterChange,
-  ALT_MIN_SAVING_S,
   ALT_WALK_CAP_S,
   endWalks,
   feederSaving,
@@ -54,28 +34,14 @@ export {
   rideParts,
   rideTimes,
 } from './journey';
-export {
-  directSeconds,
-  tripBetween,
-  latestLeaving,
-  walksToStops,
-  type FixedTrip,
-  type TripOptions,
-  type TripTime,
-} from './trip';
+export { directSeconds, tripBetween, latestLeaving, walksToStops, type TripTime } from './trip';
 export type { StopListData, TimetableData } from './ttbin';
-export {
-  decodeStopList,
-  decodeTimetable,
-  encodeStopList,
-  encodeTimetable,
-  needsStopList,
-} from './ttbin';
-export { decodeWalkBin, decodeWalkBinInSteps, encodeWalkBin, type WalkData } from './walkbin';
-export type { Hop, LineShapes } from './linesbin';
-export { decodeLines, encodeLines, hopCourse } from './linesbin';
+export { decodeStopList, decodeTimetable, encodeStopList, encodeTimetable } from './ttbin';
+export { decodeWalkBin, encodeWalkBin } from './walkbin';
+export type { LineShapes } from './linesbin';
+export { decodeLines, hopCourse } from './linesbin';
 export { BIKE_ONLY_MAX_SECONDS, BIKE_SPEED_MPS, BIKE_STATION_SECONDS, bikeTimetable } from './bike';
-export type { CellSnaps, Snaps, WalkFront, WalkLabels, WalkNetwork } from './walk';
+export type { WalkNetwork } from './walk';
 export {
   chainWalkNetwork,
   chainWalkNetworkInSteps,
@@ -88,13 +54,11 @@ export {
   snapCellsInSteps,
   snapOrigin,
   snapPoint,
-  snapStops,
   snapStopsInSteps,
   timeAt,
   walkFrom,
   walkFront,
   walkFrontFringe,
   walkPath,
-  walkSpeeds,
   WalkSources,
 } from './walk';

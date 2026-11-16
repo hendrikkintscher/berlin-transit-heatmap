@@ -11,13 +11,7 @@ import {
   WalkSources,
   type WalkFront,
 } from './walk';
-import type {
-  GeoJSONFeature,
-  GeoJSONFeatureCollection,
-  HeatGrid,
-  HeatGridOptions,
-  TravelTimeResult,
-} from './types';
+import type { HeatGrid, HeatGridOptions, TravelTimeResult } from './types';
 import { REGION } from './regions';
 
 /** The region's grid area (regions.ts): [minLon, minLat, maxLon, maxLat]. */
@@ -25,7 +19,6 @@ export const DEFAULT_BBOX: [number, number, number, number] = REGION.bbox;
 
 const DEFAULT_CELL_M = 250;
 const DEFAULT_MAX_FINAL_WALK_S = 900;
-const DEFAULT_BAND_S = 300;
 
 /**
  * Rasterises stop travel times onto a regular grid. A cell's value is the
@@ -356,47 +349,4 @@ export function cellColRow(grid: GridShape, lat: number, lon: number): [number, 
 export function cellAt(grid: GridShape, lat: number, lon: number): number {
   const [c, r] = cellColRow(grid, lat, lon);
   return c < 0 || c >= grid.cols || r < 0 || r >= grid.rows ? -1 : r * grid.cols + c;
-}
-
-/**
- * One square polygon per reachable cell, with properties
- * `seconds` (rounded to whole seconds) and `band = floor(seconds / bandSeconds)`.
- */
-export function gridToGeoJSON(
-  grid: HeatGrid,
-  bandSeconds: number = DEFAULT_BAND_S,
-): GeoJSONFeatureCollection {
-  const [minLon, minLat, maxLon, maxLat] = grid.bbox;
-  const dLon = (maxLon - minLon) / grid.cols;
-  const dLat = (maxLat - minLat) / grid.rows;
-  const round6 = (v: number): number => Math.round(v * 1e6) / 1e6;
-  const features: GeoJSONFeature[] = [];
-  for (let r = 0; r < grid.rows; r++) {
-    const north = round6(maxLat - r * dLat);
-    const south = round6(maxLat - (r + 1) * dLat);
-    for (let c = 0; c < grid.cols; c++) {
-      const v = grid.seconds[r * grid.cols + c];
-      if (v === Infinity || v !== v) continue;
-      const sec = Math.round(v);
-      const west = round6(minLon + c * dLon);
-      const east = round6(minLon + (c + 1) * dLon);
-      features.push({
-        type: 'Feature',
-        geometry: {
-          type: 'Polygon',
-          coordinates: [
-            [
-              [west, south],
-              [east, south],
-              [east, north],
-              [west, north],
-              [west, south],
-            ],
-          ],
-        },
-        properties: { band: Math.floor(sec / bandSeconds), seconds: sec },
-      });
-    }
-  }
-  return { type: 'FeatureCollection', features };
 }

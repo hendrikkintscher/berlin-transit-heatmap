@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { decodeStopList, decodeTimetable, needsStopList, type Timetable } from '../src';
+import { decodeStopList, decodeTimetable, type Timetable } from '../src';
 
 const REPO = 'hendrikkintscher/berlin-transit-heatmap';
 const TAG = 'timetable-latest';
@@ -54,18 +54,11 @@ export async function ensureFile(name: string): Promise<string> {
 }
 
 /**
- * The stop list (stoplist.bin) when a timetable file holds only its routes; null for a
- * whole file (built before 0.13.13). Delete .data/ when a newer build's list no longer fits.
+ * A window's timetable with the stop list it was built with. Delete .data/ when a newer
+ * build's list no longer fits the cached hours.
  */
-export async function ensureStopList(timetableFile: string): Promise<string | null> {
-  return needsStopList(readFileSync(timetableFile)) ? ensureFile('stoplist.bin') : null;
-}
-
 export async function readTimetable(window: 'day' | 'night'): Promise<Timetable> {
-  const file = await ensureTimetable(window);
-  const list = await ensureStopList(file);
-  const bin = readFileSync(file);
-  return (
-    list ? decodeTimetable(bin, decodeStopList(readFileSync(list))) : decodeTimetable(bin)
-  ) as Timetable;
+  const bin = readFileSync(await ensureTimetable(window));
+  const list = decodeStopList(readFileSync(await ensureFile('stoplist.bin')));
+  return decodeTimetable(bin, list) as Timetable;
 }

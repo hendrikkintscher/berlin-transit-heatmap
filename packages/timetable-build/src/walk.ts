@@ -1,6 +1,6 @@
 /**
  * The walking network: walkable OpenStreetMap ways turned into a compact graph
- * the browser router runs Dijkstra on (Contract 3, see packages/routing/src/walk.ts).
+ * the browser router runs Dijkstra on (see packages/routing/src/walk.ts).
  *
  * Input is OPL text (`osmium cat -f opl`) of the ways kept by the OSM refresh
  * workflow. Chains of ways are cut into edges at junctions and at least every
@@ -12,17 +12,18 @@ import { createInterface } from 'node:readline';
 import { createGunzip } from 'node:zlib';
 import { REGION } from '../../routing/src/regions.ts';
 import { encodeWalkBin } from '../../routing/src/walkbin.ts';
+import { M_PER_DEG_LAT } from '../../routing/src/geo.ts';
 import { inBBox, toBBox, type BBox } from './geo.ts';
 
-/** Walking speed for transfers between stops, 4 km/h (the router's default walking speed). */
+/**
+ * Walking speed for transfers between stops, 4 km/h: routing's NETWORK_WALK_SPEED_MPS, copied
+ * since its walk.ts imports without file extensions, which plain Node cannot run.
+ */
 export const NETWORK_WALK_SPEED_MPS = 4 / 3.6;
 /** Graph nodes are kept at least this often along a path. */
 export const NODE_SPACING_M = 100;
 /** Dead ends shorter than this are left out. */
 const SHORT_DEAD_END_M = 30;
-/** Coordinates are stored in units of 1e-5 degrees (about 1 m). */
-
-const M_PER_DEG_LAT = 111_320;
 
 export interface WalkGraph {
   /** Node positions in degrees. */
@@ -393,7 +394,7 @@ function morton(x: number, y: number): number {
   return z;
 }
 
-/** Encodes the graph as `walk.bin` (Contract 3, format in routing's walkbin.ts). */
+/** Encodes the graph as `walk.bin` (format in routing's walkbin.ts). */
 export function encodeWalkGraph(g: WalkGraph): Uint8Array {
   return encodeWalkBin(g);
 }

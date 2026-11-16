@@ -26,8 +26,11 @@ export const shortStop = (n: string) =>
 
 export const hourLabel = (h: number) =>
   lang() === 'de' ? `${h} Uhr` : `${String(h).padStart(2, '0')}:00`;
+/** "09:05". */
+export const twoDigitClock = (h: number, m: number) =>
+  `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 export const clockLabel = (h: number, m: number) =>
-  `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` + (lang() === 'de' ? ' Uhr' : '');
+  twoDigitClock(h, m) + (lang() === 'de' ? ' Uhr' : '');
 
 /** A time in seconds after midnight of the evening (25 h = 1 Uhr), as "01:05 Uhr". */
 export const eveningClock = (s: number) =>
@@ -78,7 +81,7 @@ export function whenChipText(
       ? hourLabel(w.hour)
       : full
         ? clockLabel(w.hour, minute)
-        : `${String(w.hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        : twoDigitClock(w.hour, minute);
   const mark =
     measure === 'next'
       ? ''

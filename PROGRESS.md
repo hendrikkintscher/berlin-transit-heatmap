@@ -17,8 +17,9 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
   (suite, speed, goal, swap, providers, chains); showcase regenerated; Claude picks UI terms, listed in the PR.
 - #418 was merged by another (vault wrap-up) session 8 s after it opened, before CI, as a merge commit.
 - Main's speed job is red since the 2026-11-16 feed: Alt-Kladow's route-tied timed transfers (bus waits for
-  bus, 0 s) became a 0 s footpath between stops 87 m apart. S066 fix on branch `task/S066-change-time-floor`
-  (unit tests pass), not yet checked on the real feed.
+  bus, 0 s) became a 0 s footpath between stops 87 m apart. S066 fixed it (#419, 1.1.16): route-tied timed
+  transfers left out, change times floored at the straight line at 5 km/h; 671 of 79,353 footpaths slower.
+  After the merge the timetable was rebuilt by hand and main's speed job is green again.
 
 ## 2026-11-15 · local · S061, S044
 

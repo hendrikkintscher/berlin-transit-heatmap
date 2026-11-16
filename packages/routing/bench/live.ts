@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  FASTEST_WALK,
   BIKE_ONLY_MAX_SECONDS,
   BIKE_SPEED_MPS,
   BIKE_STATION_SECONDS,
@@ -21,7 +22,6 @@ import {
   laterStart,
   loadTimetable,
   loadWalkNetwork,
-  needsStopList,
   reverseTimetable,
   stepFreeTimetable,
   travelTimes,
@@ -34,15 +34,13 @@ import {
 } from '../src';
 import { DATA_DIR } from './data';
 
+/** "10:02" (seconds of the day, past midnight too). */
+export const hhmm = (s: number) =>
+  `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
+
 export const LIVE = 'https://hendrikkintscher.github.io/berlin-transit-heatmap/data/berlin/';
 export const LIVE_DIR = join(DATA_DIR, 'live');
 export const WALK_MPS = 5 / 3.6;
-/** On foot every walk up to 30 minutes counts at both ends (worker-runs.ts FASTEST_WALK). */
-export const FASTEST_WALK = {
-  maxInitialWalkSeconds: 1800,
-  maxFallbackWalkSeconds: 1800,
-  maxFinalWalkSeconds: 1800,
-};
 /** As the worker's trip on tap: 50 m cells, two each way around the destination. */
 export const CELL_M = 50;
 const NEAR_CELLS = 2;
@@ -97,21 +95,15 @@ export async function liveData(dir = LIVE_DIR, offline = false) {
   const walkBin = await liveFile('walk.bin', dir, offline);
   if (!walkBin) throw new Error(`walk.bin not found (${dir})`);
   const listBin = await liveFile('stoplist.bin', dir, offline);
+  if (!listBin) throw new Error(`stoplist.bin not found (${dir})`);
   const walk = loadWalkNetwork(new Uint8Array(walkBin));
-  const stopList = listBin ? decodeStopList(listBin) : undefined;
+  const stopList = decodeStopList(listBin);
   const raws = new Map<string, Timetable | null>();
   const prepared = new Map<string, PreparedTimetable | null>();
   const raw = async (file: string) => {
     if (!raws.has(file)) {
       const bin = await liveFile(file, dir, offline);
-      raws.set(
-        file,
-        bin
-          ? ((needsStopList(bin) && stopList
-              ? decodeTimetable(bin, stopList)
-              : decodeTimetable(bin)) as Timetable)
-          : null,
-      );
+      raws.set(file, bin ? (decodeTimetable(bin, stopList) as Timetable) : null);
     }
     return raws.get(file)!;
   };

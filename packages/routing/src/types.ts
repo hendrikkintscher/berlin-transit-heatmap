@@ -1,7 +1,7 @@
 import type { WalkNetwork } from './walk';
 
 /**
- * Contract 1: timetable file format, as produced by `packages/timetable-build`.
+ * Timetable file format, as produced by `packages/timetable-build`.
  * All times are seconds since midnight of the reference service day; the night
  * window uses GTFS-style values past 24:00 (e.g. 93600 for 26:00).
  */
@@ -31,7 +31,7 @@ export interface Stop {
   lon: number;
   /** Index of the parent stop group, if any. */
   parent?: number;
-  /** false: reached only by stairs or escalators. Absent: step-free or unknown. (Addition to Contract 1.) */
+  /** false: reached only by stairs or escalators. Absent: step-free or unknown. */
   stepFree?: false;
   /** The region's station number for live departures (900100003 for Alexanderplatz), if known. */
   station?: number;
@@ -49,12 +49,11 @@ export interface Route {
   trips: number[][];
   /**
    * dwells[t][i] = seconds the vehicle of trip t waits at stops[i]: it arrives at
-   * trips[t][i] - dwells[t][i]. Absent: arrival == departure everywhere. (Addition to Contract 1.)
+   * trips[t][i] - dwells[t][i]. Absent: arrival == departure everywhere.
    */
   dwells?: number[][];
   /**
    * false: trips marked not wheelchair-accessible. Absent: accessible, or not known.
-   * (Addition to Contract 1.)
    */
   stepFree?: false;
   /**
@@ -70,7 +69,7 @@ export interface Transfer {
   seconds: number;
 }
 
-/** Contract 2: routing API types. */
+/** Routing API types. */
 export interface Origin {
   lat: number;
   lon: number;
@@ -81,23 +80,22 @@ export interface TravelTimeOptions {
   maxInitialWalkSeconds?: number;
   /**
    * Longer walk allowed when no stop is within maxInitialWalkSeconds (outskirts, woods),
-   * in seconds. Default twice maxInitialWalkSeconds. (Addition to Contract 2.)
+   * in seconds. Default twice maxInitialWalkSeconds.
    */
   maxFallbackWalkSeconds?: number;
   /**
-   * Walk on this footpath network (Contract 3) instead of in a straight line. Stops
-   * and origins off the network still use the straight line. (Addition to Contract 2.)
+   * Walk on this footpath network instead of in a straight line. Stops
+   * and origins off the network still use the straight line.
    */
   walk?: WalkNetwork;
   /**
    * Walking speed on the network in m/s (default 4 km/h); straight lines then use it
    * divided by a detour factor of 1.25. Without it straight lines keep 1.2 m/s.
-   * (Addition to Contract 2.)
    */
   walkSpeedMps?: number;
   /**
    * Added to the time of every stop reached from the origin, e.g. for taking a bike
-   * into the station. Not added to stops reached by riding. (Addition to Contract 2.)
+   * into the station. Not added to stops reached by riding.
    */
   accessPenaltySeconds?: number;
   /** Maximum number of transit legs. Default 6. */
@@ -112,7 +110,7 @@ export interface TravelTimeOptions {
   /**
    * Leave at this time (seconds since midnight of the service day, in the window)
    * instead of any time in the window: stopSeconds is then the time to each stop on the
-   * next connection, waiting included. (Addition to Contract 2.)
+   * next connection, waiting included.
    */
   leaveAt?: number;
   /** With `typical`, how far past the window departures are scanned, in seconds. Default 2700. */
@@ -120,7 +118,7 @@ export interface TravelTimeOptions {
   /**
    * Keep no arrival later than this (seconds of the service day): stops reached only later
    * count as unreached, and the search does less. Arrivals up to it are the same as without
-   * it, though of two equally quick ways the one kept may differ. (Addition to Contract 2.)
+   * it, though of two equally quick ways the one kept may differ.
    */
   arriveBy?: number;
   /**
@@ -133,7 +131,7 @@ export interface TravelTimeOptions {
   /**
    * The walks from `origin` to the stops, as walksToStops gives them with the same options
    * (Infinity where out of reach): used instead of walking the footpaths again, which is
-   * a good part of a short search. (Addition to Contract 2.)
+   * a good part of a short search.
    */
   accessSeconds?: Float32Array;
 }
@@ -141,7 +139,7 @@ export interface TravelTimeOptions {
 /**
  * The last leg of each stop's fastest journey, indexed by stop. Following legs
  * back from a stop gives a journey tree rooted at the origin; a parent's best
- * time is always strictly smaller, so the chain ends. (Addition to Contract 2.)
+ * time is always strictly smaller, so the chain ends.
  */
 export interface TravelLegs {
   /**
@@ -155,7 +153,7 @@ export interface TravelLegs {
   /**
    * Leaving at one moment (`leaveAt`), the legs of every round as well, so a journey can
    * be followed back exactly as it was ridden: a stop's own best leg may come from a later
-   * round than the arrival a vehicle boarded with there. (Addition to Contract 2.)
+   * round than the arrival a vehicle boarded with there.
    */
   rounds?: RoundLegs;
 }
@@ -188,11 +186,11 @@ export interface TravelTimeResult {
   /** Per stop index: best travel time in seconds from the origin (Infinity if unreachable). */
   stopSeconds: Float32Array;
   computedInMs: number;
-  /** The origin the result was computed for; heatGrid uses it for direct walking. (Addition to Contract 2.) */
+  /** The origin the result was computed for; heatGrid uses it for direct walking. */
   origin?: Origin;
-  /** Number of distinct origin departure times scanned by range-RAPTOR. (Addition to Contract 2.) */
+  /** Number of distinct origin departure times scanned by range-RAPTOR. */
   departures?: number;
-  /** Present when computed with `trackLegs`. (Addition to Contract 2.) */
+  /** Present when computed with `trackLegs`. */
   legs?: TravelLegs;
   /** Present when computed with `typical`: average travel time over the window, waiting included. */
   typicalSeconds?: Float32Array;
@@ -230,30 +228,30 @@ export interface HeatGridOptions {
   /**
    * Longer walk allowed for cells nothing reaches within maxFinalWalkSeconds, so the
    * outskirts and areas between lines are not left blank, in seconds. Default twice
-   * maxFinalWalkSeconds. (Addition to Contract 2.)
+   * maxFinalWalkSeconds.
    */
   maxFallbackWalkSeconds?: number;
-  /** Walk on this footpath network, as in TravelTimeOptions. (Addition to Contract 2.) */
+  /** Walk on this footpath network, as in TravelTimeOptions. */
   walk?: WalkNetwork;
-  /** Walking speed, as in TravelTimeOptions. (Addition to Contract 2.) */
+  /** Walking speed, as in TravelTimeOptions. */
   walkSpeedMps?: number;
   /**
    * Added to the way from every stop to a cell, e.g. for taking a bike out of the
-   * station. The way straight from the origin has none. (Addition to Contract 2.)
+   * station. The way straight from the origin has none.
    */
   egressPenaltySeconds?: number;
   /**
    * How far the way straight from the origin may go, in seconds, when that is
-   * further than from a stop (e.g. cycling all the way). (Addition to Contract 2.)
+   * further than from a stop (e.g. cycling all the way).
    */
   maxOriginSeconds?: number;
-  /** [minLon, minLat, maxLon, maxLat]. Default DEFAULT_BBOX (Berlin). (Addition to Contract 2.) */
+  /** [minLon, minLat, maxLon, maxLat]. Default DEFAULT_BBOX (Berlin). */
   bbox?: [number, number, number, number];
-  /** Also record which stop each cell's time comes from (grid.stop). Default false. (Addition to Contract 2.) */
+  /** Also record which stop each cell's time comes from (grid.stop). Default false. */
   trackStops?: boolean;
   /**
    * Compute only these cells of the grid (first column and row, and how many of each);
-   * the result is that part of the grid, with its own bbox. (Addition to Contract 2.)
+   * the result is that part of the grid, with its own bbox.
    */
   window?: { c0: number; r0: number; cols: number; rows: number };
 }
@@ -273,26 +271,4 @@ export interface HeatGrid {
   seconds: Float32Array;
   /** With `trackStops`: the stop each cell is reached from, -1 for walking straight from the origin or unreachable. */
   stop?: Int32Array;
-}
-
-/** Minimal GeoJSON types so the package needs no type dependencies. Structurally compatible with @types/geojson. */
-export interface GeoJSONPolygon {
-  type: 'Polygon';
-  coordinates: number[][][];
-}
-
-export interface CellProperties {
-  band: number;
-  seconds: number;
-}
-
-export interface GeoJSONFeature<P = CellProperties> {
-  type: 'Feature';
-  geometry: GeoJSONPolygon;
-  properties: P;
-}
-
-export interface GeoJSONFeatureCollection<P = CellProperties> {
-  type: 'FeatureCollection';
-  features: GeoJSONFeature<P>[];
 }

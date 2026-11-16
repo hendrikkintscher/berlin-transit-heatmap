@@ -62,9 +62,6 @@ export function datedWindows(dates: readonly string[]): WindowSpec[] {
   );
 }
 
-/** Windows of a real date ("20261012-10") rather than a reference day. */
-export const isDatedWindow = (name: string) => /^\d{8}-\d{2}$/.test(name);
-
 /** Trips are kept if they depart within [start, end + TAIL] so trips started in the window can finish. */
 export const WINDOW_TAIL_SECONDS = 2 * 3600;
 export const WALK_SPEED_MPS = 1.2;

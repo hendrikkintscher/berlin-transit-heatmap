@@ -240,7 +240,7 @@
       "size": "M",
       "deps": ["S063"],
       "test": "bash scripts/check.sh, smoke and speed pass; first map and tap timings unchanged at 360x740, 1x and 4x",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S065",
@@ -262,7 +262,7 @@
       "size": "S",
       "deps": [],
       "test": "timetable built locally from gtfs-latest (+ osm walkways) with the fix: bench/suite.ts --ci meets every target; count of changed footpaths reported; after merge and a timetable rebuild the speed job on main is green",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S067",
