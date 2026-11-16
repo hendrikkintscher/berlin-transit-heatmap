@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.20] — 2026-11-17
+
+- S067 (chore): `scripts/speed/browser.mjs --base` alternates the two dists' visits (base, dist, then dist, base, ...) instead of timing all of one side and then all of the other, so the container slowing down or speeding up during a run lands on both sides alike (S064's 4× "tap after the network" gap was such drift). Output format unchanged. Test: the same build as base and dist, 4×, two runs of 7 visits each, Mann-Whitney per timing: first map p 0.52 / 0.52, tap to trip 1.00 / 0.16, footpath map 0.44 / 0.10, tap after the network 0.28 / 0.06; none differs beyond noise. Timings: nothing the app runs changed.
+
 ## [1.1.19] — 2026-11-16
 
 - S068 (fix): the Layout workflow's WebKit screenshots run on `ubuntu-24.04` again. GitHub's `ubuntu-latest` is now 26.04, where Playwright 1.56 cannot install WebKit, so the job failed before any screenshot (on #424). Updating Playwright is left for when it is needed for its own sake. Timings: nothing the app runs changed.
