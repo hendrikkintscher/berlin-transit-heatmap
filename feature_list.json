@@ -240,7 +240,7 @@
       "size": "M",
       "deps": ["S063"],
       "test": "bash scripts/check.sh, smoke and speed pass; first map and tap timings unchanged at 360x740, 1x and 4x",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S065",
