@@ -10,6 +10,14 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
+## 2026-11-16 · cloud · S064 timings, S067
+
+- S064 browser timings in the cloud (comments on #420): no timing slower beyond noise; Hendrik's local
+  first map +300 ms did not reproduce. A 4× "tap after the network" gap (44 → 58 ms) was drift between
+  back-to-back blocks of visits: with main and branch visits alternating, 54.5 vs 49.0 ms (p ≈ 0.21).
+- S064 `passes: true`, merged (#420) and live as 1.1.17; S067 added (#421): `browser.mjs` should alternate
+  main and branch visits under `--base`.
+
 ## 2026-11-16 · local · S063 review, S066
 
 - Consistency review (code, UI, docs): S063 docs/repo cleanup shipped as 1.1.15 (#418); S064 (dead code, old
