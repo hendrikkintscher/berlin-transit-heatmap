@@ -18,6 +18,16 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - S064 `passes: true`, merged (#420) and live as 1.1.17; S067 added (#421): `browser.mjs` should alternate
   main and branch visits under `--base`.
 
+## 2026-11-16 · local · S064
+
+- S064 cleanup 2 of 3 (#420, ~3,000 lines, size accepted): finished benches, dead code, copied constants
+  (FASTEST_WALK in raptor.ts, geo helpers) and old file formats (timetable v2, stop list v1, walk.bin v1)
+  removed. timetable-build keeps its own great-circle `distanceM` on purpose (geo.ts).
+- Local timings on Hendrik's PC were too noisy to decide (an A/A run differed by 160 ms); the cloud timings
+  above decided.
+- Smoke on this PC needs Chromium; with only Edge installed, a preload that sets playwright's `executablePath`
+  to `CHROMIUM` works.
+
 ## 2026-11-16 · local · S063 review, S066
 
 - Consistency review (code, UI, docs): S063 docs/repo cleanup shipped as 1.1.15 (#418); S064 (dead code, old
