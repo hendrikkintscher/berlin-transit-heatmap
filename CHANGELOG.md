@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.19] — 2026-11-16
+
+- S068 (fix): the Layout workflow's WebKit screenshots run on `ubuntu-24.04` again. GitHub's `ubuntu-latest` is now 26.04, where Playwright 1.56 cannot install WebKit, so the job failed before any screenshot (on #424). Updating Playwright is left for when it is needed for its own sake. Timings: nothing the app runs changed.
+
 ## [1.1.18] — 2026-11-16
 
 - S065 (last of three cleanup PRs): one term per thing in the interface text, in German and English. German: "Reisezeit" everywhere (not also "Fahrzeit"), "Haltestelle" for a stop (the trip details said "Stationen"; "Bahnhof" in the Rad + Bahn note, which leaves out buses), "Startpunkt 2" (not also "2. Startpunkt"), "am besten Ort" in the meeting legend, "Vergleich" as on the chip; the Zeitlinien note no longer says "Ringe", which are the rings around the start. English: "travel time" (not "trip time"), "place" (not "spot"), "stop" in the search field, "starting point" (not "start") in prose, "Step-free" for the toggle (as in its hint and on the card), "Ø" like the card and map labels (not also "avg"), "replacement service" (not "replacement buses"), "Close notice" for both close buttons, "destination" (not also "end") outside the short pin labels. Both: the help says to tap the person-with-plus icon to add a starting point (no button was ever named "2. Startpunkt"). The fallback text in `index.html` now matches the German strings (the step-free note, the Zeitlinien note, the meeting chip, four button labels and the time chip were stale), and a test keeps it so. Unused keys removed: `searchOpen`, `menuOpen`, `menuMap`, `tripStops`, `compareOn`. Timings at 360×740 (browser.mjs, 7 visits): 1× main → branch first map 873 → 737 ms, tap to trip 311 → 238 ms, footpath map 983 → 1065 ms, tap after the network 45 → 38 ms; 4× first map 1175 → 1218 ms, tap to trip 143 → 170 ms, tap after the network 46 → 68 ms, and with the order swapped (branch first) 1317 / 1286 ms, 151 / 133 ms, 32 / 44 ms: the differences follow the run order, not the side (text only, S067).

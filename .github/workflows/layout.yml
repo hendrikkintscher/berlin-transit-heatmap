@@ -24,7 +24,8 @@ defaults:
 
 jobs:
   screens:
-    runs-on: ubuntu-latest
+    # Pinned: Playwright 1.56 cannot install WebKit on ubuntu-latest (26.04), S068.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
