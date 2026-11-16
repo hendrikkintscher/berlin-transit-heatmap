@@ -3,6 +3,7 @@
 // stays through settings changes until the ✕ or a new tap; a start marker's card offers
 // to remove it.
 
+import { distanceM } from '@berlin-transit-heatmap/routing';
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import { escapeHtml, eveningClock, gridSeconds, whenText } from './format';
 import { lang, t } from './i18n';
@@ -94,7 +95,7 @@ const SWAP_WAIT_MS = 2500;
 const LINK_SLACK_S = 5;
 /**
  * Seconds a trip span kept before the footpaths were in is widened by on each side once they
- * are: the walks at the ends change with them. Over 296 random trips (bench/kept.ts) the card
+ * are: the walks at the ends change with them. Over 296 random trips (bench/kept.ts, in git history) the card
  * then keeps the same rides in 43 % (with the usual trip where none fits), against 24 % with
  * only the usual trip; 180 s gains 2 points more but lets other trips in (0.13.8d).
  */
@@ -324,9 +325,7 @@ export function initTap(deps: TapDeps, initial: Point | null, initialSpan: Span 
     }
     if (!place || pending !== at || readout.hidden) return;
     // Only snap to an address close to the tap (about 60 m).
-    const dy = (place.lat - at.lat) * 111_000;
-    const dx = (place.lon - at.lon) * 111_000 * Math.cos((at.lat * Math.PI) / 180);
-    if (Math.hypot(dx, dy) > 60) return;
+    if (distanceM(place.lat, place.lon, at.lat, at.lon) > 60) return;
     const el = document.createElement('small');
     el.className = 'addr';
     el.textContent = place.label;

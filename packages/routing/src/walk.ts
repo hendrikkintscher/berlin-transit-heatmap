@@ -1096,7 +1096,7 @@ const OCTAGON = 1.0825;
  * network's positions are flat and float32, so a walk may be a little shorter than the
  * straight line between its ends: the bound gives away this share and these metres. This is
  * a margin, not a proof (a long straight chain of streets under 17 m could beat it); the
- * grid's octagon and in-cell margins add more, and bench/fringe.ts checks every cell.
+ * grid's octagon and in-cell margins add more, and bench/fringe.ts (S043, in git history) checked every cell.
  */
 const BOUND_SHARE = 0.97;
 const BOUND_SLACK_M = 2;

@@ -17,7 +17,7 @@ export { goalArrival, goalCells, goalShares, goalWindow } from './goal';
 export { stepFreeTimetable } from './stepfree';
 export { REGION } from './regions';
 export { cellAt, cellColRow, DEFAULT_BBOX, gridLayout, gridValueAt, heatGrid } from './grid';
-export { distanceM, WALK_SPEED_MPS } from './geo';
+export { distanceM, M_PER_DEG_LAT, metresPerDegLon, WALK_SPEED_MPS } from './geo';
 export { LEG_NONE, LEG_ORIGIN, LEG_WALK, NO_DEPARTURE } from './raptor';
 export type { UsedSegment } from './usage';
 export { goalUsage, routeUsage } from './usage';

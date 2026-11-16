@@ -12,6 +12,7 @@
 // journey to its cell and the later start of laterStart; on foot at 5 km/h, every walk up to
 // 30 min (FASTEST_WALK). Data: the live site's hourly files for those dates, its stop list and
 // footpaths, kept in <data>/live/ (as scripts/layout/screens.mjs keeps them).
+import { M_PER_DEG_LAT, metresPerDegLon } from '../src/geo';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -90,8 +91,8 @@ for (let i = 0; i < N; i++) {
       const a = rnd() * 2 * Math.PI;
       const m = rnd() * 400;
       return {
-        lat: s.lat + (m * Math.cos(a)) / 111320,
-        lon: s.lon + (m * Math.sin(a)) / (111320 * Math.cos((s.lat * Math.PI) / 180)),
+        lat: s.lat + (m * Math.cos(a)) / M_PER_DEG_LAT,
+        lon: s.lon + (m * Math.sin(a)) / metresPerDegLon(s.lat),
       };
     }
   };

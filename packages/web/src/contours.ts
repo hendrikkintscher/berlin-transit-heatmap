@@ -1,6 +1,7 @@
 // Isochrone outlines: lines where the travel time crosses each 5-minute step up to an hour, traced
 // from the grid with marching squares and joined into polylines.
 import type { FeatureCollection, LineString } from 'geojson';
+import { M_PER_DEG_LAT } from '@berlin-transit-heatmap/routing';
 import { blurSeconds } from './soften';
 
 export const CONTOUR_MINUTES = Array.from({ length: 12 }, (_, i) => 5 * (i + 1));
@@ -68,7 +69,7 @@ export function outlines(
   if (offset) for (let i = 0; i < half.seconds.length; i++) half.seconds[i] += offset;
   const blurred = blurSeconds(half.seconds, half.cols, half.rows, Math.round(blurCells / 2));
   // A cell's height in metres (cells are square), for the simplification's tolerance.
-  const cellM = ((half.bbox[3] - half.bbox[1]) / half.rows) * 111_320;
+  const cellM = ((half.bbox[3] - half.bbox[1]) / half.rows) * M_PER_DEG_LAT;
   return contours(
     blurred,
     half.cols,

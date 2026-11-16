@@ -1,5 +1,5 @@
 // Suggested meeting points: with two or more starts, a few stations everyone reaches quickly.
-import { distanceM } from '@berlin-transit-heatmap/routing';
+import { distanceM, M_PER_DEG_LAT, metresPerDegLon } from '@berlin-transit-heatmap/routing';
 
 export interface MeetCandidate {
   name: string;
@@ -61,8 +61,8 @@ export function bestCells(
   spreadM = MEET_SPREAD_M,
 ): { lat: number; lon: number; seconds: number }[] {
   // The spread in cells (an ellipse: cells are not square in metres).
-  const cellH = ((n - s) / rows) * 111_320;
-  const cellW = ((e - w) / cols) * 111_320 * Math.cos((((n + s) / 2) * Math.PI) / 180);
+  const cellH = ((n - s) / rows) * M_PER_DEG_LAT;
+  const cellW = ((e - w) / cols) * metresPerDegLon((n + s) / 2);
   const ry = spreadM / cellH;
   const rx = spreadM / cellW;
   const taken: [number, number][] = [];

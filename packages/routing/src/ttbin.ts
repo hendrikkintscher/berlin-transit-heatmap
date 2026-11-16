@@ -305,7 +305,7 @@ function readStops(r: Reader): TimetableData['stops'] {
     };
     if (r.uvar() & 1) s.stepFree = false;
     const parent = r.uvar();
-    if (parent > stops.length) throw new Error('Timetable file is inconsistent');
+    if (parent > stops.length) throw new Error('The stop list file is inconsistent');
     if (parent) s.parent = parent - 1;
     stops[i] = s;
   }

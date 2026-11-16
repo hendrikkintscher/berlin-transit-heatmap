@@ -13,6 +13,7 @@
 //        [--start YYYYMMDD] [--days 1-6] [--gtfs <unpacked GTFS dir>] [--vbb] [--out work/suite]
 //        tsx bench/suite.ts --ci --data <dir with timetable-weekday-10.bin, walk.bin, stoplist.bin>
 // --ci: 40 trips on that one file, offline; exits 1 when a target of checks 1, 2 or 4 fails.
+import { M_PER_DEG_LAT, metresPerDegLon } from '../src/geo';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -179,8 +180,8 @@ for (const mode of modes) {
         const a = rnd() * 2 * Math.PI;
         const m = rnd() * 400;
         return {
-          lat: s.lat + (m * Math.cos(a)) / 111320,
-          lon: s.lon + (m * Math.sin(a)) / (111320 * Math.cos((s.lat * Math.PI) / 180)),
+          lat: s.lat + (m * Math.cos(a)) / M_PER_DEG_LAT,
+          lon: s.lon + (m * Math.sin(a)) / metresPerDegLon(s.lat),
         };
       }
     };

@@ -2,6 +2,7 @@
 // current start point (the weighted average trip time to them). Imports read Google
 // Takeout exports (Saved Places GeoJSON, saved-list CSV) and this app's own JSON export.
 // Each region keeps its own list.
+import { distanceM } from '@berlin-transit-heatmap/routing';
 import { regionKey } from './region';
 
 export type Weight = 1 | 2 | 3;
@@ -64,8 +65,7 @@ export function favouriteAt(
   list: readonly Favourite[],
   at: { lat: number; lon: number },
 ): Favourite | undefined {
-  const kx = 111_320 * Math.cos((at.lat * Math.PI) / 180);
-  return list.find((f) => Math.hypot((f.lon - at.lon) * kx, (f.lat - at.lat) * 111_320) < NEAR_M);
+  return list.find((f) => distanceM(at.lat, at.lon, f.lat, f.lon) < NEAR_M);
 }
 
 export function newId(): string {

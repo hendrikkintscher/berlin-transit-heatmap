@@ -3,7 +3,7 @@
 // and the device's settings, so it draws the first map before the app asks for it (see
 // mapAhead in worker.ts). With a start in the link it also asks for that map's timetable
 // at once. boot.ts takes the worker over.
-import { dataPublished, dataUrl, pageDataVersions, setDataVersions } from './data-url';
+import { dataUrl, pageDataVersions, setDataVersions } from './data-url';
 import { earlyLoad, linkHasStart, STATE_KEYS } from './early';
 import type { FromWorker, ToWorker } from './protocol';
 import { dataBase } from './region';
@@ -35,10 +35,8 @@ try {
       stepFree: stored['step-free'] ?? null,
       travel: stored.travel ?? null,
     });
-    const files = [`timetable-${window}.bin`];
-    // Its stops and footpaths, loaded once for every hour (0.13.13).
-    if (dataPublished('stoplist.bin')) files.push('stoplist.bin');
-    for (const name of files)
+    // The hour and its stops and footpaths, loaded once for every hour.
+    for (const name of [`timetable-${window}.bin`, 'stoplist.bin'])
       fetch(dataUrl(dataBase(), name), { priority: 'high' })
         .then((res) => res.arrayBuffer())
         .catch(() => {});
