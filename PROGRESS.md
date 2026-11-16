@@ -10,12 +10,15 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 
-## 2026-11-16 · local · S063
+## 2026-11-16 · local · S063 review, S066
 
-- S063 cleanup 1 of 3 (1.1.15): finished specs out of `docs/specs/` (readable at `bc8d717`), old screenshots
-  removed, showcase retaken, README/CLAUDE.md/hooks/workflows brought up to date. Its session ended before
-  committing; committed and merged from a vault wrap-up session after `bash scripts/check.sh` passed.
-- `passes` stays false: the path audit and the showcase check in its test were not re-run there. S064, S065 next.
+- Consistency review (code, UI, docs): S063 docs/repo cleanup shipped as 1.1.15 (#418); S064 (dead code, old
+  benches) and S065 (UI wording) added. Hendrik's picks: 3 PRs in order; keep only benches still in use
+  (suite, speed, goal, swap, providers, chains); showcase regenerated; Claude picks UI terms, listed in the PR.
+- #418 was merged by another (vault wrap-up) session 8 s after it opened, before CI, as a merge commit.
+- Main's speed job is red since the 2026-11-16 feed: Alt-Kladow's route-tied timed transfers (bus waits for
+  bus, 0 s) became a 0 s footpath between stops 87 m apart. S066 fix on branch `task/S066-change-time-floor`
+  (unit tests pass), not yet checked on the real feed.
 
 ## 2026-11-15 · local · S061, S044
 
