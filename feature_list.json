@@ -262,7 +262,7 @@
       "size": "S",
       "deps": [],
       "test": "timetable built locally from gtfs-latest (+ osm walkways) with the fix: bench/suite.ts --ci meets every target; count of changed footpaths reported; after merge and a timetable rebuild the speed job on main is green",
-      "passes": false
+      "passes": true
     }
   ]
 }
