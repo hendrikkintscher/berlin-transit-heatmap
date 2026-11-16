@@ -50,7 +50,8 @@ MapLibre a blank style, launch Chromium with `--ignore-gpu-blocklist --enable-gp
 frame, ~75 ms that delays every worker answer; decision 0008), and time a fresh visit: first
 map (worker 'result' message), tap to trip on the card, ⇅, moving the rings. Medians of 6–8
 visits; 4× first-map times are bimodal. `scripts/speed/browser.mjs` does all of this for the first
-map and tap to trip (`--base` times main's dist in the same run); add flows to it as steps need them.
+map, tap to trip, the footpath map, a second tap and panning (`--base` times main's dist in the same
+run); add flows to it as tasks need them.
 The CI speed job checks bundle sizes (`scripts/speed/budget.json`) and Node map timings;
 raising a budget is a deliberate edit with the reason in the PR.
 
@@ -66,7 +67,7 @@ One home per kind of info, no duplicates.
 | History: app version / changelog                                   | git + `CHANGELOG.md`, `VERSION` (+ both `package.json`)                                     |
 | Decisions                                                          | vault note `Projects/Own apps and tools/Transport in Berlin visualised.md` (`## Decisions`) |
 | Speed budget                                                       | `scripts/speed/budget.json`                                                                 |
-| Finished step files (before 1.0.7)                                 | git history: `git show 012f587:docs/steps/archive/<file>`                                   |
+| Specs of finished tasks; step files before 1.0.7                   | git: `git show bc8d717:docs/specs/<file>`, `git show 012f587:docs/steps/archive/<file>`     |
 
 Implementation details go in commit messages and code comments, not planning files.
 Don't create other planning or notes files; if something doesn't fit, ask.
@@ -90,8 +91,9 @@ against the map's hour; `rollon.ts`: a missed connection rolling on, on the hour
 `fringe.ts`: the map's two-pass walk against a main checkout's `walkFront`, every cell, on foot and by bike (S043);
 `providers.ts`: the trip on tap against VBB's planner and Transitous for random trips, answers cached;
 `suite.ts`: the route quality suite with its targets, `--gtfs` replays rides against the raw feed, `--vbb` asks VBB, `--ci` is the speed job's sample; `gridexact.ts`, `vbbwhy.ts`, `footpaths.ts`: the measurements behind S041 and S042). The release downloads are public: if `fetch-data` gets a 401, run it
-without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest` (`GTFS.zip`; `GITHUB_REPOSITORY=hendrikkintscher/berlin-transit-heatmap scripts/publish/download.sh gtfs-latest work/gtfs GTFS.zip`, unzip to `work/gtfs/feed` for `suite.ts --gtfs`);
-`node packages/timetable-build/bin/build-timetable.js --gtfs data/gtfs --out <dir>` builds all hourly files in about 30 s.
+without `GITHUB_TOKEN`/`GH_TOKEN`. The GTFS feed is the release `gtfs-latest`: `pnpm gtfs:fetch` unpacks it into `data/gtfs`
+(for `suite.ts --gtfs data/gtfs`), and `pnpm build-timetable --gtfs data/gtfs --out <dir>` builds all
+hourly files in about 30 s.
 
 The cloud session hook (`.claude/hooks/session-install.sh`) installs the packages and fetches
 the bench data; `.claude/hooks/session-start.sh` prints the open tasks and the last session.
@@ -113,15 +115,12 @@ desktop are not comparable with the cloud container's, so time main and the bran
 - 0.15.13 fixed an empty app after a deploy on a slow network (`packages/web/public/sw.js`,
   `shellReady()`). It is not confirmed that this was the "Navigation lädt nicht" Hendrik saw; if he
   reports it again, the cause is elsewhere.
-- Measurement scripts of finished steps (S001–S034) were kept outside the repo; their numbers are in
-  CHANGELOG.md and the PRs. Don't look for them; rebuild from `scripts/speed/browser.mjs`.
 - PRs here are usually opened with the GitHub tools, not `gh pr create`, so the pr-guard hook does
   not see them: check the bookkeeping (VERSION, both package.json, CHANGELOG.md, feature_list.json) yourself.
 - Prettier checks every Markdown and JSON file (`pnpm format:check` in CI); run `npx prettier --write`
   on the docs you change.
-- Route quality (S036–S040, 2026-11-06): S042 was decided on 2026-11-10 (decision 0016): S053 and
-  S055 shipped, S054 measured and not shipped (decision 0017, `docs/specs/s054-*.md`); its measurements are in `docs/specs/s042-*.md` and the finished step files S039 and S041 (`git show 012f587:docs/steps/archive/041-map-minutes-a-nearer-stop-reached-later-.md`).
-  Not in git, so a new machine makes them again: the raw GTFS feed (recipe under Commands),
+- Route quality measurements (decisions 0016, 0017) need data that is not in git, so a new machine
+  makes it again: the raw GTFS feed (recipe under Commands),
   `work/suite-*` outputs (`bench/suite.ts`), and the planners' answers in `packages/routing/.data/providers/`
   (asking VBB again takes about 15 min per 1,000 trips; Transitous and VBB need network access).
 - Pushes from the cloud container sometimes fail with "fatal error in commit_refs": retry, and check with

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PreToolUse hook on Bash: refuse `gh pr create` unless the branch has the bookkeeping
 # and isn't far too big.
-#   any PR -> VERSION + CHANGELOG.md changed (one version per PR)
+#   any PR -> VERSION, CHANGELOG.md and both package.json files changed (one version per PR)
 #   any PR -> at most MAX_PR_LINES changed lines (lock files, generated files and docs excluded)
 # Limitation: only PRs opened with the gh CLI are checked (not ones opened via a GitHub connector/MCP).
 MAX_PR_LINES="${MAX_PR_LINES:-800}"
@@ -15,11 +15,11 @@ git rev-parse --verify --quiet "$base" >/dev/null || base=main
 changed=$( { git diff --name-only "$base"...HEAD; git diff --name-only HEAD; } 2>/dev/null | sort -u)
 
 missing=()
-for f in VERSION CHANGELOG.md; do printf '%s\n' "$changed" | grep -qx "$f" || missing+=("$f"); done
+for f in VERSION CHANGELOG.md package.json packages/web/package.json; do printf '%s\n' "$changed" | grep -qx "$f" || missing+=("$f"); done
 if [ ${#missing[@]} -gt 0 ]; then
   {
     echo "Blocked: this PR is missing bookkeeping: ${missing[*]}"
-    echo "Bump VERSION, add its '## X.Y.Z · YYYY-MM-DD' section to CHANGELOG.md, run scripts/check.sh, commit — then create the PR."
+    echo "Add the entry under '## [Unreleased]' in CHANGELOG.md, run bash scripts/bump.sh (VERSION, both package.json), run scripts/check.sh, commit — then create the PR."
   } >&2
   exit 2
 fi

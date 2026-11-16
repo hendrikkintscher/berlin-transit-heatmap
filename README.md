@@ -4,14 +4,14 @@ How long does it take to get from one point in Berlin to everywhere else by publ
 
 Times are for leaving now or at a chosen hour of today, the coming week or a typical weekday or weekend, or for arriving by an hour. Travel times include walking to the first stop and from the last stop along real streets and paths. Everything runs in the browser, with no server to maintain.
 
-## What's in 1.0
+## What it does
 
 - **The map:** pick a start (tap, search, or where you are) and see the travel time to every spot in Berlin as time lines, with colours under Ebenen; on foot to and from stops along real streets and paths.
 - **A tap for the trip:** the minutes and the connection to any place (lines, changes, walks, when to leave); ⇅ swaps start and end; press and hold to move the start.
 - **Zeit:** now, a chosen hour of today or the coming week, a typical weekday or weekend; leave at or arrive by; next connection, typical (wait included) or best case; compare two times.
 - **Unterwegs:** transit, bike + train or bike only; walking speed; step-free trips.
 - **Questions on the start card:** "Was erreiche ich in 30 Min.?" (Bis N Min.), "Wo treffen wir uns?" (Treffpunkt for up to five people, with fair suggestions), "Wo soll ich wohnen?" (Wohnlage from your favourite places).
-- **Layers:** lines the fastest trips use, departures per hour, transit deserts, places to go (lakes, bathing spots, parks, forests, viewpoints with their minutes).
+- **Layers:** the network's lines and stations (with a switch), lines the fastest trips use, departures per hour, transit deserts, places to go (lakes, bathing spots, parks, forests, viewpoints with their minutes), Cash Group ATMs.
 - **Timetable changes** for the chosen day, from the VBB timetable, refreshed every night.
 - **Everyday use:** favourite places, links that open the same map, German and English, installable as an app that works offline; the first map in about a second on a phone-sized screen.
 
@@ -74,8 +74,8 @@ The feed is about 50–100 MB, so it lives in releases rather than in git:
 With the [GitHub CLI](https://cli.github.com/) installed and logged in:
 
 ```sh
-npm run gtfs:fetch    # downloads gtfs-latest into data/gtfs
-npm run gtfs:verify   # re-runs the checks locally
+pnpm gtfs:fetch       # downloads gtfs-latest into data/gtfs (and GTFS.zip into data/)
+pnpm gtfs:verify      # re-runs the checks locally
 ```
 
 Set `GTFS_TAG=gtfs-2026-10-02` (for example) to fetch a specific snapshot instead.
@@ -85,15 +85,15 @@ Set `GTFS_TAG=gtfs-2026-10-02` (for example) to fetch a specific snapshot instea
 ```
 .github/workflows/         CI, data refreshes, timetable build, Pages deploy, version tags
 .claude/                   Claude Code hooks, skills (/task /spec /groom), reviewer agent
-scripts/                   check.sh, bump.sh (version), gtfs/, layout/, publish/, showcase/, smoke/, speed/
+scripts/                   check.sh, bump.sh (version), addons/, gtfs/, layout/, publish/, showcase/, smoke/, speed/
 packages/timetable-build/  GTFS -> compact timetable files
 packages/routing/          RAPTOR engine and heatmap grid
 packages/web/              web app
-docs/                      specs/ (details of open tasks; later.md)
+docs/                      specs/ (details of tasks too big for one line; later.md)
 showcase/                  screenshots (screens/) and sharepics (sharepics/), made by scripts/showcase/build.mjs
 ```
 
-How the work is planned and built (tasks, decisions, versions) is in [CLAUDE.md](CLAUDE.md), the open
+How the work is planned and built (tasks, decisions, versions) is in [CLAUDE.md](CLAUDE.md), the
 tasks in [feature_list.json](feature_list.json), and what shipped in [CHANGELOG.md](CHANGELOG.md).
 
 ## Licence

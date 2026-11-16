@@ -16,12 +16,12 @@ first** everywhere.
 ## All languages
 
 - Run `pnpm check` before every push; `npx prettier --write` on changed docs. Prettier settings
-  (`.prettierrc`): single quotes, 100 columns, trailing commas. Don't argue with the formatter.
+  (`.prettierrc.json`): single quotes, 100 columns, trailing commas. Don't argue with the formatter.
 - Comments say _why_ and give numbers ("50–65 KB gzipped each: keep the 48 most recently
   stored"), not what the next line does. Match the comment density of the file you are in.
 - Names are plain English words, the same word for the same thing across packages (Ziel, rings,
   card, trip).
-- Small diffs: one roadmap step per PR, no drive-by refactors.
+- Small diffs: one task per PR, no drive-by refactors.
 
 ## TypeScript
 
@@ -152,7 +152,7 @@ bash` scripts may use Bash (`scripts/publish/download.sh`). Pick one and keep th
 - **Pin actions.** We use major tags (`actions/checkout@v4`). GitHub recommends pinning to full
   commit SHAs (with the version in a comment, kept fresh by Dependabot), and since 2026-10-14
   _workflow lockfiles_ (`.github/workflows/actions.lock`, via `gh actions-lock`) are in public
-  preview and pin transitive actions too. Worth a roadmap decision; first-party `actions/*` are
+  preview and pin transitive actions too. Worth a task of its own; first-party `actions/*` are
   the lowest risk.
 - Avoid `pull_request_target` and checking out PR code in privileged `workflow_run` jobs; treat
   artifacts from other workflows as untrusted.
@@ -173,7 +173,7 @@ bash` scripts may use Bash (`scripts/publish/download.sh`). Pick one and keep th
 
 ## Toolchain versions (October 2026)
 
-What we pin vs. the latest release, for planning upgrades as roadmap steps (each one measured
+What we pin vs. the latest release, for planning upgrades as tasks (each one measured
 for speed before and after):
 
 | Tool              | Repo | Latest | Notes                                                                                                                                 |

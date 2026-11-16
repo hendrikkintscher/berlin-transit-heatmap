@@ -36,16 +36,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
+          cache: pnpm
 
       - name: Install
-        run: |
-          if [ -f pnpm-workspace.yaml ]; then
-            pnpm install --frozen-lockfile
-          else
-            # Until the workspace root exists, install the web package on its own.
-            pnpm --dir packages/web install --ignore-workspace --no-frozen-lockfile
-          fi
+        run: pnpm install --frozen-lockfile
 
       - name: Test
         run: pnpm --dir packages/web test

@@ -219,6 +219,39 @@
       "deps": [],
       "test": "a fresh clone with core.autocrlf=true on Windows builds packages/web and passes pnpm check",
       "passes": true
+    },
+    {
+      "id": "S063",
+      "title": "Cleanup 1 of 3 after a consistency review of code, UI and docs (Hendrik, 2026-11-16: is the app finished?): docs, specs of finished tasks, hooks, workflows, showcase pictures",
+      "kind": "chore",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "M",
+      "deps": [],
+      "test": "bash scripts/check.sh passes; every path and command in README, CLAUDE.md and the package READMEs exists; showcase pictures show 1.1.x",
+      "passes": true
+    },
+    {
+      "id": "S064",
+      "title": "Cleanup 2 of 3 (S063 review): dead code, finished benches, copied constants and old file formats in routing, timetable-build, web and scripts",
+      "kind": "refactor",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "M",
+      "deps": ["S063"],
+      "test": "bash scripts/check.sh, smoke and speed pass; first map and tap timings unchanged at 360x740, 1x and 4x",
+      "passes": false
+    },
+    {
+      "id": "S065",
+      "title": "Cleanup 3 of 3 (S063 review): UI wording, one term per thing in German and English, index.html fallback text matching i18n.ts, dead i18n keys",
+      "kind": "fix",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": ["S063"],
+      "test": "every changed string listed in the PR; smoke passes; screenshots of the changed screens",
+      "passes": false
     }
   ]
 }

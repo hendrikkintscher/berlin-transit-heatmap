@@ -7,7 +7,7 @@ cd "$ROOT" || exit 0
 git rev-parse --git-dir >/dev/null 2>&1 || exit 0
 
 changed=$(git status --porcelain 2>/dev/null | awk '{print $NF}' \
-  | grep -vE '^(docs/|feature_list\.json$|PROGRESS\.md$|CHANGELOG\.md$|VERSION$|\.claude/|\.github/|CLAUDE(\.local)?\.md$|README\.md$|TEMPLATE-README\.md$)' || true)
+  | grep -vE '^(docs/|feature_list\.json$|PROGRESS\.md$|CHANGELOG\.md$|VERSION$|\.claude/|\.github/|CLAUDE(\.local)?\.md$|README\.md$)' || true)
 [ -z "$changed" ] && exit 0
 
 out=$(bash scripts/check.sh 2>&1); rc=$?
