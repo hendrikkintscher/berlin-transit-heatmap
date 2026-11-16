@@ -51,7 +51,7 @@ describe('trip card', () => {
     expect(html).toContain('ohne Halt · 3 Min.');
     // 10:05 off, 10:13 on: 3 minutes walking, 5 waiting.
     expect(html).toContain('<li class="tl-change">Umstieg · 3 Min. Fußweg · 5 Min. warten</li>');
-    expect(html).toContain('<summary>2 Stationen · 7 Min.</summary>');
+    expect(html).toContain('<summary>2 Haltestellen · 7 Min.</summary>');
     expect(html).toContain('<time>10:15</time><span>U Schlesisches Tor</span>');
     // The stops line gives way to the timeline.
     expect(html).not.toContain('class="stops"');

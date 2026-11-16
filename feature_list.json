@@ -251,7 +251,7 @@
       "size": "S",
       "deps": ["S063"],
       "test": "every changed string listed in the PR; smoke passes; screenshots of the changed screens",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S066",

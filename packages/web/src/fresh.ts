@@ -94,7 +94,7 @@ const TEXT = {
     keep: 'Behalten und neu starten',
     all: 'Alles löschen und neu starten',
     cancel: 'Abbrechen',
-    working: 'Wird neu gestartet …',
+    working: 'Wird neu gestartet…',
   },
   en: {
     title: 'Fresh start',
@@ -109,7 +109,7 @@ const TEXT = {
     keep: 'Keep them and start fresh',
     all: 'Delete everything and start fresh',
     cancel: 'Cancel',
-    working: 'Starting fresh …',
+    working: 'Starting fresh…',
   },
 };
 type Lang = keyof typeof TEXT;
