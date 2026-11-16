@@ -227,11 +227,14 @@ for (const size of opt.sizes.split(',')) {
       await ctx.addInitScript(() => {
         const W = window.Worker;
         window.__results = 0;
+        window.__walk = -1;
         function Counted(url, options) {
           const w = new W(url, options);
           if (!String(url).startsWith('blob:'))
             w.addEventListener('message', (e) => {
               if (e.data?.type === 'result') window.__results++;
+              // The footpaths are in: the next 'result' is the map walked on the streets.
+              if (e.data?.type === 'walk') window.__walk = window.__results;
             });
           return w;
         }
@@ -282,6 +285,12 @@ for (const size of opt.sizes.split(',')) {
           if (sc.query)
             await p.waitForFunction(() => window.__results > 0, null, { timeout: 60000 });
           await p.waitForTimeout(sc.query ? 2500 : 1500);
+          // Shots without the "loading footpaths" note, also on a slow machine.
+          await p
+            .waitForFunction(() => window.__walk >= 0 && window.__results > window.__walk, null, {
+              timeout: 30000,
+            })
+            .catch(() => errors.push('footpaths: not in after 30 s'));
           if (sc.wheel) {
             const [fx, fy, steps] = sc.wheel;
             await p.mouse.move(width * fx, height * fy);

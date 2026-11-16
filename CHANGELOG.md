@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.15] — 2026-11-16
+
+- S063 (first of three cleanup PRs, after a consistency review of code, UI and docs): docs and repo only, no app code. The specs of finished tasks left `docs/specs/` (8 files; in git at `bc8d717`, CLAUDE.md says how to read them), with the Prettier exemption for three of them. The unused pre-1.0 screenshots in `packages/web/docs/` (2.2 MB) are gone and the `showcase/` pictures were taken again from 1.1.14 (they predated the network lines, stops and ATMs); `scripts/layout/screens.mjs` now waits for the footpath map before a shot, so no "Fußwege werden geladen" note shows on a slow machine. README: "What it does" instead of "What's in 1.0", with the network layer and ATMs, and `pnpm` commands. The timetable-build README lists `lines.bin`, `changes.json` and `streets.json` and the build's real 30 s. CLAUDE.md: what `browser.mjs` times today, one GTFS recipe (`pnpm gtfs:fetch`), two stale Gotchas cut. Hooks: pr-guard asks for the CHANGELOG format we use and both package.json files; template leftovers removed. Workflows read Node from `.nvmrc`; the deploy drops a fallback for a workspace that has long existed and caches pnpm. Timings: nothing the app runs changed.
+
 ## [1.1.14] — 2026-11-16
 
 - S062: every text file is checked out with LF line endings, also with `core.autocrlf=true` (Git for Windows' default): `.gitattributes` has `* text=auto eol=lf`. A fresh clone with `core.autocrlf=true` used to check out CRLF, and then the web build failed ("early-start: no charset meta in index.html") and prettier flagged 216 files; now it has no CRLF file, and the build and `pnpm check` pass. Nothing in the repository changes (every file is stored as LF already), and the built site is the same apart from the baked-in commit, so there are no timings. An existing Windows checkout keeps its CRLF files until they are checked out again (`git rm -rq --cached .` then `git reset --hard`, with nothing uncommitted).

@@ -8,7 +8,7 @@ pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 #          --osm work/walkways.opl.gz (walking network from release osm-latest)
 ```
 
-`--gtfs` takes the zip or an extracted folder. The run takes about 10 seconds on the full VBB feed and prints stats.
+`--gtfs` takes the zip or an extracted folder. Building every hourly file takes about 30 seconds on the full VBB feed (reading the footpaths with `--osm` adds about 15 s) and prints stats.
 
 ## Outputs
 
@@ -21,6 +21,9 @@ pnpm build-timetable --gtfs data/GTFS.zip --out work/out
 | `stops.json`                                           | `{ version, serviceDate, feedVersion, stops }`, same `stops` as above                                                                                                                                                                                        |
 | `build-info.json`                                      | stats, file sizes (raw and gzipped), and the GTFS manifest in CI                                                                                                                                                                                             |
 | `walk.bin`                                             | with `--osm`: the walking network (Contract 3, see the routing README)                                                                                                                                                                                       |
+| `lines.bin`                                            | the courses of the ridden stretches along tracks and roads (`src/linesbin.ts`), drawn as the network lines after the first map                                                                                                                               |
+| `changes.json`                                         | the timetable changes of each real date against its typical day (the menu's "Heute anders")                                                                                                                                                                  |
+| `streets.json`                                         | with `--osm`: the street names for the offline search                                                                                                                                                                                                        |
 
 ## How the files are built
 

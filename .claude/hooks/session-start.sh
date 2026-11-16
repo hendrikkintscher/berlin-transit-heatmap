@@ -28,11 +28,4 @@ last=$(grep -m1 -E '^## [0-9]{4}-[0-9]{2}-[0-9]{2}' "$ROOT/PROGRESS.md" 2>/dev/n
 [ -n "$last" ] && echo "Last session in PROGRESS.md: ${last#\#\# }"
 echo "Reminder: work only on the task named for this thread; ask before starting any other task."
 
-# Unfilled template placeholders mean Claude doesn't know how to build/test this project.
-if grep -qE '<(Project name|start command)>' "$ROOT/CLAUDE.md" 2>/dev/null \
-   || grep -qE '^(TEST_CMD|LINT_CMD)=""' "$ROOT/scripts/check.sh" 2>/dev/null; then
-  echo
-  echo "Setup incomplete: CLAUDE.md commands and/or TEST_CMD/LINT_CMD in scripts/check.sh are still placeholders."
-  echo "Tell the user once, early, and offer to fill them in from the codebase."
-fi
 exit 0
