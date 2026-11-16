@@ -252,6 +252,17 @@
       "deps": ["S063"],
       "test": "every changed string listed in the PR; smoke passes; screenshots of the changed screens",
       "passes": false
+    },
+    {
+      "id": "S066",
+      "title": "Fix: CI speed job red since 2026-11-16 (route quality 'walks quicker than the straight line', Alt-Kladow): the build applied route-tied timed transfers (type 1, 0 s) as everyone's footpath; leave those out and floor every change time at the straight line at 5 km/h",
+      "kind": "fix",
+      "owner": "claude",
+      "priority": "high",
+      "size": "S",
+      "deps": [],
+      "test": "timetable built locally from gtfs-latest (+ osm walkways) with the fix: bench/suite.ts --ci meets every target; count of changed footpaths reported; after merge and a timetable rebuild the speed job on main is green",
+      "passes": false
     }
   ]
 }
