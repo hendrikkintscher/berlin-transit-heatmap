@@ -10,7 +10,7 @@ import { findChanges, WATCHED_MODES, type Change, type WatchedTrip } from './cha
 import { parseTime, readCsv } from './csv.ts';
 import { hopCourses, type Pattern, type Shape } from './lines.ts';
 import type { Hop } from '../../routing/src/linesbin.ts';
-import { STOP_BBOX, type BBox, forEachNearbyPair, inBBox } from './geo.ts';
+import { STOP_BBOX, type BBox, distanceM, forEachNearbyPair, inBBox } from './geo.ts';
 import type { GtfsSource } from './source.ts';
 import { NETWORK_WALK_SPEED_MPS, WalkDistances, type WalkGraph } from './walk.ts';
 import type { DayType, Mode, Route, Stop, StopsFile, Timetable, Transfer } from './types.ts';
@@ -809,7 +809,8 @@ async function buildTransfers(
   // GTFS transfers.txt: minimum transfer times (type 2) and timed transfers (type 1,
   // the connection is held: no time needed). Rows tied to routes count for a pair of
   // stops only where no general row does, with the longest of them, since a footpath
-  // here holds for every line.
+  // here holds for every line. A timed transfer tied to routes says one vehicle waits for
+  // another, not how long the walk takes, so it is left out (S066).
   if (source.has('transfers.txt')) {
     const given = new Map<string, number>();
     const tied = new Map<string, number>();
@@ -817,14 +818,15 @@ async function buildTransfers(
       const type = get('transfer_type');
       if (type !== '1' && !(type === '2' && get('min_transfer_time') !== '')) return;
       if (get('from_trip_id') || get('to_trip_id')) return;
+      const tiedToRoutes = !!(get('from_route_id') || get('to_route_id'));
+      if (type === '1' && tiedToRoutes) return;
       const from = stopIndex.get(get('from_stop_id'));
       const to = stopIndex.get(get('to_stop_id'));
       if (from === undefined || to === undefined || from === to) return;
       if (!served.has(from) || !served.has(to)) return;
       const key = `${newIndex.get(from)},${newIndex.get(to)}`;
       const s = type === '1' ? 0 : Number(get('min_transfer_time'));
-      if (get('from_route_id') || get('to_route_id'))
-        tied.set(key, Math.max(tied.get(key) ?? 0, s));
+      if (tiedToRoutes) tied.set(key, Math.max(tied.get(key) ?? 0, s));
       else given.set(key, Math.min(given.get(key) ?? Infinity, s));
     });
     for (const [key, s] of tied) if (!given.has(key)) given.set(key, s);
@@ -836,10 +838,17 @@ async function buildTransfers(
     }
   }
 
+  // No change is quicker than walking the straight line at CAPPED_WALK_SPEED_MPS: the
+  // feed's timed transfers (0 s) and short change times between stops metres apart would
+  // otherwise let the map walk there for free (Alt-Kladow's stops, 87 m: 0 s; S066).
+  const rawOf = new Map([...newIndex].map(([raw, n]) => [n, rawStops[raw]!]));
   const transfers: Transfer[] = [];
   for (const [key, s] of seconds) {
     const [from, to] = key.split(',').map(Number) as [number, number];
-    transfers.push({ from, to, seconds: s });
+    const a = rawOf.get(from)!;
+    const b = rawOf.get(to)!;
+    const floor = Math.round(distanceM(a.lat, a.lon, b.lat, b.lon) / CAPPED_WALK_SPEED_MPS);
+    transfers.push({ from, to, seconds: Math.max(s, floor) });
   }
   transfers.sort((x, y) => x.from - y.from || x.to - y.to);
   return transfers;

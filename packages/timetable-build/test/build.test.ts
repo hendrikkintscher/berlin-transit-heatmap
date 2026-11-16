@@ -109,14 +109,17 @@ describe('buildTimetables on the mini fixture', () => {
     const byPair = new Map(day.transfers.map((x) => [`${x.from},${x.to}`, x.seconds]));
     const pair = (a: string, b: string) => byPair.get(`${idx(day, a)},${idx(day, b)}`);
     expect(day.transfers).toHaveLength(8);
-    expect(pair('A', 'B')).toBe(75); // ~18 m walk + 60 s
+    // ~18 m walk + 60 s; the timed transfer tied to routes in transfers.txt is left out (S066).
+    expect(pair('A', 'B')).toBe(75);
     expect(pair('B', 'A')).toBe(75);
-    expect(pair('C', 'E')).toBe(0); // timed transfer (type 1) in transfers.txt
+    // Timed transfer (type 1) in transfers.txt: no wait, but not quicker than walking
+    // the straight line at 5 km/h (S066).
+    expect(pair('C', 'E')).toBe(187);
     expect(pair('E', 'C')).toBe(277); // ~261 m walk + 60 s
-    expect(pair('A', 'C')).toBe(300); // from transfers.txt, mirrored
-    expect(pair('C', 'A')).toBe(300);
-    expect(pair('A', 'E')).toBe(200); // only a route-tied row for this pair, mirrored
-    expect(pair('E', 'A')).toBe(200);
+    expect(pair('A', 'C')).toBe(1000); // from transfers.txt, mirrored (~1.3 km: at least 937 s)
+    expect(pair('C', 'A')).toBe(1000);
+    expect(pair('A', 'E')).toBe(1200); // only a route-tied row for this pair, mirrored
+    expect(pair('E', 'A')).toBe(1200);
     expect(night.transfers).toEqual(day.transfers);
   });
 
