@@ -263,6 +263,17 @@
       "deps": [],
       "test": "timetable built locally from gtfs-latest (+ osm walkways) with the fix: bench/suite.ts --ci meets every target; count of changed footpaths reported; after merge and a timetable rebuild the speed job on main is green",
       "passes": false
+    },
+    {
+      "id": "S067",
+      "title": "Speed script: alternate main and branch visits under --base in scripts/speed/browser.mjs, so container drift between runs cannot land on one side (S064's false 4x 'tap after the network' gap)",
+      "kind": "chore",
+      "owner": "claude",
+      "priority": "low",
+      "size": "S",
+      "deps": [],
+      "test": "browser.mjs --base <main dist> on two identical dists, 4x, two runs: no timing differs beyond noise (Mann-Whitney p > 0.05); output format unchanged",
+      "passes": false
     }
   ]
 }
