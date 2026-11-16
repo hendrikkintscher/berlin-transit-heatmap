@@ -274,6 +274,17 @@
       "deps": [],
       "test": "browser.mjs --base <main dist> on two identical dists, 4x, two runs: no timing differs beyond noise (Mann-Whitney p > 0.05); output format unchanged",
       "passes": false
+    },
+    {
+      "id": "S068",
+      "title": "Layout check (WebKit) on ubuntu-24.04: Playwright 1.56 cannot install WebKit on ubuntu-latest, which is now 26.04 (screens job red on #424)",
+      "kind": "fix",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": [],
+      "test": "the Layout workflow's screens (webkit) job passes on the PR",
+      "passes": false
     }
   ]
 }
