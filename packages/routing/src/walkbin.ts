@@ -1,4 +1,4 @@
-// walk.bin (Contract 3), the walking network: written by timetable-build, read by
+// walk.bin, the walking network: written by timetable-build, read by
 // loadWalkNetwork (walk.ts). Little-endian u32 magic "BTHW", u8 version, then unsigned
 // LEB128 varints (signed ones zig-zag encoded).
 //
@@ -11,9 +11,6 @@
 //   line between its ends (signed, usually 0 or 1).
 // The straight line uses only exact arithmetic on the stored integers (see straightM),
 // so the build and every browser get the same metres.
-//
-// Version 1 (still read): nodeCount, edgeCount; per node the lon and lat deltas
-// interleaved; per node a its edge count, then (b - a) and the metres for each edge.
 // No imports: timetable-build runs this file with plain Node.
 
 /** As geo.ts (kept here so the file has no imports). */
@@ -100,7 +97,7 @@ export function encodeWalkBin(g: {
   return out.finish();
 }
 
-/** Reads walk.bin, version 1 or 2. */
+/** Reads walk.bin (version 2). */
 export function decodeWalkBin(buf: Uint8Array): WalkData {
   const steps = decodeWalkBinInSteps(buf);
   for (;;) {
@@ -135,8 +132,7 @@ export function* decodeWalkBinInSteps(buf: Uint8Array): Generator<void, WalkData
   const magic = (buf[0]! | (buf[1]! << 8) | (buf[2]! << 16) | (buf[3]! << 24)) >>> 0;
   if (magic !== MAGIC) throw new Error('Not a walking network file');
   const version = buf[4];
-  if (version !== 1 && version !== 2)
-    throw new Error(`Unsupported walking network version ${version}`);
+  if (version !== 2) throw new Error(`Unsupported walking network version ${version}`);
   let p = 5;
   const uvar = (): number => {
     let v = 0;
@@ -157,67 +153,44 @@ export function* decodeWalkBinInSteps(buf: Uint8Array): Generator<void, WalkData
 
   const n = uvar();
   const m = uvar();
-  const xM = version === 2 ? uvar() / 1e8 : 0;
+  const xM = uvar() / 1e8;
   const x = new Int32Array(n);
   const y = new Int32Array(n);
-  if (version === 1) {
-    let px = 0;
-    let py = 0;
-    for (let i = 0; i < n; i++) {
-      x[i] = px += svar();
-      y[i] = py += svar();
-    }
-  } else {
-    for (const col of [x, y]) {
-      let prev = 0;
-      yield* inPieces(n, (from, to) => {
-        let v = prev;
-        for (let i = from; i < to; i++) col[i] = v += svar();
-        prev = v;
-      });
-    }
+  for (const col of [x, y]) {
+    let prev = 0;
+    yield* inPieces(n, (from, to) => {
+      let v = prev;
+      for (let i = from; i < to; i++) col[i] = v += svar();
+      prev = v;
+    });
   }
   const edgeA = new Int32Array(m);
   const edgeB = new Int32Array(m);
   const edgeM = new Float32Array(m);
   let e = 0;
-  if (version === 1) {
-    for (let a = 0; a < n; a++) {
+  yield* inPieces(n, (from, to) => {
+    let f = e;
+    for (let a = from; a < to; a++) {
       const k = uvar();
-      for (let j = 0; j < k; j++) {
-        const b = a + uvar();
-        if (e >= m || b >= n) throw inconsistent();
-        edgeA[e] = a;
-        edgeB[e] = b;
-        edgeM[e] = uvar();
-        e++;
-      }
+      if (f + k > m) throw inconsistent();
+      edgeA.fill(a, f, f + k);
+      f += k;
     }
-  } else {
-    yield* inPieces(n, (from, to) => {
-      let f = e;
-      for (let a = from; a < to; a++) {
-        const k = uvar();
-        if (f + k > m) throw inconsistent();
-        edgeA.fill(a, f, f + k);
-        f += k;
-      }
-      e = f;
-    });
-    yield* inPieces(e, (from, to) => {
-      for (let k = from; k < to; k++) {
-        const b = (edgeB[k] = edgeA[k]! + uvar());
-        if (b >= n) throw inconsistent();
-      }
-    });
-    yield* inPieces(e, (from, to) => {
-      for (let k = from; k < to; k++) {
-        const a = edgeA[k]!;
-        const b = edgeB[k]!;
-        edgeM[k] = straightM(x[b]! - x[a]!, y[b]! - y[a]!, xM) + svar();
-      }
-    });
-  }
+    e = f;
+  });
+  yield* inPieces(e, (from, to) => {
+    for (let k = from; k < to; k++) {
+      const b = (edgeB[k] = edgeA[k]! + uvar());
+      if (b >= n) throw inconsistent();
+    }
+  });
+  yield* inPieces(e, (from, to) => {
+    for (let k = from; k < to; k++) {
+      const a = edgeA[k]!;
+      const b = edgeB[k]!;
+      edgeM[k] = straightM(x[b]! - x[a]!, y[b]! - y[a]!, xM) + svar();
+    }
+  });
   if (e !== m) throw inconsistent();
   const lat = new Float64Array(n);
   const lon = new Float64Array(n);

@@ -1,5 +1,5 @@
 // S044 check: walking on the junction graph (shape nodes folded into chains) against a
-// routing source folder (main's), at gridexact's 8 starts on foot and by bike: travelTimes'
+// routing source folder (main's), at 8 starts on foot and by bike: travelTimes'
 // stop times (the access walk on tap, leaving at 10:00, and the typical map's pass) and the
 // whole 50 m heatGrid, its seconds and the stop each cell comes from. Prints what differs and
 // the median times of each. Exits 1 if anything differs by more than float rounding (1 ms).

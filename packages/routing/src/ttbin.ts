@@ -1,28 +1,25 @@
 /**
- * Contract 4: the timetable as compact binary files, the same content as the JSON file
- * (Contract 1) without the GTFS stop ids, at about a third of the gzipped size and much
- * quicker to read. Since version 3 a build writes the stops and their footpaths once, in
- * `stoplist.bin`, and each `timetable-<window>.bin` holds only that hour's routes: the stop
- * list is most of a self-contained file and the same in every hour.
+ * The timetable as compact binary files, without the GTFS stop ids. A build writes the
+ * stops and their footpaths once, in `stoplist.bin`, and each `timetable-<window>.bin`
+ * holds only that hour's routes: the stop list is the same in every hour.
  *
  * Little-endian: u32 magic, u8 version, then unsigned LEB128 varints (svar: zig-zag signed):
  * - the header: byte length, then UTF-8 JSON;
  * - a string table: count, then per string its UTF-8 byte length and bytes.
  *
- * The stop list (magic "BTHS", version 2; 1 has no station numbers): the header has version,
+ * The stop list (magic "BTHS", version 2): the header has version,
  * id and feedVersion; the strings are the stop names; then
  * - stops: count; per stop svar lon and lat in 1e-5 degrees from the previous stop,
  *   the name's string index, flags (bit 0: not step-free) and parent + 1 (0: none);
  * - transfers: per stop the count, then the targets in ascending order (svar from the
  *   stop for the first, gaps after), then the seconds;
- * - stations (version 2): per stop svar its station number (VBB's 900100003 for
+ * - stations: per stop svar its station number (VBB's 900100003 for
  *   Alexanderplatz, 0: none) minus the previous stop's, for the app's live status.
  * Its id is a hash of everything after the header.
  *
  * A timetable (magic "BTHT"): the header has version, window, serviceDate, windowStart,
- * windowEnd and feedVersion; version 3 also stopList (the stop list's id) and stopCount.
- * Version 3 has the route names as strings, then the routes; versions 1 and 2 (1: no
- * dwells) are self-contained: all names as strings, the stops, the routes, the transfers.
+ * windowEnd, feedVersion, stopList (the stop list's id) and stopCount (version 3); the
+ * strings are the route names; then
  * - routes: count; per route the name's string index, mode index (MODES), flags
  *   (bit 0: not step-free, bit 1: has dwells), stop count, svar stop index deltas, trip
  *   count, then per trip svar its first time minus the previous trip's, per hop svar
@@ -37,7 +34,7 @@ const STOP_LIST_MAGIC = 0x53485442;
 const COORD_SCALE = 1e5;
 const MODES = ['sbahn', 'ubahn', 'tram', 'bus', 'ferry', 'regional', 'other'] as const;
 
-/** The shape of a Contract 1 timetable, as far as this file needs it. */
+/** The shape of a timetable, as far as this file needs it. */
 export interface TimetableData {
   version: 1;
   window: string;
@@ -52,7 +49,7 @@ export interface TimetableData {
     lon: number;
     parent?: number;
     stepFree?: false;
-    /** The region's station number, for live departures (stop lists since version 2). */
+    /** The region's station number, for live departures. */
     station?: number;
   }[];
   routes: {
@@ -230,31 +227,19 @@ export function encodeStopList(
 }
 
 /**
- * The timetable file. With `stopList` (the id encodeStopList gave for the same stops and
- * footpaths) it holds only the routes (version 3); without, everything (version 2).
+ * The timetable file: its routes, for the stops and footpaths of the stop list whose id
+ * (from encodeStopList) is `stopList`.
  */
-export function encodeTimetable(tt: TimetableData, stopList?: string): Uint8Array {
+export function encodeTimetable(tt: TimetableData, stopList: string): Uint8Array {
   const w = writer();
   const { version, window, serviceDate, windowStart, windowEnd, feedVersion } = tt;
   const head = { version, window, serviceDate, windowStart, windowEnd, feedVersion };
-  if (stopList !== undefined) {
-    w.out.push(0x42, 0x54, 0x48, 0x54, 3);
-    w.json({ ...head, stopList, stopCount: tt.stops.length });
-    const body = writer();
-    for (const r of tt.routes) body.str(r.name);
-    body.table();
-    writeRoutes(body, tt.routes);
-    return joined(w.out, body.out);
-  }
-  w.out.push(0x42, 0x54, 0x48, 0x54, 2);
-  w.json(head);
+  w.out.push(0x42, 0x54, 0x48, 0x54, 3);
+  w.json({ ...head, stopList, stopCount: tt.stops.length });
   const body = writer();
-  for (const s of tt.stops) body.str(s.name);
   for (const r of tt.routes) body.str(r.name);
   body.table();
-  writeStops(body, tt.stops);
   writeRoutes(body, tt.routes);
-  writeTransfers(body, tt.stops.length, tt.transfers);
   return joined(w.out, body.out);
 }
 
@@ -378,60 +363,39 @@ function readRoutes(r: Reader): TimetableData['routes'] {
 
 export function decodeStopList(data: ArrayBuffer | Uint8Array): StopListData {
   const r = reader(data, STOP_LIST_MAGIC, 'stop list');
-  if (r.version !== 1 && r.version !== 2)
-    throw new Error(`Unsupported stop list version ${r.version}`);
+  if (r.version !== 2) throw new Error(`Unsupported stop list version ${r.version}`);
   const head = JSON.parse(r.text()) as { id: string; feedVersion: string };
   r.table();
   const stops = readStops(r);
   const transfers = readTransfers(r, stops.length);
-  if (r.version === 2) {
-    let station = 0;
-    for (const s of stops) {
-      station += r.svar();
-      if (station) s.station = station;
-    }
+  let station = 0;
+  for (const s of stops) {
+    station += r.svar();
+    if (station) s.station = station;
   }
   r.end();
   return { id: head.id, feedVersion: head.feedVersion, stops, transfers };
 }
 
-/** Whether a timetable file holds only its routes, so decodeTimetable needs its stop list. */
-export function needsStopList(data: ArrayBuffer | Uint8Array): boolean {
-  const buf = data instanceof Uint8Array ? data : new Uint8Array(data);
-  return buf[4] === 3;
-}
-
-/**
- * Reads a timetable file; one holding only its routes (needsStopList) takes the stop list
- * it was built with, whose stops and footpaths it then shares.
- */
+/** Reads a timetable file with the stop list it was built with, whose stops and footpaths it shares. */
 export function decodeTimetable(
   data: ArrayBuffer | Uint8Array,
-  stopList?: StopListData,
+  stopList: StopListData,
 ): TimetableData {
   const r = reader(data, MAGIC, 'timetable');
-  if (r.version !== 1 && r.version !== 2 && r.version !== 3)
-    throw new Error(`Unsupported timetable version ${r.version}`);
+  if (r.version !== 3) throw new Error(`Unsupported timetable version ${r.version}`);
   const {
     stopList: listId,
     stopCount,
     ...head
   } = JSON.parse(r.text()) as Omit<TimetableData, 'stops' | 'routes' | 'transfers'> & {
-    stopList?: string;
-    stopCount?: number;
+    stopList: string;
+    stopCount: number;
   };
   r.table();
-  if (r.version === 3) {
-    if (!stopList) throw new Error('This timetable file needs its stop list');
-    if (stopList.id !== listId || stopList.stops.length !== stopCount)
-      throw new Error('The timetable and the stop list are from different builds');
-    const routes = readRoutes(r);
-    r.end();
-    return { ...head, stops: stopList.stops, routes, transfers: stopList.transfers };
-  }
-  const stops = readStops(r);
+  if (stopList.id !== listId || stopList.stops.length !== stopCount)
+    throw new Error('The timetable and the stop list are from different builds');
   const routes = readRoutes(r);
-  const transfers = readTransfers(r, stops.length);
   r.end();
-  return { ...head, stops, routes, transfers };
+  return { ...head, stops: stopList.stops, routes, transfers: stopList.transfers };
 }

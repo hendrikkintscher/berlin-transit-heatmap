@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import type { BuildResult } from './build.ts';
 import type { ChangesFile } from './changes.ts';
-// The binary format (Contract 4) lives with its decoder; that file imports nothing.
+// The binary format lives with its decoder; that file imports nothing.
 import { encodeStopList, encodeTimetable } from '../../routing/src/ttbin.ts';
 import { encodeLines } from '../../routing/src/linesbin.ts';
 
@@ -23,7 +23,7 @@ export interface BuildInfo {
 
 /**
  * Writes stoplist.bin (with the stops' VBB station numbers) and timetable-<window>.bin
- * (Contract 4, what the app loads) for every window, stops.json, lines.bin, changes.json
+ * (what the app loads) for every window, stops.json, lines.bin, changes.json
  * (with real dates) and build-info.json.
  * (The JSON timetables are gone: the app reads only the binary ones.)
  */

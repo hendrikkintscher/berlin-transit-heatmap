@@ -1,4 +1,5 @@
 // Suggested meeting points: with two or more starts, a few stations everyone reaches quickly.
+import { distanceM } from '@berlin-transit-heatmap/routing';
 
 export interface MeetCandidate {
   name: string;
@@ -40,16 +41,10 @@ export function suggestMeetingPoints(
   const picked: MeetSuggestion[] = [];
   for (const s of scored) {
     if (picked.length >= count) break;
-    if (picked.some((p) => distanceM(p, s) < spreadM)) continue;
+    if (picked.some((p) => distanceM(p.lat, p.lon, s.lat, s.lon) < spreadM)) continue;
     picked.push({ name: s.name, lat: s.lat, lon: s.lon, mins: s.mins });
   }
   return picked;
-}
-
-function distanceM(p: { lat: number; lon: number }, q: { lat: number; lon: number }): number {
-  const dy = (p.lat - q.lat) * 111_320;
-  const dx = (p.lon - q.lon) * 111_320 * Math.cos((p.lat * Math.PI) / 180);
-  return Math.hypot(dx, dy);
 }
 
 /**

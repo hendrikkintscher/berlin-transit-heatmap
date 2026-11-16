@@ -1,5 +1,6 @@
 // One start's map: the routing pass from it and its grid, and what is read off grids.
 import {
+  FASTEST_WALK,
   BIKE_ONLY_MAX_SECONDS,
   BIKE_SPEED_MPS,
   BIKE_STATION_SECONDS,
@@ -131,18 +132,6 @@ export function travelOptions(travel: Travel) {
       }
     : { walk, walkSpeedMps, ...FASTEST_WALK };
 }
-
-/**
- * On foot, every walk up to 30 minutes counts at both ends, and the fastest way wins even
- * with a longer walk (roadmap 0.13.9): before, a walk over 15 minutes counted only where no
- * stop was nearer, so the map and the trip on tap could each pick another walk (3+ minutes
- * apart in 16 % of places, now 7 %; bench/walkrule.ts).
- */
-const FASTEST_WALK = {
-  maxInitialWalkSeconds: 1800,
-  maxFallbackWalkSeconds: 1800,
-  maxFinalWalkSeconds: 1800,
-} as const;
 
 /** Meeting point: each cell gets the slowest trip ("where can we all be in N min?"). */
 export function slowestOf(grids: HeatGrid[]): HeatGrid {

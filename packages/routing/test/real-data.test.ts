@@ -3,13 +3,7 @@
  * Skipped unless ROUTING_SLOW=1 (`pnpm test:slow`); files are cached in .data/.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
-import {
-  gridToGeoJSON,
-  heatGrid,
-  loadTimetable,
-  travelTimes,
-  type PreparedTimetable,
-} from '../src';
+import { heatGrid, loadTimetable, travelTimes, type PreparedTimetable } from '../src';
 import { readTimetable } from '../bench/data';
 
 const SLOW = process.env.ROUTING_SLOW === '1';
@@ -78,10 +72,11 @@ describe.skipIf(!SLOW)('real VBB timetable', { timeout: 120_000 }, () => {
   it('computes a full heatmap well within the time budget', () => {
     const t0 = performance.now();
     const r = travelTimes(day, ALEXANDERPLATZ);
-    const fc = gridToGeoJSON(heatGrid(day, r));
+    const grid = heatGrid(day, r);
     const ms = performance.now() - t0;
-    console.log(`full day computation: ${ms.toFixed(0)} ms, ${fc.features.length} cells`);
-    expect(fc.features.length).toBeGreaterThan(10_000);
+    const cells = grid.seconds.filter((v) => v < Infinity).length;
+    console.log(`full day computation: ${ms.toFixed(0)} ms, ${cells} cells`);
+    expect(cells).toBeGreaterThan(10_000);
     expect(ms).toBeLessThan(3000);
   });
 });

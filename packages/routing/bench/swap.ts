@@ -9,7 +9,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   cellAt,
-  decodeTimetable,
   heatGrid,
   journeyTo,
   laterStart,
@@ -20,16 +19,15 @@ import {
   tripBetween,
   type Journey,
   type PreparedTimetable,
-  type Timetable,
 } from '../src/index';
-import { DATA_DIR, TIMETABLE_FILES } from './data';
+import { DATA_DIR, readTimetable } from './data';
 
 const N = Number(process.argv[2] ?? 200);
 let seed = Number(process.argv[3] ?? 1);
 const OLD = process.argv[4] === 'old';
 const rnd = () => (seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
 
-const raw = decodeTimetable(readFileSync(join(DATA_DIR, TIMETABLE_FILES.day))) as Timetable;
+const raw = await readTimetable('day');
 const fwd = loadTimetable(raw);
 const back = loadTimetable(reverseTimetable(raw, raw.windowEnd, raw.windowEnd + 3600));
 const walk = loadWalkNetwork(readFileSync(join(DATA_DIR, 'walk.bin')));

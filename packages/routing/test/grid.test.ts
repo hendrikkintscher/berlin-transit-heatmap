@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_BBOX,
-  gridToGeoJSON,
-  gridValueAt,
-  heatGrid,
-  loadTimetable,
-  travelTimes,
-} from '../src';
+import { DEFAULT_BBOX, gridValueAt, heatGrid, loadTimetable, travelTimes } from '../src';
 import { A, D, H, I, KM_LAT, KM_LON, miniTimetable, STOP_POS } from './fixture';
 
 describe('heatGrid', () => {
@@ -65,41 +58,6 @@ describe('heatGrid', () => {
     expect(g.cols).toBe(Math.ceil(0.1 / (500 / (111_320 * Math.cos((52.53 * Math.PI) / 180)))));
     expect(g.rows).toBe(Math.ceil(0.06 / (500 / 111_320)));
     expect(g.seconds.some((v) => v < Infinity)).toBe(true);
-  });
-});
-
-describe('gridToGeoJSON', () => {
-  const tt = loadTimetable(miniTimetable('day'));
-  const grid = heatGrid(tt, travelTimes(tt, STOP_POS[A]), { bbox: [13.38, 52.5, 13.48, 52.56] });
-
-  it('emits one closed square per reachable cell with band and seconds', () => {
-    const fc = gridToGeoJSON(grid);
-    expect(fc.type).toBe('FeatureCollection');
-    const reachable = grid.seconds.filter((v) => v < Infinity).length;
-    expect(fc.features.length).toBe(reachable);
-    for (const f of fc.features) {
-      const ring = f.geometry.coordinates[0];
-      expect(ring.length).toBe(5);
-      expect(ring[0]).toEqual(ring[4]);
-      expect(f.properties.band).toBe(Math.floor(f.properties.seconds / 300));
-      expect(f.properties.band).toBeGreaterThanOrEqual(0);
-    }
-  });
-
-  it('bands by the given width and places cells north to south', () => {
-    const fc = gridToGeoJSON(grid, 600);
-    const f = fc.features[0];
-    expect(f.properties.band).toBe(
-      Math.floor(Math.round(grid.seconds.find((v) => v < Infinity)!) / 600),
-    );
-    // First feature is in the northernmost reachable row.
-    const lats = fc.features.map((x) => x.geometry.coordinates[0][2][1]);
-    expect(lats[0]).toBe(Math.max(...lats));
-  });
-
-  it('is empty when nothing is reachable', () => {
-    const empty = { ...grid, seconds: new Float32Array(grid.seconds.length).fill(Infinity) };
-    expect(gridToGeoJSON(empty).features).toEqual([]);
   });
 });
 

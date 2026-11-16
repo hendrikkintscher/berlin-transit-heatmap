@@ -33,6 +33,7 @@ import {
   cellCentre,
   dateOf,
   dayStartMs,
+  hhmm,
   isWeekend,
   liveData,
   modeOptions,
@@ -314,8 +315,6 @@ if (opt.vbb) {
 mkdirSync(opt.out, { recursive: true });
 writeFileSync(join(opt.out, 'cases.jsonl'), cases.map((c) => JSON.stringify(c)).join('\n') + '\n');
 const pct = (n: number, of: number) => (of ? `${((100 * n) / of).toFixed(1)} %` : '–');
-const hhmm = (s: number) =>
-  `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 /** VBB's trip is 3+ min better: arrives earlier, or (arriving) leaves later. */
 const vbbBetter = (c: Case) =>
   !!c.vbb && (c.mode === 'arrive' ? c.vbb.leave - c.leave >= 180 : c.arrive - c.vbb.arrive >= 180);

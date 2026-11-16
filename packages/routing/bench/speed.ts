@@ -6,14 +6,14 @@
  * With the web app's source folder it also times drawing each map: the colours (softened
  * and painted) and the outlines, as the worker draws them.
  *
- *   tsx bench/speed.ts <routing src dir> <data dir with timetable-weekday-10.bin, walk.bin
- *     and, for timetables built since 0.13.13, stoplist.bin>
- *     [web src dir]
+ *   tsx bench/speed.ts <routing src dir> <data dir with timetable-weekday-10.bin,
+ *     stoplist.bin and walk.bin> [web src dir]
  */
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { FASTEST_WALK } from '../src/raptor';
 
 type Routing = typeof import('../src');
 
@@ -21,31 +21,20 @@ const [srcDir = 'src', dataDir = '.data', webDir] = process.argv.slice(2);
 const r = (await import(pathToFileURL(resolve(srcDir, 'index.ts')).href)) as Routing;
 const load = async <T>(file: string) =>
   (await import(pathToFileURL(resolve(webDir!, file)).href)) as T;
-// An older web app without these modules is not timed (draw stays empty).
 const web = webDir
   ? await Promise.all([
       load<typeof import('../../web/src/paint')>('paint.ts'),
       load<typeof import('../../web/src/contours')>('contours.ts'),
-    ]).catch((e: unknown) => {
-      // Only a missing module means an older app; any other error is a real failure.
-      if ((e as { code?: string }).code === 'ERR_MODULE_NOT_FOUND') return null;
-      throw e;
-    })
+    ])
   : null;
 
 // As in the app (worker-runs.ts): 50 m cells, typical times, lines on; walking at 4 km/h
 // (the app defaults to 5 km/h, which does not matter for comparing timings).
 const CELL_M = 50;
 const WALK_MPS = 4 / 3.6;
-// On foot the app counts walks up to 30 minutes at both ends (worker-runs.ts FASTEST_WALK,
-// 0.13.9); before S061 the probe walked the routing defaults (900/1800 s) and so missed
-// the map's own two-pass walk (S043). The worker module is not imported: it needs the
-// worker's footpaths, and main's copy may not export it.
-const FASTEST_WALK = {
-  maxInitialWalkSeconds: 1800,
-  maxFallbackWalkSeconds: 1800,
-  maxFinalWalkSeconds: 1800,
-} as const;
+// On foot the app counts walks up to 30 minutes at both ends; with the routing defaults
+// (900/1800 s) the probe would miss the map's own two-pass walk (S043, S061). The caps come
+// from this checkout, so both sides walk the same.
 const ORIGINS = {
   Alexanderplatz: { lat: 52.5219, lon: 13.4132 },
   'Spandau Rathaus': { lat: 52.5354, lon: 13.1998 },
@@ -57,17 +46,11 @@ const bin = readFileSync(join(dataDir, 'timetable-weekday-10.bin'));
 const walkBin = readFileSync(join(dataDir, 'walk.bin'));
 
 let t = performance.now();
-// Since 0.13.13 the hour's file holds only its routes (format version 3), and its stops and
-// footpaths come from stoplist.bin.
-const data =
-  bin[4] === 3
-    ? r.decodeTimetable(bin, r.decodeStopList(readFileSync(join(dataDir, 'stoplist.bin'))))
-    : r.decodeTimetable(bin);
+const list = r.decodeStopList(readFileSync(join(dataDir, 'stoplist.bin')));
+const data = r.decodeTimetable(bin, list);
 const tt = r.loadTimetable(data as Parameters<Routing['loadTimetable']>[0]);
-// Since S044 the app loads the footpaths without their chains and builds them after the
+// As the app (S044), the footpaths load without their chains, which are built after the
 // first map with the footpaths (chainMs); the maps below walk on the chains.
-// (Older code has no chainWalkNetwork and ignores the `false`.)
-const chainWalk = (r as Partial<Routing>).chainWalkNetwork;
 const walkBuf = walkBin.buffer.slice(walkBin.byteOffset, walkBin.byteOffset + walkBin.byteLength);
 const walk = r.loadWalkNetwork(walkBuf, false);
 const layout = r.gridLayout({ cellSizeM: CELL_M });
@@ -76,8 +59,8 @@ r.snapCells(walk, layout.bbox, layout.cols, layout.rows);
 const snapMs = performance.now() - snapAt;
 const loadMs = performance.now() - t;
 t = performance.now();
-chainWalk?.(walk);
-const chainMs = chainWalk ? performance.now() - t : undefined;
+r.chainWalkNetwork(walk);
+const chainMs = performance.now() - t;
 
 const origins: Record<string, number> = {};
 const draw = { colours: 0, outlines: 0 };
@@ -125,12 +108,12 @@ function fastest(f: () => unknown): number {
   return best;
 }
 
-// The files this code would write for the same data: since 0.13.13 the hour's routes, and
-// the stop list once for all hours (listGzip, 0 before).
+// The files this code would write for the same data: the hour's routes, and the stop list
+// once for all hours.
 const gz = (b: Uint8Array) => gzipSync(b, { level: 9 }).length;
-const list = 'encodeStopList' in r ? r.encodeStopList(data) : null;
-const binGzip = gz(r.encodeTimetable(data, list?.id));
-const listGzip = list ? gz(list.data) : 0;
+const written = r.encodeStopList(data);
+const binGzip = gz(r.encodeTimetable(data, written.id));
+const listGzip = gz(written.data);
 console.log(
   JSON.stringify({ loadMs, snapMs, chainMs, origins, ...(web ? { draw } : {}), binGzip, listGzip }),
 );

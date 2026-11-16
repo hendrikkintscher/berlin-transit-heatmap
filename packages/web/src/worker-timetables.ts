@@ -6,7 +6,6 @@ import {
   decodeStopList,
   decodeTimetable,
   loadTimetable,
-  needsStopList,
   reverseTimetable,
   shiftTimetable,
   stepFreeTimetable,
@@ -66,7 +65,6 @@ async function downloadTimetable(
       hour = { loaded, total };
       report();
     });
-    if (!needsStopList(buf)) return decodeTimetable(buf) as Timetable;
     if (!list) throw new Error('Timetable needs a stop list, and this deploy has none');
     return decodeTimetable(buf, await list.data) as Timetable;
   } finally {

@@ -132,14 +132,6 @@ export async function searchPlaces(
   return toPlaces(json.features, query).slice(0, 6);
 }
 
-/** Best-effort name for a point (street and number, or a named place), via Photon's reverse lookup. */
-export async function reversePlace(
-  at: { lat: number; lon: number },
-  lang: 'de' | 'en' = 'de',
-): Promise<string | null> {
-  return (await reverseAddress(at, lang))?.label ?? null;
-}
-
 /**
  * A name for a point by its address: "Oranienstraße 25" rather than the shop or café
  * nearest to it (a favourite set on the map, C7); else the nearest named place.

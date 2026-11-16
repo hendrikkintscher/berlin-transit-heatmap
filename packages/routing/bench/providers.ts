@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { distanceM, walksToStops, type Origin } from '../src';
 import { REGION } from '../src/regions';
-import { appJourney, dateOf, dayStartMs, liveData, modeOptions } from './live';
+import { appJourney, dateOf, dayStartMs, hhmm, liveData, modeOptions } from './live';
 import { transitous, vbb } from './planners';
 import {
   appTrip,
@@ -72,9 +72,6 @@ interface Case {
   vbb: TripSummary | null;
   transitous: TripSummary | null;
 }
-
-const hhmm = (s: number) =>
-  `${String(Math.floor(s / 3600) % 24).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}`;
 
 for (let i = 0; i < N; i++) {
   const date = dateOf(opt.start, d0 + Math.floor(rnd() * (d1 - d0 + 1)));

@@ -11,7 +11,7 @@ const BUCKET_M = 500;
  * A timetable converted into flat typed arrays for fast scanning. Built once
  * per timetable by `loadTimetable` and reused for every origin.
  *
- * Routes here are FIFO sub-routes: a Contract 1 route whose trips overtake one
+ * Routes here are FIFO sub-routes: a route whose trips overtake one
  * another is split so that, within each sub-route, a later trip never departs
  * any stop before an earlier one. RAPTOR's "earliest catchable trip" search
  * relies on that.
@@ -32,7 +32,7 @@ export interface PreparedTimetable {
   readonly proj: LocalProjection;
 
   readonly routeCount: number;
-  /** Original Contract 1 route index of each sub-route. */
+  /** Original route index of each sub-route. */
   readonly routeSource: Int32Array;
   readonly routeNames: readonly string[];
   readonly routeModes: readonly RouteMode[];

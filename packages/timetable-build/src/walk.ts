@@ -1,6 +1,6 @@
 /**
  * The walking network: walkable OpenStreetMap ways turned into a compact graph
- * the browser router runs Dijkstra on (Contract 3, see packages/routing/src/walk.ts).
+ * the browser router runs Dijkstra on (see packages/routing/src/walk.ts).
  *
  * Input is OPL text (`osmium cat -f opl`) of the ways kept by the OSM refresh
  * workflow. Chains of ways are cut into edges at junctions and at least every
@@ -393,7 +393,7 @@ function morton(x: number, y: number): number {
   return z;
 }
 
-/** Encodes the graph as `walk.bin` (Contract 3, format in routing's walkbin.ts). */
+/** Encodes the graph as `walk.bin` (format in routing's walkbin.ts). */
 export function encodeWalkGraph(g: WalkGraph): Uint8Array {
   return encodeWalkBin(g);
 }

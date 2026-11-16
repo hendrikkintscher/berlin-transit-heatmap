@@ -3,7 +3,7 @@ import type { PreparedTimetable } from './prepare';
 import { decodeWalkBinInSteps, inPieces } from './walkbin';
 
 /**
- * Contract 3: the walking network (`walk.bin`, format in walkbin.ts), built by
+ * The walking network (`walk.bin`, format in walkbin.ts), built by
  * timetable-build from OpenStreetMap footpaths and streets.
  */
 
@@ -731,22 +731,6 @@ export interface WalkLabels {
   time: Float64Array;
   walk: Float32Array;
   source: Int32Array;
-}
-
-const labelCache = new WeakMap<WalkNetwork, WalkLabels>();
-
-/** Label arrays reused between walks on the same network (the result of the previous walk is overwritten). */
-export function sharedLabels(net: WalkNetwork): WalkLabels {
-  let l = labelCache.get(net);
-  if (!l) {
-    l = {
-      time: new Float64Array(net.nodeCount),
-      walk: new Float32Array(net.nodeCount),
-      source: new Int32Array(net.nodeCount),
-    };
-    labelCache.set(net, l);
-  }
-  return l;
 }
 
 interface WalkQueue {

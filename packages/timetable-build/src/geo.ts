@@ -1,3 +1,4 @@
+import { M_PER_DEG_LAT, metresPerDegLon } from '../../routing/src/geo.ts';
 import { REGION, type Box } from '../../routing/src/regions.ts';
 
 export interface BBox {
@@ -12,7 +13,7 @@ export function toBBox([minLon, minLat, maxLon, maxLat]: Box): BBox {
   return { minLon, minLat, maxLon, maxLat };
 }
 
-/** The stops kept: the router's grid area plus a margin (Contract 1), from the region. */
+/** The stops kept: the router's grid area plus a margin, from the region. */
 export const STOP_BBOX: BBox = toBBox(REGION.stopBbox);
 
 export function inBBox(bbox: BBox, lat: number, lon: number): boolean {
@@ -22,7 +23,12 @@ export function inBBox(bbox: BBox, lat: number, lon: number): boolean {
 const EARTH_RADIUS_M = 6_371_000;
 const RAD = Math.PI / 180;
 
-/** Great-circle distance in metres. */
+/**
+ * Great-circle distance in metres. The router's distanceM (routing/src/geo.ts) is a flat
+ * approximation with 111,320 m per degree, about 0.1 % longer: the footpaths stay measured
+ * with this one, since switching would lengthen about 15,000 of them by a second and drop
+ * pairs right at TRANSFER_RADIUS_M (S064).
+ */
 export function distanceM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = (lat2 - lat1) * RAD;
   const dLon = (lon2 - lon1) * RAD;
@@ -45,8 +51,8 @@ export function forEachNearbyPair(
   // least that wide everywhere and no pair can sit two cells apart.
   let refLat = 0;
   for (const p of points) refLat = Math.max(refLat, Math.abs(p.lat));
-  const cellLat = radiusM / 111_320;
-  const cellLon = radiusM / (111_320 * Math.cos(refLat * RAD));
+  const cellLat = radiusM / M_PER_DEG_LAT;
+  const cellLon = radiusM / metresPerDegLon(refLat);
   const grid = new Map<string, number[]>();
   const keyOf = (x: number, y: number) => `${x},${y}`;
   points.forEach((p, i) => {

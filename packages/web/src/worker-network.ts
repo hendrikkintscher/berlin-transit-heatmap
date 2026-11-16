@@ -15,7 +15,6 @@ export const GROUP_OF: Record<RouteMode, NetworkGroup> = {
   bus: 'bus',
   other: 'bus',
 };
-export const NETWORK_GROUP_NAMES: readonly NetworkGroup[] = ['rail', 'tram', 'bus'];
 export type NetworkFiles = Record<NetworkGroup, ArrayBuffer>;
 
 /** Routes read per step. */
