@@ -11,6 +11,11 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
   S042 results sent to Hendrik, S043 and S044 open.
 - 2026-11-09: moved to the coding guidelines (feature_list.json, docs/specs, PROGRESS.md, `/task`).
 
+## 2026-11-17 · cloud · no task
+
+- Hendrik added "UI overhaul" to `docs/specs/later.md`; the project is `long-term` in the vault (no work in the
+  near future). No open tasks; the pause holds.
+
 ## 2026-11-16 · cloud · S065, S068, S067
 
 - S065 cleanup 3 of 3 (#424, 1.1.18): one term per thing in the UI text (de/en), index.html fallbacks equal
