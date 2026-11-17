@@ -10,6 +10,13 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
 - 2026-11-09: moved to the coding guidelines (feature_list.json, docs/specs, PROGRESS.md, `/task`).
+- 2026-11-10: decisions moved to the vault note; add-on layers and the ATM layer (1.1.0); shorter changes from
+  S042 (S053, 1.1.2).
+
+## 2026-11-17 · cloud · no task
+
+- Hendrik added "UI overhaul" to `docs/specs/later.md`; the project is `long-term` in the vault (no work in the
+  near future). No open tasks; the pause holds.
 
 ## 2026-11-16 · cloud · S065, S068, S067
 
@@ -97,13 +104,3 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - S057 stop dots from zoom 14, nine big stations named above it (`REGION.hubs`, decision 0018, #408, 1.1.7).
   S060 added (switch for lines and stations). Open: S058, S059, S060, S043, S044.
 - Branch pushes after a squash merge: force push is blocked here; merged the old branch with `-s ours` instead.
-
-## 2026-11-10 · cloud · S046–S059
-
-- S046 decision records moved to the vault note (1.0.9, #397). S047/S048/S050 research: add-on layers load only
-  when switched on (decision 0013); Cash Group ATMs from OSM, not the banks' finders (0014, 0015).
-- S049 ATM layer (1.1.0, #398), S051 closed branches out (1.1.1, #400); nightly `addons-refresh.yml` → `addons-latest`.
-  S052 private OSM survey worklist (#401). S042 decided (0016, #402): S053 shorter changes (1.1.2, #403;
-  VBB 3+ min better 12.3 % → 6.6 %); S056 download.sh checks files against the release's sha256 (1.1.3, #404).
-- Open: S054, S055 (from S042), S057–S059 (stops from street level, faint network lines, ATMs almost always;
-  Hendrik's question: keep S/U names in the city view?), S043, S044.
