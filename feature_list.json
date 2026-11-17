@@ -273,7 +273,7 @@
       "size": "S",
       "deps": [],
       "test": "browser.mjs --base <main dist> on two identical dists, 4x, two runs: no timing differs beyond noise (Mann-Whitney p > 0.05); output format unchanged",
-      "passes": false
+      "passes": true
     },
     {
       "id": "S068",

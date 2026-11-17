@@ -51,7 +51,7 @@ frame, ~75 ms that delays every worker answer; decision 0008), and time a fresh 
 map (worker 'result' message), tap to trip on the card, ⇅, moving the rings. Medians of 6–8
 visits; 4× first-map times are bimodal. `scripts/speed/browser.mjs` does all of this for the first
 map, tap to trip, the footpath map, a second tap and panning (`--base` times main's dist in the same
-run); add flows to it as tasks need them.
+run, alternating visits with the branch); add flows to it as tasks need them.
 The CI speed job checks bundle sizes (`scripts/speed/budget.json`) and Node map timings;
 raising a budget is a deliberate edit with the reason in the PR.
 

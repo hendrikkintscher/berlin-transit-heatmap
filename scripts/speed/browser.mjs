@@ -8,7 +8,8 @@
 //
 // Serves each dist on localhost with /data/<region>/* from --data (a file missing there is
 // fetched from the live site and kept, unless --no-fetch), blocks every other host and
-// gives MapLibre a blank style, so only the app's own work is timed. --cpu slows the page
+// gives MapLibre a blank style, so only the app's own work is timed. With --base the two
+// dists' visits alternate (base, dist, then dist, base, ...). --cpu slows the page
 // (Chrome cannot slow the worker). Chromium: $CHROMIUM, else the cloud container's
 // /opt/pw-browsers/chromium, else the installed Chrome (Windows/macOS). The GPU flags avoid the
 // ~75 ms per-frame copy of plain headless Chromium that delays every worker answer (decision 0008).
@@ -206,12 +207,20 @@ const runs = opt.url
   ? [['url', opt.url]]
   : [...(opt.base ? [['base', opt.base]] : []), ['dist', opt.dist]];
 const browser = await chromium.launch(launchOptions());
+const q = `from=52.52190,13.41320&t=weekday-10&lang=de${opt.query ? `&${opt.query}` : ''}`;
+const sides = [];
 for (const [name, dist] of runs) {
   const server = opt.url ? null : await serve(resolve(dist), resolve(opt.data));
-  const q = `from=52.52190,13.41320&t=weekday-10&lang=de${opt.query ? `&${opt.query}` : ''}`;
   const url = server ? `http://127.0.0.1:${server.address().port}/?${q}` : `${opt.url}?${q}`;
-  const rows = [];
-  for (let v = 0; v < visits; v++) rows.push(await visit(browser, url, cpu));
+  sides.push({ name, dist, server, url, rows: [] });
+}
+// With --base, main's and the branch's visits alternate, and which side goes first swaps every
+// visit, so the container getting slower or faster during a run lands on both sides alike
+// (S067: back-to-back blocks once showed a 4x gap that was only drift).
+for (let v = 0; v < visits; v++)
+  for (const side of v % 2 ? [...sides].reverse() : sides)
+    side.rows.push(await visit(browser, side.url, cpu));
+for (const { name, dist, server, rows } of sides) {
   server?.close();
   const r = (x) => Math.round(x);
   console.log(
