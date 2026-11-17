@@ -9,6 +9,16 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-05: 1.0.0 shipped, all steps to 1.0 done; after that only route quality work (1.0.x).
 - 2026-11-06: route quality suite (S040), exact map minutes (S041), feeder ride on the card (S045);
   S042 results sent to Hendrik, S043 and S044 open.
+- 2026-11-09: moved to the coding guidelines (feature_list.json, docs/specs, PROGRESS.md, `/task`).
+
+## 2026-11-16 · cloud · S065, S068, S067
+
+- S065 cleanup 3 of 3 (#424, 1.1.18): one term per thing in the UI text (de/en), index.html fallbacks equal
+  the German strings (new test in `i18n.test.ts`), 5 dead i18n keys removed. Live.
+- S068 added and built (#425, 1.1.19): `ubuntu-latest` became 26.04, where Playwright 1.56 cannot install
+  WebKit; Hendrik chose pinning `layout.yml` to `ubuntu-24.04` over updating Playwright or dropping the job.
+- S067 (#426, 1.1.20): `browser.mjs --base` alternates visits; A/A at 4×, two runs, every p > 0.05 (lowest
+  0.06, 4× tap after the network stays noisy). No open tasks left; the pause holds.
 
 ## 2026-11-16 · cloud · S064 timings, S067
 
@@ -97,11 +107,3 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
   VBB 3+ min better 12.3 % → 6.6 %); S056 download.sh checks files against the release's sha256 (1.1.3, #404).
 - Open: S054, S055 (from S042), S057–S059 (stops from street level, faint network lines, ATMs almost always;
   Hendrik's question: keep S/U names in the city view?), S043, S044.
-
-## 2026-11-09 · local · coding guidelines
-
-- Moved to the coding guidelines (claude-brain `setup/coding-guidelines.md`), like claude-project-template 0.2.x:
-  ROADMAP.md and docs/steps/ became `feature_list.json` (S042, S043, S044, S046) and docs/specs/; this log
-  added; `scripts/steps.sh` replaced by `scripts/bump.sh`; `/step` and `/handoff` replaced by `/task`.
-- Decisions stay in `docs/decisions/` until the vault audit is done, then S046 moves them to the vault note.
-- Next: S042 waits for Hendrik's yes; S043 and S044 only when Hendrik names them.
