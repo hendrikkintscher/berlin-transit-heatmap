@@ -17,6 +17,9 @@ Append one entry to `features` (next free id, `S047` style, continuing the old s
 - kind: feature · fix · refactor · chore · maintenance · research (= measure and decide). owner: hendrik · claude.
 - priority: high · medium · low. size: S < half a day · M ~1 day / ~400 lines · L too big → add smaller tasks instead.
 - `test`: one line saying how we'll know it works — a command, a bench result or a concrete check.
+- **The `test` is frozen once the task is added.** The session that builds it never softens or rewrites it.
+  Found it wrong or too strict? Show Hendrik old → new in one line and stop that task until he says yes;
+  other tasks of a batch go on. Only after the yes, change it, in its own commit.
 - Came up during another task? Don't work on it — one line: "added S047 (fix · medium · S)".
 
 ## start (only the task named for this thread, after Hendrik's yes)
@@ -36,12 +39,16 @@ real work → `add` build task(s). Then `passes: true` and a short docs PR.
 
 **Build:**
 
-1. Run the task's `test` and `bash scripts/check.sh`; both pass → set `passes: true`. Not run or failed → it stays `false`.
-2. `git diff --stat main...` vs the size — clearly bigger? Stop and ask: split, or accept.
-3. CHANGELOG.md entry under `## [Unreleased]`, then `bash scripts/bump.sh` (patch; `minor` for a new
+1. Run the task's `test` and `bash scripts/check.sh`; both pass → go on. Not run or failed → it stays `false`.
+2. **Size M:** start the `reviewer` agent (`.claude/agents/reviewer.md`) with the task id and the output of
+   `git diff main...` (it can't run git). Gaps it reports get fixed (or, if you disagree, Hendrik decides) and
+   the review runs again. Only a clean verdict lets it pass; put the verdict in one line of the commit message
+   (`Review: clean` or `Review: fixed <what>`). Then set `passes: true`. Size S: set `passes: true`.
+3. `git diff --stat main...` vs the size — clearly bigger? Stop and ask: split, or accept.
+4. CHANGELOG.md entry under `## [Unreleased]`, then `bash scripts/bump.sh` (patch; `minor` for a new
    milestone) — sets VERSION and both package.json files and moves the entry under the new version.
-4. Commit, open the PR (fill in the PR template, timings included).
-5. CI green (`check`, `smoke`, `speed`), squash-merge after Hendrik's yes (deploys to Pages), check the live site.
+5. Commit, open the PR (fill in the PR template, timings included).
+6. CI green (`check`, `smoke`, `speed`), squash-merge after Hendrik's yes (deploys to Pages), check the live site.
 
 Then: short summary, and ask "Next: S0NN — <title>?" (highest-priority open task whose deps pass). Wait.
 
@@ -49,6 +56,7 @@ Then: short summary, and ask "Next: S0NN — <title>?" (highest-priority open ta
 
 Only for build tasks sized S whose deps pass or are inside the batch. Run start → done for each in
 order, one PR each. No questions in between; stop at the first failing check or oversize diff and report.
+A task whose `test` needs changing waits for Hendrik's yes (see add); the rest of the batch goes on.
 
 ## next
 
