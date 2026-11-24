@@ -40,10 +40,14 @@ real work → `add` build task(s). Then `passes: true` and a short docs PR.
 **Build:**
 
 1. Run the task's `test` and `bash scripts/check.sh`; both pass → go on. Not run or failed → it stays `false`.
-2. **Size M:** start the `reviewer` agent (`.claude/agents/reviewer.md`) with the task id and the output of
-   `git diff main...` (it can't run git). Gaps it reports get fixed (or, if you disagree, Hendrik decides) and
-   the review runs again. Only a clean verdict lets it pass; put the verdict in one line of the commit message
-   (`Review: clean` or `Review: fixed <what>`). Then set `passes: true`. Size S: set `passes: true`.
+2. **Size M:** you don't review your own diff. Commit the change with `passes: false` and push, then ask the
+   standing reviewer (`C:\Claude\reviewer`, README "Review on request"): `SendMessage` to a running reviewer
+   session if one is linked or listed, else `start_session` in `C:\Claude\reviewer` (preset `reviewer`) with
+   `Review <repo> <task id> <first sha>^..<last sha>` and one line on what the change does. Gaps it reports
+   get fixed (or, if you disagree, Hendrik decides), pushed, and you ask again. Only `Verdict: clean` lets it
+   pass: set `passes: true` with `Review: clean (reviewer YYYY-MM-DD)` in the commit message. No session tools
+   (cloud, claude.ai): the `reviewer` agent (`.claude/agents/reviewer.md`) instead, with the task id and the
+   output of `git diff main...`, and `Review: clean (agent)`. Size S: set `passes: true`.
 3. `git diff --stat main...` vs the size — clearly bigger? Stop and ask: split, or accept.
 4. CHANGELOG.md entry under `## [Unreleased]`, then `bash scripts/bump.sh` (patch; `minor` for a new
    milestone) — sets VERSION and both package.json files and moves the entry under the new version.

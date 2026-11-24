@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Reviews a build task's change against its frozen test and spec. Required before an M build task passes (/task done); use for others when in doubt.
+description: Reviews a build task's change against its frozen test and spec. Required before an M build task passes (/task done) only where no session tools exist (cloud, claude.ai), recorded as `Review: clean (agent)`; elsewhere the standing reviewer session in C:\Claude\reviewer reviews. Use for others when in doubt.
 tools: Read, Grep, Glob
 ---
 
