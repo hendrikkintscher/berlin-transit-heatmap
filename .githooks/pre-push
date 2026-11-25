@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Runs the project's check before every push. Replaces GitHub Actions (2026-11-12: private repos' minutes used up).
+# Active once per clone after `git config core.hooksPath .githooks` (the session-start hook does this).
+# Skip once in an emergency: git push --no-verify
+# Synced from project-templates (sync_template.py): edit only between the local markers below.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+refs=$(cat)   # pushed refs on stdin: <local ref> <local sha> <remote ref> <remote sha>
+fail=0
+bash scripts/check.sh || fail=1
+# >>> local: this repo's extra pre-push checks (set fail=1 on a problem; $refs holds the pushed refs)
+# <<< local
+if [ $fail -ne 0 ]; then
+  echo "pre-push: checks failed, push stopped. Fix them, or skip once with git push --no-verify." >&2
+  exit 1
+fi
