@@ -10,7 +10,7 @@ Tidy the bookkeeping. Change only bookkeeping files, never code. Don't start any
    High-priority tasks blocked by a dep that's gone or done? Unknown deps? Propose fixes; change only after a yes.
 2. For each open task: still wanted? Size, owner and `test` still right? Propose (don't silently do) deleting obsolete ones.
 3. `PROGRESS.md`: more than ~10 entries → roll the oldest into the 3-line `## Earlier (summary)`.
-4. VERSION should match the newest CHANGELOG section.
+4. VERSION should match the newest CHANGELOG section (skip where CLAUDE.md "Task rules" say history is git only).
 5. Stale handovers, scratch notes, duplicate docs (`git ls-files '*.md'`) → list them with where their content belongs;
    delete only after the user's OK. Decisions found in the repo → the project's vault note (cross-project ones → the brain).
 6. Run `bash scripts/check.sh`. Report what you changed and what you propose in ≤12 lines.
