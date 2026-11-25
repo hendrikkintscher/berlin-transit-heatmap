@@ -3,7 +3,7 @@
 # 1. Bookkeeping (scripts/check.py): feature_list.json, PROGRESS.md, VERSION vs CHANGELOG, local links.
 # 2. The same as `pnpm check`: lint, format check, typecheck, then all tests.
 set -uo pipefail
-cd "${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}" || exit 1
+cd "$(dirname "$0")/.." || exit 1   # this script's repo, also when another repo's session runs it
 
 TEST_CMD="pnpm test"
 LINT_CMD="pnpm lint && pnpm format:check && pnpm typecheck"

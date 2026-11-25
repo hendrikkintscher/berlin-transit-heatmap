@@ -6,6 +6,7 @@
 SKIP_RE='^(docs/|feature_list\.json$|PROGRESS\.md$|CHANGELOG\.md$|VERSION$|\.claude/|\.github/|CLAUDE(\.local)?\.md$|README\.md$|TEMPLATE-README\.md$)'
 # >>> local: override SKIP_RE here
 # <<< local
+input=$(cat 2>/dev/null || true)
 ROOT="${CLAUDE_PROJECT_DIR:-.}"
 cd "$ROOT" || exit 0
 git rev-parse --git-dir >/dev/null 2>&1 || exit 0
@@ -15,6 +16,11 @@ changed=$(git status --porcelain 2>/dev/null | awk '{print $NF}' | grep -vE "$SK
 
 out=$(bash scripts/check.sh 2>&1); rc=$?
 if [ $rc -ne 0 ]; then
+  # Claude already went back once for this stop (stop_hook_active): don't loop, tell the person instead.
+  if printf '%s' "$input" | grep -qE '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+    printf '{"systemMessage": "scripts/check.sh still fails after one fix attempt; the turn ends unchecked. Run it before committing."}\n'
+    exit 0
+  fi
   { echo "scripts/check.sh failed — fix this before finishing:"; printf '%s\n' "$out" | tail -40; } >&2
   exit 2
 fi

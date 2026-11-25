@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.22] — 2026-11-25
+
+- Template 1.6.0 synced (project-templates `sync_template.py`).
+
 ## [1.1.21] — 2026-11-20
 
 - /task skill and reviewer agent (claude-brain S-040): a task's `test` is frozen once added (a change shows old → new and waits for Hendrik's yes); an M build task passes only after a clean reviewer verdict, written into the commit message. Docs only, no timings.
