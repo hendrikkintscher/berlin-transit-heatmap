@@ -134,8 +134,8 @@ desktop are not comparable with the cloud container's, so time main and the bran
 
 ## Files you create
 
-Write new files inside this folder. Files for other people (to send) go to `C:\Claude\_Outbox`.
-Files Hendrik has to handle himself (check, sign, upload, install, decide) go to `C:\Claude\_Inbox`,
+Write new files inside this folder. Files for other people (to send) go to `C:\Users\Henni\Downloads\_Claude`.
+Files Hendrik has to handle himself (check, sign, upload, install, decide) go to `C:\Users\Henni\Downloads\_Claude`,
 so they do not get lost in a project folder. Name both `YYYY-MM-DD_Title.ext`. Nothing goes directly into `C:\Claude`.
 
 ## Task rules
