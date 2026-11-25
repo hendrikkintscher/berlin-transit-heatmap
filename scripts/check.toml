@@ -1,0 +1,19 @@
+# Settings for scripts/repo_check.py (synced from project-templates; this file is the repo's own).
+# Every key is optional; the defaults are shown commented out. Lint and test commands: scripts/check.sh.
+
+[tasks]
+# file = "feature_list.json"
+# required = true
+
+[progress]
+# max_entries = 10
+
+[changelog]
+# mode = "section"   # "section": VERSION needs a '## X.Y.Z · date' section; "git": history in git only; "off"
+
+[retired]
+# files = ["HANDOVER.md", "docs/HANDOVER.md", "ROADMAP.md"]
+
+[links]
+# check = true
+skip_dirs = ["work", "data"]
