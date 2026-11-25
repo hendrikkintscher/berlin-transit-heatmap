@@ -5,3 +5,8 @@ data/
 work/
 coverage/
 pnpm-lock.yaml
+# Byte-identical copies of the coding plugin (project-templates/plugins/coding); never reformat
+.claude/skills/task/
+.claude/skills/groom/
+.claude/skills/spec/
+.claude/agents/reviewer.md
