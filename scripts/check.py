@@ -1,3 +1,5 @@
+# ruff: noqa
+# fmt: off
 """Bookkeeping checks run by scripts/check.sh: runs scripts/repo_check.py, configured by scripts/check.toml.
 Synced from project-templates (sync_template.py); do not edit. Exit 1 on any problem."""
 import pathlib

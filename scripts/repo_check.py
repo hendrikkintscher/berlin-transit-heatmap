@@ -1,3 +1,6 @@
+# ruff: noqa
+# fmt: off
+# (vendored into repos with their own lint rules: kept out of their ruff check and ruff format)
 """Bookkeeping check for a repo: feature_list.json, PROGRESS.md, VERSION vs CHANGELOG.md, retired files, local links.
 
 One source: project-templates/kit/ckit/repo_check.py. sync_template.py copies it byte-identical into each repo's
