@@ -7,6 +7,10 @@ Each entry names the task (S0NN), the PR and the timings before/after.
 
 ## [Unreleased]
 
+## [1.1.23] — 2026-11-28
+
+- S069 (fix): the OSM workflows (Refresh add-ons nightly, Refresh OSM footpaths monthly) download and merge the Geofabrik extracts with one script, `scripts/osm/extracts.sh`. curl now retries every error for up to 15 minutes per file (once a minute; job timeouts raised to 45 and 60 min): plain `--retry` gave up at once on a refused connection (failed runs on 2026-11-15, 11-24 and 11-28) and on a 404 while Geofabrik replaced the file (11-22). The merge keeps one version of each object (`osmium time-filter`), so the Berlin and Brandenburg extracts, cut on different days, no longer stop `osmium extract` at "Node ID twice in input" (11-19). Test: two synthetic extracts with one node at two versions fail the old steps and pass the new; on the 2026-11-28 extracts both give a byte-identical `atm.json` (130 ATMs) and `walkways.opl.gz`. Timings: nothing the app runs changed.
+
 ## [1.1.22] — 2026-11-25
 
 - Template 1.6.0 synced (project-templates `sync_template.py`).

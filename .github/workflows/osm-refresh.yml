@@ -29,7 +29,7 @@ defaults:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,19 +50,11 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
 
       - name: Download extracts
-        run: |
-          mkdir -p work
-          for region in $EXTRACTS; do
-            curl -fsSL --retry 4 --retry-delay 10 -o "work/$region.osm.pbf" \
-              "https://download.geofabrik.de/europe/germany/$region-latest.osm.pbf"
-          done
-          ls -la work
+        run: bash scripts/osm/extracts.sh work $EXTRACTS
 
       - name: Filter walkable ways
         run: |
           cd work
-          read -ra extracts <<<"$EXTRACTS"
-          osmium merge "${extracts[@]/%/.osm.pbf}" -o merged.osm.pbf
           osmium extract -b "$BBOX" --strategy complete_ways merged.osm.pbf -o area.osm.pbf
           osmium tags-filter -t area.osm.pbf \
             w/highway w/railway=platform w/public_transport=platform \
