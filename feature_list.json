@@ -285,6 +285,17 @@
       "deps": [],
       "test": "the Layout workflow's screens (webkit) job passes on the PR",
       "passes": true
+    },
+    {
+      "id": "S069",
+      "title": "OSM workflows (Refresh add-ons, Refresh OSM footpaths) fail on a Geofabrik outage or 404 (curl does not retry a refused connection) and on 'Node ID twice in input' when the Berlin and Brandenburg extracts hold different versions of one object",
+      "kind": "fix",
+      "owner": "claude",
+      "priority": "medium",
+      "size": "S",
+      "deps": [],
+      "test": "two synthetic extracts holding one node at different versions fail the old merge-and-extract steps with 'Node ID twice' and pass the new ones; on the same real extracts the new steps give an identical atm.json and walkways.opl.gz to the old ones; after the merge, Refresh add-ons passes on main (workflow_dispatch)",
+      "passes": false
     }
   ]
 }
