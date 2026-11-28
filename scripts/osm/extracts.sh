@@ -10,7 +10,8 @@ mkdir -p "$dir"
 for region in "$@"; do
   # --retry-all-errors: plain --retry gives up at once on a refused connection (curl exit 7)
   # and on a 404 while Geofabrik swaps in the night's file; both broke the nightly run.
-  curl -fsSL --connect-timeout 30 --retry 6 --retry-delay 30 --retry-all-errors \
+  # Geofabrik's refusals can last minutes, so keep trying for up to 15 minutes per file.
+  curl -fsSL --connect-timeout 30 --retry 15 --retry-delay 60 --retry-max-time 900 --retry-all-errors \
     -o "$dir/$region.osm.pbf.part" \
     "https://download.geofabrik.de/europe/germany/$region-latest.osm.pbf"
   mv "$dir/$region.osm.pbf.part" "$dir/$region.osm.pbf"
