@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # PreToolUse hook on Write: blocks new scratch/planning files outside the one-home-per-kind system.
 # Exit 2 + stderr = Claude sees the message and the write is blocked. No jq needed (plain Git Bash).
+# Synced from project-templates (sync_template.py): edit only between the local markers below.
+HISTORY="CHANGELOG.md + git"
+DECISIONS="the vault note (cross-project: the brain)"
+# >>> local: override HISTORY or DECISIONS here
+# <<< local
 input=$(cat)
 get() { printf '%s' "$input" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -1; }
 [ "$(get tool_name)" = "Write" ] || exit 0
@@ -20,8 +25,8 @@ case "$upper" in
   TODO*|NOTES*|NOTE.*|PLAN*|PROGRESS?*|STATUS*|*SUMMARY*|IMPLEMENTATION*|NEXT*STEPS*|ROADMAP*|HANDOVER*|HANDOFF*|TASKS*|CHANGES.*|WORKLOG*|SCRATCH*|SESSION*|DECISION*)
     {
       echo "Blocked: '$name' looks like a planning/notes file outside the system."
-      echo "Tasks -> feature_list.json; session log -> PROGRESS.md; history -> CHANGELOG.md + git;"
-      echo "decisions -> the vault note (cross-project: the brain); specs -> docs/specs/. Ask the user if it's really needed."
+      echo "Tasks -> feature_list.json; session log -> PROGRESS.md; history -> $HISTORY;"
+      echo "decisions -> $DECISIONS; specs -> docs/specs/. Ask the user if it's really needed."
     } >&2
     exit 2 ;;
 esac

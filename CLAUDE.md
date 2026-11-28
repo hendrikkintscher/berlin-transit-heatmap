@@ -134,6 +134,14 @@ desktop are not comparable with the cloud container's, so time main and the bran
 
 ## Files you create
 
-Write new files inside this folder. Files for other people (to send) go to `C:\Claude\_ZuVerschicken`.
-Files Hendrik has to handle himself (check, sign, upload, install, decide) go to `C:\Claude\_ZumVerarbeiten`,
+Write new files inside this folder. Files for other people (to send) go to `C:\Users\Henni\Downloads\_Claude`.
+Files Hendrik has to handle himself (check, sign, upload, install, decide) go to `C:\Users\Henni\Downloads\_Claude`,
 so they do not get lost in a project folder. Name both `YYYY-MM-DD_Title.ext`. Nothing goes directly into `C:\Claude`.
+
+## Task rules
+
+What `/task` does differently here (it wins over the skill):
+
+- Ids `S047` style (continuing the old step numbers). Research writes its results into the task's spec and ends in a short docs PR.
+- Build on `task/S0NN-<slug>` (or the session's own `claude/…` branch), timed at 360×740 against main ("Speed comes first"). Reviewer and size check use `git diff main...`.
+- Done: CHANGELOG entry under `## [Unreleased]`, then `bash scripts/bump.sh` (not a hand bump); commit, open the PR (template, timings), CI green (`check`, `smoke`, `speed`), squash-merge after Hendrik's yes (deploys to Pages), check the live site. A batch is one PR per task.
