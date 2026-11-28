@@ -12,6 +12,16 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - 2026-11-09: moved to the coding guidelines (feature_list.json, docs/specs, PROGRESS.md, `/task`).
 - 2026-11-10: decisions moved to the vault note; add-on layers and the ATM layer (1.1.0); shorter changes from
   S042 (S053, 1.1.2).
+- 2026-11-11: snapping a place to several paths measured, not shipped (S054); step-free mode counts trips of unknown
+  access (S055); stop dots from zoom 14 (S057).
+
+## 2026-11-28 · cloud · S069
+
+- Hendrik got a GitHub mail: Refresh add-ons failed (Geofabrik refused connections). 6 of its last 20 runs
+  failed: refused connection or 404 (curl's `--retry` did not retry those) and "Node ID twice in input" after
+  merging extracts cut on different days. S069 (#430, 1.1.23): `scripts/osm/extracts.sh` for both OSM
+  workflows, retries every error for up to 15 min, merge keeps the newest version (`osmium time-filter`).
+  Same `atm.json` and `walkways.opl.gz` as before on real data; Refresh add-ons green on main. Live.
 
 ## 2026-11-17 · cloud · no task
 
@@ -95,12 +105,3 @@ Session log, newest first. Keep the last ~10 entries; roll older ones into the s
 - `browser.mjs` also times a second tap and panning. Panning is about one frame slower in the test browser:
   even a one-feature line layer costs that there, and the page's own work is unchanged; shipped on Hendrik's yes.
 - Worker bundle budget 37.7 → 39.0 KB (main was already over it, within tolerance). Open: S059, S060, S043, S044.
-
-## 2026-11-11 · cloud · S054, S055, S057
-
-- S054 (snap a place to several paths) built twice and measured, not shipped (decision 0017, #406, 1.1.5):
-  place only parts card from map and swap (7.6 % of places); with cells maps +11–14 %. `bench/snapwalks.ts`.
-- S055 step-free mode uses trips of unknown access, card names them (#407, 1.1.6): VBB 3+ min better 17.2 % → 8.2 %.
-- S057 stop dots from zoom 14, nine big stations named above it (`REGION.hubs`, decision 0018, #408, 1.1.7).
-  S060 added (switch for lines and stations). Open: S058, S059, S060, S043, S044.
-- Branch pushes after a squash merge: force push is blocked here; merged the old branch with `-s ours` instead.

@@ -295,7 +295,7 @@
       "size": "S",
       "deps": [],
       "test": "two synthetic extracts holding one node at different versions fail the old merge-and-extract steps with 'Node ID twice' and pass the new ones; on the same real extracts the new steps give an identical atm.json and walkways.opl.gz to the old ones; after the merge, Refresh add-ons passes on main (workflow_dispatch)",
-      "passes": false
+      "passes": true
     }
   ]
 }
